@@ -152,7 +152,7 @@ ownership checks, argument forwarding and recursion protection. Wrappers inspect
 synchronization read-only; drift tells the developer to rerun sync manually.
 
 The `commit-msg` point imports `commit-msg/conventional-commits` from
-[the shared Ruleset repository](https://github.com/christianpflugradt/christianpflugradt-rulesets),
+[Christian Pflugradt’s personal Ruleset repository](https://github.com/christianpflugradt/please-behave-rulesets),
 pinned to the full commit in `.please/config.toml`. It receives
 `.please/commit-scopes.txt` through the `scopes_file` parameter. Keep this file
 consistent with the scopes in `.githooks/commit-policy`.
