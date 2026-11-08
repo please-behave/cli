@@ -21,7 +21,7 @@ authenticated with the required permissions. It starts the workflow for **remote
 main** and returns after dispatch; it neither commits/pushes local changes nor
 waits for publication. Follow progress in GitHub Actions or with `gh run list
 --workflow release.yml`. `mise run release` is equivalent. `mise deploy` instead
-downloads and installs the latest published Hannes development governor for the
+downloads and installs the pinned published Please Behave development governor for the
 current OS/CPU, verifying its checksum and executable compatibility before
 replacement. It does
 not install Please Behave; see the [product installation instructions](../README.md#build-locally).
@@ -92,11 +92,11 @@ not to build or run Please Behave. Dependencies are locked in `package-lock.json
 1. Planning on main selects initial 0.1.0 if no semantic tag exists; otherwise a
    Semantic Release dry run calculates the proposed version. Prepare/publish plugins do
    not run; no tag, commit or release is created at this stage.
-2. The quality workflow installs the published governor pinned in `.hannes-version`.
-   Each native runner stamps Cargo.toml/Cargo.lock before its `release` Hannes
-   gate runs formatting, Clippy, tests, candidate build and executable smoke test.
-   The CI workflow runs all 17 checks once on Linux through `check`, including
-   tooling, minimum Rust, dependency audits and security.
+2. Release checks retain independent tooling, minimum Rust, dependency audits,
+   security and license gates. Python integration tests use the published governor
+   pinned in `.please-version`. Each native runner stamps Cargo.toml/Cargo.lock
+   before formatting, Clippy, tests, candidate build and executable smoke test.
+   Normal CI runs all 17 checks on Linux through the governor at `check`.
 3. Packaging verifies `please --version` matches the proposed version. It archives
    the tested executable, README and LICENSE, and records hashes, target and
    source commit as internal artifact metadata.
@@ -106,7 +106,7 @@ not to build or run Please Behave. Dependencies are locked in `package-lock.json
    hashes, executable permissions, packaged documentation, metadata, source commit,
    planned version and checksums. The publication guard then checks the planned
    version and that local/remote main still match the tested source before any
-   release tag is created. Publish installs no Hannes, managed
+   release tag is created. Publish installs no Please Behave, managed
    Git hooks, Rust, Go, actionlint or Gitleaks and runs no governance checks.
 5. For the initial release, GitHub CLI publishes v0.1.0 at the tested source SHA.
    For subsequent releases, Semantic Release calculates the version again, checks
@@ -134,12 +134,10 @@ without building or publishing again. Partial publication still needs inspection
 
 ## Native downloads
 
-The packaging contract below describes Please Behave artifacts; it is not a
-claim that a compatible release is already available. The protected workflows
-retain matching `hannes-*` internal job artifact labels. These labels transfer
-the current run's `please-*` archives and metadata; they do not download Hannes
-release assets. The new [Action repository](https://github.com/please-behave/action)
-requires matching `please-*` archives and `SHA256SUMS` before consumer use.
+Published v0.1.0 provides the four native archives and `SHA256SUMS`. Build jobs
+transfer candidate archives and metadata using matching `please-*` artifact labels.
+The [Action repository](https://github.com/please-behave/action) has no released
+Action ref yet; CLI governance uses the pinned, checksum-verifying installer.
 
 | Platform | Rust target | Archive |
 | --- | --- | --- |

@@ -1,12 +1,12 @@
 # AGENTS.md quality review
 
-The repository demonstrates a conditional document review using ordinary Hannes
+The repository demonstrates a conditional document review using ordinary Please Behave
 Rules. A blocking size Check runs first; a non-blocking semantic Review then
 checks whether root AGENTS.md provides usable guidance for coding agents.
 
 ## Size and evaluation
 
-The [size Rule](../.hannes/checks/agents-size/rule.toml) runs at pre-commit,
+The [size Rule](../.please/checks/agents-size/rule.toml) runs at pre-commit,
 pre-push and check. Its command passes the explicit limit **1200** to
 [scripts/check-word-count.py](../scripts/check-word-count.py). A word is a maximal
 run separated by ASCII whitespace: space, tab, LF, CR, vertical tab or form feed.
@@ -20,9 +20,9 @@ including contradictions, ambiguous precedence, impossible instructions and unsa
 requirements. Optional suggestions do not cause FAIL. Findings must identify
 concrete source evidence and consequences; verbosity earns no credit.
 
-The [Review](../.hannes/reviews/agents-quality/rule.toml) runs only at check.
+The [Review](../.please/reviews/agents-quality/rule.toml) runs only at check.
 Both AGENTS.md and the rubric are selected as whole-file context, without heading
-filters. Hannes supplies their complete current text and original line numbers,
+filters. Please Behave supplies their complete current text and original line numbers,
 the review instructions and its existing response schema. `include_diff = false`
 excludes the Git diff. Existing context and snapshot limits apply; oversized or
 missing context produces ERROR rather than silently reviewing an excerpt.
@@ -33,25 +33,25 @@ Install Python 3 and supply the API key explicitly:
 
 ```sh
 export GEMINI_API_KEY="your-api-key"
-export HANNES_CHANGE_BASE="<baseline-commit>"
-hannes mach was --at check
-hannes was ist phase --details
+export PLEASE_CHANGE_BASE="<baseline-commit>"
+please run --at check
+please status --details
 ```
 
-The repository pins published Hannes v0.14.1 for local hooks and GitHub Actions.
+The repository pins published Please Behave v0.1.0 for local hooks and GitHub Actions.
 The active Review disables diff inclusion, and its provider sets
 `timeout_seconds = 0` so the adapter controls request deadlines and retries.
 For a local branch comparison, use the merge-base with the target branch as
-HANNES_CHANGE_BASE; HEAD is suitable for uncommitted edits. Only AGENTS.md changes
+PLEASE_CHANGE_BASE; HEAD is suitable for uncommitted edits. Only AGENTS.md changes
 trigger the Review. Rubric changes alone omit it, without checking credentials.
 Git hooks and release build points never select this Review. The check point
 still requires its deterministic tools. Agents use Git-hook validation; the
 commands above are for developers.
 
-The named [gemini-flash provider](../.hannes/providers/gemini-flash.toml) invokes
-[scripts/gemini-review.py](../scripts/gemini-review.py) through the generic CLI
+The named [gemini-flash provider](../.please/providers/gemini-flash.toml) invokes
+[scripts/please-gemini-review.py](../scripts/please-gemini-review.py) through the generic CLI
 transport, using Python's standard library. The configured model is
-gemini-3.8-flash, passed as HANNES_MODEL. No Gemini CLI or HTTP dependency is needed.
+gemini-3.8-flash, passed as PLEASE_MODEL. No Gemini CLI or HTTP dependency is needed.
 Authentication uses the GEMINI_API_KEY environment variable in x-goog-api-key.
 
 One POST to `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent`
@@ -60,7 +60,7 @@ sets responseMimeType to application/json and maxOutputTokens to 8192. The adapt
 selects the first candidate, requires finishReason STOP and concatenates its text
 parts. It rejects missing, blocked, malformed, duplicate-key, empty, oversized or
 incomplete envelopes. HTTP 200 alone proves no review outcome. Extracted text is
-returned unchanged; Hannes validates IDs, verdicts, JSON shape and source evidence.
+returned unchanged; Please Behave validates IDs, verdicts, JSON shape and source evidence.
 It never removes fences, repairs JSON or fabricates PASS.
 
 There are at most five attempts. HTTP 429, 500, 502, 503 and 504 and transient
@@ -74,7 +74,7 @@ deadlines.
 No fallback model or provider is selected.
 
 Normal success is quiet. Each scheduled retry prints one safe diagnostic to
-stderr. Hannes forwards only fixed Gemini diagnostic formats and bounded numeric
+stderr. Please Behave forwards only fixed Gemini diagnostic formats and bounded numeric
 fields; arbitrary provider stderr stays private. Final provider errors remain in
 reports and CLI output. API error envelopes are parsed when possible, but HTTP
 status controls retries and API message content is never logged. Redirects are
@@ -90,17 +90,16 @@ verification. Missing event commits are fetched explicitly; invalid, zero, unava
 or unsupported baselines fail visibly. A first push without a previous commit
 therefore requires an explicit usable baseline integration rather than HEAD^.
 The trigger compares that baseline against the worktree under the existing
-HANNES_CHANGE_BASE semantics. AGENTS.md
+PLEASE_CHANGE_BASE semantics. AGENTS.md
 changing schedules the Review; all other changes omit it.
 
 CI allows 90 minutes for checks and the HTTP retry budget, and exposes the GEMINI_API_KEY
-repository secret only to the Hannes execution step. The reusable release CI call
-passes this optional secret explicitly; native builds and Action-consumer jobs
-never need it. Fork pull requests normally receive no secret. If their trigger
+repository secret only to the Please Behave execution step. The reusable CI workflow accepts this optional secret; independent release
+checks and native builds never need it. Fork pull requests normally receive no secret. If their trigger
 matches and checks pass, the review reports ERROR; it never fabricates PASS.
 Do not supply secrets to untrusted fork code to avoid that error.
 
-All applicable checks run in the same Hannes invocation before any review. A failed
+All applicable checks run in the same Please Behave invocation before any review. A failed
 check prevents every LLM review from running. No continue-on-error hides failures.
 The always-run [summary helper](../scripts/agents-review-summary.py) reads only
 bounded verdict fields from the fresh report, escapes model-authored markup and

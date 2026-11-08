@@ -1,14 +1,13 @@
 # Repository self-integration
 
-Please Behave is developed under a separately installed, published Hannes CLI.
-This document describes that development governor and its `.hannes/` configuration;
-product commands and configuration use `please` and `.please/`.
+Please Behave is developed under a separately installed, published Please Behave CLI.
+This document describes its `.please/` development configuration.
 Builds under target/ are candidates under test and never become the governor.
 The repository uses local Check definitions and a pinned external commit-message
 Rule Set and Security Rule Set. A conditional AGENTS.md quality Review uses Gemini
 only at check; Git hooks and native release builds remain checks-only.
 
-The exact published governor pin is recorded in [.hannes-version](../.hannes-version).
+The exact published governor pin is recorded in [.please-version](../.please-version).
 It must support named CLI providers, runtime requirements and file-change triggers,
 as well as direct commands and unattended hook reconciliation.
 
@@ -29,16 +28,16 @@ export PATH="$HOME/.local/bin:$PATH"
 mise hooks:install
 ```
 
-The setup task delegates hook management to hannes pass auf. If an old clone still
+The setup task delegates hook management to please sync. If an old clone still
 sets core.hooksPath to .githooks, the setup shim removes that local setting only
 when all three obsolete event files are absent. If an event file remains, setup
 stops and preserves it for manual integration. Other configured hook paths are
-retained and reconciled by Hannes. No global Git settings are changed.
-Fresh clones can run hannes pass auf directly. Interactive setup displays the
+retained and reconciled by Please Behave. No global Git settings are changed.
+Fresh clones can run please sync directly. Interactive setup displays the
 plan and requests confirmation. For unattended setup use:
 
 ```sh
-hannes pass auf --auto-approve
+please sync --yes
 ```
 
 Setup installs no tools or dependencies. Conflicts still fail. Generated wrappers
@@ -50,7 +49,7 @@ Python 3.11+, Git, Gitleaks v8 with `gitleaks dir` (tested with 8.30.1), stable
 Rust with rustfmt/Clippy and the Node version in mise.toml are required locally.
 Install Gitleaks explicitly and put it on PATH before running the security checks
 or pre-push gate; `gitleaks version` verifies availability. Hooks inherit PATH
-and call the installed hannes binary.
+and call the installed please binary.
 Prepare dependencies online first, including Rust 1.85 for the minimum-version
 check and actionlint for workflow validation. Cargo build, Clippy, test and MSRV
 commands explicitly use --offline; npm tests use --offline too. The execution
@@ -63,7 +62,7 @@ Checks neither install the governor nor repair project files.
 
 Every selected rule is mandatory. Each point preserves the exact check membership
 of its configured execution point. Checks run once per binding, ordered by ID.
-The concrete rule definitions and assignments live in `.hannes/`; product tests
+The concrete rule definitions and assignments live in `.please/`; product tests
 use independent synthetic configurations.
 
 | Execution point | Required checks |
@@ -74,9 +73,9 @@ use independent synthetic configurations.
 | check | All pre-push checks plus commit-range, rust-audit and npm-audit: 17 checks total; conditional agents-quality Review |
 | release | format, clippy, rust-tests, native-build, native-smoke |
 
-The 15 local [checks](../.hannes/checks) use string commands. Python scripts run
+The 15 local [checks](../.please/checks) use string commands. Python scripts run
 as `python3 scripts/<name>.py`, relative to the consuming repository root.
-The published v0.14.1 governor supports these commands and explicit path
+The published v0.1.0 governor supports these commands and explicit path
 references for the four imported Checks. There are no local index.sh launchers.
 Local Rule directories and IDs use descriptive names without numeric prefixes.
 The local commit-message Rule and the imported Rule have distinct identities:
@@ -114,14 +113,14 @@ These checks cannot all be meaningfully executed in an unprepared local checkout
 For manual developer use:
 
 ```sh
-hannes mach was --at pre-commit
-hannes mach was --at pre-push --plan
-HANNES_CHANGE_BASE="<baseline-commit>" python3 scripts/run-execution-point.py check --reviews
-hannes was ist phase --details
+please run --at pre-commit
+please run --at pre-push --plan
+PLEASE_CHANGE_BASE="<baseline-commit>" python3 scripts/run-execution-point.py check --reviews
+please status --details
 ```
 
 For explicit manual use, mise check delegates through the execution wrapper to
-Hannes at pre-push. Individual format, lint, test, smoke and docs:check tasks
+Please Behave at pre-push. Individual format, lint, test, smoke and docs:check tasks
 remain available to developers. Format explicitly edits source; verification
 only checks formatting.
 
@@ -129,7 +128,7 @@ only checks formatting.
 
 Agents receive validation feedback from Git commit and push. They must not run
 checks, tests, linters or builds manually, including mise check, mise docs:check,
-individual Cargo/npm commands or direct Hannes execution. Source formatting is
+individual Cargo/npm commands or direct Please Behave execution. Source formatting is
 allowed. The fast formatting and documentation checks run at pre-commit; pre-push
 runs the complete local suite, including those checks again. There is no result
 cache, so a manual full run before pushing would repeat the suite.
@@ -137,7 +136,7 @@ cache, so a manual full run before pushing would repeat the suite.
 If pre-commit or commit-msg fails, fix the issue and retry the commit. If pre-push
 fails, fix the issue, amend only the agent's own unpublished commit when appropriate
 and retry the push. Do not bypass hooks, force-push or rewrite unrelated work.
-Read hook output or use hannes was ist phase --details for saved output without
+Read hook output or use please status --details for saved output without
 rerunning rules. Address missing tools or hook drift, or report the blocker.
 Prepare the intended commit before the final push: general local checks inspect
 working files, while the imported pre-push security and license checks inspect
@@ -148,24 +147,24 @@ HEAD.
 The published governor derives the three required Git hooks from effective Rule
 assignments. Each hook runs its fixed, identically named execution point. The
 repository configuration declares no hook mappings. The governor manages wrappers
-through pass auf, including configured hook paths, compatible unmanaged content,
+through sync, including configured hook paths, compatible unmanaged content,
 ownership checks, argument forwarding and recursion protection. Wrappers inspect
-synchronization read-only; drift tells the developer to rerun pass auf manually.
+synchronization read-only; drift tells the developer to rerun sync manually.
 
 The `commit-msg` point imports `commit-msg/conventional-commits` from
 [the shared Ruleset repository](https://github.com/christianpflugradt/christianpflugradt-rulesets),
-pinned to the full commit in `.hannes/config.toml`. It receives
-`.hannes/commit-scopes.txt` through the `scopes_file` parameter. Keep this file
+pinned to the full commit in `.please/config.toml`. It receives
+`.please/commit-scopes.txt` through the `scopes_file` parameter. Keep this file
 consistent with the scopes in `.githooks/commit-policy`.
-Both message checks consume HANNES_GIT_HOOK_ARG_1 and require exactly one
+Both message checks consume PLEASE_GIT_HOOK_ARG_1 and require exactly one
 commit-msg argument. The imported Rule validates the header, type and scope.
-The local `commit-message` check also enforces Hannes' narrower type allowlist
+The local `commit-message` check also enforces the repository's narrower type allowlist
 and summary whitespace requirements using the same policy checker as CI.
-`pass auf` retrieves and validates the import during setup; subsequent checks and
+`sync` retrieves and validates the import during setup; subsequent checks and
 hooks use its immutable cache offline. A fresh clone needs access to the source
 repository during setup.
 The same external repository supplies `multi-point/security`, pinned separately
-in `.hannes/config.toml`. Its blocking `sensitive-files` and `secret-scan` checks
+in `.please/config.toml`. Its blocking `sensitive-files` and `secret-scan` checks
 run at `check` and `pre-push`. `check` scans tracked and nonignored untracked
 working-tree files, including unstaged changes; deleted files are excluded.
 `pre-push` scans the current `HEAD` tree, without history or other pushed refs.
@@ -176,10 +175,10 @@ submodules cause ERROR. Scanner configuration comes from the selected snapshot.
 The external Rule Set documents its complete policy and limitations.
 
 The `repository-conventions` import pins the same migrated full Git commit as
-the other imports in `.hannes/config.toml`. It includes only the blocking `license`
+the other imports in `.please/config.toml`. It includes only the blocking `license`
 Rule at `check` and `pre-push`, with `target = "LICENSE"`. The Rule uses the shared
 `scripts/file-reference.py` entrypoint and resolves bundled references relative
-to `HANNES_RULE_DIRECTORY`. LICENSE must match Apache-2.0,
+to `PLEASE_RULE_DIRECTORY`. LICENSE must match Apache-2.0,
 PolyForm-Noncommercial-1.0.0 or Unlicense byte-for-byte; this repository uses the
 SPDX PolyForm-Noncommercial-1.0.0 reference. `check` reads the working-tree file;
 `pre-push` reads HEAD. Missing or nonmatching files produce FAIL; technical errors produce ERROR.
@@ -188,84 +187,46 @@ Pre-commit runs before the final message is available. Hooks block on failure an
 never modify the Git index. Local checks verify working files, including
 unstaged edits, which can differ from staged or pushed commits. The imported
 security and license checks explicitly read `HEAD` at pre-push. Hooks are
-bypassable; clean CI checkouts remain authoritative. General Hannes index/commit inputs remain
+bypassable; clean CI checkouts remain authoritative. General Please Behave index/commit inputs remain
 future work.
 
 ## CI, pinning and Renovate
 
-[.hannes-version](../.hannes-version) is the single exact governor pin. The
-[CI workflow](../.github/workflows/ci.yml) has one **Quality checks** job on Ubuntu
-x64. It prepares Python, Node and Go, then explicitly prepares Rust toolchains,
-locked dependencies, actionlint, cargo-audit and checksum-verified Gitleaks through
-[scripts/prepare-ci.sh](../scripts/prepare-ci.sh). Preparation is outside Hannes
-Rule execution. The job installs the pinned published governor through the public
-[Hannes Action](https://github.com/christianpflugradt/hannes/tree/eedbc1dbb227110667a8b40bdcf8603bddb33726), resolves imports once and invokes `check` once.
-One `quality-check` artifact preserves reports even on failure.
+[.please-version](../.please-version) pins the separately installed governor to
+v0.1.0. Local `mise deploy` and CI use the checksum-verifying
+[scripts/deploy.py](../scripts/deploy.py) installer; CI exports its absolute path
+and PATH through [scripts/install-governor.py](../scripts/install-governor.py).
+Renovate proposes version-pin updates without automerging them.
 
-The separate **GitHub Action compatibility** matrix tests the pinned external
-Hannes governor Action on Ubuntu x64 and ARM64 using a disposable consumer. It verifies PATH, install-only
-mode, custom selection and failure propagation. These runner-specific tests remain
-separate from repository checks.
+The [CI workflow](../.github/workflows/ci.yml) prepares dependencies, installs the
+released governor, runs `please sync --yes`, establishes PLEASE_CHANGE_BASE and
+runs all 17 deterministic checks followed by applicable reviews at `check`.
+Reports and execution metadata are uploaded from `.please/reports/`; the review
+summary reads the same report. Provider failures remain errors.
+The [native build workflow](../.github/workflows/quality.yml) uses the same installer
+on all four platforms and runs the `release` point before packaging.
+The [release workflow](../.github/workflows/release.yml) retains its independent
+quality gates, source/version guards and artifact verification, and installs the
+released governor for Python integration tests. Publishing remains explicit.
 
-The [release build workflow](../.github/workflows/quality.yml) runs only for
-releases, with four native runners and the `release` execution point.
-The point runs after release version stamping and before packaging, selecting
-the same five reusable native checks with unchanged commands, timeouts and
-blocking behavior. It is an ordinary custom point supported by the pinned
-published governor; it performs no packaging or publication.
-The release workflow also reuses CI before publication. macOS release runners use the
-[native installer](../scripts/install-governor.py). The execution wrapper rejects
-candidate governors inside the checkout and checks CI's version against the pin.
-Both installers download the pinned release's assets directly, without a GitHub
-Releases API request. Missing tags, assets or valid checksums fail installation;
-there is no fallback to latest. These installation steps need no GitHub token.
+The Please Behave Action repository has no published release or tag at migration
+time. No unverified Action ref is used. Adopting a released Action and restoring
+public Action consumer checks remain follow-up work in the Action repository;
+the released CLI supplies governance in CI today.
 
-The repository uses published Hannes v0.14.1 for both local hooks and CI.
-All development governor Action references pin the v0.14.1 source commit; their
-version input continues to come from `.hannes-version`.
-The AGENTS.md review sets include_diff = false and its Gemini provider sets
-timeout_seconds = 0, leaving request deadlines and retries to the REST adapter.
-Candidate binaries remain confined to disposable acceptance fixtures and smoke
-tests; they never govern this checkout.
+## Migration from Hannes
 
-Historically, the initial Hannes governor Action was published on main at
-[`2d3cac2324ce54f076c7090e5bf80969eee4b37e`](https://github.com/christianpflugradt/hannes/commit/2d3cac2324ce54f076c7090e5bf80969eee4b37e)
-before a second commit added public `uses: christianpflugradt/hannes@2d3cac2324ce54f076c7090e5bf80969eee4b37e`
-references. This immutable publication revision contains `action.yml`; it has no
-separate Action release tag or compiled artifact. No major-version tag is created.
-The Action revision and CLI release pin are independent.
+The former `.hannes/` rules were migrated to `.please/` without changing point
+membership, blocking policy or timeouts. Runtime variables now use `PLEASE_*`.
+The existing product Gemini adapter replaces the duplicate governor adapter.
+All three imports pin the same Please Behave-compatible ruleset commit; no local
+copies replace external rules. Legacy consumers can retain the previous ruleset
+commit `86c1a09519de6e848e6f8a0110427ca8d136dd1c`.
 
-The regex custom manager in [renovate.json](../renovate.json) retains the
-GitHub-releases datasource and disabled automerge. Pin updates remain normal
-reviewed dependency PRs. A format-breaking update may require configuration
-changes; every execution point must validate and plan with the proposed release.
-
-Push/PR checks retain native Linux x64, tooling, MSRV and audit coverage. Releases
-reuse that CI workflow and run native validation on all four supported hosts. Tool
-installation, dependency preparation, release stamping, packaging and publication
-remain separate operations. Publish installs no governor, managed hooks or check
-prerequisites. It calculates checksums and directly runs
-`python3 scripts/check-release-artifacts.py` before publication. This mandatory
-step verifies the complete four-platform archive set, metadata, archive/binary
-hashes, executable permissions, packaged README/LICENSE, planned version, tested
-source SHA and SHA256SUMS. Failures stop the job. The publication plugin retains
-the planned-version and local/remote source guards before tagging, without
-repeating artifact verification. Release lifecycle tests exercise tag and Git
-note pushes in a disposable repository and verify that publication creates no source commit.
-
-CI and native build jobs retain their failure-report uploads.
-Schema-4 last.json records execution
-point, required rules, source state and results. The [execution wrapper](../scripts/run-execution-point.py)
-adds execution.json with governor version/digest, execution point, checked commit
-and exit code. Managed hooks and direct CLI invocations write the ordinary report;
-the wrapper supplies companion evidence for CI and mise invocations.
-
-## Conditional document review
-
-See [AGENTS.md quality review](agents-quality-review.md) for the 1200-word gate,
-whole-document rubric evaluation, named Gemini provider, local execution and CI
-summary. The existing check point runs both checks and triggered reviews; the
-execution wrapper's --reviews option enables full execution there. Its default
-remains checks-only for hooks and native release points. CI sets an event baseline,
-uses the Python REST adapter and supplies its optional secret only during execution.
-The review remains non-blocking for FAIL and ERROR; both stay visible.
+Before installing new hooks, the three installed wrappers were inspected: each
+contained only its Hannes-managed shell block, with no unmanaged content.
+`core.hooksPath` was unset. Those obsolete wrappers were removed, then the
+released `please sync --yes` installed its own wrappers. Sample hooks were kept.
+Other clones must inspect legacy hooks before retiring them; the setup shim does
+not delete arbitrary hooks. Fresh configuration was initialized using `please init`
+before the existing rules replaced its examples.

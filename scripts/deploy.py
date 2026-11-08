@@ -1,4 +1,4 @@
-"""Install the latest published native release without building local source."""
+"""Install a published native release without building local source."""
 import hashlib
 import io
 import json
@@ -13,8 +13,8 @@ import tempfile
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError
 
-REPOSITORY = "https://github.com/christianpflugradt/hannes"
-API = "https://api.github.com/repos/christianpflugradt/hannes/releases/latest"
+REPOSITORY = "https://github.com/please-behave/cli"
+API = "https://api.github.com/repos/please-behave/cli/releases/latest"
 
 
 def detect_target():
@@ -27,7 +27,7 @@ def detect_target():
 
 
 def download(url):
-    headers = {"User-Agent": "hannes-deploy"}
+    headers = {"User-Agent": "please-deploy"}
     if url == API:
         headers["Accept"] = "application/vnd.github+json"
         token = os.environ.get("GITHUB_TOKEN")
@@ -67,7 +67,7 @@ def deploy(tag=None, prefix=None):
         tag = release.get("tag_name")
         if not isinstance(tag, str) or not re.fullmatch(r"v(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)", tag) or release.get("draft") or release.get("prerelease"):
             raise ValueError("Latest release has no supported stable version tag.")
-    name = f"hannes-{tag}-{target}"
+    name = f"please-{tag}-{target}"
     archive_name = f"{name}.tar.gz"
     base = f"{REPOSITORY}/releases/download/{tag}"
     try:
@@ -81,32 +81,32 @@ def deploy(tag=None, prefix=None):
     if hashlib.sha256(data).hexdigest() != matches[0]:
         raise ValueError(f"SHA-256 checksum mismatch for {archive_name}; installation aborted.")
     with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as archive:
-        members = [member for member in archive.getmembers() if member.name == f"{name}/hannes"]
+        members = [member for member in archive.getmembers() if member.name == f"{name}/please"]
         if len(members) != 1 or not members[0].isfile():
-            raise ValueError("Release archive must contain one regular hannes executable.")
+            raise ValueError("Release archive must contain one regular please executable.")
         binary = archive.extractfile(members[0]).read()
     prefix = Path(prefix or os.environ.get("CARGO_INSTALL_ROOT") or Path.home() / ".local").expanduser()
-    destination = prefix / "bin" / "hannes"
+    destination = prefix / "bin" / "please"
     destination.parent.mkdir(parents=True, exist_ok=True)
     # Same filesystem for atomic replacement. Never extract archive paths to disk.
-    with tempfile.TemporaryDirectory(prefix=".hannes-deploy-", dir=destination.parent) as temporary:
-        candidate = Path(temporary) / "hannes"
+    with tempfile.TemporaryDirectory(prefix=".please-deploy-", dir=destination.parent) as temporary:
+        candidate = Path(temporary) / "please"
         candidate.write_bytes(binary)
         candidate.chmod(0o755)
         try:
             result = subprocess.run([str(candidate.resolve()), "--version"], capture_output=True, text=True, timeout=15,
-                                    env=dict(os.environ, HANNES_STATE_DIR=str(Path(temporary) / "state"), NO_COLOR="1"))
-            if result.returncode or result.stdout.strip() != f"hannes {tag[1:]}":
+                                    env=dict(os.environ, PLEASE_STATE_DIR=str(Path(temporary) / "state"), NO_COLOR="1"))
+            if result.returncode or result.stdout.strip() != f"please {tag[1:]}":
                 raise ValueError("Downloaded executable failed its version check.")
         except (OSError, subprocess.SubprocessError, ValueError) as error:
             raise ValueError(f"Release {tag} cannot run on this system ({target}); Linux requires a glibc version compatible with Ubuntu 24.04. Build from source instead. {error}") from error
         os.replace(candidate, destination)
-    print(f"Installed hannes {tag[1:]} ({target}) to {destination}")
+    print(f"Installed please {tag[1:]} ({target}) to {destination}")
     return destination
 
 
 if __name__ == "__main__":
     try:
-        deploy()
+        deploy(tag=Path(".please-version").read_text().strip())
     except (OSError, ValueError, KeyError, TypeError, tarfile.TarError) as error:
-        sys.exit(f"Hannes deploy failed: {error}")
+        sys.exit(f"Please Behave deploy failed: {error}")

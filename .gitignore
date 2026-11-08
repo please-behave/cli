@@ -2,8 +2,6 @@
 /dist/
 /node_modules/
 .DS_Store
-.hannes/reports/*
-!.hannes/reports/.gitignore
 .please/reports/*
 !.please/reports/.gitignore
 

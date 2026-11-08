@@ -1,4 +1,4 @@
-# Hannes repository rules
+# Please Behave repository rules
 
 This repository uses unversioned, self-contained deterministic rules and pinned
 external commit-message and Security Rule Sets at five execution points, plus
@@ -17,22 +17,22 @@ same migrated revision. All four imported Checks use string commands with
 `@rule/` or `@source/` references.
 `commit-scopes.txt` supplies the commit-message import's required
 scopes_file parameter and matches the scopes in `.githooks/commit-policy`. The
-local message check additionally enforces the narrower Hannes type allowlist and
+local message check additionally enforces the narrower repository type allowlist and
 summary whitespace requirements. Git events use their fixed, identically named built-in points.
 
 ```sh
-hannes pass auf --auto-approve
-hannes mach was --at pre-commit --plan
-hannes was ist phase --details
+please sync --yes
+please run --at pre-commit --plan
+please status --details
 ```
 
-The exact published governor pin is v0.14.1 in .hannes-version, shared by local
+The exact published governor pin is v0.1.0 in .please-version, shared by local
 hooks and GitHub Actions. The AGENTS.md review excludes the Git diff and its
 Gemini REST provider delegates deadlines to the adapter.
 Do not use a candidate built from this checkout as the governor.
 Agents rely on pre-commit and pre-push feedback instead of running checks manually.
 The manual `mise check` task remains available to developers and delegates to
-Hannes at pre-push.
+Please Behave at pre-push.
 
 See [repository self-integration](../docs/self-governance.md) for setup, required
 coverage, reports and CI. The general [configuration reference](../docs/configuration.md)

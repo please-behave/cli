@@ -109,7 +109,7 @@ archive and `SHA256SUMS` from
 | Linux x64 | `x86_64-unknown-linux-gnu` |
 | Linux ARM64 | `aarch64-unknown-linux-gnu` |
 
-`mise deploy` continues to install the published Hannes development governor.
+`mise deploy` installs the published Please Behave development governor.
 The first Please Behave release is prepared as `0.1.0`; no compatible published
 release is claimed here. Build `please` from source until its archives are
 published. See [native downloads](docs/releasing.md#native-downloads).
@@ -152,10 +152,10 @@ With [mise](https://mise.jdx.dev/), product builds and governor installation are
 mise trust
 mise install                  # Install development tools.
 mise build                    # Build target/release/please.
-mise deploy                   # Install the published Hannes development governor.
+mise deploy                   # Install the published Please Behave development governor.
 ```
 
-`mise install` installs development tools; `mise deploy` installs the Hannes governor.
+`mise install` installs development tools; `mise deploy` installs the Please Behave governor.
 Build and install Please Behave separately as shown above. See [Development](#development) for checks and release tasks.
 
 ### Initialize your project
@@ -320,8 +320,9 @@ the consumer checkout. The Action revision and CLI release version are independe
 No Please Behave Action release is claimed here; a usable Action ref and matching
 CLI release assets must exist before adopting it.
 
-The CLI repository continues to use its pinned published Hannes Action solely
-for development governance; see [repository self-integration](docs/self-governance.md#ci-pinning-and-renovate).
+The CLI repository installs the pinned published CLI directly with its
+checksum-verifying installer in CI; adoption of a released Action remains pending.
+See [repository self-integration](docs/self-governance.md#ci-pinning-and-renovate).
 
 Assign enabled Rules to `pre-commit`, `commit-msg` or `pre-push`. Please Behave derives
 required hooks from effective assignments, including Rule Set inheritance and
@@ -857,8 +858,7 @@ executables = ["python3"]
 ```
 
 The adapter reads the complete prompt from stdin and selects the configured model
-through `PLEASE_MODEL`. This product adapter is independent of the Hannes
-development-governance adapter (`scripts/gemini-review.py`), which remains unchanged.
+through `PLEASE_MODEL`. The same adapter serves repository governance.
 It sends a generateContent request and extracts the first completed candidate's
 text. Please Behave validates the unchanged review JSON. Requests time out after
 600 seconds. Transient connection failures and HTTP 429/500/502/503/504 retry up
@@ -1197,32 +1197,31 @@ is listed in the [TODOs](docs/todo/README.md).
 
 ## Development
 
-Please Behave is developed under a separately installed, published Hannes CLI.
-Its governor configuration remains in `.hannes/`, and `.hannes-version` pins its
-release. Product commands use `please` and product configuration uses `.please/`.
-`mise deploy` and the repository hooks continue to operate Hannes. See
-[repository self-integration](docs/self-governance.md) for setup and coverage.
+Please Behave governs its own development using a separately installed release.
+`.please-version` pins the governor, and `.please/` defines its rules.
+`mise deploy` installs that exact release; builds under `target/` are candidates.
+See [repository self-integration](docs/self-governance.md) for setup and coverage.
 The `repository-conventions` Rule Set is pinned to a full Git commit and checks
 LICENSE against its permitted reference texts at `pre-push` and `check`.
 
 The [AGENTS.md quality-review example](docs/agents-quality-review.md) combines a
 blocking 1200-word limit with a conditional, non-blocking Gemini review at `check`.
-It receives the complete document and rubric; provider errors still block CI.
+It receives the complete document and rubric; provider errors remain visible in reports.
 Git hooks need no Gemini credentials.
 
 This repository's deterministic quality checks run through an installed published
-Hannes release. Install development tools with `mise install`, dependencies with
+Please Behave release. Install development tools with `mise install`, dependencies with
 `npm ci --ignore-scripts` and `cargo +stable fetch --locked`, then the governor
 with `mise deploy`. Install Gitleaks v8 with the `dir` command (tested with
-8.30.1) explicitly for the imported Security Rule Set. Prepare Rust 1.85 and actionlint as described in the setup guide. Ensure Hannes,
+8.30.1) explicitly for the imported Security Rule Set. Prepare Rust 1.85 and actionlint as described in the setup guide. Ensure Please Behave,
 Gitleaks and actionlint are on PATH.
 
 Install the pre-commit, commit-msg and pre-push hooks explicitly with
-`mise hooks:install`. Commit and push then invoke Hannes automatically: pre-commit
+`mise hooks:install`. Commit and push then invoke Please Behave automatically: pre-commit
 checks formatting and documentation, and pre-push runs the complete local suite.
 Agents rely on this feedback and must not manually run checks, tests, linters or
 builds. They may format source and inspect saved results with
-`hannes was ist phase --details`.
+`please status --details`.
 
 For developers who want an explicit manual run, `mise check` delegates to the
 pinned published governor at the `pre-push` execution point:

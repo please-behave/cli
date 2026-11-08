@@ -71,18 +71,10 @@ jobs:
         env:
           COMMIT_HEAD: ${{ github.sha }}
         run: python3 scripts/check-commits.py
-      - name: Test Python helpers without legacy governor integration tests
-        run: |
-          python3 - <<'PYTHON'
-          import unittest
-          from pathlib import Path
-          suite = unittest.TestSuite()
-          for path in sorted(Path("scripts").glob("test_*.py")):
-              if path.name not in {"test_commit_hook.py", "test_governance.py"}:
-                  suite.addTests(unittest.defaultTestLoader.discover("scripts", pattern=path.name))
-          result = unittest.TextTestRunner(verbosity=2).run(suite)
-          raise SystemExit(not result.wasSuccessful())
-          PYTHON
+      - name: Install pinned published Please Behave for integration tests
+        run: python3 scripts/install-governor.py
+      - name: Test Python helpers and governor integration
+        run: python3 -m unittest discover -s scripts -p 'test_*.py'
       - name: Test release tooling
         run: npm --offline test
       - name: Validate workflow syntax and expressions
@@ -97,7 +89,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: christianpflugradt/christianpflugradt-rulesets
-          ref: 86c1a09519de6e848e6f8a0110427ca8d136dd1c
+          ref: ae4a769b59b6ab8beb5cf7ea322065ad28070e34
           path: .release-rules
           persist-credentials: false
       - name: Keep check sources outside the scanned working tree

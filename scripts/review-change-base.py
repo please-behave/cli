@@ -38,6 +38,6 @@ if __name__ == "__main__":
     try:
         value = baseline(os.environ["GITHUB_EVENT_NAME"], json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text()))
         with open(os.environ["GITHUB_ENV"], "a") as output:
-            output.write(f"HANNES_CHANGE_BASE={value}\n")
+            output.write(f"PLEASE_CHANGE_BASE={value}\n")
     except (OSError, ValueError, KeyError, subprocess.SubprocessError):
         sys.exit("Cannot establish review baseline; fetch the event history and retry")

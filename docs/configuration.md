@@ -473,8 +473,7 @@ executables = ["python3"]
 ```
 
 The adapter reads the complete prompt from stdin and selects the configured model
-through `PLEASE_MODEL`. This product adapter is independent of the Hannes
-development-governance adapter (`scripts/gemini-review.py`), which remains unchanged.
+through `PLEASE_MODEL`. The same adapter serves repository governance.
 It sends a generateContent request and extracts the first completed candidate's
 text. Please Behave validates the unchanged review JSON. Requests time out after
 600 seconds. Transient connection failures and HTTP 429/500/502/503/504 retry up

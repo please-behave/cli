@@ -8,7 +8,7 @@ description = "Build the native release executable"
 run = "cargo build --release --locked"
 
 [tasks.deploy]
-description = "Download and install the latest Hannes release for this platform"
+description = "Download and install the pinned Please Behave release for this platform"
 run = "python3 scripts/deploy.py"
 run_windows = "python scripts/deploy.py"
 
@@ -52,5 +52,5 @@ description = "Check documentation links, configuration reference and executable
 run = ["python3 scripts/check-docs.py", "cargo test --locked --test documentation"]
 
 [tasks.check]
-description = "Manually run the Hannes pre-push gate (agents use Git hooks)"
+description = "Manually run the Please Behave pre-push gate (agents use Git hooks)"
 run = "python3 scripts/run-execution-point.py pre-push"

@@ -34,20 +34,14 @@ jobs:
           go-version: stable
           cache: false
       - name: Prepare tools and dependencies
-        id: governor
-        run: |
-          bash scripts/prepare-ci.sh
-          echo "version=$(cat .hannes-version)" >> "$GITHUB_OUTPUT"
-      - name: Install published Hannes
-        uses: christianpflugradt/hannes@eedbc1dbb227110667a8b40bdcf8603bddb33726 # v0.14.1
-        with:
-          version: ${{ steps.governor.outputs.version }}
-          run: 'false'
-      - name: Resolve external Rule Sets
-        run: hannes pass auf --auto-approve
+        run: bash scripts/prepare-ci.sh
+      - name: Install pinned published Please Behave
+        run: python3 scripts/install-governor.py
+      - name: Resolve external Rule Sets and synchronize hooks
+        run: please sync --yes
       - name: Establish review comparison baseline
         run: python3 scripts/review-change-base.py
-      - name: Run Hannes checks and applicable reviews
+      - name: Run Please Behave checks and applicable reviews
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           COMMIT_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
@@ -62,79 +56,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: quality-check
-          path: .hannes/reports/*.json
+          path: .please/reports/*.json
           include-hidden-files: true
           if-no-files-found: ignore
           retention-days: 7
-
-  action-consumer:
-    name: GitHub Action compatibility / ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-24.04, ubuntu-24.04-arm]
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - name: Read the exact governor release pin
-        id: governor
-        run: echo "version=$(cat .hannes-version)" >> "$GITHUB_OUTPUT"
-      - name: Prepare an isolated consumer configuration
-        run: |
-          # This disposable checkout tests the public Action without repository imports.
-          mv .hannes "$RUNNER_TEMP/original-hannes"
-          mkdir -p .hannes/checks/consumer
-          cat > .hannes/config.toml <<'TOML'
-          project = "Action_Consumer"
-          [execution_points]
-          custom = ["action-test"]
-          TOML
-          cat > .hannes/checks/consumer/rule.toml <<'TOML'
-          id = "consumer"
-          description = "Record the selected point and return the requested test status"
-          run_at = ["check", "action-test"]
-          [check]
-          command = "sh .hannes/checks/consumer/index.sh"
-          TOML
-          cat > .hannes/checks/consumer/index.sh <<'SH'
-          printf '%s\n' "$HANNES_EXECUTION_POINT" >> "$RUNNER_TEMP/action-points"
-          exit "${ACTION_CHECK_STATUS:-0}"
-          SH
-      - name: Install only through the public Action
-        uses: christianpflugradt/hannes@eedbc1dbb227110667a8b40bdcf8603bddb33726 # v0.14.1
-        with:
-          version: ${{ steps.governor.outputs.version }}
-          execution-point: check
-          run: 'false'
-      - name: Verify PATH and skipped execution in a subsequent step
-        env:
-          EXPECTED_VERSION: ${{ steps.governor.outputs.version }}
-        run: |
-          test "$(hannes --version)" = "hannes ${EXPECTED_VERSION#v}"
-          test ! -e "$RUNNER_TEMP/action-points"
-      - name: Run a specified execution point through the public Action
-        uses: christianpflugradt/hannes@eedbc1dbb227110667a8b40bdcf8603bddb33726 # v0.14.1
-        with:
-          version: ${{ steps.governor.outputs.version }}
-          execution-point: action-test
-          run: 'true'
-      - name: Verify default execution propagates a failing check
-        id: failing
-        continue-on-error: true
-        uses: christianpflugradt/hannes@eedbc1dbb227110667a8b40bdcf8603bddb33726 # v0.14.1
-        env:
-          ACTION_CHECK_STATUS: '1'
-        with:
-          version: ${{ steps.governor.outputs.version }}
-          execution-point: check
-      - name: Assert the expected failure and executed points
-        if: always()
-        env:
-          FAILURE_OUTCOME: ${{ steps.failing.outcome }}
-        run: |
-          test "$FAILURE_OUTCOME" = failure
-          printf 'action-test\ncheck\n' > "$RUNNER_TEMP/expected-points"
-          diff -u "$RUNNER_TEMP/expected-points" "$RUNNER_TEMP/action-points"

@@ -14,7 +14,7 @@ def module(name, filename):
     return result
 
 
-adapter = module("gemini_review", "gemini-review.py")
+adapter = module("gemini_review", "please-gemini-review.py")
 change_base = module("change_base", "review-change-base.py")
 
 
@@ -33,7 +33,7 @@ class AdapterTests(unittest.TestCase):
         response.read.return_value = self.response()
         opener.open.side_effect = [response if x is None else x for x in outcomes]
         log = io.StringIO()
-        with patch.dict(adapter.os.environ, {"GEMINI_API_KEY": "private-key", "HANNES_MODEL": "configured-model"}), patch.object(adapter, "build_opener", return_value=opener), patch.object(adapter.time, "sleep") as sleep, contextlib.redirect_stderr(log):
+        with patch.dict(adapter.os.environ, {"GEMINI_API_KEY": "private-key", "PLEASE_MODEL": "configured-model"}), patch.object(adapter, "build_opener", return_value=opener), patch.object(adapter.time, "sleep") as sleep, contextlib.redirect_stderr(log):
             try:
                 result = adapter.run(b"complete private prompt")
             except adapter.ProviderError as error:
@@ -121,7 +121,7 @@ class AdapterTests(unittest.TestCase):
         response = MagicMock(status=200)
         response.__enter__.return_value = response
         response.read.return_value = b"malformed private response"
-        with patch.dict(adapter.os.environ, {"GEMINI_API_KEY": "key", "HANNES_MODEL": "model"}), patch.object(adapter, "build_opener") as build, patch.object(adapter.time, "sleep") as sleep:
+        with patch.dict(adapter.os.environ, {"GEMINI_API_KEY": "key", "PLEASE_MODEL": "model"}), patch.object(adapter, "build_opener") as build, patch.object(adapter.time, "sleep") as sleep:
             build.return_value.open.return_value = response
             with self.assertRaises(adapter.ProviderError):
                 adapter.run("prompt")

@@ -316,5 +316,5 @@ Local hooks are bypassable (`git commit --no-verify`, `git push --no-verify`).
 They verify the working tree, not the exact staged index or pushed commit.
 Exact-index verification is separate future work. CI can execute the same execution points
 against a clean checkout; hosted authentication and deployment remain separate.
-Development of Please Behave itself uses a separately installed, published Hannes
-governor and `.hannes/` configuration. See [repository self-integration](self-governance.md).
+Development of Please Behave itself uses a separately installed, published Please Behave
+governor and `.please/` configuration. See [repository self-integration](self-governance.md).

@@ -43,10 +43,10 @@ Consistency and avoiding AI slop are the highest quality priorities.
 
 ## Development governor
 
-This repository is governed by the separately installed, released Hannes CLI,
-not the Please Behave candidate. Keep its `.hannes/` configuration,
-`.hannes-version` pin, wrappers, Git hooks and governance workflows operational.
-Hannes commands below operate that governor; they are not product commands.
+This repository is governed by the separately installed, released Please Behave
+CLI pinned in `.please-version`. Keep its `.please/` configuration, wrappers,
+Git hooks and governance workflows operational. Never use candidate binaries
+from this checkout as the governor.
 
 ## Validation — Git hooks are authoritative
 
@@ -58,7 +58,7 @@ Hannes commands below operate that governor; they are not product commands.
   - `pre-commit` validates formatting and documentation.
   - `pre-push` runs the complete local validation suite.
 - Read hook failures and fix their reported causes. Use
-  `hannes was ist phase --details` to inspect saved reports without rerunning
+  `please status --details` to inspect saved reports without rerunning
   checks. Retry the Git operation after fixing the problem.
 - Never bypass hooks or replace their validation with manual checks.
 - Formatting commands that modify source are permitted.

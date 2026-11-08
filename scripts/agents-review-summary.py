@@ -30,7 +30,7 @@ def render(report):
     try:
         status, reason, findings = outcome(report)
     except (ValueError, KeyError, TypeError):
-        status, reason, findings = "ERROR", "No reliable review result; inspect the Hannes execution step and report artifact.", []
+        status, reason, findings = "ERROR", "No reliable review result; inspect the Please Behave execution step and report artifact.", []
     labels = {"PASS": "No substantive issues found", "FAIL": "Substantive issues found (non-blocking)",
               "ERROR": "Review could not complete reliably", "SKIP": "Review was not run"}
     lines = [f"### AGENTS.md quality: {status}", "", labels[status], "", reason[:120]]
@@ -44,7 +44,7 @@ def render(report):
 
 if __name__ == "__main__":
     try:
-        report = json.loads(Path(".hannes/reports/last.json").read_text())
+        report = json.loads(Path(".please/reports/last.json").read_text())
     except (OSError, ValueError):
         report = {}
     with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as output:

@@ -2,7 +2,7 @@
 set -eu
 root=$(git rev-parse --show-toplevel)
 cd "$root"
-# Retire the old repository-owned path; Hannes manages actual hook state.
+# Retire the old repository-owned path; Please Behave manages actual hook state.
 current=$(git config --local --get core.hooksPath || :)
 case "$current" in
     .githooks|"$root/.githooks")
@@ -15,4 +15,4 @@ case "$current" in
         git config --local --unset core.hooksPath
         ;;
 esac
-exec "${HANNES_EXECUTABLE:-hannes}" pass auf "$@"
+exec "${PLEASE_EXECUTABLE:-please}" sync "$@"

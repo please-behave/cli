@@ -18,26 +18,20 @@ export PATH="$HOME/.local/bin:$PATH"
 mise hooks:install
 ```
 
-Please Behave is the product: its executable is `please`, its configuration is
-`.please/`, and its English commands are `init`, `sync`, `run`, `status` and `help`.
-Development is governed by a separately installed, released Hannes CLI using
-`.hannes/` and the `.hannes-version` pin. `mise deploy` installs that governor,
-not Please Behave. Build the product separately as described in the README.
-The governor must be a published release; building the source is a check, never
-how the governor is obtained. Preserve governor configuration, wrappers, hooks
-and governance workflows when changing the product. See [repository quality gates](docs/self-governance.md)
-for execution points, tool prerequisites, CI pinning and Renovate updates. Local hooks
-use offline dependency mode; prepare dependencies explicitly before running them.
+Development is governed by the separately installed Please Behave release pinned
+in `.please-version`, using `.please/`. `mise deploy` installs that exact release.
+Build the candidate separately as described in the README; it never becomes the
+governor. See [repository quality gates](docs/self-governance.md) for execution
+points, prerequisites, CI pinning and Renovate updates. Prepare dependencies
+explicitly before running the offline local hooks.
 
-Commit and push to receive validation feedback from the installed Hannes hooks.
+Commit and push to receive validation feedback from the installed Please Behave hooks.
 Agents must not manually run checks, tests, linters or builds, including
 `mise run check` and `mise docs:check`. Source formatting is allowed. Developers
-can use `mise run check` for an explicit manual run of Hannes at pre-push.
+can use `mise run check` for an explicit manual run of Please Behave at pre-push.
 
 Tests must remain offline and credential-free; mock Codex instead of calling it.
-Keep source, configuration, documentation and product output in English. German
-commands below belong only to the existing Hannes development governor.
-Update relevant docs and focused tests when behavior changes.
+Keep source, configuration, documentation and product output in English. Update relevant docs and focused tests when behavior changes.
 Commit Cargo.lock; exclude reports, credentials and local MCP configuration.
 
 ## Commits
@@ -88,17 +82,17 @@ sh scripts/setup-git-hooks.sh
 # Or: mise run hooks:install
 ```
 
-The Hannes governor manages the three hooks through `hannes pass auf` and
+The Please Behave governor manages the three hooks through `please sync` and
 corresponding execution points. Pre-commit checks formatting and documentation; commit-msg checks the final message before Git
 creates or amends a commit; pre-push runs the complete local suite. The shared
 message checker reads `.githooks/commit-policy` and never calls a hook. The setup shim retires only the obsolete local `.githooks` setting when its
-event files are absent, then delegates to `hannes pass auf`. Other custom hook
-paths remain configured; Hannes preserves compatible unmanaged hook content. Each clone needs setup;
+event files are absent, then delegates to `please sync`. Other custom hook
+paths remain configured; Please Behave preserves compatible unmanaged hook content. Each clone needs setup;
 Git's `--no-verify` can bypass a local hook; agents must never bypass validation.
 Work on `main`. If a commit hook fails, fix the reported issue and retry the
 commit. If pre-push fails, fix the issue, amend your own unpublished commit when
 appropriate and retry the push. Preserve unrelated work and never force-push.
-Use `hannes was ist phase --details` to inspect captured output without rerunning
+Use `please status --details` to inspect captured output without rerunning
 checks. Missing tools or broken hooks must be addressed or reported.
 
 Examples: `chore(deps): update dependencies`, `feat(reviews): add scoped context`, `fix(cli): preserve report output`,
@@ -110,7 +104,7 @@ Contributions use the project's [PolyForm Noncommercial License 1.0.0](LICENSE).
 
 Native reconciliation tests use temporary repositories and real Git commits/pushes;
 they run with the Rust suite at pre-push. Keep tests offline and never
-change developer/global Git configuration. The repository integration uses published Hannes v0.14.1 with `--auto-approve`.
+change developer/global Git configuration. The repository integration uses published Please Behave v0.1.0 with `--yes`.
 Do not substitute a candidate built from this checkout.
 
 For release tooling changes, use the Node version in `mise.toml`, prepare npm

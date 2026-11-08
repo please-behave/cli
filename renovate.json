@@ -10,12 +10,12 @@
     {
       "customType": "regex",
       "managerFilePatterns": [
-        "/^\\.hannes-version$/"
+        "/^\\.please-version$/"
       ],
       "matchStrings": [
         "(?<currentValue>v\\d+\\.\\d+\\.\\d+)"
       ],
-      "depNameTemplate": "christianpflugradt/hannes",
+      "depNameTemplate": "please-behave/cli",
       "datasourceTemplate": "github-releases",
       "versioningTemplate": "semver"
     }
@@ -23,7 +23,7 @@
   "packageRules": [
     {
       "matchPackageNames": [
-        "christianpflugradt/hannes"
+        "please-behave/cli"
       ],
       "matchDatasources": [
         "github-releases"

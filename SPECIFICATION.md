@@ -113,8 +113,8 @@ echo Git stderr or secret repository selectors.
 
 New projects use `.please/` exclusively; `.hannes/` is not discovered or migrated.
 Acceptance: initialization and configuration fixtures use `.please/`; the product
-binary is `please`. The repository itself retains its published Hannes governor
-and existing `.hannes/` development configuration.
+binary is `please`. The repository itself uses the separately installed Please Behave release
+pinned in `.please-version` with `.please/` development configuration.
 
 One unversioned configuration model uses lowercase .please/config.toml, optional
 provider.toml, providers/*.toml, checks/*/rule.toml, reviews/*/rule.toml and rule-sets/*.toml.
@@ -560,7 +560,8 @@ owns the Action implementation, inputs, supported runners and acceptance tests.
 The Action revision and selected CLI release are independent. A usable Action
 ref and compatible Please Behave release assets must exist before adoption;
 this specification does not assert that either has been released.
-The CLI's pinned external Hannes Action remains its development governor.
+The CLI repository uses its checksum-verifying installer for released CLI
+governance; adopting a released Action remains pending.
 
 Supported hosted CI/release targets are macOS Apple Silicon, macOS Intel and
 Linux x64 and ARM64 (GNU/glibc); Windows builds/releases are excluded. Linux ARM64
@@ -569,18 +570,18 @@ with the same formatting, lint, tests, build and executable smoke gates. Build w
 Rust/Cargo (declared minimum 1.85) into a native executable. Git and configured
 external tools remain runtime dependencies; no Python/Node runtime is bundled.
 
-`mise deploy` installs the separately released Hannes development governor, not
-Please Behave. It downloads that governor's latest published GitHub release for
+`mise deploy` installs the Please Behave development governor pinned in
+`.please-version`. It downloads that exact published GitHub release for
 the detected OS and CPU (the four targets above), verifies SHA-256 and executable
 compatibility,
-and installs to `${CARGO_INSTALL_ROOT:-$HOME/.local}/bin/hannes`. It never builds
+and installs to `${CARGO_INSTALL_ROOT:-$HOME/.local}/bin/please`. It never builds
 local source. Unsupported platforms, missing downloads, invalid checksums and
 incompatible binaries fail with an actionable error and preserve the installed binary.
 
 Push/PR CI runs the Linux x64 native gates; release runs all four native hosts.
 CI runs formatting, Clippy, offline unit/acceptance tests, native smoke tests,
 minimum-Rust checks, dependency audits and release-tooling/workflow checks.
-Releases are manually dispatched on main and reuse the quality workflow. The
+Releases are manually dispatched on main and retain independent quality gates. The
 initial release is 0.1.0, published through GitHub CLI only after artifact/source
 verification; subsequent releases use Semantic Release. During 0.x, breaking
 changes/features increment minor and fixes/maintenance increment patch. Stable
@@ -591,17 +592,13 @@ request write permission. Actions are pinned. See [release policy](docs/releasin
 
 Please Behave packaging uses `please-vVERSION-TARGET.tar.gz`, containing a
 matching directory with `please`, README and LICENSE, plus release SHA256SUMS.
-The protected workflows retain matching `hannes-*` internal job artifact labels
-for transferring the current run's Please Behave archives and metadata. These
-labels do not select predecessor release assets. Build from source
-until compatible Please Behave assets are published.
+Workflows use matching `please-*` artifact labels to transfer candidate archives
+and metadata. The four native CLI assets are published for v0.1.0.
 
-Repository self-integration continues to use its pinned published Hannes governor.
-The governor is an installed, previously published binary outside the checkout;
-local candidate builds never govern the source being checked. `.hannes-version`
-is the sole exact release pin, passed explicitly to the public Action on Ubuntu
-and the native installer on macOS. Renovate updates it through GitHub-release
-PRs without automerge. CI never resolves latest.
+Repository self-integration uses an installed, previously published Please Behave
+binary outside the checkout; local candidate builds never govern the source being
+checked. `.please-version` is the sole exact governor pin for local deployment and
+CI on all four platforms. Renovate proposes updates without automerge.
 Pinned installation downloads the exact release's native archive and SHA256SUMS
 directly, without a GitHub Releases API lookup or fallback to latest. Only latest
 discovery uses the API, with optional GITHUB_TOKEN Bearer authentication; asset
@@ -609,7 +606,7 @@ requests carry no token. Missing releases/assets, network/API failures and missi
 malformed or mismatched checksums fail installation and preserve the installed copy.
 Acceptance: `scripts/test_deploy.py` covers direct pinned URLs, optional API
 authentication, safe diagnostics and installation failures with mocked downloads.
-The governor uses the exact published release in .hannes-version. Repository rules use the unversioned,
+The governor uses the exact published release in .please-version. Repository rules use the unversioned,
 self-contained Rule model and fixed Git-hook execution points.
 
 The three Git-backed built-in points serve Git hooks. Normal CI uses one check
@@ -623,7 +620,7 @@ minimum-Rust checks run at pre-push and again in CI. The repository has 15 local
 Checks and one conditional document Review; dependency audits remain at check with advisory access. Agents use Git
 commit/push feedback instead of manually running checks,
 tests, linters or builds. They may read saved reports without rerunning Rules.
-The manual mise check task delegates to published Hannes at pre-push.
+The manual mise check task delegates to published Please Behave at pre-push.
 All three external Rule Set imports pin the same migrated full Git commit.
 Their parameters and execution-point assignments remain unchanged.
 The custom release point selects format, clippy, rust-tests, native-build and
@@ -631,17 +628,17 @@ native-smoke on each release host after version stamping and before packaging.
 It uses the published governor's existing custom-point support. Artifact verification
 is release orchestration: the workflow directly invokes
 scripts/check-release-artifacts.py after download and checksum generation, before
-publication. A failed verification blocks publication. No Hannes artifact point
+publication. A failed verification blocks publication. No artifact execution point
 is configured.
 The commit-msg point additionally imports the conventional-commits set at a full
-Git commit pin. Its scopes_file parameter uses .hannes/commit-scopes.txt, which
+Git commit pin. Its scopes_file parameter uses .please/commit-scopes.txt, which
 must match the scopes in .githooks/commit-policy. The existing local message check
-retains Hannes' narrower type allowlist and stricter summary whitespace policy.
+retains the repository's narrower type allowlist and stricter summary whitespace policy.
 The check and pre-push points also import multi-point/security at a full commit
 pin. Its sensitive-files and secret-scan checks inspect the working tree at check
 and HEAD contents at pre-push, without history. The CI quality job explicitly
 runs check with Python 3 and a checksum-verified Gitleaks binary available. Rules
-and Hannes never install these dependencies automatically. The same points import
+and Please Behave never install these dependencies automatically. The same points import
 repository-conventions at a full Git commit pin. It currently
 contains only the blocking license Rule, with target = "LICENSE". The license
 must match an SPDX reference byte-for-byte: Apache-2.0,
@@ -654,18 +651,18 @@ file trigger matches. Missing tools and errors
 block success. Setup, dependency installation and release publication remain
 outside rule execution.
 
-Hooks are managed by hannes pass auf at Git's effective hook path, including forwarding
+Hooks are managed by please sync at Git's effective hook path, including forwarding
 commit-message arguments and preserving compatible unmanaged content. A setup
 shim only retires this checkout's obsolete .githooks setting when its old event
-files are absent, then delegates to hannes pass auf; custom hook paths are preserved.
+files are absent, then delegates to please sync; custom hook paths are preserved.
 Check subprocesses retain the inherited environment and recursion guard. Local
 Rules use string commands for installed tools and consumer-root Python script
 paths, without per-rule shell or Python launchers. Cargo build/test/Clippy/MSRV
 commands and npm tests explicitly select offline mode. The execution-point wrapper additionally sets Cargo/npm
 offline mode and disables Rustup auto-install for Git-backed invocations.
-CI invokes hannes pass auf --auto-approve once before execution. Execution never repairs
+CI invokes please sync --yes once before execution. Execution never repairs
 hooks noninteractively. Publish installs no governor or managed hooks and runs no
-Hannes checks. It requires successful CI and native build jobs, then verifies the
+governance checks. It requires successful CI and native build jobs, then verifies the
 complete artifact set and checksums through the direct workflow step. The
 publication guard additionally checks the planned version and tested source SHA
 before tagging. Native builds stamp Cargo.toml/Cargo.lock only in their disposable
@@ -822,9 +819,8 @@ directory, execution-point, change-base, hook context, recursion guard and CLI
 provider model variables. Hannes variables are not aliases or fallback inputs.
 Third-party credentials and standard tool variables keep their upstream names.
 The product uses `.please/` and its own cache and managed-hook markers; it never
-loads `.hannes/` or invokes the development governor. The standalone
-`scripts/please-gemini-review.py` adapter consumes `PLEASE_MODEL`; the existing
-`scripts/gemini-review.py` remains exclusive to Hannes development governance.
+loads `.hannes/`. The standalone `scripts/please-gemini-review.py` adapter
+consumes `PLEASE_MODEL` for both product use and repository governance.
 
 Rule and provider IDs reserve `please-`. Generated integrity results use
 `please-plan`, `please-snapshot` and `please-tree-stability`, with report schema 4

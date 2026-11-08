@@ -20,7 +20,7 @@ def git(root, *args, success=True):
 
 class CommitHookTests(unittest.TestCase):
     def test_synthetic_hooks_forward_arguments_and_preserve_git_state(self):
-        with tempfile.TemporaryDirectory(prefix="hannes-commit-hook-") as directory:
+        with tempfile.TemporaryDirectory(prefix="please-commit-hook-") as directory:
             root = Path(directory)
             repository = root / "repository"
             repository.mkdir()
@@ -31,19 +31,19 @@ class CommitHookTests(unittest.TestCase):
             scripts = repository / "scripts"
             scripts.mkdir()
             shutil.copy2(ROOT / "scripts/setup-git-hooks.sh", scripts / "setup-git-hooks.sh")
-            config = repository / ".hannes"
+            config = repository / ".please"
             (config / "checks").mkdir(parents=True)
             (config / "reviews").mkdir()
             (config / "config.toml").write_text('project = "Hook fixture"\nmax_display_files = 5\n')
             (config / "provider.toml").write_text('provider = "codex-cli"\ntimeout_seconds = 30\n')
-            (repository / ".gitignore").write_text(".hannes/reports/\n__pycache__/\n")
+            (repository / ".gitignore").write_text(".please/reports/\n__pycache__/\n")
             (scripts / "fixture-check.py").write_text(
                 "from pathlib import Path\nimport os, sys\n"
                 "point = sys.argv[1]\n"
-                "assert os.environ['HANNES_GIT_HOOK'] == point\n"
+                "assert os.environ['PLEASE_GIT_HOOK'] == point\n"
                 "if point == 'commit-msg':\n"
-                "    assert os.environ['HANNES_GIT_HOOK_ARG_COUNT'] == '1'\n"
-                "    text = Path(os.environ['HANNES_GIT_HOOK_ARG_1']).read_text()\n"
+                "    assert os.environ['PLEASE_GIT_HOOK_ARG_COUNT'] == '1'\n"
+                "    text = Path(os.environ['PLEASE_GIT_HOOK_ARG_1']).read_text()\n"
                 "    sys.exit(1 if text.strip() == 'reject fixture' else 0)\n"
                 "sys.exit(1 if Path('fail-' + point).exists() else 0)\n"
             )
@@ -52,11 +52,11 @@ class CommitHookTests(unittest.TestCase):
                 rule = config / "checks" / point
                 rule.mkdir()
                 (rule / "rule.toml").write_text(f'id = "{point}"\ndescription = "Fixture gate"\nrun_at = ["{point}"]\n[check]\ncommand = {json.dumps(shlex.join(command))}\ntimeout_seconds = 30\n')
-            executable = os.environ.get("HANNES_EXECUTABLE") or shutil.which("hannes")
-            assert executable, "Install the compatible published Hannes governor first"
+            executable = os.environ.get("PLEASE_EXECUTABLE") or shutil.which("please")
+            assert executable, "Install the compatible published Please Behave governor first"
             # Exercise a custom effective hook path.
             git(repository, "config", "core.hooksPath", "custom-hooks")
-            setup = subprocess.run([executable, "pass", "auf", "--auto-approve"], cwd=repository, capture_output=True, text=True)
+            setup = subprocess.run([executable, "sync", "--yes"], cwd=repository, capture_output=True, text=True)
             assert setup.returncode == 0, setup.stderr
             assert git(repository, "config", "--get", "core.hooksPath") == "custom-hooks"
             (repository / "tracked").write_text("unchanged source\n")
@@ -67,7 +67,7 @@ class CommitHookTests(unittest.TestCase):
             assert git(repository, "ls-files", "--stage") == index
             assert (repository / "tracked").read_text() == "unchanged source\n"
             (repository / "fail-pre-commit").unlink()
-            # Wrapper execution must fail closed when Hannes is missing from PATH.
+            # Wrapper execution must fail closed when Please Behave is missing from PATH.
             binaries = root / "git-only"
             binaries.mkdir()
             (binaries / "git").symlink_to(shutil.which("git"))
@@ -99,7 +99,7 @@ class CommitHookTests(unittest.TestCase):
             assert git(root, "--git-dir", str(remote), "rev-parse", "main") == head
             # Setup delegates to the manager and retains a custom effective path.
             before = (repository / "custom-hooks/pre-commit").read_bytes()
-            result = subprocess.run(["sh", str(scripts / "setup-git-hooks.sh"), "--auto-approve"], cwd=repository, capture_output=True, text=True)
+            result = subprocess.run(["sh", str(scripts / "setup-git-hooks.sh"), "--yes"], cwd=repository, capture_output=True, text=True)
             assert result.returncode == 0, result.stderr
             assert git(repository, "config", "--get", "core.hooksPath") == "custom-hooks"
             assert (repository / "custom-hooks/pre-commit").read_bytes() == before
