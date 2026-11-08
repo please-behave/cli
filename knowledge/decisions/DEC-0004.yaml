@@ -1,0 +1,24 @@
+id: DEC-0004
+name: Progressive Governance Enforcement
+context: >-
+  Developers benefit from early feedback, but expensive checks can disrupt
+  local development workflows. Local Git hooks can also be bypassed and
+  therefore cannot provide authoritative evidence that governance was
+  enforced before changes were shared.
+decision: >-
+  Please supports governance at multiple execution points with different
+  verification requirements. Developers can perform lightweight checks
+  during local development, apply stronger verification before publishing
+  changes, and repeat required checks in CI for independently observable
+  enforcement.
+rationale: >-
+  Shifting verification left should not impose unnecessary delays on every
+  local commit. Pre-push is a useful enforcement point because it precedes
+  sharing changes with others. CI provides a more reliable and traceable
+  execution environment, while repository protection rules can make
+  successful verification mandatory. Local and CI governance therefore
+  complement rather than replace each other.
+capabilities:
+  - CAP-0004
+  - CAP-0007
+  - CAP-0015

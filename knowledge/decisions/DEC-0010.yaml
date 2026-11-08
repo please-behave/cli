@@ -1,0 +1,26 @@
+id: DEC-0010
+name: Provider-Agnostic AI Integration
+context: >-
+  AI providers differ in their interfaces, capabilities, configuration
+  options, and response formats. These differences evolve rapidly,
+  making provider-specific application code a source of coupling and
+  maintenance overhead.
+decision: >-
+  Please integrates all AI providers through a uniform, configuration-driven
+  adapter interface. No provider-specific execution or response-handling
+  logic belongs in the Please core. Adapters receive review inputs and
+  configurable provider-specific parameters, perform provider communication,
+  and translate responses into a common result contract. Please remains
+  responsible for orchestration, contract validation, enforcement, and
+  reporting.
+rationale: >-
+  Separating provider integrations from the core allows new providers,
+  models, and capabilities to be introduced without modifying or
+  releasing Please. Provider-specific features such as reasoning levels,
+  tool access, or MCP configuration can be passed through extensible
+  parameters rather than requiring dedicated application code.
+  Organizations remain responsible for selecting and validating models
+  appropriate to their review requirements.
+capabilities:
+  - CAP-0010
+  - CAP-0014

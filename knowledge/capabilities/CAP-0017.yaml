@@ -1,0 +1,4 @@
+id: CAP-0017
+name: Execution Progress Visualization
+description: Please displays rule execution progress through interactive terminal updates or non-interactive logs, including execution states, durations, and overall progress.
+status: implemented

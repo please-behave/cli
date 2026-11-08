@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Decision",
+  "description": "Guiding question: Why was this approach chosen?\n\nA decision records a deliberate choice, the circumstances that motivated it, and the reasoning behind it. Decisions are immutable once recorded. A subsequent decision may supersede an earlier one without modifying the original. Examples include choosing resource-based scheduling over dependency graphs or using Git hooks for local governance.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "name",
+    "context",
+    "decision",
+    "rationale"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^DEC-[0-9]{4}$",
+      "description": "Permanent, unique identifier. IDs must never be reused.",
+      "examples": ["DEC-0001"]
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Short, descriptive name of the decision.",
+      "examples": ["Resource-Based Scheduling"]
+    },
+    "context": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Describes the problem, circumstances, or constraints that motivated the decision."
+    },
+    "decision": {
+      "type": "string",
+      "minLength": 1,
+      "description": "States what was decided, using clear and unambiguous language."
+    },
+    "rationale": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Explains why this approach was chosen, including relevant trade-offs or rejected alternatives."
+    },
+    "capabilities": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^CAP-[0-9]{4}$"
+      },
+      "description": "Capabilities directly affected by this decision."
+    },
+    "requirements": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^REQ-[0-9]{4}$"
+      },
+      "description": "Requirements directly affected by this decision."
+    },
+    "use_cases": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^UC-[0-9]{4}$"
+      },
+      "description": "Use cases directly affected by this decision."
+    },
+    "supersedes": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^DEC-[0-9]{4}$"
+      },
+      "description": "Earlier decisions replaced by this decision. The referenced decisions remain unchanged."
+    }
+  }
+}

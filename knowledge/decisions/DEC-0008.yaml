@@ -1,0 +1,24 @@
+id: DEC-0008
+name: Immutable Imported Rule Definitions
+context: >-
+  External Rule Sets allow organizations to distribute shared governance
+  requirements across multiple repositories. Allowing consuming projects
+  to override imported rule definitions, including their enforcement
+  settings, would undermine consistency and delegate organizational
+  governance decisions to individual teams.
+decision: >-
+  Imported rule definitions are immutable from the perspective of the
+  consuming project. Consumers may configure explicitly supported
+  integration parameters but cannot override rule properties such as
+  blocking behavior. Changes to shared governance requirements must
+  be made at their source.
+rationale: >-
+  Centralized rule ownership ensures that repositories using the same
+  Rule Set receive consistent governance requirements. Systematic
+  problems with shared rules should be resolved organizationally
+  rather than through independent local exceptions. Whether a
+  repository is required to include a particular Rule Set is a
+  separate organizational enforcement concern.
+capabilities:
+  - CAP-0005
+  - CAP-0006

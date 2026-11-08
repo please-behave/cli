@@ -1,0 +1,31 @@
+id: DEC-0011
+name: Adapter-Controlled Review Execution
+context: >-
+  AI reviews may range from simple single-request evaluations to
+  complex agentic workflows that independently explore repository
+  contents, invoke tools, and perform multiple model interactions.
+  Different providers offer different capabilities and permission
+  models. Restricting their execution to a fixed interaction pattern
+  would unnecessarily limit the usefulness of AI-based governance.
+decision: >-
+  Please determines when an AI review is triggered, prepares its
+  initial context, and delegates execution to the configured provider
+  adapter. Adapters independently control their internal execution,
+  including agentic loops, additional repository exploration, tool
+  usage, and execution permissions. Please does not restrict adapter
+  access to the initially selected context or impose provider-specific
+  execution policies. Provider-specific behavior and permissions can
+  be configured through extensible adapter parameters. All adapters
+  must return results through the common review contract.
+rationale: >-
+  Keeping execution control within adapters allows Please to support
+  both simple model requests and sophisticated agentic workflows
+  without introducing provider-specific logic or permission models
+  into the core. Review authors and organizations retain control
+  over provider capabilities and operational constraints through
+  adapter configuration. Please remains responsible for orchestration,
+  result validation, enforcement, and reporting rather than managing
+  the internal behavior of AI providers.
+capabilities:
+  - CAP-0010
+  - CAP-0014

@@ -1,0 +1,4 @@
+id: CAP-0009
+name: Parallel Check Execution
+description: Please executes independent checks concurrently with configurable concurrency limits and exclusive resource coordination.
+status: implemented

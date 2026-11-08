@@ -1,0 +1,22 @@
+id: DEC-0003
+name: Event-Based Governance
+context: >-
+  Governance can be enforced continuously, through periodic repository
+  scans, or at specific stages of software development. Continuous
+  monitoring of developer machines introduces unnecessary intrusion and
+  potential privacy concerns, while retrospective scans detect violations
+  only after changes have already been introduced.
+decision: >-
+  Please evaluates governance rules at explicitly defined execution points
+  in the development and delivery lifecycle rather than continuously
+  monitoring developer machines or running as a permanent surveillance
+  service.
+rationale: >-
+  Governance should intervene where developers can still prevent violations
+  from propagating. Integration with existing development events, including
+  Git operations and CI workflows, enables early enforcement without
+  requiring continuous monitoring. Runtime security monitoring is outside
+  the intended scope of Please.
+capabilities:
+  - CAP-0007
+  - CAP-0015

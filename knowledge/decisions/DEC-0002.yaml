@@ -1,0 +1,19 @@
+id: DEC-0002
+name: Unified Governance Model
+context: >-
+  Software properties can be verified through deterministic checks or
+  AI-based reviews. Both serve the same purpose: determining whether
+  defined expectations are satisfied.
+decision: >-
+  Please treats deterministic checks and AI-based reviews as complementary
+  mechanisms within a unified governance model. Both participate in rule
+  selection, execution, and result reporting.
+rationale: >-
+  Governance should focus on what must be verified and enforced, not on
+  whether verification is deterministic. Separating governance into
+  independent systems based on verification technology would introduce an
+  artificial distinction for users.
+capabilities:
+  - CAP-0003
+  - CAP-0008
+  - CAP-0010

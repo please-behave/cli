@@ -1,0 +1,20 @@
+id: DEC-0005
+name: Declarative TOML Configuration
+context: >-
+  Please requires configuration files that developers can comfortably read,
+  review, and edit by hand. JSON introduces considerable syntactic overhead,
+  while YAML relies on indentation to express structure and can become
+  difficult to navigate with deeply nested collections.
+decision: >-
+  Please uses TOML for its user-facing project and rule configuration.
+  This choice does not prescribe TOML for unrelated structured documents.
+rationale: >-
+  TOML provides a compact, readable representation without indentation-based
+  structure. It offers a practical balance between the verbosity of JSON
+  and the structural flexibility of YAML, particularly for relatively small
+  configuration files. YAML remains appropriate where its characteristics
+  are advantageous, such as the project's knowledge documents.
+capabilities:
+  - CAP-0001
+  - CAP-0002
+  - CAP-0003

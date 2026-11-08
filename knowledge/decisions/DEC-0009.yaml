@@ -1,0 +1,25 @@
+id: DEC-0009
+name: Standalone Governance Execution
+context: >-
+  A future centralized governance platform may collect execution
+  reports, provide organization-wide visibility, and evaluate
+  repository compliance. However, these capabilities are not
+  prerequisites for executing governance rules within individual
+  projects.
+decision: >-
+  Please CLI must remain fully functional without a centralized
+  governance platform. Local configuration, rule execution, and
+  result reporting must not depend on the availability or existence
+  of a central service. Future platform integrations must preserve
+  this standalone capability.
+rationale: >-
+  Independent execution keeps governance accessible to individual
+  developers, open-source projects, and organizations without central
+  infrastructure. It also avoids introducing an unnecessary external
+  dependency into local development and CI workflows. Centralized
+  visibility and organizational enforcement can be added separately
+  without changing the fundamental execution model.
+capabilities:
+  - CAP-0008
+  - CAP-0010
+  - CAP-0016

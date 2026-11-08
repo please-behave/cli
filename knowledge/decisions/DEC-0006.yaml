@@ -1,0 +1,21 @@
+id: DEC-0006
+name: Mandatory Deterministic Checks
+context: >-
+  Deterministic checks operate in environments whose dependencies and
+  execution conditions can largely be controlled and reproduced.
+  Although infrastructure failures and flaky checks can occur, these
+  are considered manageable engineering problems rather than reasons
+  to weaken governance enforcement.
+decision: >-
+  Deterministic checks are always blocking. Both failed checks and
+  execution errors prevent successful governance execution.
+  Non-blocking deterministic checks are not supported.
+rationale: >-
+  Deterministic checks provide sufficiently reliable verification to
+  justify mandatory enforcement. Failures should be investigated,
+  corrected, or retried rather than silently accepted. Exceptional
+  situations requiring immediate action should be handled through
+  explicitly authorized processes outside Please, such as emergency
+  deployment workflows.
+capabilities:
+  - CAP-0008

@@ -1,0 +1,27 @@
+id: DEC-0007
+name: Configurable AI Review Enforcement
+context: >-
+  AI-based reviews depend on providers and models whose availability,
+  behavior, and evaluation quality may change independently of the
+  consuming project. Provider outages, usage limits, model changes,
+  and inconsistent assessments can make mandatory enforcement
+  operationally disruptive.
+decision: >-
+  AI reviews support configurable blocking behavior. When blocking
+  is enabled, both negative assessments and execution errors prevent
+  successful governance execution. When blocking is disabled, neither
+  negative assessments nor execution errors prevent execution from
+  proceeding. All outcomes remain recorded regardless of blocking
+  configuration.
+rationale: >-
+  Organizations must be able to balance governance requirements
+  against the operational reliability of AI-based verification.
+  Non-blocking reviews preserve visibility into compliance without
+  making software delivery dependent on potentially unstable external
+  services or changing model behavior. Review outcomes and enforcement
+  consequences remain separate so that reporting can distinguish
+  successful verification, detected violations, and unsuccessful
+  evaluations.
+capabilities:
+  - CAP-0010
+  - CAP-0016

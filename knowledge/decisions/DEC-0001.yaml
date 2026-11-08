@@ -1,0 +1,17 @@
+id: DEC-0001
+name: Resource-Based Scheduling
+context: >-
+  Please executes checks concurrently to reduce execution time. Some checks
+  compete for shared resources, such as build directories, and therefore
+  cannot safely execute at the same time.
+decision: >-
+  Checks may declare an optional exclusive resource. Checks sharing the same
+  resource must not execute concurrently within a single invocation. Please
+  does not model dependencies between checks.
+rationale: >-
+  Resource-based coordination addresses conflicts between independent checks
+  without introducing the complexity of a dependency graph. Checks remain
+  independent, and scheduling does not require knowledge of specific build
+  tools.
+capabilities:
+  - CAP-0009
