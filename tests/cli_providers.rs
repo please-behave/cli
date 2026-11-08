@@ -472,3 +472,54 @@ fn init_has_no_provider_and_selected_reviews_require_explicit_configuration() {
             .executable()
     );
 }
+
+#[test]
+fn documented_dummy_runs_from_supporting_adapter_directory() {
+    let root = fixture();
+    write(
+        root.path(),
+        ".please/providers/adapters/dummy.py",
+        include_str!("../examples/adapters/dummy.py"),
+    );
+    // This supporting file must never be recursively interpreted as a provider.
+    write(
+        root.path(),
+        ".please/providers/adapters/data.toml",
+        "not a provider definition",
+    );
+    write(
+        root.path(),
+        ".please/providers/dummy.toml",
+        "command = 'python3'\nargs = ['.please/providers/adapters/dummy.py']\ntimeout_seconds = 5\n",
+    );
+    review(root.path(), "a", "dummy", "check");
+    let result = execute(root.path());
+    assert_eq!(result.overall, Status::Error);
+    assert_eq!(
+        result.results[0].reason,
+        "Dummy adapter performs no AI assessment"
+    );
+    assert!(result.results[0].findings.is_empty());
+}
+
+#[test]
+fn unknown_named_references_are_rejected_even_for_disabled_reviews() {
+    let root = fixture();
+    review(root.path(), "a", "missing", "check");
+    let path = root.path().join(".please/reviews/a/rule.toml");
+    for disabled in [false, true] {
+        if disabled {
+            let text = fs::read_to_string(&path).unwrap();
+            fs::write(
+                &path,
+                text.replace("description =", "enabled = false\ndescription ="),
+            )
+            .unwrap();
+        }
+        let error = format!("{:#}", config::load(root.path()).unwrap_err());
+        assert!(
+            error.contains("unknown provider") && error.contains("missing"),
+            "{error}"
+        );
+    }
+}

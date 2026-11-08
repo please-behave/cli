@@ -822,7 +822,8 @@ Public documentation explains supported behavior; proposals remain in the roadma
 ## Runtime namespace isolation
 
 Product-owned runtime variables use `PLEASE_*`, including parameter, Rule
-directory, execution-point, change-base, hook context, recursion guard and adapter context. Hannes variables are not aliases or fallback inputs.
+directory, execution-point, change-base, hook context and recursion guard.
+Hannes variables are not aliases or fallback inputs.
 Third-party credentials and standard tool variables keep their upstream names.
 The product uses `.please/` and its own cache and managed-hook markers; it never
 loads `.hannes/`. Repository-owned adapters live under `.please/adapters/` and belong

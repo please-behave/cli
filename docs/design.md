@@ -141,6 +141,24 @@ model settings and provider response translation. The core supervises processes
 and validates verdict coverage, evidence paths, line ranges and input stability.
 No provider implementation or default is supplied.
 
+The provider trait returns a raw final document so tests can inject successful,
+failed or malformed responses without real credentials. Schema-shaped serde types
+reject unknown fields, wrong types, invalid statuses and duplicate object keys.
+Semantic checks require exact requested ID coverage, one verdict each, nonempty
+reasons, at most 20 findings per review and real in-manifest file/line references
+for substantive PASS/FAIL. Any invalid combined document makes every review in that batch
+ERROR, even if another verdict looked valid. ERROR can express model uncertainty.
+Grounded references are necessary, not proof of accurate conclusions.
+
+Parameter declarations live in the existing Rule schema. Loaded Rules carry a
+binding of those declarations and import-local values. The shared `parameters`
+module resolves and validates only active Rules, and configures child environments.
+The planner counts distinct valid pairs of provider reference and review environment;
+execution groups Reviews by that pair and reuses the prepared context. Inherited parameter variables
+are removed before applying values. No global environment mutations occur.
+Missing check entrypoints and review prompts are retained for per-rule ERROR
+results; disabled Rules need neither implementation nor parameter resolution.
+
 ## External source boundaries
 
 `external` supplies each import binding to the existing discovery/validation flow.
@@ -182,8 +200,16 @@ live in `providers/` inside the selected set directory. Scope-local rule validat
 runs first. Provider definitions merge globally, rejecting collisions except for
 repeated references to the same repository/commit/file. Review references resolve
 after merging all explicit imports, before publishing resolution state. No source
-files are rewritten. The legacy project provider remains separate and is selected
+files are rewritten. The explicit project default remains separate and is selected
 only when a review omits its reference. All invocations use the same executable
 adapter boundary, with matching provider references, Rule parameter environments
 and diff selections batched together. Each review carries independently merged
 adapter settings. See the [adapter protocol](adapter-protocol.md).
+
+File-change triggers filter enabled, point-selected Reviews inside the existing
+planner before preparing input or counting provider groups. `git_snapshot::changed_paths`
+resolves an explicit `PLEASE_CHANGE_BASE` and uses bounded NUL Git output for a
+net commit-to-worktree comparison, including untracked configuration. The baseline
+commit and omission decisions enter plan identity. No history inference, fetch,
+provider-specific CI resolution or additional scheduler is involved. Omitted reviews
+are excluded from required IDs/results; reports retain their omission metadata.
