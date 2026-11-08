@@ -18,7 +18,7 @@ please --version
 `init` creates `.please/` (lowercase) only when it does not exist. Any existing
 entry, including an empty directory, file or symlink, fails with exit code 2 and
 `Please Behave: ERROR: Already initialized (.please/ exists).` before any writes.
-Success prints `Initialized .please/ (10 files created).` to stdout, using the
+Success prints `Initialized .please/ (9 files created).` to stdout, using the
 actual created file count. It never installs hooks, stages files or commits.
 The enabled example uses `git --version`
 and passes without an adapter. The deliberately failing check and example review are

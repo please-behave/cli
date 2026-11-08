@@ -175,7 +175,7 @@ a disabled example review. It requires `.please/` to be absent. Any existing
 entry, including an empty directory, file or symlink, fails with exit code 2
 before any files or directories are created or modified:
 `Please Behave: ERROR: Already initialized (.please/ exists).`
-On success it prints `Initialized .please/ (10 files created).`, using the actual
+On success it prints `Initialized .please/ (9 files created).`, using the actual
 created file count. It does not install hooks or make a Git commit.
 
 `sync` validates configuration and reconciles declared external state after

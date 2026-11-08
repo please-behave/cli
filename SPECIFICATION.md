@@ -471,7 +471,8 @@ Finding path and line keys are required but nullable. PASS/FAIL require at least
 one existing in-manifest file and positive, in-range line reference. Grounded
 references do not prove an LLM conclusion correct. Invalid types, unknown/duplicate
 keys, malformed/missing/duplicate results and incomplete coverage make the batch
-ERROR. The final document is limited to 1 MiB.
+ERROR. Adapter stdout, including the envelope, is limited to 64 KiB. The shared
+verdict validator additionally retains its 1 MiB document bound.
 
 Provider schema, wire types and local validation share one response contract and
 limits. The schema constrains requested IDs/count, verdicts, summary length/line
@@ -481,8 +482,8 @@ compatibility errors are ERROR; constraints are never silently weakened.
 
 Available token counters are summed across parameter batches, retaining unknown
 counters as unavailable, including when the verdict is rejected. Total is input plus output; cached input, reasoning output
-and cache writes are subsets. Missing/invalid telemetry remains unavailable,
-never fabricated as zero. No monetary estimate or total token budget is enforced.
+and cache writes are subsets. Missing telemetry remains unavailable, never fabricated as zero; invalid adapter
+counters invalidate the response. No monetary estimate or total token budget is enforced.
 
 ## INP-001: Snapshots and stability
 

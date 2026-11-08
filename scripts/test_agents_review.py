@@ -1,4 +1,4 @@
-"""Offline tests for the CLI provider adapter and CI change-base helper."""
+"""Offline tests for the CI change-base helper."""
 import importlib.util
 from pathlib import Path
 import subprocess

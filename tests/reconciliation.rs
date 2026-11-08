@@ -141,8 +141,8 @@ fn obsolete_hooks_are_rejected_and_provider_validation_is_preserved() {
     let original = fs::read_to_string(&provider).unwrap();
     for bad in [
         format!("{original}unsupported = true\n"),
-        original.replace("180", "0"),
-        original.replace("medium", "unsupported"),
+        original.replace("180", "3601"),
+        original.replace("fake-adapter", ""),
     ] {
         fs::write(&provider, bad).unwrap();
         assert_eq!(cli(root.path(), &["sync"]).status.code(), Some(2));

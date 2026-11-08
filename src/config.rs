@@ -181,7 +181,11 @@ pub struct CheckDefinition {
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct ReviewDefinition {
-    #[serde(default, deserialize_with = "adapter_parameters")]
+    #[serde(
+        default,
+        deserialize_with = "adapter_parameters",
+        skip_serializing_if = "BTreeMap::is_empty"
+    )]
     pub parameters: BTreeMap<String, serde_json::Value>,
     #[serde(default = "default_true")]
     pub include_diff: bool,

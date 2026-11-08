@@ -687,7 +687,7 @@ fn external_invalid_roots_import_overrides_and_scope_references_fail() {
 fn initialization_is_one_time() {
     let d = tempfile::tempdir().unwrap();
     git(d.path(), &["init", "--quiet"]);
-    assert_eq!(config::init(d.path()).unwrap(), 10);
+    assert_eq!(config::init(d.path()).unwrap(), 9);
     config::load(d.path()).unwrap();
     assert!(
         !fs::read_to_string(d.path().join(".please/config.toml"))

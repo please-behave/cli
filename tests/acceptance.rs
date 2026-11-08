@@ -126,7 +126,7 @@ fn json_plan_errors_use_current_schema_and_blocking_reasons() {
         );
         assert!(document.get("errors").is_none());
         if document.get("input").is_some() {
-            let mut plan: please::planner::Plan = serde_json::from_value(document.clone()).unwrap();
+            let plan: please::planner::Plan = serde_json::from_value(document.clone()).unwrap();
             let human_args: Vec<_> = args
                 .iter()
                 .copied()
