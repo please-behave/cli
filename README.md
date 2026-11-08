@@ -317,11 +317,10 @@ The public Please Behave Action is maintained separately in
 usage, inputs and supported platforms. It installs an explicitly selected CLI
 release, verifies its archive checksum and optionally runs `please run --at` in
 the consumer checkout. The Action revision and CLI release version are independent.
-No Please Behave Action release is claimed here; a usable Action ref and matching
-CLI release assets must exist before adopting it.
-
-The CLI repository installs the pinned published CLI directly with its
-checksum-verifying installer in CI; adoption of a released Action remains pending.
+The CLI repository uses Action v1.0.0 pinned to
+`00f52401b8272b530fde5f7b6af7f65a1157dbc2` in Ubuntu workflows. It reads the CLI
+version from `.please-version` and uses installation-only mode, preserving explicit
+synchronization and governance execution.
 See [repository self-integration](docs/self-governance.md#ci-pinning-and-renovate).
 
 Assign enabled Rules to `pre-commit`, `commit-msg` or `pre-push`. Please Behave derives

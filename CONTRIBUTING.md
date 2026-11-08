@@ -86,9 +86,9 @@ sh scripts/setup-git-hooks.sh
 The Please Behave governor manages the three hooks through `please sync` and
 corresponding execution points. Pre-commit checks formatting and documentation; commit-msg checks the final message before Git
 creates or amends a commit; pre-push runs the complete local suite. The shared
-message checker reads `.githooks/commit-policy` and never calls a hook. The setup shim retires only the obsolete local `.githooks` setting when its
-event files are absent, then delegates to `please sync`. Other custom hook
-paths remain configured; Please Behave preserves compatible unmanaged hook content. Each clone needs setup;
+message checker reads `.githooks/commit-policy` and never calls a hook. The setup
+shim delegates to `please sync` without changing `core.hooksPath`. Please Behave
+preserves compatible unmanaged hook content. Each clone needs setup;
 Git's `--no-verify` can bypass a local hook; agents must never bypass validation.
 Work on `main`. If a commit hook fails, fix the reported issue and retry the
 commit. If pre-push fails, fix the issue, amend your own unpublished commit when

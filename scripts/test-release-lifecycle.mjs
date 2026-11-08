@@ -1,4 +1,4 @@
-// Exercise initial GitHub publication and subsequent semantic releases offline.
+// Exercise semantic release planning and publication offline.
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { chmodSync, copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -9,7 +9,6 @@ import { Writable } from "node:stream";
 import semanticRelease from "semantic-release";
 import config from "../release.config.mjs";
 import { verifyRelease } from "./semantic-release-plugin.mjs";
-import { isInitialRelease, publishInitialRelease, verifyInitialSource } from "./initial-release.mjs";
 
 const require = createRequire(import.meta.url);
 const source = resolve(import.meta.dirname, "..");
@@ -62,27 +61,9 @@ for target in targets:
 (dist/'SHA256SUMS').write_text(''.join(f'{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}\\n' for p in sorted(dist.glob('*.tar.gz'))))
 `], { cwd, env });
     }
-    archives("0.1.0");
+    git("tag", "v0.1.0");
+    git("push", "origin", "v0.1.0");
     const verifyArtifacts = () => execFileSync("python3", ["scripts/check-release-artifacts.py"], { cwd, env });
-    verifyArtifacts();
-    const initialContext = { cwd, env, options: { repositoryUrl: "https://github.com/fixture/please.git" } };
-    assert.equal(isInitialRelease(initialContext), true);
-    // Bootstrap must accept the actual source, without first repairing its version.
-    verifyInitialSource(initialContext);
-    let publications = 0;
-    const initial = await publishInitialRelease(initialContext, (command, args) => {
-      publications++;
-      assert.equal(command, "gh");
-      assert.deepEqual(args.slice(0, 5), ["release", "create", "v0.1.0", "--target", env.GITHUB_SHA]);
-      assert.equal(args.filter(arg => arg.endsWith(".tar.gz")).length, 4);
-      assert.ok(readFileSync(args[args.indexOf("--notes-file") + 1], "utf8").includes("initialize fixture"));
-      git("--git-dir", remote, "tag", "v0.1.0", env.GITHUB_SHA); // Fake GitHub's tag creation.
-    });
-    assert.equal(initial.version, "0.1.0"); assert.equal(publications, 1);
-    assert.equal(git("tag"), ""); assert.equal(git("rev-parse", "HEAD"), env.GITHUB_SHA);
-    git("fetch", "origin", "--tags");
-    assert.equal(isInitialRelease(initialContext), false);
-    await assert.rejects(publishInitialRelease(initialContext), /existing semantic release tag/);
     git("commit", "--allow-empty", "-m", "fix: improve fixture"); git("push", "origin", "main");
     env.GITHUB_SHA = git("rev-parse", "HEAD"); archives("0.1.1");
     const notesPlugin = join(temporary, "notes.mjs");
@@ -134,4 +115,4 @@ for target in targets:
   } finally { rmSync(temporary, { recursive: true, force: true }); }
 }
 await testLifecycle();
-console.log("Release lifecycle passed: initial 0.1.0 GitHub publication, inert preview, patch 0.1.1 and breaking 0.2.0.");
+console.log("Release lifecycle passed: inert preview, patch 0.1.1 and breaking 0.2.0.");

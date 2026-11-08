@@ -453,7 +453,7 @@ fn validation_does_not_execute_checks_or_provider() {
         } else {
             r#"entrypoint = "index.sh""#
         },
-        r#"command = "nonexistent-command-hannes""#,
+        r#"command = "nonexistent-command-please""#,
     );
     assert!(config::load(d.path()).is_ok());
     assert_eq!(cli(d.path(), &["sync", "--yes"]).status.code(), Some(0));
@@ -513,7 +513,7 @@ fn spawn_error_writes_blocking_error_report() {
         } else {
             r#"entrypoint = "index.sh""#
         },
-        r#"command = "nonexistent-command-hannes""#,
+        r#"command = "nonexistent-command-please""#,
     );
     let r = please::verify(d.path(), &Never).unwrap();
     assert_eq!(r.overall, Status::Error);

@@ -76,21 +76,17 @@ breaking changes increment the minor version; fixes and maintenance increment
 patch. Moving to `1.0.0` requires an explicit change to the development-series
 policy in release.config.mjs, not merely a breaking commit.
 
-Semantic Release's built-in first version is 1.0.0. Therefore, when no semantic
-release tag exists, this workflow publishes the initial 0.1.0 through GitHub CLI,
-after the same native quality/artifact gates. Source Cargo versions must already
-be 0.1.0, and the release/tag targets the exact tested source SHA. From that tag
-onward Semantic Release calculates versions and handles publication normally.
-If no release-worthy commits exist after a release, the workflow exits without
-building or publishing. The initial path uses all history for release notes and
-does not create a separate version commit.
-Node 24.15+ (24.x) and `npm ci --ignore-scripts` are needed only for release tooling,
-not to build or run Please Behave. Dependencies are locked in `package-lock.json`.
+The published v0.1.0 tag establishes the release history. Semantic Release
+calculates subsequent versions and handles publication. If no release-worthy
+commits exist after a release, the workflow exits without building or publishing.
+The Node version range in [package.json](../package.json) and
+`npm ci --ignore-scripts` are needed only for release tooling, not to build or run
+Please Behave. Dependencies are locked in `package-lock.json`.
 
 ## Release sequence
 
-1. Planning on main selects initial 0.1.0 if no semantic tag exists; otherwise a
-   Semantic Release dry run calculates the proposed version. Prepare/publish plugins do
+1. Planning on main uses a Semantic Release dry run to calculate the proposed
+   version from the existing release tags. Prepare/publish plugins do
    not run; no tag, commit or release is created at this stage.
 2. Release checks retain independent tooling, minimum Rust, dependency audits,
    security and license gates. Python integration tests use the published governor
@@ -108,8 +104,7 @@ not to build or run Please Behave. Dependencies are locked in `package-lock.json
    version and that local/remote main still match the tested source before any
    release tag is created. Publish installs no Please Behave, managed
    Git hooks, Rust, Go, actionlint or Gitleaks and runs no governance checks.
-5. For the initial release, GitHub CLI publishes v0.1.0 at the tested source SHA.
-   For subsequent releases, Semantic Release calculates the version again, checks
+5. Semantic Release calculates the version again, checks
    it against the plan, generates notes, tags the tested source SHA, pushes the tag
    and Git notes, and publishes archives, checksums, README and LICENSE to GitHub
    Releases. Nothing is published to npm or crates.io. Issue/PR comments and release
@@ -136,8 +131,9 @@ without building or publishing again. Partial publication still needs inspection
 
 Published v0.1.0 provides the four native archives and `SHA256SUMS`. Build jobs
 transfer candidate archives and metadata using matching `please-*` artifact labels.
-The [Action repository](https://github.com/please-behave/action) has no released
-Action ref yet; CLI governance uses the pinned, checksum-verifying installer.
+Ubuntu CI installs the governor through [Action v1.0.0](https://github.com/please-behave/action/releases/tag/v1.0.0),
+pinned to `00f52401b8272b530fde5f7b6af7f65a1157dbc2`. The CLI version comes
+from `.please-version`; installation-only mode preserves explicit governance execution.
 
 | Platform | Rust target | Archive |
 | --- | --- | --- |

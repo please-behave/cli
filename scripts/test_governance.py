@@ -34,11 +34,10 @@ class GovernanceTests(unittest.TestCase):
         self.assertEqual(rule["matchDatasources"], ["github-releases"])
         self.assertIn("config:best-practices", config["extends"])
 
-    def test_setup_shim_preserves_custom_paths_and_retires_only_empty_legacy_path(self):
+    def test_setup_shim_delegates_sync_and_preserves_custom_paths(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             subprocess.run(["git", "init", "--quiet", str(root)], check=True)
-            (root / ".githooks").mkdir()
             fake = root / "governor"
             fake.write_text("#!/bin/sh\nprintf '%s\\n' \"$@\"\n")
             fake.chmod(0o755)
@@ -52,14 +51,6 @@ class GovernanceTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(result.stdout.splitlines(), ["sync", "--yes"])
             self.assertEqual(subprocess.check_output(["git", "config", "--get", "core.hooksPath"], cwd=root, text=True).strip(), "custom-hooks")
-            configure(".githooks")
-            custom = root / ".githooks/pre-commit"
-            custom.write_text("custom content")
-            self.assertNotEqual(setup().returncode, 0)
-            self.assertEqual(custom.read_text(), "custom content")
-            custom.unlink()
-            self.assertEqual(setup().returncode, 0)
-            self.assertNotEqual(subprocess.run(["git", "config", "--local", "--get", "core.hooksPath"], cwd=root, capture_output=True).returncode, 0)
 
     def test_execution_rejects_missing_or_candidate_governors(self):
         with patch.dict(os.environ, PLEASE_EXECUTABLE="/nonexistent/please"):

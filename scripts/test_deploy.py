@@ -5,7 +5,6 @@ import io
 import json
 import os
 from pathlib import Path
-import runpy
 import tarfile
 import tempfile
 import unittest
@@ -19,20 +18,6 @@ spec.loader.exec_module(deploy)
 
 
 class DeployTests(unittest.TestCase):
-    def test_governor_consumes_exact_pin_and_exports_verified_install(self):
-        script = Path(__file__).with_name("install-governor.py")
-        with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
-            destination = root / "please-governor/bin/please"
-            for name in ("GITHUB_ENV", "GITHUB_PATH"):
-                (root / name).touch()
-            environment = {"RUNNER_TEMP": temporary, "GITHUB_ENV": str(root / "GITHUB_ENV"), "GITHUB_PATH": str(root / "GITHUB_PATH")}
-            with patch.dict(os.environ, environment), patch.dict("sys.modules", deploy=deploy), patch.object(Path, "read_text", return_value="v1.2.3\n"), patch.object(deploy, "deploy", return_value=destination) as install:
-                runpy.run_path(str(script))
-                install.assert_called_once_with(tag="v1.2.3", prefix=root / "please-governor")
-            self.assertEqual((root / "GITHUB_ENV").read_text(), f"PLEASE_EXECUTABLE={destination.resolve()}\n")
-            self.assertEqual((root / "GITHUB_PATH").read_text(), f"{destination.parent.resolve()}\n")
-
     def test_platforms(self):
         for system, machine, target in [
             ("Darwin", "arm64", "aarch64-apple-darwin"),

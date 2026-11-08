@@ -29,17 +29,17 @@ verification = load("verify-release")
 
 
 class ReleaseTests(unittest.TestCase):
-    def test_initial_package_metadata_matches_bootstrap(self):
+    def test_package_metadata_matches_lockfile(self):
         root = SCRIPTS.parent
         package = tomllib.loads((root / "Cargo.toml").read_text())["package"]
-        self.assertEqual((package["name"], package["version"]), ("please", "0.1.0"))
+        self.assertEqual(package["name"], "please")
         locked = [entry for entry in tomllib.loads((root / "Cargo.lock").read_text())["package"]
                   if entry["name"] == "please" and "source" not in entry]
         self.assertEqual(len(locked), 1)
         self.assertEqual(locked[0]["version"], package["version"])
 
     @unittest.skipUnless(os.name == "posix", "Native release targets are Unix")
-    def test_packager_produces_the_verified_initial_archive_contract(self):
+    def test_packager_produces_the_verified_archive_contract(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             for filename in ("Cargo.toml", "README.md", "LICENSE"):
@@ -165,13 +165,13 @@ class ReleaseTests(unittest.TestCase):
                 verification.verify("1.2.3", "a" * 40, dist)
 
     def test_native_matrix_and_archive_contract_cover_the_same_platforms(self):
-        workflow = (SCRIPTS.parent / ".github/workflows/quality.yml").read_text()
+        workflow = (SCRIPTS.parent / ".github/workflows/release.yml").read_text()
         release = [dict(os=os_name, target=target) for os_name, target in
                    re.findall(r"- \{os: ([^,]+), target: ([^}]+)\}", workflow)]
         self.assertEqual({entry["target"] for entry in release}, set(verification.TARGETS))
         self.assertEqual(len(release), len(verification.TARGETS))
         self.assertIn(dict(os="ubuntu-24.04-arm", target="aarch64-unknown-linux-gnu"), release)
-        ci = (SCRIPTS.parent / ".github/workflows/ci.yml").read_text().split("  action-consumer:")[0]
+        ci = (SCRIPTS.parent / ".github/workflows/ci.yml").read_text()
         self.assertNotIn("matrix:", ci)
         self.assertIn("BUILD_TARGET: x86_64-unknown-linux-gnu", ci)
 

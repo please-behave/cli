@@ -193,40 +193,20 @@ future work.
 ## CI, pinning and Renovate
 
 [.please-version](../.please-version) pins the separately installed governor to
-v0.1.0. Local `mise deploy` and CI use the checksum-verifying
-[scripts/deploy.py](../scripts/deploy.py) installer; CI exports its absolute path
-and PATH through [scripts/install-governor.py](../scripts/install-governor.py).
-Renovate proposes version-pin updates without automerging them.
+v0.1.0. Local `mise deploy` uses the checksum-verifying
+[scripts/deploy.py](../scripts/deploy.py) installer. Ubuntu workflows use
+[Please Behave Action v1.0.0](https://github.com/please-behave/action/releases/tag/v1.0.0),
+pinned to `00f52401b8272b530fde5f7b6af7f65a1157dbc2`, with the version read
+from `.please-version` and `run: 'false'`. The Action adds the installed release
+to PATH. Renovate proposes CLI version-pin and Action SHA updates without
+automerging governor version changes.
 
 The [CI workflow](../.github/workflows/ci.yml) prepares dependencies, installs the
 released governor, runs `please sync --yes`, establishes PLEASE_CHANGE_BASE and
 runs all 17 deterministic checks followed by applicable reviews at `check`.
 Reports and execution metadata are uploaded from `.please/reports/`; the review
 summary reads the same report. Provider failures remain errors.
-The [native build workflow](../.github/workflows/quality.yml) uses the same installer
-on all four platforms and runs the `release` point before packaging.
-The [release workflow](../.github/workflows/release.yml) retains its independent
-quality gates, source/version guards and artifact verification, and installs the
-released governor for Python integration tests. Publishing remains explicit.
-
-The Please Behave Action repository has no published release or tag at migration
-time. No unverified Action ref is used. Adopting a released Action and restoring
-public Action consumer checks remain follow-up work in the Action repository;
-the released CLI supplies governance in CI today.
-
-## Migration from Hannes
-
-The former `.hannes/` rules were migrated to `.please/` without changing point
-membership, blocking policy or timeouts. Runtime variables now use `PLEASE_*`.
-The existing product Gemini adapter replaces the duplicate governor adapter.
-All three imports pin the same Please Behave-compatible ruleset commit; no local
-copies replace external rules. Legacy consumers can retain the previous ruleset
-commit `86c1a09519de6e848e6f8a0110427ca8d136dd1c`.
-
-Before installing new hooks, the three installed wrappers were inspected: each
-contained only its Hannes-managed shell block, with no unmanaged content.
-`core.hooksPath` was unset. Those obsolete wrappers were removed, then the
-released `please sync --yes` installed its own wrappers. Sample hooks were kept.
-Other clones must inspect legacy hooks before retiring them; the setup shim does
-not delete arbitrary hooks. Fresh configuration was initialized using `please init`
-before the existing rules replaced its examples.
+The [release workflow](../.github/workflows/release.yml) retains independent
+quality gates, source/version guards and artifact verification. Its Ubuntu checks
+job uses the Action to install the governor for Python integration tests. Native
+builds verify candidates directly on all four platforms. Publishing remains explicit.

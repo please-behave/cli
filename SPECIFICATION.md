@@ -557,11 +557,11 @@ An executable plan exits 0; a blocked/invalid plan exits 2.
 The public GitHub Action is maintained independently in
 [please-behave/action](https://github.com/please-behave/action). Its repository
 owns the Action implementation, inputs, supported runners and acceptance tests.
-The Action revision and selected CLI release are independent. A usable Action
-ref and compatible Please Behave release assets must exist before adoption;
-CLI v0.1.0 is published; no Action release is claimed here.
-The CLI repository uses its checksum-verifying installer for released CLI
-governance; adopting a released Action remains pending.
+The Action revision and selected CLI release are independent. Ubuntu CI uses
+Action v1.0.0 pinned to `00f52401b8272b530fde5f7b6af7f65a1157dbc2`, with
+installation-only mode and the CLI version read from `.please-version`.
+Synchronization and governance execution remain explicit subsequent steps.
+The Action supports Ubuntu runners; native release builds retain their independent gates.
 
 Supported hosted CI/release targets are macOS Apple Silicon, macOS Intel and
 Linux x64 and ARM64 (GNU/glibc); Windows builds/releases are excluded. Linux ARM64
@@ -581,9 +581,9 @@ incompatible binaries fail with an actionable error and preserve the installed b
 Push/PR CI runs the Linux x64 native gates; release runs all four native hosts.
 CI runs formatting, Clippy, offline unit/acceptance tests, native smoke tests,
 minimum-Rust checks, dependency audits and release-tooling/workflow checks.
-Releases are manually dispatched on main and retain independent quality gates. The
-initial release is 0.1.0, published through GitHub CLI only after artifact/source
-verification; subsequent releases use Semantic Release. During 0.x, breaking
+Releases are manually dispatched on main and retain independent quality gates.
+Semantic Release plans versions from the existing release tags and publishes only
+after artifact/source verification. During 0.x, breaking
 changes/features increment minor and fixes/maintenance increment patch. Stable
 1.0.0 requires explicit policy graduation. Publish native archives with README,
 LICENSE and checksums. Artifacts must match the tested
@@ -598,7 +598,8 @@ and metadata. The four native CLI assets are published for v0.1.0.
 Repository self-integration uses an installed, previously published Please Behave
 binary outside the checkout; local candidate builds never govern the source being
 checked. `.please-version` is the sole exact governor pin for local deployment and
-CI on all four platforms. Renovate proposes updates without automerge.
+Ubuntu CI. Native release builds verify candidates independently on all four
+platforms. Renovate proposes updates without automerge.
 Pinned installation downloads the exact release's native archive and SHA256SUMS
 directly, without a GitHub Releases API lookup or fallback to latest. Only latest
 discovery uses the API, with optional GITHUB_TOKEN Bearer authentication; asset
@@ -653,8 +654,8 @@ outside rule execution.
 
 Hooks are managed by please sync at Git's effective hook path, including forwarding
 commit-message arguments and preserving compatible unmanaged content. A setup
-shim only retires this checkout's obsolete .githooks setting when its old event
-files are absent, then delegates to please sync; custom hook paths are preserved.
+shim delegates to please sync without changing core.hooksPath; custom hook paths
+are preserved.
 Check subprocesses retain the inherited environment and recursion guard. Local
 Rules use string commands for installed tools and consumer-root Python script
 paths, without per-rule shell or Python launchers. Cargo build/test/Clippy/MSRV
