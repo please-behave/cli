@@ -64,6 +64,11 @@ reviews. Checks-only rejects a point requiring reviews. Empty points succeed.
 See [execution points and plans](execution-points-and-plans.md) and the
 [configuration reference](configuration.md).
 
+Checks run concurrently by default, up to four at a time. Configure
+`[execution] max_parallel` or override it with `please run --at check --max-parallel 6`.
+Use 1 for serial execution. Checks sharing mutable state must declare the same
+`check.resource`; see the [configuration reference](configuration.md#project-settings).
+
 ## Run results
 
 Execution errors and blocking failures prevent success. Non-blocking FAIL stays visible. A valid run writes `.please/reports/last.json`
@@ -77,14 +82,15 @@ rule ID. Imported hashes and binding identities are confined to JSON and details
 Duplicate labels receive a short origin suffix and an occurrence number.
 
 `--progress=auto` is the default. Interactive terminals replace running rows with
-results; `CI=true`, `CI=1`, `TERM=dumb` and redirected stderr use append-only plain
-output. `--progress=plain` explicitly selects logs; `--progress=tty` requests
-redraw. Very narrow terminals and review batches larger than the screen use plain
-output to avoid wrapping or rewriting scrollback. Color settings
+results, show pending and resource waits, refresh running elapsed times and show
+completed/total counts. Short terminals show selected rows and hidden counts.
+`CI=true`, `CI=1`, `GITHUB_ACTIONS=true`, `TERM=dumb` and redirected stderr use
+append-only logs, even with `--progress=tty`. `--progress=plain` explicitly selects
+logs. Very narrow or short terminals also use plain output. Color settings
 are independent: `NO_COLOR` removes colors without disabling terminal redraw.
 Disabled rules are excluded from the total. Skipped reviews show NOT_RUN without
 a running message. Internal preparation and successful process-exit messages are
-hidden. Failed rules show their reason and findings; raw command output remains
+hidden. Failed rules show their reason; full findings are available with `status --details`; raw command output remains
 in the saved report.
 
 Reviews with the same provider reference and identical resolved parameter

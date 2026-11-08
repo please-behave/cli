@@ -57,6 +57,9 @@ Initialization requires `.please/` to be absent and installs no hooks.
 ```toml
 project = "My_App"
 
+[execution]
+max_parallel = 4
+
 [execution_points]
 custom = ["release"]
 ```
@@ -65,6 +68,8 @@ custom = ["release"]
 | --- | --- | --- |
 | `project` | Required | Nonblank display name. |
 | `max_display_files` | Optional; `5` | Integer `1..5`: changed paths shown in status. |
+| `execution` | Optional table | Check scheduling settings. |
+| `execution.max_parallel` | Optional; `4` | Positive integer: maximum running checks; `1` runs serially. |
 | `execution_points` | Optional table | Additional execution contexts. |
 | `execution_points.custom` | Optional; `[]` | Unique names of 1–80 lowercase ASCII letters, digits, `-`, `_`, starting with a letter/digit. Built-in names are reserved. |
 | `imports` | Optional; `[]` | External references, declared only here as `[[imports]]`. |
@@ -76,6 +81,29 @@ Consumers decide where to invoke it, including multiple workflows; Please Behave
 not generate workflows, discover them or validate CI integration. Declare custom
 points in the consumer, including unmapped custom points used by imports.
 `release` is an ordinary custom point. The default execution point is `pre-push`.
+
+Checks run concurrently by default. `please run --at check --max-parallel 6`
+overrides configuration for that invocation; otherwise `execution.max_parallel`
+applies, defaulting to 4. Set it to 1 for serial execution. Zero, negative,
+noninteger and overflowing limits are rejected. Concurrency does not change the
+semantic plan hash; saved snapshots still detect configuration file changes.
+
+Checks sharing mutable state must declare the same `resource` inside `[check]`:
+
+```toml
+[check]
+command = "cargo test --locked"
+resource = "cargo"
+```
+
+Resource names are exact, case-sensitive opaque identifiers. They coordinate
+local and imported checks within one invocation, without namespacing by import.
+They do not lock other Please invocations. Resource-waiting checks occupy no
+execution slots; later independent checks can start first. Failures and timeouts
+do not stop remaining checks. Results retain canonical ID order. Existing rule
+files remain valid, but checks relying on serial execution need resources or a
+limit of 1. Older CLI releases reject these new configuration fields; upgrade
+pinned consumers before adding them to shared rulesets.
 
 ### Fields shared by checks and reviews
 
@@ -206,6 +234,7 @@ produce a clear startup ERROR.
 | `check.entrypoint` | Optional; `null`; required unless `command` is set | Deprecated file syntax: filename in this Rule directory, or path containing `/` relative to the rule-source root (see below). |
 | `check.command` | Optional; `null`; required unless `entrypoint` is set | Preferred: string containing executable and arguments. Deprecated arrays remain supported. Mutually exclusive with `entrypoint` and `interpreter`. |
 | `check.interpreter` | Optional; `null` | Deprecated file syntax: executable used to run an entrypoint. Omitted means direct execution; forbidden with `command`. |
+| `check.resource` | Optional; `null` | Exclusive, case-sensitive resource name; nonempty, no control characters or surrounding whitespace. |
 | `check.timeout_seconds` | Optional; `30` | Integer `1..3600`; deadline including output capture. |
 
 For an installed tool, use a direct command instead of a script wrapper:
@@ -654,7 +683,7 @@ please run --at check
 please run --at release --plan --json
 ```
 
-Checks precede reviews, ordered by ID. Empty points succeed. Every scheduled rule
+Checks finish before reviews; reports retain ID order within each kind. Empty points succeed. Every scheduled rule
 must execute; `--checks-only` cannot omit required reviews. An offline plan
 prepares the same selection without rules, provider calls or reconciliation.
 

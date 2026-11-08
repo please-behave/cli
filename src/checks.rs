@@ -118,3 +118,227 @@ pub fn execute_with_context(
     item.duration_ms = start.elapsed().as_millis() as u64;
     item
 }
+
+/// Events stay on the coordinator thread; workers only return their result.
+pub(crate) enum Event<'a> {
+    Queued(usize, Option<&'a str>),
+    Started(usize),
+    Finished(usize, &'a Item),
+    Tick,
+}
+
+pub(crate) fn schedule(
+    checks: &[&Check],
+    max_parallel: std::num::NonZeroUsize,
+    execute: impl Fn(&Check) -> Item + Sync,
+    progress: &mut dyn FnMut(Event<'_>),
+) -> Vec<Item> {
+    use std::{
+        collections::{BTreeMap, BTreeSet},
+        sync::mpsc,
+        thread,
+    };
+    // Notify even during unwinding. The coordinator joins every worker, so a
+    // panic becomes a per-check ERROR rather than propagating out of the scope.
+    struct Done(mpsc::Sender<usize>, usize);
+    impl Drop for Done {
+        fn drop(&mut self) {
+            let _ = self.0.send(self.1);
+        }
+    }
+    let error = |index: usize, reason: String, elapsed: Duration| {
+        let mut item = Item::simple(&checks[index].id, "check", Status::Error, reason);
+        item.blocking = checks[index].blocking;
+        item.duration_ms = elapsed.as_millis() as u64;
+        item
+    };
+    thread::scope(|scope| {
+        let (sender, receiver) = mpsc::channel();
+        let mut pending: BTreeSet<_> = (0..checks.len()).collect();
+        let mut running = BTreeMap::new();
+        let mut resources = BTreeSet::new();
+        let mut waiting = BTreeSet::new();
+        let mut results: Vec<Option<Item>> = (0..checks.len()).map(|_| None).collect();
+        for index in &pending {
+            progress(Event::Queued(*index, None));
+        }
+        while !pending.is_empty() || !running.is_empty() {
+            // A blocked resource never claims a slot; scan past it.
+            while running.len() < max_parallel.get() {
+                let Some(index) = pending.iter().copied().find(|&index| {
+                    checks[index]
+                        .resource
+                        .as_deref()
+                        .is_none_or(|r| !resources.contains(r))
+                }) else {
+                    break;
+                };
+                pending.remove(&index);
+                waiting.remove(&index);
+                let started = Instant::now();
+                let done = Done(sender.clone(), index);
+                let execute = &execute;
+                progress(Event::Started(index));
+                match thread::Builder::new().spawn_scoped(scope, move || {
+                    let _done = done;
+                    execute(checks[index])
+                }) {
+                    Ok(handle) => {
+                        if let Some(resource) = &checks[index].resource {
+                            resources.insert(resource.as_str());
+                        }
+                        running.insert(index, (handle, started));
+                    }
+                    Err(cause) => {
+                        let item = error(
+                            index,
+                            format!("Cannot start check worker: {cause}"),
+                            started.elapsed(),
+                        );
+                        progress(Event::Finished(index, &item));
+                        results[index] = Some(item);
+                    }
+                }
+            }
+            for &index in &pending {
+                let resource = checks[index]
+                    .resource
+                    .as_deref()
+                    .filter(|r| resources.contains(r));
+                if resource.is_some() && waiting.insert(index) {
+                    progress(Event::Queued(index, resource));
+                } else if resource.is_none() && waiting.remove(&index) {
+                    progress(Event::Queued(index, None));
+                }
+            }
+            if running.is_empty() {
+                continue;
+            }
+            match receiver.recv_timeout(Duration::from_millis(100)) {
+                Ok(index) => {
+                    // Failed thread creation can also drop its notification.
+                    let Some((handle, started)) = running.remove(&index) else {
+                        continue;
+                    };
+                    let item = handle.join().unwrap_or_else(|_| {
+                        error(
+                            index,
+                            "Check worker terminated unexpectedly".into(),
+                            started.elapsed(),
+                        )
+                    });
+                    if let Some(resource) = &checks[index].resource {
+                        resources.remove(resource.as_str());
+                    }
+                    progress(Event::Finished(index, &item));
+                    results[index] = Some(item);
+                }
+                Err(mpsc::RecvTimeoutError::Timeout) => progress(Event::Tick),
+                Err(mpsc::RecvTimeoutError::Disconnected) => {
+                    unreachable!("coordinator retains a sender")
+                }
+            }
+        }
+        results.into_iter().map(Option::unwrap).collect()
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::{
+        collections::BTreeMap,
+        path::PathBuf,
+        sync::{Mutex, mpsc},
+        thread,
+    };
+
+    fn check(id: &str, resource: Option<&str>) -> Check {
+        Check {
+            id: id.into(),
+            name: id.into(),
+            description: id.into(),
+            enabled: true,
+            blocking: true,
+            resource: resource.map(str::to_owned),
+            entrypoint: None,
+            command: None,
+            source_root: PathBuf::new(),
+            rule_directory: PathBuf::new(),
+            interpreter: None,
+            timeout_seconds: 1,
+            run_at: vec![],
+            parameters: crate::parameters::Binding::local(BTreeMap::new()),
+        }
+    }
+
+    #[test]
+    fn scheduler_bounds_workers_skips_waiters_and_preserves_order() {
+        let checks = [
+            check("a", Some("shared")),
+            check("b", Some("shared")),
+            check("c", Some("Shared")),
+            check("d", None),
+        ];
+        let checks: Vec<_> = checks.iter().collect();
+        let (started, starts) = mpsc::channel();
+        let channels: Vec<_> = (0..4).map(|_| mpsc::channel()).collect();
+        let releases: Vec<_> = channels.iter().map(|(s, _)| s.clone()).collect();
+        let waits: Vec<_> = channels.into_iter().map(|(_, r)| Mutex::new(r)).collect();
+        thread::scope(|scope| {
+            let handle = scope.spawn(|| {
+                schedule(
+                    &checks,
+                    2.try_into().unwrap(),
+                    |check| {
+                        let index = usize::from(check.id.as_bytes()[0] - b'a');
+                        started.send(index).unwrap();
+                        waits[index]
+                            .lock()
+                            .unwrap()
+                            .recv_timeout(Duration::from_secs(5))
+                            .unwrap();
+                        Item::simple(&check.id, "check", Status::Pass, String::new())
+                    },
+                    &mut |_| {},
+                )
+            });
+            let mut first = [
+                starts.recv_timeout(Duration::from_secs(5)).unwrap(),
+                starts.recv_timeout(Duration::from_secs(5)).unwrap(),
+            ];
+            first.sort();
+            assert_eq!(first, [0, 2]); // b cannot consume c's execution slot.
+            assert!(starts.try_recv().is_err());
+            releases[2].send(()).unwrap();
+            assert_eq!(starts.recv_timeout(Duration::from_secs(5)).unwrap(), 3);
+            releases[0].send(()).unwrap();
+            assert_eq!(starts.recv_timeout(Duration::from_secs(5)).unwrap(), 1);
+            releases[1].send(()).unwrap();
+            releases[3].send(()).unwrap();
+            let results = handle.join().unwrap();
+            assert_eq!(
+                results.iter().map(|i| i.id.as_str()).collect::<Vec<_>>(),
+                ["a", "b", "c", "d"]
+            );
+        });
+    }
+
+    #[test]
+    fn worker_panics_release_resources_and_do_not_stop_checks() {
+        let checks = [check("a", Some("shared")), check("b", Some("shared"))];
+        let checks: Vec<_> = checks.iter().collect();
+        let results = schedule(
+            &checks,
+            4.try_into().unwrap(),
+            |check| {
+                assert_ne!(check.id, "a", "simulated worker failure");
+                Item::simple(&check.id, "check", Status::Pass, String::new())
+            },
+            &mut |_| {},
+        );
+        assert_eq!(results[0].status, Status::Error);
+        assert!(results[0].reason.contains("worker terminated"));
+        assert_eq!(results[1].status, Status::Pass);
+    }
+}

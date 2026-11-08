@@ -138,7 +138,7 @@ fn progress_modes_are_explicit_and_auto_respects_the_output_environment() {
         false,
         false
     ));
-    assert!(terminal::progress_redraw(
+    assert!(!terminal::progress_redraw(
         ProgressMode::Tty,
         false,
         true,
@@ -149,7 +149,7 @@ fn progress_modes_are_explicit_and_auto_respects_the_output_environment() {
 fn concise_cli_keeps_diagnostics_and_avoids_duplicate_results() {
     let root = project();
     named(&root, "first", "First check");
-    for mode in ["auto", "plain"] {
+    for mode in ["auto", "plain", "tty"] {
         let output = Command::new(env!("CARGO_BIN_EXE_please"))
             .args(["run", "--at", "check", "--progress", mode])
             .current_dir(root.path())
@@ -228,7 +228,7 @@ fn terminal_rows_are_bounded_and_success_replaces_running_state() {
         description: &description,
     });
     assert!(first.contains("RUNNING"));
-    assert!(finished.starts_with("\u{1b}[1A\r\u{1b}[2K"));
+    assert!(finished.starts_with("\u{1b}[2A\r\u{1b}[2K"));
     assert!(finished.contains("PASS") && finished.contains("1.2 s"));
     assert!(!finished.contains("RUNNING") && !finished.contains("Command exited"));
     for text in [&first, &finished] {
@@ -328,7 +328,7 @@ fn real_terminal_finishes_with_one_visible_row_per_check() {
     assert!(output.status.success());
     let bytes = reading.join().unwrap();
     let raw = String::from_utf8(bytes).unwrap();
-    assert!(raw.contains("\u{1b}[1A"), "{raw:?}");
+    assert!(raw.contains("\u{1b}[2A"), "{raw:?}");
     // Interpret the small cursor-control vocabulary used by progress, independently
     // of the renderer: the final screen contains two completed rows, no starts.
     let mut rows = vec![String::new()];
@@ -363,13 +363,14 @@ fn real_terminal_finishes_with_one_visible_row_per_check() {
         cursor += 1;
     }
     let final_rows: Vec<_> = rows.iter().filter(|line| !line.is_empty()).collect();
-    assert_eq!(final_rows.len(), 2, "{raw:?}");
+    assert_eq!(final_rows.len(), 3, "{raw:?}");
     assert!(
         final_rows
             .iter()
+            .skip(1)
             .all(|line| line.contains("PASS") && !line.contains("RUNNING"))
     );
-    assert!(final_rows[0].contains("First check"));
+    assert!(final_rows[1].contains("First check"));
     assert!(
         String::from_utf8(output.stdout)
             .unwrap()
@@ -378,7 +379,7 @@ fn real_terminal_finishes_with_one_visible_row_per_check() {
 }
 
 #[test]
-fn large_review_batches_use_plain_output_and_do_not_rewrite_scrollback() {
+fn large_review_batches_use_bounded_output_without_rewriting_scrollback() {
     let mut renderer = terminal::ProgressRenderer::new(true, false, 80, 10);
     let batch = renderer.render(&Progress::ReviewBatch {
         count: 20,
@@ -405,5 +406,69 @@ fn large_review_batches_use_plain_output_and_do_not_rewrite_scrollback() {
         name: "Review",
         description: "Inspect evidence",
     });
-    assert!(!row.contains('\u{1b}') && row.contains("RUNNING"));
+    assert!(row.contains("RUNNING") && row.lines().count() <= 8);
+}
+
+#[test]
+fn elapsed_ticks_waiting_states_and_short_boards_are_bounded() {
+    let now = std::time::Instant::now();
+    let mut renderer = terminal::ProgressRenderer::new(true, false, 80, 6);
+    for number in 1..=12 {
+        renderer.render_at(
+            &Progress::RuleQueued {
+                number,
+                total: 12,
+                name: "Queued check",
+                description: "Inspect files",
+                resource: None,
+            },
+            now,
+        );
+    }
+    renderer.render_at(
+        &Progress::RuleStarted {
+            number: 1,
+            total: 12,
+            kind: "check",
+            id: "first",
+            name: "First",
+            description: "Inspect files",
+        },
+        now,
+    );
+    renderer.render_at(
+        &Progress::RuleQueued {
+            number: 2,
+            total: 12,
+            name: "Second",
+            description: "Inspect files",
+            resource: Some("shared"),
+        },
+        now,
+    );
+    let frame = renderer.render_at(&Progress::Tick, now + std::time::Duration::from_secs(2));
+    assert!(frame.contains("0/12 completed"));
+    assert!(
+        frame.contains("2.0 s") && frame.contains("WAITING"),
+        "{frame}"
+    );
+    assert!(frame.lines().count() <= 4);
+    assert!(
+        renderer
+            .render_at(
+                &Progress::Tick,
+                now + std::time::Duration::from_millis(2050)
+            )
+            .is_empty()
+    );
+    assert!(terminal::render_progress(&Progress::Tick, false).is_empty());
+    let mut narrow = terminal::ProgressRenderer::new(true, false, 20, 2);
+    let plain = narrow.render(&Progress::RuleQueued {
+        number: 1,
+        total: 1,
+        name: "Check",
+        description: "Files",
+        resource: Some("shared"),
+    });
+    assert!(plain.contains("shared") && !plain.contains('\u{1b}'));
 }

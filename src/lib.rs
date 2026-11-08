@@ -35,6 +35,14 @@ pub enum Progress<'a> {
         total: usize,
     },
     Phase(&'static str),
+    RuleQueued {
+        number: usize,
+        total: usize,
+        name: &'a str,
+        description: &'a str,
+        resource: Option<&'a str>,
+    },
+    Tick,
     RuleStarted {
         number: usize,
         total: usize,
@@ -148,36 +156,70 @@ pub fn verify_project_with_context(
             plan.blocking_reasons.join("; "),
         ));
     }
-    for (offset, check) in project.checks.iter().filter(|c| c.enabled).enumerate() {
-        let number = offset + 1;
-        if plan.executable() {
-            progress(Progress::RuleStarted {
-                number,
-                total,
-                kind: "check",
-                id: &check.id,
-                name: &names[&check.id],
-                description: &check.description,
-            });
-        }
-        let item = if plan.executable() {
-            checks::execute_with_context(&project, check, &plan.at, hook)
-        } else {
-            Item::simple(
+    let checks: Vec<_> = project.checks.iter().filter(|c| c.enabled).collect();
+    if plan.executable() {
+        items.extend(checks::schedule(
+            &checks,
+            project.config.execution.max_parallel,
+            |check| checks::execute_with_context(&project, check, &plan.at, hook),
+            &mut |event| {
+                let index = match event {
+                    checks::Event::Queued(index, _)
+                    | checks::Event::Started(index)
+                    | checks::Event::Finished(index, _) => index,
+                    checks::Event::Tick => {
+                        progress(Progress::Tick);
+                        return;
+                    }
+                };
+                let check = checks[index];
+                let number = index + 1;
+                let name = &names[&check.id];
+                let description = &check.description;
+                progress(match event {
+                    checks::Event::Queued(_, resource) => Progress::RuleQueued {
+                        number,
+                        total,
+                        name,
+                        description,
+                        resource,
+                    },
+                    checks::Event::Started(_) => Progress::RuleStarted {
+                        number,
+                        total,
+                        kind: "check",
+                        id: &check.id,
+                        name,
+                        description,
+                    },
+                    checks::Event::Finished(_, item) => Progress::RuleFinished {
+                        number,
+                        total,
+                        item,
+                        name,
+                        description,
+                    },
+                    checks::Event::Tick => unreachable!(),
+                });
+            },
+        ));
+    } else {
+        for (offset, check) in checks.iter().enumerate() {
+            let item = Item::simple(
                 &check.id,
                 "check",
                 Status::NotRun,
                 "Execution plan blocked; no command started".into(),
-            )
-        };
-        progress(Progress::RuleFinished {
-            number,
-            total,
-            item: &item,
-            name: &names[&check.id],
-            description: &check.description,
-        });
-        items.push(item);
+            );
+            progress(Progress::RuleFinished {
+                number: offset + 1,
+                total,
+                item: &item,
+                name: &names[&check.id],
+                description: &check.description,
+            });
+            items.push(item);
+        }
     }
     if !snapshot.complete && !items.iter().any(|x| x.kind == "integrity") {
         items.push(Item::simple(

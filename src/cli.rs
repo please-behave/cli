@@ -43,6 +43,8 @@ pub enum Words {
         progress: ProgressMode,
         #[arg(long, help = "Run only deterministic checks, without LLM calls")]
         checks_only: bool,
+        #[arg(long, help = "Maximum concurrent checks (default: configuration or 4)")]
+        max_parallel: Option<std::num::NonZeroUsize>,
         #[arg(long, help = "Run rules at this execution point (default: pre-push)")]
         at: Option<String>,
         #[arg(

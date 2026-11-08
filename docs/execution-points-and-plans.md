@@ -22,7 +22,8 @@ The loader records source paths. The domain resolver computes effective
 assignments once. Validation, CLI planning and execution share that result.
 Review file-change triggers then filter enabled reviews at the requested point,
 before context preparation or provider requirements. Checks run before scheduled
-reviews, ordered by ID and deduplicated. Every scheduled rule is required. Checks-only execution rejects required reviews before any command starts.
+reviews, deduplicated and dispatched in ID order among runnable checks. Reports
+retain ID order; resource waits and concurrent completion do not change selection. Every scheduled rule is required. Checks-only execution rejects required reviews before any command starts.
 
 Plans include the selected point, rule sources, effective points, contributing
 sets, required IDs, input identity, bounded context and declared provider settings.
@@ -30,7 +31,9 @@ Each review with an explicit provider reference also records `provider` (the nam
 ID) and `provider_config` (its complete effective settings). Absent fields select
 the plan's legacy project provider. Model calls count distinct provider references
 and resolved parameter environments and include_diff settings for Codex; CLI reviews each count one call.
-No check, Codex request, network access or reconciliation occurs during preview.
+Concurrency limits change execution strategy and are excluded from semantic plan
+identity. Resource declarations participate in check identity. No check, Codex
+request, network access or reconciliation occurs during preview.
 Incomplete snapshots or context preparation block execution. Preview does not
 certify a later source state. Reports use schema 4 and plans use schema 3. Blocking metadata distinguishes
 advisory FAIL/review ERROR from blocking failures and check/integrity errors; disabled Rules are listed separately.

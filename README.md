@@ -206,6 +206,7 @@ The supported commands are:
 | --- | --- | --- |
 | `--yes` | `sync` | Approve the displayed integration changes without a prompt, including in CI. Defaults to off. |
 | `--checks-only` | `run` | Run only checks; do not call an AI provider. |
+| `--max-parallel N` | `run` | Positive maximum concurrent checks; overrides configuration (default `4`). |
 | `--at NAME` | `run` | Select a known execution point (default `pre-push`). |
 | `--progress=auto`, `--progress=plain`, `--progress=tty` | `run` | Progress display; defaults to `auto`. Terminal rows update in place; CI and redirected streams use append-only output. |
 | `--plan` | `run` | Preview what would run without executing rules or calling the provider. |
@@ -216,7 +217,8 @@ The supported commands are:
 | `-V`, `--version` | `please` | Show the version. |
 
 At the selected execution point, enabled checks run first, followed by reviews.
-Within each kind, rules run in ID order. Disabled rules are validated but are not
+Checks dispatch in ID order among runnable checks and may finish out of order.
+Reports retain ID order within each kind. Disabled rules are validated but are not
 executed or included in results. Selected reviews with identical parameter
 environments share a Codex invocation.
 
@@ -225,11 +227,13 @@ If neither checks nor reviews are defined, Please Behave additionally prints
 establish that your project passed any quality rules.
 
 During execution, each rule shows its short name, description, status and duration.
-An interactive terminal replaces running rows with their results. In CI, redirected
-output or `--progress=plain`, start and finish messages are appended without cursor
-controls. `auto` also uses plain output for `CI=true`, `CI=1` or `TERM=dumb`;
-`tty` explicitly requests redraw. Colors are controlled separately. Very narrow
-terminals and review batches larger than the screen fall back to plain output. Execution ends with one overall result line;
+An interactive terminal shows pending, resource-waiting, running and completed
+rows, running elapsed times and completed/total counts. Refreshes are limited to
+ten per second; short terminals show selected rows with hidden counts. In CI,
+GitHub Actions, redirected stderr or `--progress=plain`, named starts, resource
+waits and results are appended without cursor controls, even with `--progress=tty`.
+`TERM=dumb` and very narrow or short terminals also use plain output. Colors are
+controlled separately. Execution ends with one overall result line;
 use `please status --details` for saved output and full diagnostics.
 
 ### Run checks without AI
@@ -430,6 +434,9 @@ Initialization requires `.please/` to be absent and installs no hooks.
 ```toml
 project = "My_App"
 
+[execution]
+max_parallel = 4
+
 [execution_points]
 custom = ["release"]
 ```
@@ -438,6 +445,8 @@ custom = ["release"]
 | --- | --- | --- |
 | `project` | Required | Nonblank display name. |
 | `max_display_files` | Optional; `5` | Integer `1..5`: changed paths shown in status. |
+| `execution` | Optional table | Check scheduling settings. |
+| `execution.max_parallel` | Optional; `4` | Positive integer: maximum running checks; `1` runs serially. |
 | `execution_points` | Optional table | Additional execution contexts. |
 | `execution_points.custom` | Optional; `[]` | Unique names of 1–80 lowercase ASCII letters, digits, `-`, `_`, starting with a letter/digit. Built-in names are reserved. |
 | `imports` | Optional; `[]` | External references, declared only here as `[[imports]]`. |
@@ -453,6 +462,29 @@ Clippy, Rust tests, a native build and an executable smoke test after version
 stamping and before packaging. GitHub Actions handles packaging, collected
 artifact verification and publication; see the [release sequence](docs/releasing.md#release-sequence).
 The default execution point is `pre-push`.
+
+Checks run concurrently by default. `please run --at check --max-parallel 6`
+overrides configuration for that invocation; otherwise `execution.max_parallel`
+applies, defaulting to 4. Set it to 1 for serial execution. Zero, negative,
+noninteger and overflowing limits are rejected. Concurrency does not change the
+semantic plan hash; saved snapshots still detect configuration file changes.
+
+Checks sharing mutable state must declare the same `resource` inside `[check]`:
+
+```toml
+[check]
+command = "cargo test --locked"
+resource = "cargo"
+```
+
+Resource names are exact, case-sensitive opaque identifiers. They coordinate
+local and imported checks within one invocation, without namespacing by import.
+They do not lock other Please invocations. Resource-waiting checks occupy no
+execution slots; later independent checks can start first. Failures and timeouts
+do not stop remaining checks. Results retain canonical ID order. Existing rule
+files remain valid, but checks relying on serial execution need resources or a
+limit of 1. Older CLI releases reject these new configuration fields; upgrade
+pinned consumers before adding them to shared rulesets.
 
 ### Fields shared by checks and reviews
 
@@ -583,6 +615,7 @@ produce a clear startup ERROR.
 | `check.entrypoint` | Optional; `null`; required unless `command` is set | Deprecated file syntax: filename in this Rule directory, or path containing `/` relative to the rule-source root (see below). |
 | `check.command` | Optional; `null`; required unless `entrypoint` is set | Preferred: string containing executable and arguments. Deprecated arrays remain supported. Mutually exclusive with `entrypoint` and `interpreter`. |
 | `check.interpreter` | Optional; `null` | Deprecated file syntax: executable used to run an entrypoint. Omitted means direct execution; forbidden with `command`. |
+| `check.resource` | Optional; `null` | Exclusive, case-sensitive resource name; nonempty, no control characters or surrounding whitespace. |
 | `check.timeout_seconds` | Optional; `30` | Integer `1..3600`; deadline including output capture. |
 
 For an installed tool, use a direct command instead of a script wrapper:
@@ -1038,7 +1071,7 @@ please run --at check
 please run --at release --plan --json
 ```
 
-Checks precede reviews, ordered by ID. Empty points succeed. Every scheduled rule
+Checks finish before reviews; reports retain ID order within each kind. Empty points succeed. Every scheduled rule
 must execute; `--checks-only` cannot omit required reviews. An offline plan
 prepares the same selection without rules, provider calls or reconciliation.
 

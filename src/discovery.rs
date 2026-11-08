@@ -252,6 +252,7 @@ fn load_rules(
                 loaded.checks.push((
                     path.clone(),
                     Check {
+                        resource: check.resource,
                         id: rule.id.clone(),
                         name,
                         description: rule.description,
@@ -361,6 +362,7 @@ pub(crate) fn init(root: &Path) -> Result<usize> {
     let config = Config {
         project: project.into_owned(),
         max_display_files: MAX_DISPLAY_FILES,
+        execution: Default::default(),
         execution_points: Default::default(),
         imports: vec![],
     };
@@ -383,6 +385,7 @@ pub(crate) fn init(root: &Path) -> Result<usize> {
             run_at: vec!["pre-push".into()],
             parameters: Default::default(),
             check: Some(crate::config::CheckDefinition {
+                resource: None,
                 entrypoint: Some(entrypoint.into()),
                 command: None,
                 interpreter: None,

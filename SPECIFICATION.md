@@ -126,8 +126,8 @@ No recursive TOML discovery is supported. External sets explicitly select Rule
 directories as defined in EXT-001; local definitions use only the paths above.
 Supporting files inside rule directories are data, never governance documents.
 
-Project settings are project, max_display_files (default 5), execution_points
-and imports. The README defines all fields and bounds. Review prompt filenames
+Project settings are project, max_display_files (default 5), execution_points,
+execution and imports. The README defines all fields and bounds. Review prompt filenames
 must be single nonempty names directly in a Rule directory: no separators,
 absolute paths, parent traversal, symlinks or special files. Review prompts are
 UTF-8 Markdown without frontmatter requirements. Check entrypoints follow CHK-001.
@@ -215,7 +215,7 @@ Codex compatibility coverage.
 
 `--at NAME` selects a known execution point, defaulting to pre-push. Selection
 uses only centrally resolved effective assignments. Only worktree input is
-supported. Rules run once, checks first and each kind ordered by ID.
+supported. Rules run once, checks first; results retain ID order within each kind.
 
 `--plan` uses the same selection/preparation as execution. Its human-readable
 output uses English labels and explanations, preserving configured values and
@@ -356,6 +356,35 @@ termination is ERROR. Wrappers map scanner infrastructure errors to 2. Spawn,
 capture and timeout failures are always ERROR. Non-blocking FAIL remains visible and allows success
 and subsequent Reviews. Check ERROR is fatal regardless of blocking; non-blocking review ERROR remains visible but permits success. Stdout/stderr
 capture, process deadlines and cancellation remain shared in process.rs.
+
+### Parallel check execution
+
+Checks execute concurrently by default, with up to four running checks. Optional
+`[execution] max_parallel` in `.please/config.toml` sets a positive integer limit;
+`run --max-parallel N` overrides it. A limit of one preserves serial execution.
+Concurrency changes execution strategy and does not affect semantic plan identity.
+
+Optional `check.resource` is a nonempty, case-sensitive opaque string without
+control characters or surrounding whitespace, validated even on disabled rules.
+Equal names exclude simultaneous execution across local and imported checks in
+one invocation only. Checks without a resource have no exclusion restrictions.
+Checks sharing mutable state must declare the same resource. Waiting checks use
+no execution slots, and later runnable checks may start ahead of them. All checks
+finish before review gating; failures, timeouts and worker errors release resources
+and do not stop remaining checks. Dispatch prefers canonical ID order among
+runnable checks; saved results retain canonical order regardless of completion.
+No dependency graph, resource list or build-tool-specific behavior is supported.
+
+Interactive progress shows pending, resource-waiting, running and final rule
+states, running elapsed times and completed/total counts. Refreshes are bounded;
+short terminals show a bounded selection of rows and hidden-state counts. Plain
+logs attribute waiting, starts and results without raw subprocess output. CI,
+GitHub Actions and nonterminal streams never use cursor controls, including with
+`--progress=tty`. Detailed captured output remains available through saved status.
+Report schema 4 and plan schema 3 are unchanged.
+
+Acceptance: `tests/parallel.rs` covers scheduling, configuration and report behavior;
+`tests/progress.rs` covers interactive and append-only rendering.
 
 ## PARAM-001: Rule parameters
 

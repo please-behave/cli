@@ -96,9 +96,8 @@ pub fn progress_redraw(
     dumb: bool,
 ) -> bool {
     match mode {
-        crate::cli::ProgressMode::Auto => terminal && !ci && !dumb,
+        crate::cli::ProgressMode::Auto | crate::cli::ProgressMode::Tty => terminal && !ci && !dumb,
         crate::cli::ProgressMode::Plain => false,
-        crate::cli::ProgressMode::Tty => true,
     }
 }
 
@@ -187,7 +186,37 @@ fn progress_row(
 fn progress_event(event: &crate::Progress<'_>, color: bool, width: Option<usize>) -> String {
     use crate::Progress;
     match event {
-        Progress::Plan { .. } | Progress::Phase(_) => String::new(),
+        Progress::Plan { .. } | Progress::Phase(_) | Progress::Tick => String::new(),
+        Progress::RuleQueued {
+            number,
+            total,
+            name,
+            description,
+            resource,
+        } => {
+            // Capacity-only queueing is useful on the board, but noisy in logs.
+            if let Some(resource) = resource {
+                progress_row(
+                    (*number, *total),
+                    ("WAITING", Tone::Muted),
+                    (name, &format!("resource {}", clean(resource))),
+                    None,
+                    color,
+                    width,
+                )
+            } else if width.is_some() {
+                progress_row(
+                    (*number, *total),
+                    ("PENDING", Tone::Muted),
+                    (name, description),
+                    None,
+                    color,
+                    width,
+                )
+            } else {
+                String::new()
+            }
+        }
         Progress::RuleStarted {
             number,
             total,
@@ -268,75 +297,202 @@ pub fn render_progress(event: &crate::Progress<'_>, color: bool) -> String {
 
 /// Stateful terminal output replaces running rows, including shared review batches.
 /// Plain mode is append-only and uses the same names and messages.
+struct ProgressRow {
+    text: String,
+    started: Option<std::time::Instant>,
+    finished: bool,
+    waiting: bool,
+    failed: bool,
+}
+
 pub struct ProgressRenderer {
     redraw: bool,
     color: bool,
     width: usize,
-    rows: std::collections::BTreeMap<usize, String>,
+    rows: std::collections::BTreeMap<usize, ProgressRow>,
     visible: usize,
     height: usize,
-    pending: std::collections::BTreeSet<usize>,
+    total: usize,
+    last_draw: Option<std::time::Instant>,
 }
 impl ProgressRenderer {
     pub fn new(redraw: bool, color: bool, width: usize, height: usize) -> Self {
         Self {
-            redraw: redraw && width >= 40,
+            redraw: redraw && width >= 40 && height >= 4,
             color,
             width,
             rows: Default::default(),
             visible: 0,
             height,
-            pending: Default::default(),
+            total: 0,
+            last_draw: None,
         }
     }
     pub fn render(&mut self, event: &crate::Progress<'_>) -> String {
+        self.render_at(event, std::time::Instant::now())
+    }
+    /// Supply the clock explicitly for deterministic elapsed-time rendering.
+    pub fn render_at(&mut self, event: &crate::Progress<'_>, now: std::time::Instant) -> String {
+        use crate::Progress;
         if !self.redraw {
             return render_progress(event, self.color);
         }
-        let number = match event {
-            crate::Progress::RuleStarted { number, .. } => {
-                self.pending.insert(*number);
-                *number
+        let (number, running, finished, failed) = match event {
+            Progress::Plan { total } => {
+                self.total = *total;
+                return String::new();
             }
-            crate::Progress::RuleFinished { number, .. } => {
-                self.pending.remove(number);
-                *number
+            Progress::RuleQueued { number, total, .. } => {
+                self.total = *total;
+                (*number, false, false, false)
             }
-            crate::Progress::ReviewBatch { count, .. } => {
-                // A batch larger than the screen must remain append-only;
-                // cursor-up cannot recover rows that have scrolled off-screen.
-                if *count >= self.height.saturating_sub(2) {
-                    self.redraw = false;
+            Progress::RuleStarted { number, total, .. } => {
+                self.total = *total;
+                (*number, true, false, false)
+            }
+            Progress::RuleFinished {
+                number,
+                total,
+                item,
+                ..
+            } => {
+                self.total = *total;
+                (
+                    *number,
+                    false,
+                    true,
+                    matches!(item.status, Status::Fail | Status::Error),
+                )
+            }
+            Progress::Tick => (0, false, false, false),
+            Progress::ReviewBatch { .. } => {
+                // End the current board before the provider-call announcement.
+                let mut text = String::new();
+                if self.visible > 0 {
+                    text.push_str(&format!("\x1b[{}A", self.visible));
+                    for _ in 0..self.visible {
+                        text.push_str("\r\x1b[2K\n");
+                    }
+                    text.push_str(&format!("\x1b[{}A", self.visible));
                 }
-                self.rows.clear();
                 self.visible = 0;
-                return render_progress(event, self.color);
+                self.last_draw = None;
+                text.push_str(&render_progress(event, self.color));
+                return text;
             }
-            _ => return String::new(),
+            Progress::Phase(_) => return String::new(),
         };
+        if number != 0 {
+            let width = if running {
+                self.width.saturating_sub(12)
+            } else {
+                self.width
+            };
+            self.rows.insert(
+                number,
+                ProgressRow {
+                    text: match event {
+                        Progress::RuleFinished {
+                            number,
+                            total,
+                            item,
+                            name,
+                            ..
+                        } if item.status != Status::Pass => progress_row(
+                            (*number, *total),
+                            (
+                                item.status.label(),
+                                if failed { Tone::Failure } else { Tone::Muted },
+                            ),
+                            (name, &item_reason(item)),
+                            Some(item.duration_ms),
+                            self.color,
+                            Some(width),
+                        ),
+                        _ => progress_event(event, self.color, Some(width)),
+                    },
+                    started: running.then_some(now),
+                    finished,
+                    failed,
+                    waiting: matches!(
+                        event,
+                        Progress::RuleQueued {
+                            resource: Some(_),
+                            ..
+                        }
+                    ),
+                },
+            );
+        }
+        let completed = self.rows.values().filter(|r| r.finished).count();
+        // Coalesce bursts of queue/start/completion events, but always publish
+        // the final state. The coordinator sends ticks even without completions.
+        if completed != self.total
+            && self.last_draw.is_some_and(|last| {
+                now.saturating_duration_since(last) < std::time::Duration::from_millis(100)
+            })
+        {
+            return String::new();
+        }
+        self.last_draw = Some(now);
+        let capacity = self.height.saturating_sub(3);
+        let mut selected: Vec<_> = self.rows.iter().collect();
+        // Prefer running and queued rows, then failures and recent completions.
+        selected.sort_by_key(|(number, row)| {
+            (
+                if row.started.is_some() {
+                    0
+                } else if row.waiting {
+                    1
+                } else if !row.finished {
+                    2
+                } else if row.failed {
+                    3
+                } else {
+                    4
+                },
+                std::cmp::Reverse(**number),
+            )
+        });
+        selected.truncate(capacity);
+        selected.sort_by_key(|(number, _)| **number);
+        let hidden = self.rows.len().saturating_sub(selected.len());
+        let failures = self.rows.values().filter(|r| r.failed).count();
+        let summary = format!(
+            "Progress: {completed}/{} completed · {failures} failed{}",
+            self.total,
+            if hidden > 0 {
+                format!(" · {hidden} hidden; please status --details")
+            } else {
+                String::new()
+            }
+        );
+        let mut lines = vec![fit(&summary, self.width.saturating_sub(1))];
+        for (_, row) in selected {
+            let mut text = row.text.lines().next().unwrap_or_default().to_owned();
+            if let Some(started) = row.started {
+                text.push_str(&format!(
+                    " · {}",
+                    duration(now.saturating_duration_since(started).as_millis() as u64)
+                ));
+            }
+            lines.push(text);
+        }
         let mut text = if self.visible > 0 {
             format!("\x1b[{}A", self.visible)
         } else {
             String::new()
         };
-        self.rows
-            .insert(number, progress_event(event, self.color, Some(self.width)));
-        self.visible = 0;
-        for row in self.rows.values() {
-            for line in row.lines() {
-                text.push_str("\r\x1b[2K");
+        // Clear stale rows when the visible window shrinks.
+        let count = lines.len().max(self.visible);
+        for index in 0..count {
+            text.push_str("\r\x1b[2K");
+            if let Some(line) = lines.get(index) {
                 text.push_str(line);
-                text.push('\n');
-                self.visible += 1;
             }
+            text.push('\n');
         }
-        if self.visible >= self.height.saturating_sub(2) {
-            self.redraw = false;
-        }
-        if self.pending.is_empty() || !self.redraw {
-            self.rows.clear();
-            self.visible = 0;
-        }
+        self.visible = count;
         text
     }
 }

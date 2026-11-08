@@ -2137,3 +2137,65 @@ fn imported_path_references_use_cached_provenance_offline() {
         assert_eq!(result.stdout.unwrap().text, "cached paths passed");
     }
 }
+
+#[test]
+fn exclusive_resources_coordinate_local_and_imported_bindings() {
+    let f = Fixture::new();
+    for path in ["repository", "software"] {
+        let rule = f
+            .remote
+            .join(format!("{path}/checks/required-files/rule.toml"));
+        fs::write(
+            &rule,
+            format!(
+                "{}resource = 'shared'\n",
+                fs::read_to_string(&rule).unwrap()
+            ),
+        )
+        .unwrap();
+    }
+    let revision = commit(&f.remote);
+    f.imports(&[("repository", &revision), ("software", &revision)]);
+    support::check(&f.root, "a-local", &["check"], "git --version");
+    let rule = f.root.join(".please/checks/a-local/rule.toml");
+    fs::write(
+        &rule,
+        format!(
+            "{}resource = 'shared'\n",
+            fs::read_to_string(&rule).unwrap()
+        ),
+    )
+    .unwrap();
+    let project = f.load(true).unwrap();
+    assert_eq!(
+        project
+            .checks
+            .iter()
+            .filter(|c| c.resource.as_deref() == Some("shared"))
+            .count(),
+        3
+    );
+    let mut running = std::collections::BTreeSet::new();
+    let report = please::verify_project_at(
+        project,
+        &Never,
+        please::VerificationMode::AllRules,
+        Some("check"),
+        &mut |event| match event {
+            please::Progress::RuleStarted { id, .. } => {
+                assert!(
+                    running.is_empty(),
+                    "shared resource overlapped: {running:?}"
+                );
+                running.insert(id.to_owned());
+            }
+            please::Progress::RuleFinished { item, .. } => {
+                assert!(running.remove(&item.id));
+            }
+            _ => {}
+        },
+    )
+    .unwrap();
+    assert_eq!(report.overall, Status::Pass);
+    assert_eq!(report.results.len(), 3);
+}

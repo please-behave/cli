@@ -61,7 +61,7 @@ Checks neither install the governor nor repair project files.
 ## Execution points and required coverage
 
 Every selected rule is mandatory. Each point preserves the exact check membership
-of its configured execution point. Checks run once per binding, ordered by ID.
+of its configured execution point. Checks run once per binding; reports retain ID order.
 The concrete rule definitions and assignments live in `.please/`; product tests
 use independent synthetic configurations.
 

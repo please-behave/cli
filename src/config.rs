@@ -43,12 +43,26 @@ impl ProviderConfig {
 #[serde(deny_unknown_fields)]
 pub struct Config {
     pub project: String,
+    #[serde(default)]
+    pub execution: Execution,
     #[serde(default = "default_display")]
     pub max_display_files: usize,
     #[serde(default)]
     pub execution_points: ExecutionPoints,
     #[serde(default)]
     pub imports: Vec<crate::external::Import>,
+}
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct Execution {
+    pub max_parallel: std::num::NonZeroUsize,
+}
+impl Default for Execution {
+    fn default() -> Self {
+        Self {
+            max_parallel: std::num::NonZeroUsize::new(DEFAULT_MAX_PARALLEL).unwrap(),
+        }
+    }
 }
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -97,6 +111,8 @@ pub struct ReviewContext {
 /// A loaded check retaining its source boundary and declaring directory for execution.
 #[derive(Debug, Clone, Serialize)]
 pub struct Check {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub resource: Option<String>,
     pub id: String,
     pub name: String,
     pub description: String,
@@ -159,6 +175,7 @@ pub struct RuleDefinition {
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct CheckDefinition {
+    pub resource: Option<String>,
     pub entrypoint: Option<String>,
     #[serde(default, deserialize_with = "crate::check_command::deserialize")]
     pub command: Option<crate::check_command::Command>,
@@ -375,6 +392,14 @@ pub(crate) fn validate(root: PathBuf, loaded: crate::discovery::Loaded) -> Resul
         (|| -> Result<()> {
             identity(&check.id, &check.description, &mut ids)?;
             timeout(check.timeout_seconds)?;
+            if let Some(resource) = &check.resource {
+                ensure!(
+                    !resource.is_empty()
+                        && resource.trim() == resource
+                        && !resource.chars().any(char::is_control),
+                    "resource must be nonempty without control characters or surrounding whitespace"
+                );
+            }
             Ok(())
         })()
         .with_context(|| format!("invalid check '{}' ({})", check.id, path.display()))?;

@@ -47,6 +47,7 @@ fn execute(cli: Cli) -> Result<i32> {
         Words::Run {
             progress,
             checks_only,
+            max_parallel,
             at,
             plan,
             json,
@@ -86,14 +87,18 @@ fn execute(cli: Cli) -> Result<i32> {
             let redraw = terminal::progress_redraw(
                 progress,
                 stderr.is_terminal(),
-                matches!(std::env::var("CI").as_deref(), Ok("true" | "1")),
+                matches!(std::env::var("CI").as_deref(), Ok("true" | "1"))
+                    || matches!(std::env::var("GITHUB_ACTIONS").as_deref(), Ok("true")),
                 std::env::var("TERM").is_ok_and(|term| term == "dumb"),
             );
             let (width, height) = terminal::terminal_dimensions();
             let mut renderer =
                 terminal::ProgressRenderer::new(redraw, progress_color, width, height);
             let started = std::time::Instant::now();
-            let project = config::load(&root)?;
+            let mut project = config::load(&root)?;
+            if let Some(limit) = max_parallel {
+                project.config.execution.max_parallel = limit;
+            }
             for diagnostic in &project.effective.diagnostics {
                 eprintln!("Note: {}", terminal::clean(diagnostic));
             }
