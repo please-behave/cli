@@ -98,8 +98,7 @@ build it from source; Python and Node are used by Please Behave's development to
 
 ### Install a release
 
-When a compatible Please Behave release is available, download the matching
-archive and `SHA256SUMS` from
+Download the matching v0.1.0 archive and `SHA256SUMS` from
 [GitHub Releases](https://github.com/please-behave/cli/releases):
 
 | Platform | Target in the archive name |
@@ -109,10 +108,9 @@ archive and `SHA256SUMS` from
 | Linux x64 | `x86_64-unknown-linux-gnu` |
 | Linux ARM64 | `aarch64-unknown-linux-gnu` |
 
-`mise deploy` installs the published Please Behave development governor.
-The first Please Behave release is prepared as `0.1.0`; no compatible published
-release is claimed here. Build `please` from source until its archives are
-published. See [native downloads](docs/releasing.md#native-downloads).
+From this source checkout, `mise deploy` installs the published Please Behave
+release pinned in `.please-version`, with checksum and executable verification.
+See [native downloads](docs/releasing.md#native-downloads).
 
 For manual installation, verify the checksum, then extract and install it. Replace
 `VERSION` and `TARGET` below with the downloaded archive's values:
@@ -156,7 +154,9 @@ mise deploy                   # Install the published Please Behave development 
 ```
 
 `mise install` installs development tools; `mise deploy` installs the Please Behave governor.
-Build and install Please Behave separately as shown above. See [Development](#development) for checks and release tasks.
+Use the source installation above only when you need a candidate build.
+Repository governance uses the published release installed by `mise deploy`.
+See [Development](#development) for checks and release tasks.
 
 ### Initialize your project
 

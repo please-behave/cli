@@ -31,7 +31,8 @@ Agents must not manually run checks, tests, linters or builds, including
 can use `mise run check` for an explicit manual run of Please Behave at pre-push.
 
 Tests must remain offline and credential-free; mock Codex instead of calling it.
-Keep source, configuration, documentation and product output in English. Update relevant docs and focused tests when behavior changes.
+Keep source, configuration, documentation and product output in English.
+Update relevant docs and focused tests when behavior changes.
 Commit Cargo.lock; exclude reports, credentials and local MCP configuration.
 
 ## Commits

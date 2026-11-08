@@ -95,7 +95,7 @@ def deploy(tag=None, prefix=None):
         candidate.chmod(0o755)
         try:
             result = subprocess.run([str(candidate.resolve()), "--version"], capture_output=True, text=True, timeout=15,
-                                    env=dict(os.environ, PLEASE_STATE_DIR=str(Path(temporary) / "state"), NO_COLOR="1"))
+                                    env=dict(os.environ, NO_COLOR="1"))
             if result.returncode or result.stdout.strip() != f"please {tag[1:]}":
                 raise ValueError("Downloaded executable failed its version check.")
         except (OSError, subprocess.SubprocessError, ValueError) as error:

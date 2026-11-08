@@ -559,7 +559,7 @@ The public GitHub Action is maintained independently in
 owns the Action implementation, inputs, supported runners and acceptance tests.
 The Action revision and selected CLI release are independent. A usable Action
 ref and compatible Please Behave release assets must exist before adoption;
-this specification does not assert that either has been released.
+CLI v0.1.0 is published; no Action release is claimed here.
 The CLI repository uses its checksum-verifying installer for released CLI
 governance; adopting a released Action remains pending.
 
@@ -647,8 +647,8 @@ PolyForm-Noncommercial-1.0.0 reference text.
 The Rule reads the working tree at check and HEAD at pre-push. Missing or
 nonmatching licenses produce FAIL; technical errors produce ERROR.
 Checks remain mandatory. The agents-quality Review runs at check only when its
-file trigger matches. Missing tools and errors
-block success. Setup, dependency installation and release publication remain
+file trigger matches. Deterministic errors block success; this advisory Review
+keeps FAIL and ERROR visible without blocking. Setup, dependency installation and release publication remain
 outside rule execution.
 
 Hooks are managed by please sync at Git's effective hook path, including forwarding

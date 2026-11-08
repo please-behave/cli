@@ -2,7 +2,7 @@
 
 Releases are started manually from **Actions → Release → Run workflow → main**.
 No hand-written version tag is needed. CI runs automatically on pushes to main
-and pull requests. Releases reuse CI and add native release builds before publishing.
+and pull requests. Releases run independent quality gates and native builds before publishing.
 
 CI runs have no project-defined concurrency limit or automatic cancellation of
 older runs. Releases execute one at a time to avoid competing version/tag writes.
@@ -23,8 +23,8 @@ waits for publication. Follow progress in GitHub Actions or with `gh run list
 --workflow release.yml`. `mise run release` is equivalent. `mise deploy` instead
 downloads and installs the pinned published Please Behave development governor for the
 current OS/CPU, verifying its checksum and executable compatibility before
-replacement. It does
-not install Please Behave; see the [product installation instructions](../README.md#build-locally).
+replacement. Candidate builds remain separate; see the
+[source build instructions](../README.md#build-locally).
 
 ## Version policy
 

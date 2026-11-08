@@ -94,8 +94,9 @@ PLEASE_CHANGE_BASE semantics. AGENTS.md
 changing schedules the Review; all other changes omit it.
 
 CI allows 90 minutes for checks and the HTTP retry budget, and exposes the GEMINI_API_KEY
-repository secret only to the Please Behave execution step. The reusable CI workflow accepts this optional secret; independent release
-checks and native builds never need it. Fork pull requests normally receive no secret. If their trigger
+repository secret only to the Please Behave execution step. The reusable CI
+workflow accepts this optional secret; independent release checks and native
+builds never need it. Fork pull requests normally receive no secret. If their trigger
 matches and checks pass, the review reports ERROR; it never fabricates PASS.
 Do not supply secrets to untrusted fork code to avoid that error.
 
