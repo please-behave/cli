@@ -43,7 +43,7 @@ fn provider(root: &Path, id: &str, mode: &str, requirements: &str) {
         root,
         &format!(".please/providers/{id}.toml"),
         &format!(
-            "provider = 'cli'\ncommand = './tool'\nargs = [{mode:?}, '$HOME', '$(false)', '|', '']\nmodel = {id:?}\ntimeout_seconds = 1\n{requirements}"
+            "command = './tool'\nargs = [{mode:?}, '$HOME', '$(false)', '|', '']\ntimeout_seconds = 1\n[parameters]\nlabel = {id:?}\n{requirements}"
         ),
     );
 }
@@ -58,15 +58,15 @@ assert sys.argv[2:] == ['$HOME', '$(false)', '|', '']
 assert os.environ['PLEASE_EXECUTION_POINT'] == 'check'
 if mode == 'unread':
     time.sleep(30)
-prompt = sys.stdin.read()
+request = json.load(sys.stdin)
+assert request['protocol_version'] == 1
+prompt = request['prompt']
 assert 'Unique review instructions' in prompt
-assert 'response schema' in prompt
+assert request['response_schema']['required'] == ['reviews']
 assert 'positive line number' in prompt
 assert 'manifest paths' in prompt
-line = next(line for line in prompt.splitlines() if line.startswith('Configured reviews (JSON data): '))
-reviews = json.loads(line.split(': ', 1)[1])
-assert len(reviews) == 1
-assert os.environ['PLEASE_MODEL'] in ['first', 'second']
+reviews = request['reviews']
+assert all(r['parameters']['label'] in ['first', 'second'] for r in reviews)
 if mode == 'malformed':
     print('{"private-prompt-secret": "never expose"}')
     sys.exit(0)
@@ -80,7 +80,7 @@ if mode == 'oversized':
     sys.exit(0)
 status = 'FAIL' if mode == 'fail' else 'ERROR' if mode == 'error' else 'PASS'
 findings = [] if mode == 'ungrounded' else [{'message':'Evidence inspected','path':'evidence','line':1}]
-print(json.dumps({'reviews':[{'id': reviews[0]['id'], 'status':status, 'reason':'Evidence inspected', 'findings':findings}]}))
+print(json.dumps({'protocol_version':1,'reviews':[{'id': r['id'], 'status':status, 'reason':'Evidence inspected', 'findings':findings} for r in reviews]}))
 "#,
     );
     fs::set_permissions(root.join("tool"), fs::Permissions::from_mode(0o755)).unwrap();
@@ -88,7 +88,7 @@ print(json.dumps({'reviews':[{'id': reviews[0]['id'], 'status':status, 'reason':
 fn execute(root: &Path) -> report::Report {
     please::verify_project_at(
         config::load(root).unwrap(),
-        &Configured::default(),
+        &Configured,
         VerificationMode::AllRules,
         Some("check"),
         &mut |_| {},
@@ -103,7 +103,7 @@ fn stdin_results_and_provider_isolation() {
         root.path(),
         "first",
         "ok",
-        "[requirements]\nenv = ['PLEASE_MODEL']\nexecutables = ['./tool', 'python3']\n",
+        "[requirements]\nenv = ['PATH']\nexecutables = ['./tool', 'python3']\n",
     );
     provider(root.path(), "second", "ok", "");
     for (id, reference) in [("a", "first"), ("b", "first"), ("c", "second")] {
@@ -115,7 +115,7 @@ fn stdin_results_and_provider_isolation() {
             .unwrap()
             .plan
             .planned_model_calls,
-        3
+        2
     );
     let result = execute(root.path());
     assert_eq!(result.overall, Status::Pass, "{:?}", result.results);
@@ -202,7 +202,7 @@ fn runtime_requirements_are_deferred_until_selected_after_checks() {
     assert_eq!(execute(root.path()).overall, Status::Error);
 }
 #[test]
-fn cli_configuration_is_strict_and_legacy_provider_remains_compatible() {
+fn adapter_configuration_is_strict_and_defaults_are_explicit() {
     let root = fixture();
     provider(root.path(), "first", "ok", "");
     review(root.path(), "a", "first", "check");
@@ -210,10 +210,10 @@ fn cli_configuration_is_strict_and_legacy_provider_remains_compatible() {
     let valid = fs::read_to_string(&path).unwrap();
     for invalid in [
         valid.replace("command = './tool'", "command = ''"),
-        valid.replace("provider = 'cli'", "provider = 'http'"),
+        format!("provider = 'unsupported'\n{valid}"),
         format!("{valid}\n[requirements]\nenv = ['BAD=NAME']\n"),
-        format!("{valid}\n[review_profile]\nreasoning_effort = 'low'\n"),
-        format!("{valid}\napi_key = 'forbidden'\n"),
+        format!("unknown = true\n{valid}"),
+        format!("api_key = 'forbidden'\n{valid}"),
     ] {
         fs::write(&path, invalid).unwrap();
         assert!(config::load(root.path()).is_err());
@@ -227,20 +227,29 @@ fn cli_configuration_is_strict_and_legacy_provider_remains_compatible() {
         config::load(root.path())
             .unwrap()
             .review_provider(&config::load(root.path()).unwrap().reviews[0])
+            .unwrap()
             .timeout_seconds,
         0
     );
     fs::write(path, valid).unwrap();
     let project = config::load(root.path()).unwrap();
-    assert_eq!(project.provider.provider, "codex-cli");
-    assert_eq!(project.review_provider(&project.reviews[0]).provider, "cli");
-    // Legacy default configuration can also select generic CLI.
+    assert!(project.provider.is_none());
+    assert_eq!(
+        project
+            .review_provider(&project.reviews[0])
+            .unwrap()
+            .command,
+        "./tool"
+    );
     fs::write(
         root.path().join(".please/provider.toml"),
-        "provider = 'cli'\ncommand = 'missing-but-valid'\ntimeout_seconds = 5\n",
+        "command = 'missing-but-valid'\ntimeout_seconds = 5\n",
     )
     .unwrap();
-    assert_eq!(config::load(root.path()).unwrap().provider.provider, "cli");
+    assert_eq!(
+        config::load(root.path()).unwrap().provider.unwrap().command,
+        "missing-but-valid"
+    );
 }
 #[test]
 fn completed_fail_and_error_respect_review_blocking() {
@@ -279,4 +288,187 @@ fn completed_fail_and_error_respect_review_blocking() {
     )
     .unwrap();
     assert_eq!(execute(root.path()).overall, Status::Error);
+}
+
+#[test]
+fn protocol_versions_complete_coverage_and_usage_fail_closed() {
+    for mode in [
+        "wrong-version",
+        "missing-version",
+        "duplicate-key",
+        "missing-review",
+        "extra-review",
+        "missing-path",
+        "bad-usage",
+        "fenced",
+        "valid-usage",
+    ] {
+        let root = fixture();
+        write(
+            root.path(),
+            "tool",
+            r#"#!/usr/bin/env python3
+import json, sys
+request = json.load(sys.stdin)
+mode = sys.argv[1]
+r = {'id': request['reviews'][0]['id'], 'status':'PASS', 'reason':'Evidence inspected', 'findings':[{'message':'Evidence', 'path':'evidence', 'line':1}]}
+response = {'protocol_version':1,'reviews':[r]}
+if mode == 'wrong-version': response['protocol_version'] = 2
+if mode == 'missing-version': del response['protocol_version']
+if mode == 'missing-review': response['reviews'] = []
+if mode == 'extra-review': response['reviews'].append(dict(r, id='unexpected'))
+if mode == 'missing-path': del r['findings'][0]['path']
+if mode in ['bad-usage', 'valid-usage']:
+    response['usage'] = {'input_tokens':10,'cached_input_tokens':11 if mode == 'bad-usage' else 3,'output_tokens':4}
+if mode == 'duplicate-key':
+    print('{"protocol_version":1,"protocol_version":1,"reviews":[]}')
+elif mode == 'fenced': print('```json\n' + json.dumps(response) + '\n```')
+else: print(json.dumps(response))
+"#,
+        );
+        fs::set_permissions(root.path().join("tool"), fs::Permissions::from_mode(0o755)).unwrap();
+        write(
+            root.path(),
+            ".please/providers/first.toml",
+            &format!("command = './tool'\nargs = [{mode:?}]\ntimeout_seconds = 5\n"),
+        );
+        review(root.path(), "a", "first", "check");
+        let result = execute(root.path());
+        assert_eq!(
+            result.overall,
+            if mode == "valid-usage" {
+                Status::Pass
+            } else {
+                Status::Error
+            },
+            "{mode}: {:?}",
+            result.results
+        );
+        if mode == "valid-usage" {
+            assert_eq!(result.token_usage, Some(14));
+            assert_eq!(
+                report::read(root.path())
+                    .unwrap()
+                    .provider_usage
+                    .unwrap()
+                    .cached_input_tokens,
+                3
+            );
+        }
+    }
+}
+
+#[test]
+fn structured_parameters_merge_per_review_without_changing_provider_definition() {
+    let root = fixture();
+    write(
+        root.path(),
+        ".please/provider.toml",
+        "command = 'python3'\nargs = ['tool.py']\ntimeout_seconds = 5\n[parameters]\nvariant = 'quick'\nretained = [1, true, 'text']\n[parameters.tools]\nread = true\nsearch = true\n",
+    );
+    for id in ["a", "b"] {
+        write(
+            root.path(),
+            &format!(".please/reviews/{id}/rule.toml"),
+            &format!(
+                "id = {id:?}\ndescription = 'Inspect evidence'\nrun_at = ['check']\n[review]\nprompt = 'prompt.md'\n{}",
+                if id == "a" {
+                    "[review.parameters]\nvariant = 'careful'\n[review.parameters.tools]\nread = false\n"
+                } else {
+                    ""
+                }
+            ),
+        );
+        write(
+            root.path(),
+            &format!(".please/reviews/{id}/prompt.md"),
+            "Inspect evidence\n",
+        );
+    }
+    write(
+        root.path(),
+        "tool.py",
+        r#"import json, sys
+request = json.load(sys.stdin)
+assert request['protocol_version'] == 1
+assert request['execution_point'] == 'check'
+assert request['input']['manifest']
+assert len(request['reviews']) == 2
+for review in request['reviews']:
+    p = review['parameters']
+    assert p['retained'] == [1, True, 'text']
+    assert p['variant'] == ('careful' if review['id'] == 'a' else 'quick')
+    assert p['tools'] == ({'read':False} if review['id'] == 'a' else {'read':True,'search':True})
+print(json.dumps({'protocol_version':1, 'reviews':[{'id':r['id'],'status':'PASS','reason':'Parameters delivered','findings':[{'message':'Evidence','path':'evidence','line':1}]} for r in request['reviews']]}))
+"#,
+    );
+    let project = config::load(root.path()).unwrap();
+    assert_eq!(
+        planner::build(&project, Some("check"), false)
+            .unwrap()
+            .plan
+            .planned_model_calls,
+        1
+    );
+    assert_eq!(execute(root.path()).overall, Status::Pass);
+    assert_eq!(
+        config::load(root.path())
+            .unwrap()
+            .provider
+            .unwrap()
+            .parameters["tools"]["search"],
+        true
+    );
+    for value in ["nan", "inf", "2026-01-01"] {
+        write(
+            root.path(),
+            ".please/provider.toml",
+            &format!(
+                "command = 'fake-adapter'\ntimeout_seconds = 1\n[parameters]\ninvalid = {value}\n"
+            ),
+        );
+        assert!(config::load(root.path()).is_err(), "{value}");
+    }
+}
+
+#[test]
+fn init_has_no_provider_and_selected_reviews_require_explicit_configuration() {
+    let root = fixture();
+    assert!(!root.path().join(".please/provider.toml").exists());
+    assert!(config::load(root.path()).unwrap().provider.is_none());
+    write(
+        root.path(),
+        ".please/reviews/a/rule.toml",
+        "id = 'a'\ndescription = 'Inspect evidence'\nrun_at = ['check']\n[review]\nprompt = 'prompt.md'\n",
+    );
+    write(
+        root.path(),
+        ".please/reviews/a/prompt.md",
+        "Inspect evidence\n",
+    );
+    let project = config::load(root.path()).unwrap();
+    let plan = planner::build(&project, Some("check"), false).unwrap().plan;
+    assert!(!plan.executable());
+    assert!(
+        plan.blocking_reasons
+            .iter()
+            .any(|r| r.contains("no adapter configured"))
+    );
+    assert!(
+        planner::build(&project, Some("pre-push"), false)
+            .unwrap()
+            .plan
+            .executable()
+    );
+    write(
+        root.path(),
+        ".please/reviews/a/rule.toml",
+        "id = 'a'\ndescription = 'Inspect evidence'\nenabled = false\nrun_at = ['check']\n[review]\nprompt = 'prompt.md'\n",
+    );
+    assert!(
+        planner::build(&config::load(root.path()).unwrap(), Some("check"), false)
+            .unwrap()
+            .plan
+            .executable()
+    );
 }

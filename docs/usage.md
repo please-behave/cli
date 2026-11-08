@@ -21,7 +21,7 @@ entry, including an empty directory, file or symlink, fails with exit code 2 and
 Success prints `Initialized .please/ (10 files created).` to stdout, using the
 actual created file count. It never installs hooks, stages files or commits.
 The enabled example uses `git --version`
-and passes without Codex. The deliberately failing check and example review are
+and passes without an adapter. The deliberately failing check and example review are
 disabled. To demonstrate failure, change `enabled = false` to `enabled = true`
 in `.please/checks/deliberately-failing/rule.toml` and run `please run`.
 
@@ -110,13 +110,13 @@ lists saved results without rerunning them. Both streams respect `NO_COLOR`,
 `--no-color` and their own TTY state.
 
 Use `please status --details` to inspect full saved findings and captured
-command output separately. It does not run Codex or any check again. Saved reports
+command output separately. It does not run adapters or any check again. Saved reports
 remain readable; only `run` obtains new provider results. Status labels are
 English: `Overall` summarizes results, `Mode: Checks only` identifies saved
-scope, and `Codex tokens` shows available usage. Details add selection, required
+scope, and `Adapter tokens` shows available usage. Details add selection, required
 rule IDs, external sources and token counter breakdowns where available.
 
-`status` reads that report without executing checks or Codex. It reports
+`status` reads that report without executing checks or adapters. It reports
 CURRENT, STALE or UNKNOWN, with up to five paths and exact changed-file counts
 when both snapshots are complete. Line deltas are unavailable: Please Behave stores
 hashes, not prior file content. HEAD-relative diffs are never mislabeled as changes
@@ -147,53 +147,11 @@ reported as FAIL; signals, missing scripts and process-launch failures are ERROR
 A completed non-blocking FAIL permits success; execution errors always block. Checks are
 trusted code, without process sandboxing. Changing evaluated files prevents PASS.
 
-For an optional Codex review:
-
-1. Install a compatible Codex CLI and authenticate using `codex login`.
-2. Customize `.please/reviews/product-consistency/prompt.md` for your project's criteria.
-3. Set `enabled = true` in `.please/reviews/product-consistency/rule.toml`.
-4. Run `please sync`, then `please run`.
-
-New provider configuration uses `codex-cli`, a 180-second timeout, `gpt-6.1-sol`,
-medium reasoning and no MCP servers. Model and MCP allow list are configurable in
-`.please/provider.toml`. Reviews may instead select complete named configurations
-from `.please/providers/<id>.toml` or explicitly imported rule sets using
-`review.provider`; see [provider configuration](configuration.md#configure-the-ai-provider). A ChatGPT-backed local login works without a separate
-API key. Usage consumes your account allowance; Please Behave does not bypass limits.
-Inherited `OPENAI_API_KEY`/`CODEX_API_KEY` variables are removed from the child;
-your saved Codex authentication and user configuration still apply. Check
-`codex login status` if you want to confirm the saved authentication mode.
-There is no automatic real-model smoke test and no LLM cache.
-
-The adapter uses documented [`codex exec`](https://learn.chatgpt.com/docs/non-interactive-mode)
-flags: `--sandbox read-only`, `--ask-for-approval never`, `--ephemeral`,
-`--json`, `--output-schema` and `--output-last-message`. Full final JSON, exact ID coverage,
-allowed statuses and evidence references are checked locally. Missing CLI, auth
-errors, timeouts, missing/malformed output and ungrounded responses become ERROR.
-Provider traces are not stored. The `turn.completed.usage` event supplies the
-CLI-reported input, cached input and output token counts, available in saved
-status and details. JSON `token_usage` is input plus output;
-`provider_usage` retains the separate counters and optional reasoning/cache-write
-counts. Cached tokens are already included in input; reasoning tokens are already
-included in output. Neither is added to the total again. `--details` shows the
-optional counters. These are CLI-reported usage figures, not a billing audit,
-currency cost or remaining account allowance.
-
-Missing, invalid or ambiguous usage stays null and displays as unavailable, never
-as zero. It does not invalidate an otherwise valid review. Available usage is
-retained even if the verdict fails validation or Codex exits unsuccessfully;
-failed/interrupted calls may provide no usage despite consuming allowance.
-Older reports remain readable, but their missing usage cannot be reconstructed.
-
-Read-only applies to Codex shell execution, not a new security boundary around
-all installed integrations. Your Codex configuration and account remain trusted;
-review it before use, especially enabled MCP services or custom hooks. The built-in
-prompt treats repo files and diffs as untrusted evidence, but prompt injection and
-LLM mistakes cannot be eliminated. Validate findings yourself. Evidence paths and
-line numbers are checked; Please Behave cannot prove that reasoning is correct.
-
-The [My_App example](../examples/my-app/README.md) illustrates Xcode checks
-and a project review without coupling Please Behave to that application.
+For an optional AI review, configure an external adapter, customize the disabled
+example review, then enable it. Please Behave ships no provider and supplies no
+implicit default. Authentication, model settings and tool permissions belong to
+the adapter. See [provider configuration](configuration.md#configure-the-ai-provider)
+and the [adapter protocol](adapter-protocol.md).
 
 ## Exit codes
 

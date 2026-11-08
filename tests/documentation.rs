@@ -78,22 +78,21 @@ fn contract<T: Serialize + DeserializeOwned>(sample: &T, text: &str, prefix: &st
             Ok(parsed) => {
                 assert!(cell.starts_with("Optional"), "optional field {label}");
                 let defaults = serde_json::to_value(parsed).unwrap();
-                let empty = Value::Array(vec![]);
+                let empty = if key == "parameters" {
+                    serde_json::json!({})
+                } else {
+                    Value::Array(vec![])
+                };
                 let default = defaults.pointer(&pointer).unwrap_or_else(|| {
-                    assert!(matches!(key.as_str(), "files" | "context"));
+                    assert!(matches!(key.as_str(), "files" | "context" | "parameters"));
                     &empty
                 });
                 let expected = match (key.as_str(), default) {
-                    ("model" | "reasoning_effort", Value::Null) => Some("Codex default".into()),
                     (_, Value::Object(_)) => None, // Child fields are visited recursively.
                     _ => Some(default.to_string()),
                 };
                 if let Some(expected) = expected {
-                    let expected = if expected == "Codex default" {
-                        expected
-                    } else {
-                        format!("`{expected}`")
-                    };
+                    let expected = format!("`{expected}`");
                     assert!(
                         cell.contains(&expected),
                         "wrong default for {label}: expected {expected}, found {cell}"
@@ -148,6 +147,7 @@ fn every_configuration_field_required_marker_and_default_is_documented() {
             timeout_seconds: 30,
         }),
         review: Some(config::ReviewDefinition {
+            parameters: Default::default(),
             include_diff: true,
             trigger: Some(config::ReviewTrigger {
                 changed_files: vec!["docs/**".into()],
@@ -178,16 +178,9 @@ fn every_configuration_field_required_marker_and_default_is_documented() {
         section(README, "Rule parameters"),
         "parameters.<name>.",
     );
-    contract(
-        &p.provider,
-        section(README, "Configure the AI provider"),
-        "",
-    );
-    contract(
-        &p.provider.review_profile,
-        section(README, "Configure the AI provider"),
-        "review_profile.",
-    );
+    let adapter: config::ProviderConfig =
+        toml::from_str(block(section(README, "Configure the AI provider"), "toml")).unwrap();
+    contract(&adapter, section(README, "Configure the AI provider"), "");
     contract(
         &config::ReviewContext {
             path: "README.md".into(),
@@ -210,22 +203,21 @@ fn every_configuration_field_required_marker_and_default_is_documented() {
 #[test]
 fn documentation_contract_detects_missing_fields_and_wrong_defaults() {
     let root = project();
-    let p = config::load(root.path()).unwrap();
+    let _p = config::load(root.path()).unwrap();
+    let adapter: config::ProviderConfig =
+        toml::from_str(block(section(README, "Configure the AI provider"), "toml")).unwrap();
     let original = section(README, "Configure the AI provider");
     for bad in [
         original
             .lines()
-            .filter(|line| !line.starts_with("| `model` |"))
+            .filter(|line| !line.starts_with("| `command` |"))
             .collect::<Vec<_>>()
             .join("\n"),
         original.replace("Optional; `[]`", "Optional; `[\"all\"]`"),
-        original.replace("Optional; `2000`", "Optional; `20000`"),
-        original.replace(
-            "| `review_profile.tool_output_token_limit` |",
-            "| `removed` |",
-        ),
+        original.replace("Required | Executable", "Optional | Executable"),
+        original.replace("| `command` |", "| `removed` |"),
     ] {
-        assert!(std::panic::catch_unwind(|| contract(&p.provider, &bad, "")).is_err());
+        assert!(std::panic::catch_unwind(|| contract(&adapter, &bad, "")).is_err());
     }
 }
 fn block<'a>(text: &'a str, kind: &str) -> &'a str {
@@ -281,6 +273,11 @@ fn readme_examples_validate_and_plan_without_ai_or_check_execution() {
         block(section(README, "Group rules into rule sets"), "toml"),
     )
     .unwrap();
+    support::write(
+        root.path(),
+        ".please/provider.toml",
+        block(section(README, "Configure the AI provider"), "toml"),
+    );
     let p = config::load(root.path()).unwrap();
     let plan = planner::build(&p, Some("check"), false).unwrap().plan;
     assert!(plan.executable());
@@ -288,11 +285,9 @@ fn readme_examples_validate_and_plan_without_ai_or_check_execution() {
 }
 
 #[test]
-fn documented_provider_scaffold_matches_the_implementation() {
+fn documented_adapter_configuration_is_valid() {
     let example: config::ProviderConfig =
         toml::from_str(block(section(README, "Configure the AI provider"), "toml")).unwrap();
-    assert_eq!(
-        serde_json::to_value(example).unwrap(),
-        serde_json::to_value(config::ProviderConfig::scaffold()).unwrap()
-    );
+    assert_eq!(example.command, "python3");
+    assert_eq!(example.timeout_seconds, 180);
 }

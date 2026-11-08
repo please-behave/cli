@@ -46,6 +46,7 @@ fn fixture() -> tempfile::TempDir {
     let root = tempfile::tempdir().unwrap();
     git(root.path(), &["init", "-q"]);
     config::init(root.path()).unwrap();
+    support::configure_adapter(root.path());
     fs::remove_dir_all(root.path().join(".please/checks")).unwrap();
     fs::remove_dir_all(root.path().join(".please/reviews")).unwrap();
     write(root.path(), "evidence", "Evidence\n");
@@ -64,7 +65,7 @@ fn review(root: &Path, trigger: &str, extra: &str) {
     write(
         root,
         ".please/providers/fixture.toml",
-        "provider = 'cli'\ncommand = 'missing-trigger-test-tool'\ntimeout_seconds = 5\n[requirements]\nenv = ['MISSING_TRIGGER_TEST_CREDENTIAL_15821']\n",
+        "command = 'missing-trigger-test-tool'\ntimeout_seconds = 5\n[requirements]\nenv = ['MISSING_TRIGGER_TEST_CREDENTIAL_15821']\n",
     );
 }
 fn invoke(root: &Path, base: Option<&str>, preview: bool) -> Output {
@@ -298,7 +299,7 @@ fn matched_reviews_preserve_provider_grouping_and_global_check_gate() {
             .any(|r| r.kind == "review" && r.status == report::Status::NotRun)
     );
     assert!(!format!("{:?}", saved.results).contains("required environment"));
-    // Trigger-free reviews still schedule without a baseline, with either provider transport.
+    // Trigger-free reviews still schedule without a baseline, through an adapter.
     review(root.path(), "", "");
     assert_eq!(plan(root.path(), None).planned_model_calls, 1);
     let file = root.path().join(".please/reviews/test/rule.toml");
@@ -329,9 +330,8 @@ fn truncated_comparisons_and_incomplete_snapshots_never_skip() {
 }
 
 #[test]
-fn matched_triggers_execute_with_both_local_provider_fixtures() {
-    use std::os::unix::fs::PermissionsExt;
-    for transport in ["codex-cli", "cli"] {
+fn matched_triggers_execute_through_adapter_boundary() {
+    {
         let root = fixture();
         review(
             root.path(),
@@ -352,39 +352,15 @@ fn matched_triggers_execute_with_both_local_provider_fixtures() {
         );
         write(root.path(), "evidence", "Changed\n");
         let log = root.path().join(".please/reports/calls");
-        let tool = if transport == "codex-cli" {
-            support::context_provider(root.path())
-        } else {
-            write(
-                root.path(),
-                "tool",
-                r#"#!/usr/bin/env python3
-import json, sys
-prompt = sys.stdin.read()
-line = next(line for line in prompt.splitlines() if line.startswith('Configured reviews (JSON data): '))
-reviews = json.loads(line.split(': ', 1)[1])
-print(json.dumps({'reviews': [{'id': r['id'], 'status': 'PASS', 'reason': 'Evidence inspected', 'findings': [{'message': 'Evidence inspected', 'path': 'evidence', 'line': 1}]} for r in reviews]}))
-"#,
-            );
-            fs::set_permissions(root.path().join("tool"), fs::Permissions::from_mode(0o755))
-                .unwrap();
-            root.path().join("tool")
-        };
-        let provider = if transport == "cli" {
-            format!(
-                "provider = 'cli'\ncommand = {:?}\ntimeout_seconds = 5\n",
-                tool.to_str().unwrap()
-            )
-        } else {
-            "provider = 'codex-cli'\ntimeout_seconds = 5\n".into()
-        };
+        let tool = support::context_provider(root.path());
+        let provider = format!(
+            "command = {:?}\ntimeout_seconds = 5\n",
+            tool.to_str().unwrap()
+        );
         write(root.path(), ".please/providers/fixture.toml", &provider);
         let preview = plan(root.path(), Some("HEAD"));
         assert!(preview.executable());
-        assert_eq!(
-            preview.planned_model_calls,
-            if transport == "cli" { 2 } else { 1 }
-        );
+        assert_eq!(preview.planned_model_calls, 1);
         let output = Command::new(env!("CARGO_BIN_EXE_please"))
             .current_dir(root.path())
             .args(["run", "--at", "check"])
@@ -403,7 +379,7 @@ print(json.dumps({'reviews': [{'id': r['id'], 'status': 'PASS', 'reason': 'Evide
             .unwrap();
         assert!(
             output.status.success(),
-            "{transport}: {}",
+            "{}",
             String::from_utf8_lossy(&output.stderr)
         );
         let saved = report::read(root.path()).unwrap();

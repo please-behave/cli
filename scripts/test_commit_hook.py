@@ -35,7 +35,6 @@ class CommitHookTests(unittest.TestCase):
             (config / "checks").mkdir(parents=True)
             (config / "reviews").mkdir()
             (config / "config.toml").write_text('project = "Hook fixture"\nmax_display_files = 5\n')
-            (config / "provider.toml").write_text('provider = "codex-cli"\ntimeout_seconds = 30\n')
             (repository / ".gitignore").write_text(".please/reports/\n__pycache__/\n")
             (scripts / "fixture-check.py").write_text(
                 "from pathlib import Path\nimport os, sys\n"

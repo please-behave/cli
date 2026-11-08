@@ -88,6 +88,7 @@ fn review_contract_enforces_boundaries_and_semantic_evidence_locally() {
             .success()
     );
     config::init(root.path()).unwrap();
+    support::configure_adapter(root.path());
     let project = config::load(root.path()).unwrap();
     let snapshot = git_snapshot::capture(root.path()).unwrap();
     let active = [&project.reviews[0]];

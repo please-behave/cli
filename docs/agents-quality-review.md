@@ -49,7 +49,7 @@ still requires its deterministic tools. Agents use Git-hook validation; the
 commands above are for developers.
 
 The named [gemini-flash provider](../.please/providers/gemini-flash.toml) invokes
-[scripts/please-gemini-review.py](../scripts/please-gemini-review.py) through the generic CLI
+[.please/adapters/gemini.py](../.please/adapters/gemini.py) through the generic CLI
 transport, using Python's standard library. The configured model is
 gemini-3.8-flash, passed as PLEASE_MODEL. No Gemini CLI or HTTP dependency is needed.
 Authentication uses the GEMINI_API_KEY environment variable in x-goog-api-key.

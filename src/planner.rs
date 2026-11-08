@@ -90,7 +90,7 @@ pub struct Plan {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub disabled_rules: Vec<Rule>,
     pub required_ids: Vec<String>,
-    pub provider: crate::config::ProviderConfig,
+    pub provider: Option<crate::config::ProviderConfig>,
     pub provider_availability_checked: bool,
     pub planned_model_calls: usize,
     pub context: ContextPlan,
@@ -232,11 +232,7 @@ pub fn build(
         };
         let review = project.reviews.iter().find(|r| r.id == *id);
         let provider = review.and_then(|r| r.provider.clone());
-        let provider_config = provider.as_ref().map(|id| {
-            let mut config = project.providers[id].clone();
-            config.mcp_servers.sort();
-            config
-        });
+        let provider_config = provider.as_ref().map(|id| project.providers[id].clone());
         let rule = Rule {
             provider,
             provider_config,
@@ -345,8 +341,12 @@ pub fn build(
             Err(error) => blocking_reasons.push(format!("Cannot prepare review input: {error:#}")),
         }
     }
-    let mut provider = project.provider.clone();
-    provider.mcp_servers.sort();
+    for review in &active {
+        if project.review_provider(review).is_none() {
+            blocking_reasons.push(format!("Review {}: no adapter configured; configure .please/provider.toml or select a named provider", review.id));
+        }
+    }
+    let provider = project.provider.clone();
     let mut plan = Plan {
         change_base: changes
             .as_ref()
@@ -385,15 +385,7 @@ pub fn build(
                     .parameters
                     .resolve(&project.root, &review.id)
                     .ok()
-                    .map(|environment| {
-                        (
-                            review.provider.clone(),
-                            environment,
-                            (project.review_provider(review).provider == "cli")
-                                .then(|| review.id.clone()),
-                            review.include_diff,
-                        )
-                    })
+                    .map(|environment| (review.provider.clone(), environment, review.include_diff))
             })
             .collect::<BTreeSet<_>>()
             .len(),
@@ -440,10 +432,7 @@ pub fn build(
     let excerpts = review_input
         .as_ref()
         .map_or(&[][..], |input| input.excerpts.as_slice());
-    let mut named_providers = project.providers.clone();
-    for config in named_providers.values_mut() {
-        config.mcp_servers.sort();
-    }
+    let named_providers = project.providers.clone();
     let identity = serde_json::json!({
         "plan_schema_version": PLAN_SCHEMA_VERSION, "verifier_version": env!("CARGO_PKG_VERSION"),
         "project": project.config.project,

@@ -20,6 +20,7 @@ fn validated_execution_point_overrides_inherited_context_for_checks_and_provider
             .success()
     );
     config::init(root.path()).unwrap();
+    support::configure_adapter(root.path());
     write(
         root.path(),
         ".please/config.toml",
@@ -126,6 +127,6 @@ printf '%s' "$PLEASE_EXECUTION_POINT"
         assert_eq!(report.overall, Status::Pass);
         let item = report.results.iter().find(|r| r.id == "context").unwrap();
         assert_eq!(item.stdout.as_ref().unwrap().text, expected);
-        assert_eq!(fs::read_to_string(calls).unwrap(), "discovery\nreview\n");
+        assert_eq!(fs::read_to_string(calls).unwrap(), "review\n");
     }
 }

@@ -53,9 +53,9 @@ It must not evolve into another coding agent or a general-purpose agent orchestr
 
 Please Behave must remain independent of individual coding agents and LLM providers.
 
-Codex CLI is the initial provider because it allows the project to use an existing ChatGPT subscription without requiring separate API billing.
-
-Future integrations may include direct model APIs or managed enterprise providers.
+External executable adapters integrate provider CLIs, direct model APIs or local
+models without provider-specific logic in the core. Please Behave supplies no
+providers by default.
 
 Provider-specific functionality must remain behind explicit integration boundaries.
 
@@ -158,7 +158,7 @@ Its primary capabilities are:
 - Repository-local configuration with reusable external Git rule sets.
 - Deterministic checks.
 - LLM-based reviews.
-- A Codex CLI provider and configurable external CLI providers.
+- A uniform, configuration-driven executable adapter interface.
 - Configuration validation and confirmed reconciliation of declared external state.
 - Rule selection through execution points and rule sets.
 - Structured verification reports.

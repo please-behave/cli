@@ -35,6 +35,7 @@ fn project() -> TempDir {
     let dir = tempdir().unwrap();
     git(dir.path(), &["init", "--quiet"]);
     config::init(dir.path()).unwrap();
+    support::configure_adapter(dir.path());
     dir
 }
 fn synchronize(root: &Path) {
@@ -125,7 +126,7 @@ fn json_plan_errors_use_current_schema_and_blocking_reasons() {
         );
         assert!(document.get("errors").is_none());
         if document.get("input").is_some() {
-            let plan: please::planner::Plan = serde_json::from_value(document.clone()).unwrap();
+            let mut plan: please::planner::Plan = serde_json::from_value(document.clone()).unwrap();
             let human_args: Vec<_> = args
                 .iter()
                 .copied()
@@ -192,14 +193,11 @@ fn human_plan_uses_english_and_preserves_layout_and_values() {
         "scheduled": [{"id": "architecture", "name": "Architektur", "kind": "review",
             "description": "Prüft das Design", "blocking": true, "selected_by": ["at:check"],
             "provider": "reviewer", "provider_config": {
-                "provider": "codex-cli", "model": "review-model", "timeout_seconds": 60,
-                "mcp_servers": ["docs"], "review_profile": {
-                    "reasoning_effort": "high", "tool_output_token_limit": 1024}}}],
+                "command": "review-adapter", "timeout_seconds": 60}}],
         "omitted": [{"rule": {"id": "unchanged", "kind": "review", "description": "Unused",
             "blocking": true, "selected_by": ["at:check"]}, "reason": "trigger_not_matched"}],
         "required_ids": ["architecture"],
-        "provider": {"provider": "codex-cli", "timeout_seconds": 180,
-            "review_profile": {"tool_output_token_limit": 2000}},
+        "provider": {"command": "fake-adapter", "timeout_seconds": 180},
         "provider_availability_checked": false,
         "planned_model_calls": 1,
         "change_base": "base-789",
@@ -212,9 +210,6 @@ fn human_plan_uses_english_and_preserves_layout_and_values() {
             "orientation_diff_bytes": 40, "orientation_diff_truncated": true}
     }))
     .unwrap();
-    // Explicitly unset these optional values to cover the unresolved Codex defaults.
-    plan.provider.model = None;
-    plan.provider.review_profile.reasoning_effort = None;
     let before = serde_json::to_value(&plan).unwrap();
     let text = terminal::render_plan(&plan, false);
     assert_eq!(
@@ -226,11 +221,10 @@ fn human_plan_uses_english_and_preserves_layout_and_values() {
             "Change base: base-789\nSelection: complete\n",
             "[1] review Architektur · Prüft das Design\n    Selection: at:check\n",
             "Omitted: review unchanged · trigger_not_matched\nRequired rules: architecture\n",
-            "Provider: codex-cli · Model: Codex default (unresolved) · Reasoning: Codex default (unresolved) · Timeout: 180 s\n",
-            "MCP: none · availability not checked\n",
-            "Tool output: 2000 tokens per output · Planned model calls: 1\n",
+            "Default adapter: fake-adapter · Timeout: 180 s\n",
+            "Adapter availability not checked · Planned model calls: 1\n",
             "Context: 120 / 1000 bytes · Diff: 40 bytes (truncated; additional evidence must be read)\n",
-            "Review Architektur · Provider configuration: reviewer · Provider: codex-cli · Model: review-model · Reasoning: high · Timeout: 60 s · MCP: docs · Tool output: 1024 tokens\n",
+            "Review Architektur · Provider configuration: reviewer · Adapter: review-adapter · Timeout: 60 s\n",
             "Entry file: src/lib.rs\n",
             "Review criteria: 80 / 500 bytes · Orientation: at most 10 manifest paths\n",
             "Requirements: SPECIFICATION.md · entire file\n",
@@ -314,11 +308,10 @@ fn init_exact_paths_and_repeated_initialization_rejected() {
     git(root, &["init", "--quiet"]);
     let output = cli(root, &["init"]);
     assert_eq!(output.status.code(), Some(0));
-    assert_eq!(output.stdout, b"Initialized .please/ (10 files created).\n");
+    assert_eq!(output.stdout, b"Initialized .please/ (9 files created).\n");
     assert!(output.stderr.is_empty());
     for file in [
         "config.toml",
-        "provider.toml",
         "README.md",
         "checks/always-ok/rule.toml",
         "checks/deliberately-failing/rule.toml",
@@ -336,7 +329,7 @@ fn init_exact_paths_and_repeated_initialization_rejected() {
     );
     assert!(!path(root, "reports/last.json").exists());
     fs::write(path(root, "config.toml"), "personal edits").unwrap();
-    fs::remove_file(path(root, "provider.toml")).unwrap();
+    assert!(!path(root, "provider.toml").exists());
     let output = cli(root, &["init"]);
     assert_eq!(output.status.code(), Some(2));
     assert!(output.stdout.is_empty());
@@ -433,6 +426,7 @@ fn predecessor_configuration_is_not_loaded_or_modified() {
     );
     assert!(config::load(root.path()).is_err());
     config::init(root.path()).unwrap();
+    support::configure_adapter(root.path());
     assert!(root.path().join(".please/config.toml").is_file());
     assert!(config::load(root.path()).is_ok());
     assert_eq!(
@@ -598,31 +592,6 @@ fn provider_error_and_timeout_are_errors() {
     assert_eq!(mock.calls.get(), 1);
 }
 #[test]
-fn codex_arguments_are_read_only_noninteractive_and_structured() {
-    let command = please::provider::command(
-        Path::new("/repo"),
-        Path::new("/tmp/schema"),
-        Path::new("/tmp/output"),
-        None,
-    );
-    let args: Vec<_> = command
-        .get_args()
-        .map(|s| s.to_string_lossy().into_owned())
-        .collect();
-    for pair in [
-        ["--ask-for-approval", "never"],
-        ["--sandbox", "read-only"],
-        ["--output-schema", "/tmp/schema"],
-        ["--output-last-message", "/tmp/output"],
-    ] {
-        assert!(args.windows(2).any(|a| a == pair));
-    }
-    assert_eq!(args.last().unwrap(), "-");
-    assert!(args.contains(&"--json".into()));
-    assert!(!args.contains(&"--model".into()));
-    assert!(!args.iter().any(|a| a.contains("bypass")));
-}
-#[test]
 fn status_tracks_staged_modified_untracked_and_ignores_report_changes() {
     let d = project();
     let root = d.path();
@@ -774,84 +743,6 @@ fn terminal_strips_control_sequences_from_untrusted_values() {
     assert_eq!(terminal::clean("evil\x1b[31m\nrow"), "evil [31m row");
 }
 
-#[cfg(unix)]
-#[test]
-fn real_provider_transport_with_fake_executable_never_calls_codex() {
-    for mode in [
-        "pass",
-        "malformed",
-        "missing",
-        "exit",
-        "timeout",
-        "no-usage",
-        "invalid-usage",
-    ] {
-        let d = project();
-        enable(d.path());
-        replace(
-            d.path(),
-            "provider.toml",
-            "timeout_seconds = 180",
-            "timeout_seconds = 1",
-        );
-        let fake = tempdir().unwrap();
-        let executable = fake.path().join("fake-codex");
-        let payload =
-            serde_json::json!({"reviews":[verdict("product-consistency", "PASS")]}).to_string();
-        let behavior = match mode {
-            "pass" | "no-usage" | "invalid-usage" => {
-                format!("printf '%s' '{}' > \"$output\"", payload)
-            }
-            "malformed" => "printf 'invalid JSON' > \"$output\"".into(),
-            "missing" => ":".into(),
-            "exit" => "printf 'SENSITIVE_TRACE' >&2; exit 17".into(),
-            _ => "while :; do :; done".into(),
-        };
-        let telemetry = match mode {
-            "no-usage" | "timeout" => String::new(),
-            "invalid-usage" => "printf '%s\\n' '{\"type\":\"turn.completed\",\"usage\":{\"input_tokens\":\"oops\"}}'".into(),
-            _ => "printf '%s\\n' '{\"type\":\"turn.completed\",\"usage\":{\"input_tokens\":1000,\"cached_input_tokens\":800,\"output_tokens\":200,\"reasoning_output_tokens\":50,\"cache_write_input_tokens\":100}}'".into(),
-        };
-        // The completion arrives after more than the retained stdout limit.
-        write_executable(&executable, format!("#!/bin/sh\nset -eu\nif [ \"${{1:-}}\" = mcp ]; then printf '[]\\n'; exit 0; fi\noutput=''\nwhile [ $# -gt 0 ]; do\n case \"$1\" in --output-last-message) shift; output=$1;; esac\n shift\ndone\ncat > /dev/null\nprintf 'unstructured stdout is not a verdict\\n'\nprintf '%070000d\\n' 0\n{telemetry}\n{behavior}\n")).unwrap();
-        let provider = please::provider::Codex::new(executable);
-        let r = please::verify(d.path(), &provider).unwrap();
-        assert_eq!(
-            r.overall,
-            if matches!(mode, "pass" | "no-usage" | "invalid-usage") {
-                Status::Pass
-            } else {
-                Status::Error
-            },
-            "{mode}"
-        );
-        let serialized = fs::read_to_string(path(d.path(), "reports/last.json")).unwrap();
-        assert!(!serialized.contains("SENSITIVE_TRACE"));
-        assert!(!serialized.contains("unstructured stdout"));
-        let expected_usage = !matches!(mode, "no-usage" | "invalid-usage" | "timeout");
-        assert_eq!(r.token_usage, expected_usage.then_some(1200), "{mode}");
-        assert_eq!(r.provider_usage.is_some(), expected_usage, "{mode}");
-        let rendered = terminal::render(&r, false);
-        if expected_usage {
-            assert!(rendered.contains("1200 total · 1000 input (800 cached) · 200 output"));
-            let details = terminal::render_details(&r, false);
-            assert!(details.contains(
-                "Reasoning tokens (included in output): 50 · Cache write tokens (included in input): 100"
-            ));
-            assert!(details.contains(
-                "Usage reported by Codex CLI for the entire review call; not a billing or quota statement."
-            ));
-            assert!(details.contains("Selection: complete"));
-            assert!(details.contains("Required rules:"));
-            assert!(details.contains("Overall: PASS") || details.contains("Overall: ERROR"));
-        } else {
-            assert!(rendered.contains("Codex tokens: unavailable"));
-        }
-        let saved = report::read(d.path()).unwrap();
-        assert_eq!(saved.provider_usage, r.provider_usage);
-        assert_eq!(saved.token_usage, r.token_usage);
-    }
-}
 #[test]
 fn staging_alone_does_not_stale_content_and_head_changes_do() {
     let d = project();
@@ -1149,7 +1040,7 @@ fn provider_summary_must_be_short_nonempty_and_single_line() {
 }
 #[cfg(unix)]
 #[test]
-fn detailed_status_reads_saved_findings_without_another_codex_call() {
+fn detailed_status_reads_saved_findings_without_another_adapter_call() {
     let d = project();
     enable(d.path());
     let mut value = verdict("product-consistency", "FAIL");
@@ -1160,7 +1051,7 @@ fn detailed_status_reads_saved_findings_without_another_codex_call() {
     please::verify(d.path(), &provider).unwrap();
     let bytes_before = fs::read(path(d.path(), "reports/last.json")).unwrap();
     let fake = tempdir().unwrap();
-    let executable = fake.path().join("codex");
+    let executable = fake.path().join("fake-adapter");
     write_executable(
         &executable,
         "#!/bin/sh\nprintf 'called' > \"$PLEASE_TEST_PROVIDER_MARKER\"\nexit 90\n",
@@ -1302,7 +1193,7 @@ fn failed_checks_report_skipped_reviews_without_claiming_they_started() {
     assert!(output.contains("[1/3] PASS    · always-ok"));
     assert!(output.contains("[2/3] FAIL    · deliberately-failing"));
     assert!(output.contains("[3/3] NOT_RUN · product-consistency"));
-    assert!(!output.contains("RUNNING review") && !output.contains("Codex:"));
+    assert!(!output.contains("RUNNING review") && !output.contains("Adapter:"));
     assert_eq!(
         terminal::render_outcome(&report, 2000, false),
         "FAIL · 3 rules · 1 failed · 1 not executed · 2.0 s\n"
@@ -1448,7 +1339,9 @@ fn usage_is_recorded_once_for_bundled_reviews() {
     assert_eq!(r.overall, Status::Pass);
     assert_eq!(r.token_usage, Some(1200));
     assert_eq!(
-        terminal::render(&r, false).matches("Codex tokens:").count(),
+        terminal::render(&r, false)
+            .matches("Adapter tokens:")
+            .count(),
         1
     );
     assert_eq!(
@@ -1594,7 +1487,7 @@ fn run_and_checks_only_are_scoped_to_verification() {
 
 #[cfg(unix)]
 #[test]
-fn checks_only_cli_skips_enabled_codex_reviews_and_status_keeps_the_scope() {
+fn checks_only_cli_skips_enabled_adapter_reviews_and_status_keeps_the_scope() {
     let d = project();
     enable(d.path());
     replace(
@@ -1604,11 +1497,11 @@ fn checks_only_cli_skips_enabled_codex_reviews_and_status_keeps_the_scope() {
         "commit-msg",
     );
     let fake = tempdir().unwrap();
-    let executable = fake.path().join("codex");
+    let executable = fake.path().join("fake-adapter");
     let marker = fake.path().join("called");
     write_executable(
         &executable,
-        "#!/bin/sh\nif [ \"${1:-}\" = mcp ]; then printf '[]\\n'; exit 0; fi\nprintf called > \"$PLEASE_PROVIDER_MARKER\"\nexit 23\n",
+        "#!/bin/sh\nprintf called > \"$PLEASE_PROVIDER_MARKER\"\nexit 23\n",
     )
     .unwrap();
     let search_path = std::env::join_paths(
@@ -1635,7 +1528,7 @@ fn checks_only_cli_skips_enabled_codex_reviews_and_status_keeps_the_scope() {
     );
     assert!(!marker.exists());
     assert!(!String::from_utf8_lossy(&output.stdout).contains("Checks only"));
-    assert!(!String::from_utf8_lossy(&output.stderr).contains("Codex:"));
+    assert!(!String::from_utf8_lossy(&output.stderr).contains("Adapter:"));
     let saved = fs::read(path(d.path(), "reports/last.json")).unwrap();
     for args in [vec!["status"], vec!["status", "--details"]] {
         let status = run(&args);
@@ -1743,173 +1636,6 @@ fn focused_reviews_exclude_unrelated_paths_and_diff_and_include_untracked_entry_
     assert!(!prompt.contains("UNRELATED_POLICY_SECRET") && !prompt.contains("unrelated.swift"));
     assert!(prompt.contains("starting points, not an exhaustive boundary"));
     assert!(prompt.contains("targeted searches") && prompt.contains("ONCE"));
-}
-
-#[cfg(unix)]
-#[test]
-fn lean_review_transport_disables_unlisted_mcp_and_honors_model_profile_and_allowlist() {
-    let d = project();
-    enable(d.path());
-    let fake = tempdir().unwrap();
-    let executable = fake.path().join("fake-codex");
-    let args_file = fake.path().join("args");
-    let input_file = fake.path().join("input");
-    let list_marker = fake.path().join("listed");
-    let payload =
-        serde_json::json!({"reviews":[verdict("product-consistency", "PASS")]}).to_string();
-    let script = format!(
-        r#"#!/bin/sh
-set -eu
-if [ "${{1:-}}" = mcp ]; then
- printf listed >> '{}'
- printf '%s\n' '[{{"name":"memory"}},{{"name":"external-other"}}]'
- exit 0
-fi
-printf '%s\n' "$@" > '{}'
-output=''
-multi_agent=true
-while [ $# -gt 0 ]; do
- case "$1" in
-  --output-last-message) shift; output=$1;;
-  --config) shift; case "$1" in features.multi_agent=false) multi_agent=false;; esac;;
- esac
- shift
-done
-[ "$multi_agent" = false ] || exit 2
-cat > '{}'
-printf '%s' '{}' > "$output"
-"#,
-        list_marker.display(),
-        args_file.display(),
-        input_file.display(),
-        payload
-    );
-    write_executable(&executable, script).unwrap();
-    let provider = please::provider::Codex::new(executable);
-    let result = please::verify(d.path(), &provider).unwrap();
-    assert_eq!(result.overall, Status::Pass);
-    let args = fs::read_to_string(&args_file).unwrap();
-    assert!(args.contains("--model\ngpt-6.1-sol\n"));
-    for flag in [
-        "skills.include_instructions=false",
-        "features.plugins=false",
-        "features.apps=false",
-        "features.multi_agent=false",
-        "model_reasoning_effort=\"medium\"",
-        "tool_output_token_limit=2000",
-        "mcp_servers.memory.enabled=false",
-        "mcp_servers.external-other.enabled=false",
-    ] {
-        assert!(args.contains(flag), "missing {flag}: {args}");
-    }
-    assert!(
-        fs::read_to_string(&input_file)
-            .unwrap()
-            .contains("bounded numbered line ranges")
-    );
-    replace(
-        d.path(),
-        "provider.toml",
-        "mcp_servers = []",
-        "mcp_servers = [\"memory\"]",
-    );
-    replace(
-        d.path(),
-        "provider.toml",
-        "gpt-6.1-sol",
-        "custom-review-model",
-    );
-    replace(
-        d.path(),
-        "provider.toml",
-        "reasoning_effort = \"medium\"",
-        "reasoning_effort = \"low\"",
-    );
-    let result = please::verify(d.path(), &provider).unwrap();
-    assert_eq!(result.overall, Status::Pass);
-    let args = fs::read_to_string(&args_file).unwrap();
-    assert!(args.contains("mcp_servers.memory.enabled=true"));
-    assert!(args.contains("mcp_servers.external-other.enabled=false"));
-    assert!(
-        args.contains("custom-review-model") && args.contains("model_reasoning_effort=\"low\"")
-    );
-    assert_eq!(fs::read_to_string(list_marker).unwrap(), "listedlisted");
-}
-
-#[cfg(unix)]
-#[test]
-fn failed_mcp_discovery_or_unavailable_allowlist_never_starts_a_review_or_leaks_config() {
-    for mode in [
-        "invalid-json",
-        "exit",
-        "oversized",
-        "unknown-allowed",
-        "unsafe-name",
-    ] {
-        let d = project();
-        enable(d.path());
-        if mode == "unknown-allowed" {
-            replace(
-                d.path(),
-                "provider.toml",
-                "mcp_servers = []",
-                "mcp_servers = [\"missing\"]",
-            );
-        }
-        let fake = tempdir().unwrap();
-        let executable = fake.path().join("fake-codex");
-        let marker = fake.path().join("review-called");
-        let listing = match mode {
-            "invalid-json" => "printf SENSITIVE_CONFIG",
-            "exit" => "printf SENSITIVE_CONFIG >&2; exit 17",
-            "oversized" => "printf '%070000d' 0",
-            "unsafe-name" => "printf '[{\"name\":\"unsafe.name\"}]'",
-            _ => "printf '[]'",
-        };
-        write_executable(&executable, format!("#!/bin/sh\nif [ \"${{1:-}}\" = mcp ]; then {listing}; exit 0; fi\nprintf called > '{}'\nexit 19\n", marker.display())).unwrap();
-        let result = please::verify(d.path(), &please::provider::Codex::new(&executable)).unwrap();
-        assert_eq!(result.overall, Status::Error, "{mode}");
-        assert!(!marker.exists(), "{mode}");
-        assert!(
-            !fs::read_to_string(path(d.path(), "reports/last.json"))
-                .unwrap()
-                .contains("SENSITIVE_CONFIG")
-        );
-    }
-}
-
-#[test]
-fn provider_profile_validation_is_strict() {
-    for (before, after) in [
-        (
-            "tool_output_token_limit = 2000",
-            "tool_output_token_limit = 0",
-        ),
-        (
-            "reasoning_effort = \"medium\"",
-            "reasoning_effort = \"guess\"",
-        ),
-        (
-            "mcp_servers = []",
-            "mcp_servers = [\"duplicate\", \"duplicate\"]",
-        ),
-        ("mcp_servers = []", "mcp_servers = [\"\"]"),
-    ] {
-        let d = project();
-        replace(d.path(), "provider.toml", before, after);
-        assert!(config::load(d.path()).is_err());
-    }
-    let d = project();
-    fs::write(
-        path(d.path(), "provider.toml"),
-        "provider = \"codex-cli\"\ntimeout_seconds = 180\n",
-    )
-    .unwrap();
-    let p = config::load(d.path()).unwrap();
-    assert!(p.provider.model.is_none());
-    assert!(p.provider.mcp_servers.is_empty());
-    assert!(p.provider.review_profile.reasoning_effort.is_none());
-    assert_eq!(p.provider.review_profile.tool_output_token_limit, 2000);
 }
 
 #[test]

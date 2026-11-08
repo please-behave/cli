@@ -90,24 +90,26 @@ fn providers(
     root: &Path,
     directory: &Path,
 ) -> Result<Vec<(PathBuf, String, config::ProviderConfig)>> {
-    entries(root, directory)?
-        .into_iter()
-        .map(|path| {
-            ensure!(
-                path.extension().is_some_and(|e| e == "toml"),
-                "{}: expected a provider TOML file",
-                path.display()
-            );
-            let id = path
-                .file_stem()
-                .and_then(|s| s.to_str())
-                .context("provider ID must be UTF-8")?
-                .to_owned();
-            let provider =
-                document(root, &path).with_context(|| format!("invalid provider {id:?}"))?;
-            Ok((path, id, provider))
-        })
-        .collect()
+    let mut providers = Vec::new();
+    for path in entries(root, directory)? {
+        // Supporting adapter directories are data, never recursively discovered.
+        if source_path(root, &path)?.is_dir() {
+            continue;
+        }
+        ensure!(
+            path.extension().is_some_and(|e| e == "toml"),
+            "{}: expected a provider TOML file",
+            path.display()
+        );
+        let id = path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .context("provider ID must be UTF-8")?
+            .to_owned();
+        let provider = document(root, &path).with_context(|| format!("invalid provider {id:?}"))?;
+        providers.push((path, id, provider));
+    }
+    Ok(providers)
 }
 
 pub(crate) fn document<T: serde::de::DeserializeOwned>(root: &Path, path: &Path) -> Result<T> {
@@ -298,6 +300,7 @@ fn load_rules(
                         include_diff: review.include_diff,
                         trigger: review.trigger,
                         provider: review.provider,
+                        adapter_parameters: review.parameters,
                         id: rule.id.clone(),
                         name,
                         description: rule.description,
@@ -404,6 +407,7 @@ pub(crate) fn init(root: &Path) -> Result<usize> {
         parameters: Default::default(),
         check: None,
         review: Some(crate::config::ReviewDefinition {
+            parameters: Default::default(),
             include_diff: true,
             trigger: None,
             provider: None,
@@ -414,7 +418,6 @@ pub(crate) fn init(root: &Path) -> Result<usize> {
     };
     let files = [
         ("config.toml".into(), toml::to_string(&config)?),
-        ("provider.toml".into(), toml::to_string(&crate::config::ProviderConfig::scaffold())?),
         ("checks/always-ok/rule.toml".into(), check("always-ok", "Example deterministic pass", true)?),
         (format!("checks/always-ok/{entrypoint}"), pass.into()),
         ("checks/deliberately-failing/rule.toml".into(), check("deliberately-failing", "Disabled example demonstrating failure", false)?),

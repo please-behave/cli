@@ -26,6 +26,7 @@ fn project() -> TempDir {
             .success()
     );
     config::init(root.path()).unwrap();
+    support::configure_adapter(root.path());
     root
 }
 fn verify(root: &TempDir) -> report::Report {

@@ -28,9 +28,8 @@ pub fn valid_summary(reason: &str) -> bool {
             .any(|c| c.is_control() || matches!(c, '\u{2028}' | '\u{2029}'))
 }
 
-/// Use the Structured Outputs subset. Byte bounds, ID uniqueness/coverage and
+/// Describe the common provider-independent verdict document. Byte bounds, ID uniqueness/coverage and
 /// evidence existence/line ranges still require local validation.
-/// https://developers.openai.com/api/docs/guides/structured-outputs
 pub fn schema(ids: &[&str]) -> Value {
     json!({"type":"object", "additionalProperties":false, "required":["reviews"], "properties":{
         "reviews":{"type":"array", "minItems":ids.len(), "maxItems":ids.len(), "items":{

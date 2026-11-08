@@ -622,20 +622,25 @@ pub fn render_plan(plan: &crate::planner::Plan, color: bool) -> String {
             clean(&plan.required_ids.join(", "))
         ));
     }
-    text.push_str(&format!("Provider: {} · Model: {} · Reasoning: {} · Timeout: {} s\nMCP: {} · availability not checked\nTool output: {} tokens per output · Planned model calls: {}\nContext: {} / {} bytes · Diff: {} bytes{}\n",
-        clean(&plan.provider.provider), clean(plan.provider.model.as_deref().unwrap_or("Codex default (unresolved)")),
-        clean(plan.provider.review_profile.reasoning_effort.as_deref().unwrap_or("Codex default (unresolved)")), plan.provider.timeout_seconds,
-        if plan.provider.mcp_servers.is_empty() { "none".into() } else { clean(&plan.provider.mcp_servers.join(", ")) },
-        plan.provider.review_profile.tool_output_token_limit, plan.planned_model_calls,
-        plan.context.selected_bytes, plan.context.byte_limit, plan.context.orientation_diff_bytes,
+    if let Some(config) = &plan.provider {
+        text.push_str(&format!(
+            "Default adapter: {} · Timeout: {} s\n",
+            clean(&config.command),
+            config.timeout_seconds
+        ));
+    }
+    text.push_str(&format!("Adapter availability not checked · Planned model calls: {}\nContext: {} / {} bytes · Diff: {} bytes{}\n",
+        plan.planned_model_calls, plan.context.selected_bytes, plan.context.byte_limit, plan.context.orientation_diff_bytes,
         if plan.context.orientation_diff_truncated { " (truncated; additional evidence must be read)" } else { "" }));
     for rule in &plan.scheduled {
         if let (Some(id), Some(config)) = (&rule.provider, &rule.provider_config) {
-            text.push_str(&format!("Review {} · Provider configuration: {} · Provider: {} · Model: {} · Reasoning: {} · Timeout: {} s · MCP: {} · Tool output: {} tokens\n",
-                clean(&names[&rule.id]), clean(id), clean(&config.provider),
-                clean(config.model.as_deref().unwrap_or("Codex default (unresolved)")),
-                clean(config.review_profile.reasoning_effort.as_deref().unwrap_or("Codex default (unresolved)")),
-                config.timeout_seconds, clean(&config.mcp_servers.join(", ")), config.review_profile.tool_output_token_limit));
+            text.push_str(&format!(
+                "Review {} · Provider configuration: {} · Adapter: {} · Timeout: {} s\n",
+                clean(&names[&rule.id]),
+                clean(id),
+                clean(&config.command),
+                config.timeout_seconds
+            ));
         }
     }
     for path in &plan.context.entry_files {
@@ -750,7 +755,7 @@ pub fn render(report: &Report, color: bool) -> String {
     ));
     if let Some(usage) = report.provider_usage {
         text.push_str(&format!(
-            "Codex tokens: {} total · {} input ({} cached) · {} output\n",
+            "Adapter tokens: {} total · {} input ({} cached) · {} output\n",
             usage
                 .total()
                 .map(|n| n.to_string())
@@ -764,7 +769,7 @@ pub fn render(report: &Report, color: bool) -> String {
         .iter()
         .any(|item| item.kind == "review" && item.status != Status::NotRun)
     {
-        text.push_str("Codex tokens: unavailable\n");
+        text.push_str("Adapter tokens: unavailable\n");
     }
     if !report.snapshot.complete {
         text.push_str("Snapshot: UNKNOWN (details in report)\n");
@@ -819,7 +824,7 @@ pub fn render_details(report: &Report, color: bool) -> String {
             usage.reasoning_output_tokens.map(|n| n.to_string()).unwrap_or_else(|| "unavailable".into()),
             usage.cache_write_input_tokens.map(|n| n.to_string()).unwrap_or_else(|| "unavailable".into())
         ));
-        text.push_str("Usage reported by Codex CLI for the entire review call; not a billing or quota statement.\n");
+        text.push_str("Usage reported by adapters for the entire review call; not a billing or quota statement.\n");
     }
     text.push_str(&format!(
         "\n{}\nRepository: {}\nProvider: {}\nHEAD: {}\nSnapshot: {}\n{}\n",

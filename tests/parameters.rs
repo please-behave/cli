@@ -26,6 +26,7 @@ fn project() -> TempDir {
             .success()
     );
     config::init(root.path()).unwrap();
+    support::configure_adapter(root.path());
     root
 }
 fn parameters(root: &Path, id: &str, text: &str) {
@@ -418,12 +419,11 @@ fn provider_subprocess_receives_only_its_batch_parameters_and_clears_inherited_v
         "[parameters.label]\ntype = 'string'\nvalue = 'second'\n",
     );
     let fake = tempfile::tempdir().unwrap();
-    let script = fake.path().join("codex");
+    let script = fake.path().join("fake-adapter");
     fs::write(&script, r#"#!/bin/sh
 set -eu
 test "$PLEASE_EXECUTION_POINT" = check
 test "${PLEASE_PARAM_UNDECLARED+x}" != x
-if [ "${1:-}" = mcp ]; then printf '[]'; exit 0; fi
 test "${PLEASE_PARAM_UNDECLARED+x}" != x
 test "${PLEASE_PARAM_OPTIONAL+x}" != x
 case "$PLEASE_PARAM_LABEL" in
@@ -431,20 +431,15 @@ case "$PLEASE_PARAM_LABEL" in
  second) id=b; test "${PLEASE_PARAM_FILE+x}" != x;;
  *) exit 2;;
 esac
-output=''
-while [ $# -gt 0 ]; do
- case "$1" in --output-last-message) shift; output=$1;; esac
- shift
-done
 cat >/dev/null
-printf '{"reviews":[{"id":"%s","status":"PASS","reason":"Parameters delivered","findings":[{"message":"Evidence read","path":"evidence","line":1}]}]}' "$id" > "$output"
-printf '%s\n' '{"type":"turn.completed","usage":{"input_tokens":10,"cached_input_tokens":3,"output_tokens":4}}'
+printf '{"protocol_version":1,"reviews":[{"id":"%s","status":"PASS","reason":"Parameters delivered","findings":[{"message":"Evidence read","path":"evidence","line":1}]}],"usage":{"input_tokens":10,"cached_input_tokens":3,"output_tokens":4}}' "$id"
+
 "#).unwrap();
     fs::set_permissions(&script, fs::Permissions::from_mode(0o755)).unwrap();
     // Use an isolated child rather than mutating this test process's environment.
     let harness = fake.path().join("bin");
     fs::create_dir(&harness).unwrap();
-    fs::copy(&script, harness.join("codex")).unwrap();
+    fs::copy(&script, harness.join("fake-adapter")).unwrap();
     let path = std::env::join_paths(
         std::iter::once(harness).chain(std::env::split_paths(&std::env::var_os("PATH").unwrap())),
     )

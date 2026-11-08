@@ -82,6 +82,7 @@ impl Fixture {
         git(&root, &["init", "--quiet", "--initial-branch=main"]);
         git(&remote, &["init", "--quiet", "--initial-branch=main"]);
         config::init(&root).unwrap();
+        support::configure_adapter(&root);
         write(
             &root,
             ".please/config.toml",
@@ -1825,7 +1826,7 @@ printf '%s' "$PLEASE_EXECUTION_POINT"
     for check in report.results.iter().filter(|r| r.kind == "check") {
         assert_eq!(check.stdout.as_ref().unwrap().text, "verify");
     }
-    assert_eq!(fs::read_to_string(calls).unwrap(), "discovery\nreview\n");
+    assert_eq!(fs::read_to_string(calls).unwrap(), "review\n");
 }
 
 #[test]

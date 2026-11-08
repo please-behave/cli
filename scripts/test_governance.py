@@ -87,7 +87,6 @@ class GovernanceTests(unittest.TestCase):
             (root / ".gitignore").write_text(".please/reports/\n")
             (root / ".please-version").write_text((ROOT / ".please-version").read_text())
             (config / "config.toml").write_text('project = "Failure fixture"\nmax_display_files = 5\n')
-            (config / "provider.toml").write_text('provider = "codex-cli"\ntimeout_seconds = 30\n')
             rule = config / "checks/fail"
             rule.mkdir()
             (rule / "rule.toml").write_text('id = "fail"\ndescription = "Deliberate failure"\nrun_at = ["pre-commit"]\n[check]\n' + f'command = {json.dumps(shlex.join([sys.executable, "@rule/index.py"]))}\ntimeout_seconds = 10\n')

@@ -1,3 +1,4 @@
+mod support;
 use please::{
     config, external, planner,
     provider::{Provider, Request},
@@ -47,6 +48,7 @@ fn project() -> TempDir {
         "project = 'My_App'\n[execution_points]\ncustom = ['release']\n",
     );
     write(d.path(), "README.md", "# My_App\n");
+    support::configure_adapter(d.path());
     d
 }
 fn check(root: &Path, id: &str, attributes: &str, implementation: &str, script: &str) {

@@ -26,6 +26,7 @@ fn fixture() -> tempfile::TempDir {
             .success()
     );
     config::init(root.path()).unwrap();
+    support::configure_adapter(root.path());
     fs::remove_dir_all(root.path().join(".please/checks")).unwrap();
     fs::remove_dir_all(root.path().join(".please/reviews")).unwrap();
     root
@@ -45,7 +46,7 @@ fn product_prefix_is_reserved_for_rules_and_providers() {
     write(
         root.path(),
         ".please/providers/please-provider.toml",
-        "provider = 'codex-cli'\ntimeout_seconds = 5\n",
+        "command = 'fake-adapter'\ntimeout_seconds = 5\n",
     );
     assert!(
         format!("{:#}", config::load(root.path()).unwrap_err())
@@ -142,49 +143,4 @@ fn library_phases_and_saved_integrity_results_use_product_namespace() {
             .iter()
             .all(|item| !item.id.starts_with("hannes-"))
     );
-}
-
-#[test]
-fn cli_provider_clears_product_model_without_using_governor_model() {
-    let root = fixture();
-    write(root.path(), "evidence", "Evidence\n");
-    write(
-        root.path(),
-        ".please/reviews/review/rule.toml",
-        "id = 'review'\ndescription = 'Review evidence'\nrun_at = ['check']\n[review]\nprompt = 'prompt.md'\n",
-    );
-    write(
-        root.path(),
-        ".please/reviews/review/prompt.md",
-        "Inspect evidence.",
-    );
-    write(
-        root.path(),
-        ".please/provider.toml",
-        "provider = 'cli'\ncommand = 'python3'\nargs = ['tool.py']\ntimeout_seconds = 5\n",
-    );
-    write(
-        root.path(),
-        "tool.py",
-        r#"import json, os, sys
-assert 'PLEASE_MODEL' not in os.environ
-assert os.environ['HANNES_MODEL'] == 'governor-model'
-assert os.environ['PLEASE_EXECUTION_POINT'] == 'check'
-sys.stdin.read()
-print(json.dumps({'reviews': [{'id': 'review', 'status': 'PASS', 'reason': 'Evidence inspected', 'findings': [{'message': 'Evidence inspected', 'path': 'evidence', 'line': 1}]}]}))
-"#,
-    );
-    let output = Command::new(env!("CARGO_BIN_EXE_please"))
-        .args(["run", "--at", "check"])
-        .current_dir(root.path())
-        .env("PLEASE_MODEL", "inherited-product-model")
-        .env("HANNES_MODEL", "governor-model")
-        .output()
-        .unwrap();
-    assert!(
-        output.status.success(),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    assert_eq!(report::read(root.path()).unwrap().overall, Status::Pass);
 }

@@ -119,7 +119,7 @@ repeated references within one binding execute once. See
 ## Named provider configurations
 
 A selected directory may distribute complete named configurations in
-`providers/<id>.toml` beside its `config.toml`. They use the same Codex fields,
+`providers/<id>.toml` beside its `config.toml`. They use the same adapter fields,
 defaults and limits as [local provider configurations](configuration.md#configure-the-ai-provider).
 All provider files in that directory are validated, including unused definitions.
 A review selects one with `provider = "quality"` in its `[review]` table.
@@ -130,13 +130,12 @@ A distinct definition with an existing ID fails, even with identical settings;
 consumer overrides are unsupported. Repeated imports of the same immutable file
 share its configuration. A provider-only set may use `rules = []`, with the usual
 required `id`, `description` and nonempty `run_at`. No extra imports are inferred
-or downloaded. Reviews without references keep the consumer's legacy provider.
+or downloaded. Reviews without references keep the consumer's explicit default adapter.
 
 Provider files follow the existing source-boundary, integrity and atomic state
-publication checks. Named configurations support `codex-cli` and generic `cli`
-providers. Codex uses its existing login; generic tools inherit credentials from the execution environment.
-Generic configurations may declare required environment variables and executables;
-no credential values belong in provider files.
+publication checks. All configurations identify executable adapters; runtime
+requirements may name environment variables and executables. No credential values
+belong in provider files. Please Behave ships no provider implementation.
 
 ## Refresh, storage and provenance
 

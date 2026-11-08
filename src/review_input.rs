@@ -8,7 +8,7 @@ use crate::{
 use anyhow::{Result, ensure};
 use std::collections::BTreeSet;
 
-#[derive(Debug)]
+#[derive(Debug, serde::Serialize)]
 pub struct PreparedReviewInput {
     pub excerpts: Vec<Excerpt>,
     pub focused_paths: Option<Vec<String>>,

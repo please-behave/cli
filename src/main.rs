@@ -114,7 +114,7 @@ fn execute(cli: Cli) -> Result<i32> {
             let no_rules = project.checks.is_empty() && project.reviews.is_empty();
             let report = please::verify_project_with_context(
                 project,
-                &Configured::default(),
+                &Configured,
                 if checks_only {
                     please::VerificationMode::ChecksOnly
                 } else {
@@ -123,7 +123,7 @@ fn execute(cli: Cli) -> Result<i32> {
                 at.as_deref(),
                 hook_context.as_ref(),
                 &mut |event| {
-                    // Progress must be visible before a slow command or Codex call finishes.
+                    // Progress must be visible before a slow command or adapter call finishes.
                     // Losing the progress stream must not prevent writing the report.
                     let _ = stderr.write_all(renderer.render(&event).as_bytes());
                     let _ = stderr.flush();

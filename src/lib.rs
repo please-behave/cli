@@ -244,9 +244,9 @@ pub fn verify_project_with_context(
                 calls: plan.planned_model_calls,
                 timeout_seconds: active
                     .iter()
-                    .map(|r| project.review_provider(r).timeout_seconds)
+                    .filter_map(|r| project.review_provider(r).map(|p| p.timeout_seconds))
                     .max()
-                    .unwrap_or(project.provider.timeout_seconds),
+                    .unwrap_or(0),
             });
             for (offset, review) in active.iter().enumerate() {
                 progress(Progress::RuleStarted {
@@ -319,7 +319,7 @@ pub fn verify_project_with_context(
         timestamp: chrono::Utc::now().to_rfc3339(),
         repository: project.root.to_string_lossy().into_owned(),
         project: project.config.project,
-        provider: project.provider.provider,
+        provider: "adapter".into(),
         overall: report::overall(&items),
         git_summary: format!(
             "{} working files fingerprinted; HEAD {}; {}",

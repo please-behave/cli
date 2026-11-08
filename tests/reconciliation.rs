@@ -39,6 +39,7 @@ fn project(points: &[&str]) -> TempDir {
     let root = tempfile::tempdir().unwrap();
     ok(git(root.path(), &["init", "--quiet"]));
     config::init(root.path()).unwrap();
+    support::configure_adapter(root.path());
     fs::write(
         root.path().join(".please/config.toml"),
         "project = 'My_App'\n[execution_points]\ncustom = ['first', 'second']\n",
@@ -139,7 +140,7 @@ fn obsolete_hooks_are_rejected_and_provider_validation_is_preserved() {
     let provider = root.path().join(".please/provider.toml");
     let original = fs::read_to_string(&provider).unwrap();
     for bad in [
-        original.replace("codex-cli", "unsupported"),
+        format!("{original}unsupported = true\n"),
         original.replace("180", "0"),
         original.replace("medium", "unsupported"),
     ] {

@@ -137,12 +137,7 @@ pub fn execute_prepared(
     execution_point: &str,
 ) -> (Vec<Item>, Option<TokenUsage>) {
     let mut groups = std::collections::BTreeMap::<
-        (
-            Option<String>,
-            crate::parameters::Environment,
-            Option<String>,
-            bool,
-        ),
+        (Option<String>, crate::parameters::Environment, bool),
         Vec<&Review>,
     >::new();
     let mut items = Vec::new();
@@ -161,12 +156,7 @@ pub fn execute_prepared(
             });
         match resolved {
             Ok(environment) => groups
-                .entry((
-                    review.provider.clone(),
-                    environment,
-                    (project.review_provider(review).provider == "cli").then(|| review.id.clone()),
-                    review.include_diff,
-                ))
+                .entry((review.provider.clone(), environment, review.include_diff))
                 .or_default()
                 .push(review),
             Err(error) => {
@@ -179,7 +169,7 @@ pub fn execute_prepared(
         }
     }
     let mut usages = Vec::new();
-    for ((_, parameters, _, _), reviews) in groups {
+    for ((_, parameters, _), reviews) in groups {
         // A snapshot check is required before every provider invocation, including
         // later parameter batches. Never reuse prepared evidence after edits.
         let stable = crate::git_snapshot::capture(&project.root).is_ok_and(|current| {
@@ -207,10 +197,7 @@ pub fn execute_prepared(
         let result = response
             .verdict
             .and_then(|json| {
-                let parsed = parse(project, &reviews, snapshot, &json);
-                if project.review_provider(reviews[0]).provider == "cli" {
-                    parsed.map_err(|_| anyhow::anyhow!("Invalid CLI review response; structured verdict and evidence requirements were not met"))
-                } else { parsed }
+                parse(project, &reviews, snapshot, &json).map_err(|_| anyhow::anyhow!("Invalid adapter review response; structured verdict and evidence requirements were not met"))
             });
         let mut results = match result {
             Ok(items) => items,

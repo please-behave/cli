@@ -4,5 +4,6 @@ enabled = true
 run_at = ["pre-push", "check", "release"]
 
 [check]
+resource = "native-artifact"
 command = "python3 scripts/smoke.py"
 timeout_seconds = 120

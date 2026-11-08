@@ -137,79 +137,67 @@ init requires `.please/` to be absent. Any existing entry, including an empty
 directory, regular file or symlink, fails with exit 2 and
 `Please Behave: ERROR: Already initialized (.please/ exists).` before any files
 or directories are created or modified. On success it prints
-`Initialized .please/ (10 files created).` to stdout, using the actual created
+`Initialized .please/ (9 files created).` to stdout, using the actual created
 file count, and exits 0. It installs no hooks.
 It scaffolds a passing enabled Check, a disabled failing Check and disabled
 product-consistency Review in self-contained directories. Reports remain local.
-Provider omission uses scaffold defaults: codex-cli, 180 seconds, gpt-6.1-sol,
-medium effort, empty MCP allow list and 2000 retained tool-output tokens.
+Initialization supplies no provider configuration or adapter. Configure an adapter
+before enabling reviews.
 Acceptance: `tests/acceptance.rs::init_exact_paths_and_repeated_initialization_rejected`
 and `tests/acceptance.rs::init_rejects_existing_configuration_entries_without_writes`.
 
-## PROV-001: Named provider configurations
+## PROV-001: Named adapter configurations
 
-Local `.please/providers/<id>.toml` files define complete provider configurations
-using the same fields, defaults and limits as `provider.toml`. IDs use the Rule ID
-syntax and are global across local definitions and explicitly imported sets.
-Each external selected directory may contain `providers/<id>.toml`; these files
-are loaded through the existing immutable cache and source-boundary checks.
-Repeated imports of the same immutable provider file share one definition;
-distinct definitions with the same ID fail, even if their settings match. Local
-overrides, per-review model overrides and credentials are unsupported.
+All AI reviews use external executable adapters. No provider implementation or
+implicit provider is supplied. Optional `.please/provider.toml` defines the project
+default; `.please/providers/<id>.toml` defines named configurations. Review provider
+references, imported definitions, conflict detection and offline resolution retain
+their existing scope rules. An enabled selected review without a named or explicit
+project default is blocked before execution. Disabled or omitted reviews need no
+default; explicit unknown references remain invalid even when disabled.
 
-`review.provider` optionally references one named configuration. Resolve references
-only after all explicit imports are loaded, independently of import order, before
-publishing resolution state. Unknown references fail even for disabled reviews.
-Unreferenced reviews continue using the consumer's `provider.toml`, or its scaffold
-defaults when omitted. Named configurations never become an implicit default.
-`codex-cli` and generic `cli` providers are supported. Codex batches require the same provider reference and
-resolved parameter environment; each invocation uses its resolved model, timeout,
-review profile and MCP allow list. Plans and saved reports retain the reference
-and effective named configuration per review; existing schema 3/4 documents
-without these optional fields remain readable. Provider settings contain no
-credential fields; authentication remains in the existing Codex login.
+Definitions require command and timeout_seconds (0 disables the deadline;
+otherwise 1..=3600), with optional literal args, requirements.env,
+requirements.executables and parameters tables. No shell expansion occurs. The
+consumer root is the working directory. Availability requirements are evaluated
+only after checks and immediately before invocation. Provider-specific fields
+from the previous configuration model are rejected; migrate them into parameters.
 
-Acceptance: `tests/named_providers.rs` covers local/imported resolution, conflicts,
-legacy defaults, batching, invocation settings and saved plan/report metadata.
+## PROV-002: Adapter protocol
 
-## PROV-002: Generic CLI execution and runtime requirements
+Protocol version 1 uses one UTF-8 JSON request on stdin and one JSON response on
+stdout. Requests contain protocol_version, execution_point, input (prepared
+excerpts, manifest, focused paths and bounded diff), head, prompt, response_schema,
+and reviews with id, criteria, entry_files, context_files and effective parameters.
+The common prompt/schema describe the verdict and evidence contract; adapters
+translate them for their provider. Adapters own authentication, tools, models,
+response extraction and other provider-specific behavior.
 
-`provider = "cli"` uses a required nonblank `command` and optional literal `args`
-(default empty). No shell, interpolation or argument expansion occurs. The consumer
-root is the working directory. Optional `model` is delivered as `PLEASE_MODEL`;
-wrappers may translate it into tool-specific flags. The required `timeout_seconds` (1..=3600, or 0 for no overall CLI deadline)
-applies to the entire invocation, including stdin delivery.
-Codex-only MCP/profile settings must remain at their omitted defaults for CLI.
+Provider parameters and review.parameters are arbitrary JSON-compatible TOML
+tables. Merge top-level keys, with each review value replacing the provider value
+at that key; nested tables and arrays are replaced whole. Please validates only
+JSON compatibility and transports values without interpreting provider meaning.
+Existing Rule parameter environments remain separate and are delivered as before.
+Batching requires equal provider references, Rule parameter environments and diff
+selection. Each review retains its own effective adapter parameters.
 
-Each generic CLI review executes individually, preserving provider references and
-parameter isolation. Stdin receives the complete shared review prompt plus the JSON
-response schema; stdout must be exactly the existing structured verdict document.
-No envelopes, Markdown fences or natural-language extraction are supported. Output
-is bounded by the shared 64 KiB capture limit. Malformed, incomplete, oversized or
-ungrounded verdicts, missing commands, nonzero exits and timeouts produce ERROR.
-Raw stdout/stderr and invalid-response details are never persisted as diagnostics.
-The shared process runner drains both pipes and cleans up process trees.
+Responses require protocol_version = 1 and reviews matching the common verdict
+contract. Optional usage contains common token counters; absent usage remains
+unavailable. Each requested ID must occur exactly once with PASS, FAIL or ERROR.
+PASS/FAIL require existing manifest evidence and valid line numbers. Technical
+adapter failures may exit nonzero; no verdict is accepted on nonzero exit.
+Unsupported versions, unknown fields, malformed, incomplete, oversized or invalid
+responses produce ERROR. Raw stdout/stderr and parser details are suppressed.
+The shared process runner bounds output, drains pipes and terminates process
+trees on timeout, including blocked stdin delivery. Nonblocking review errors
+remain visible without blocking success; checks and integrity failures retain
+their existing enforcement. Protocol changes require explicit version handling;
+unknown versions never silently fall back.
 
-Both provider kinds accept optional `[requirements]` with `env` and `executables`
-arrays (default empty). Names are validated during configuration loading, but
-availability is checked only for selected, enabled reviews after deterministic
-gating and parameter resolution, immediately before their invocation. Environment
-requirements use the child environment and must be nonempty. Executables resolve
-through that environment's PATH or explicit paths relative to the consumer root.
-No credential values are configured, discovered or logged. Generic tools inherit
-the execution environment; Codex retains its login-only credential policy.
-
-Imported CLI definitions follow EXT-001's existing explicit import trust boundary:
-refresh and validate before publication, immutable offline cache, no local overrides.
-Imported commands have the consumer's permissions, just like imported checks.
-Generic CLIs provide no sandbox or Codex MCP controls; consumers must trust their
-tools and configure read-only behavior themselves.
-CLI providers may set timeout_seconds = 0 to delegate deadlines to their adapter;
-Codex still requires 1..=3600 seconds.
-
-Acceptance: `tests/cli_providers.rs` covers configuration, stdin/JSON execution,
-runtime gating, isolation, process errors and timeout cleanup; PROV-001 retains
-Codex compatibility coverage.
+Acceptance: `tests/cli_providers.rs` exercises the actual process boundary using
+only deterministic provider-neutral adapters. No test requires AI credentials,
+external services or AI token consumption. See [adapter protocol](docs/adapter-protocol.md)
+for schemas, migration and a working dummy adapter.
 
 ## SEL-001: Selection and offline plans
 
@@ -221,7 +209,7 @@ supported. Rules run once, checks first; results retain ID order within each kin
 output uses English labels and explanations, preserving configured values and
 technical identifiers. It prints order, selection reasons, omissions, required
 rules, input identity, declared provider settings and bounded context sizes,
-without running checks, Codex, MCPs or network
+without running checks, adapters or network
 calls, changing project/Git state or replacing the report. `--plan --json` uses
 plan schema 3 and structured diagnostics. Every JSON preview includes
 plan_schema_version, status and blocking_reasons. Configuration or selection
@@ -232,8 +220,7 @@ when blocked by an incomplete snapshot. Acceptance:
 A plan is neither a cache nor proof
 that a later input is identical. Provider availability is not checked offline.
 
-`--checks-only` runs checks only, without provider discovery, model calls or MCP
-connections. Reviews are excluded from progress/results and the limited scope is
+`--checks-only` runs checks only, without adapter processes or model calls. Reviews are excluded from progress/results and the limited scope is
 recorded in plans and reports; terminal output warns only about actual omissions.
 Full configuration validation still runs.
 Every selected rule must execute; non-blocking FAIL and non-blocking provider/review ERROR are nonfatal.
@@ -414,22 +401,11 @@ Acceptance: `tests/parameters.rs` and parameterized imports in
 
 ## REV-001: Reviews and provider isolation
 
-The built-in Codex CLI and generic CLI providers execute reviews. Codex resolves
-through inherited PATH and uses the existing local login. API-key environment
-variables are removed; no credentials or raw provider traces are persisted or
-copied into CI. Missing/incompatible CLI, login, timeout or exhausted allowance
-produces ERROR, never PASS or a fabricated policy violation.
-
-Selected reviews with the same provider reference and identical resolved parameter
-environments and include_diff settings share one new,
-noninteractive, ephemeral Codex invocation with structured output, read-only sandbox and no approvals. A bounded, token-free
-`codex mcp list --json` precedes it. Every discovered server is explicitly disabled
-unless in the provider allow list; unknown allowed names, unsafe names, oversized
-or failed discovery block the call. Automatic skills, apps/plugins, subagents and
-web search are disabled for the child process, including when multi-agent support
-is enabled in the user's configuration. User Codex configuration is not
-rewritten. Allowed integrations and local Codex configuration remain trusted;
-read-only execution is not a new sandbox for MCP capabilities.
+All reviews use the adapter interface defined by PROV-002. Provider-specific
+behavior belongs in externally configured adapters. Core orchestration still
+prepares shared evidence once, executes checks before reviews, and validates all
+verdicts and snapshot stability locally. No provider is distributed or selected
+implicitly.
 
 Review criteria state what to judge. Exact entry files are starting points;
 Markdown context supplies documented expectations with original line numbers.
@@ -707,7 +683,7 @@ See [repository self-integration](docs/self-governance.md) for coverage and setu
 Git hooks required by enabled effective assignments are derived automatically
 and reconciled only after explicit confirmation (or sync --yes). A bypassable
 local hook verifies working files, not necessarily the pushed commit. Hosted
-Codex authentication is not provisioned and personal tokens are not copied to CI.
+provider authentication is not provisioned and personal tokens are not copied to CI.
 No hosted service, database, autonomous development, universal policy engine,
 result cache or additional input/provider implementation is in current scope.
 
@@ -828,14 +804,14 @@ Public documentation explains supported behavior; proposals remain in the roadma
 | EXT-001 | `tests/external_rule_sets.rs::shared_rules_are_reused_across_sets_and_points_offline` |
 | RULE-001 | `tests/execution_points.rs::resolution_obeys_membership_override_union_and_disabled_rules` |
 | REC-001 | `tests/reconciliation.rs::approval_updates_removals_and_idempotency` |
-| ARC-001 | `tests/documentation.rs::documented_provider_scaffold_matches_the_implementation` |
+| ARC-001 | `tests/documentation.rs::documented_adapter_configuration_is_valid` |
 | DOC-001 | `tests/documentation.rs::every_configuration_field_required_marker_and_default_is_documented` |
 | CLI-001 | `tests/acceptance.rs::all_command_paths_and_standard_help` |
 | PARAM-001 | `tests/parameters.rs::local_parameters_deliver_strings_and_consumer_files_without_changing_rule_resources` |
 | CFG-001 | `tests/configuration.rs::strict_configuration_and_implementation_validation` |
 | SEL-001 | `tests/configuration.rs::checks_only_requires_complete_selection` |
 | CHK-001 | `tests/configuration.rs::direct_and_interpreter_execution_keep_consumer_and_resources` |
-| REV-001 | `tests/acceptance.rs::lean_review_transport_disables_unlisted_mcp_and_honors_model_profile_and_allowlist` |
+| REV-001 | `tests/cli_providers.rs::stdin_results_and_provider_isolation` |
 | PREP-001 | `tests/configuration.rs::prepared_input_is_shared_without_rereading_resources` |
 | OUT-001 | `tests/review_contract.rs::review_contract_enforces_boundaries_and_semantic_evidence_locally` |
 | INP-001 | `tests/acceptance.rs::changing_files_during_checks_blocks_pass` |
@@ -845,12 +821,11 @@ Public documentation explains supported behavior; proposals remain in the roadma
 ## Runtime namespace isolation
 
 Product-owned runtime variables use `PLEASE_*`, including parameter, Rule
-directory, execution-point, change-base, hook context, recursion guard and CLI
-provider model variables. Hannes variables are not aliases or fallback inputs.
+directory, execution-point, change-base, hook context, recursion guard and adapter context. Hannes variables are not aliases or fallback inputs.
 Third-party credentials and standard tool variables keep their upstream names.
 The product uses `.please/` and its own cache and managed-hook markers; it never
-loads `.hannes/`. The standalone `scripts/please-gemini-review.py` adapter
-consumes `PLEASE_MODEL` for both product use and repository governance.
+loads `.hannes/`. Repository-owned adapters live under `.please/adapters/` and belong
+to development governance, not the product.
 
 Rule and provider IDs reserve `please-`. Generated integrity results use
 `please-plan`, `please-snapshot` and `please-tree-stability`, with report schema 4

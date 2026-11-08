@@ -34,6 +34,7 @@ fn project() -> tempfile::TempDir {
     let root = tempfile::tempdir().unwrap();
     git(root.path(), &["init", "--quiet", "--initial-branch=main"]);
     config::init(root.path()).unwrap();
+    support::configure_adapter(root.path());
     fs::remove_dir_all(root.path().join(".please/checks")).unwrap();
     fs::remove_dir_all(root.path().join(".please/reviews")).unwrap();
     write(root.path(), "evidence", "Evidence\n");
@@ -44,7 +45,7 @@ fn provider(root: &Path, directory: &str, id: &str, model: &str) {
         root,
         &format!("{directory}/providers/{id}.toml"),
         &format!(
-            "provider = 'codex-cli'\ntimeout_seconds = 17\nmodel = {model:?}\nmcp_servers = []\n[review_profile]\nreasoning_effort = 'low'\ntool_output_token_limit = 512\n"
+            "command = 'fake-adapter'\ntimeout_seconds = 17\n[parameters]\nlabel = {model:?}\n"
         ),
     );
 }
@@ -75,9 +76,12 @@ fn named_references_load_without_changing_legacy_defaults() {
     review(root.path(), ".please", "legacy", None, "");
     let p = config::load(root.path()).unwrap();
     assert_eq!(p.providers.len(), 2);
-    assert_eq!(p.review_provider(&p.reviews[0]).model, p.provider.model);
     assert_eq!(
-        p.review_provider(&p.reviews[1]).model.as_deref(),
+        p.review_provider(&p.reviews[0]).unwrap().parameters,
+        p.provider.as_ref().unwrap().parameters
+    );
+    assert_eq!(
+        p.review_provider(&p.reviews[1]).unwrap().parameters["label"].as_str(),
         Some("quality-model")
     );
     let plan = planner::build(&p, Some("check"), false).unwrap().plan;
@@ -93,47 +97,7 @@ fn named_references_load_without_changing_legacy_defaults() {
         17
     );
     fs::remove_file(root.path().join(".please/provider.toml")).unwrap();
-    assert_eq!(
-        config::load(root.path()).unwrap().provider.model,
-        config::ProviderConfig::scaffold().model
-    );
-}
-
-#[test]
-fn missing_invalid_and_credential_bearing_configurations_fail_closed() {
-    let root = project();
-    review(root.path(), ".please", "named", Some("missing"), "");
-    let path = root.path().join(".please/reviews/named/rule.toml");
-    let text = fs::read_to_string(&path)
-        .unwrap()
-        .replace("run_at =", "enabled = false\nrun_at =");
-    fs::write(&path, text).unwrap();
-    let error = format!("{:#}", config::load(root.path()).unwrap_err());
-    assert!(
-        error.contains("named") && error.contains("missing"),
-        "{error}"
-    );
-    provider(root.path(), ".please", "missing", "model");
-    let config_path = root.path().join(".please/providers/missing.toml");
-    let valid = fs::read_to_string(&config_path).unwrap();
-    for invalid in [
-        valid.replace("codex-cli", "gemini"),
-        valid.replace("17", "0"),
-        valid.replace("'low'", "'unknown'"),
-        valid.replace("512", "1"),
-        valid.replace("mcp_servers = []", "mcp_servers = ['*']"),
-        format!("api_token = 'unsupported'\n{valid}"),
-        format!("{valid}\nsecret = 'unsupported'"),
-        valid.replace("model = \"model\"", "model = ''"),
-    ] {
-        fs::write(&config_path, invalid).unwrap();
-        let error = format!("{:#}", config::load(root.path()).unwrap_err());
-        assert!(error.contains("missing"), "{error}");
-    }
-    fs::write(&config_path, valid).unwrap();
-    assert!(config::load(root.path()).is_ok());
-    fs::rename(&config_path, config_path.with_file_name("bad.id.toml")).unwrap();
-    assert!(config::load(root.path()).is_err());
+    assert!(config::load(root.path()).unwrap().provider.is_none());
 }
 
 struct Recording(Mutex<Vec<(String, Vec<String>)>>);
@@ -141,7 +105,12 @@ impl Provider for Recording {
     fn review(&self, request: &Request<'_>) -> anyhow::Result<String> {
         let config = request.provider_config()?;
         self.0.lock().unwrap().push((
-            config.model.clone().unwrap(),
+            config
+                .parameters
+                .get("label")
+                .and_then(|v| v.as_str())
+                .unwrap_or("default")
+                .to_owned(),
             request.reviews.iter().map(|r| r.id.clone()).collect(),
         ));
         Ok(serde_json::json!({"reviews":request.reviews.iter().map(|r| serde_json::json!({"id":r.id,"status":"PASS","reason":"Evidence inspected","findings":[{"message":"Evidence","path":"evidence","line":1}]})).collect::<Vec<_>>()} ).to_string())
@@ -199,8 +168,8 @@ fn batching_and_saved_reports_keep_provider_and_parameter_boundaries() {
             .provider_config
             .as_ref()
             .unwrap()
-            .model
-            .as_deref(),
+            .parameters["label"]
+            .as_str(),
         Some("second-model")
     );
     let path = root.path().join(".please/reports/last.json");
@@ -253,11 +222,9 @@ fn imported_providers_resolve_across_sets_offline_and_reconcile_atomically() {
     let p = external::load(root.path(), true, Some(cache.path())).unwrap();
     assert_eq!(p.providers.len(), 1);
     assert_eq!(p.reviews.len(), 2);
-    assert!(
-        p.reviews
-            .iter()
-            .all(|r| p.review_provider(r).model.as_deref() == Some("central-model"))
-    );
+    assert!(p.reviews.iter().all(
+        |r| p.review_provider(r).unwrap().parameters["label"].as_str() == Some("central-model")
+    ));
     let original = planner::build(&p, Some("check"), false).unwrap().plan;
     let state_path = root.path().join(".git/please/external-rule-sets.json");
     let state = fs::read(&state_path).unwrap();
@@ -356,64 +323,6 @@ fn provider_files_preserve_source_boundaries() {
 
 #[cfg(unix)]
 #[test]
-fn codex_invocations_use_each_named_configuration() {
-    use std::os::unix::fs::PermissionsExt;
-    let root = project();
-    for (id, model) in [("first", "first-model"), ("second", "second-model")] {
-        provider(root.path(), ".please", id, model);
-        review(root.path(), ".please", id, Some(id), "");
-    }
-    let second = root.path().join(".please/providers/second.toml");
-    let text = fs::read_to_string(&second)
-        .unwrap()
-        .replace("'low'", "'high'")
-        .replace("512", "1024")
-        .replace("mcp_servers = []", "mcp_servers = ['allowed']");
-    fs::write(second, text).unwrap();
-    let fake = tempfile::tempdir().unwrap();
-    let script = fake.path().join("codex");
-    fs::write(&script, r#"#!/usr/bin/env python3
-import json, sys
-if sys.argv[1] == 'mcp':
-    print('[{"name":"allowed"},{"name":"other"}]')
-else:
-    args = sys.argv[1:]
-    model = args[args.index('--model') + 1]
-    if model == 'first-model':
-        id, effort, limit, allowed = 'first', 'low', 512, 'false'
-    elif model == 'second-model':
-        id, effort, limit, allowed = 'second', 'high', 1024, 'true'
-    else:
-        raise AssertionError(model)
-    assert 'model_reasoning_effort="' + effort + '"' in args
-    assert 'tool_output_token_limit=' + str(limit) in args
-    assert 'mcp_servers.allowed.enabled=' + allowed in args
-    assert 'mcp_servers.other.enabled=false' in args
-    assert '--sandbox' in args and 'read-only' in args
-    assert '--ask-for-approval' in args and 'never' in args
-    sys.stdin.read()
-    with open(args[args.index('--output-last-message') + 1], 'w') as output:
-        json.dump({'reviews':[{'id':id,'status':'PASS','reason':'Settings delivered','findings':[{'message':'Evidence','path':'evidence','line':1}]}]}, output)
-"#).unwrap();
-    fs::set_permissions(&script, fs::Permissions::from_mode(0o755)).unwrap();
-    let p = config::load(root.path()).unwrap();
-    let result = please::verify_project_at(
-        p,
-        &please::provider::Codex::new(&script),
-        please::VerificationMode::AllRules,
-        Some("check"),
-        &mut |_| {},
-    )
-    .unwrap();
-    assert_eq!(result.overall, Status::Pass, "{:?}", result.results);
-    assert_eq!(
-        report::read(root.path()).unwrap().plan.planned_model_calls,
-        2
-    );
-}
-
-#[cfg(unix)]
-#[test]
 fn imported_cli_commands_follow_existing_explicit_import_trust() {
     use std::os::unix::fs::PermissionsExt;
     let root = project();
@@ -425,7 +334,7 @@ fn imported_cli_commands_follow_existing_explicit_import_trust() {
     write(
         remote.path(),
         "quality/providers/central.toml",
-        "provider = 'cli'\ncommand = './tool'\nmodel = 'central-model'\ntimeout_seconds = 5\n[requirements]\nenv = ['PLEASE_MODEL']\nexecutables = ['./tool']\n",
+        "command = './tool'\ntimeout_seconds = 5\n[parameters]\nlabel = 'central-model'\n[requirements]\nexecutables = ['./tool']\n",
     );
     commit(remote.path());
     imports(root.path(), remote.path(), &["quality"]);
@@ -436,18 +345,17 @@ fn imported_cli_commands_follow_existing_explicit_import_trust() {
         "tool",
         r#"#!/usr/bin/env python3
 import json, os, sys
-assert os.environ['PLEASE_MODEL'] == 'central-model'
-prompt = sys.stdin.read()
-line = next(line for line in prompt.splitlines() if line.startswith('Configured reviews (JSON data): '))
-id = json.loads(line.split(': ', 1)[1])[0]['id']
-print(json.dumps({'reviews':[{'id':id,'status':'PASS','reason':'Evidence inspected','findings':[{'message':'Evidence','path':'evidence','line':1}]}]}))
+request = json.load(sys.stdin)
+assert request['reviews'][0]['parameters']['label'] == 'central-model'
+id = request['reviews'][0]['id']
+print(json.dumps({'protocol_version':1,'reviews':[{'id':id,'status':'PASS','reason':'Evidence inspected','findings':[{'message':'Evidence','path':'evidence','line':1}]}]}))
 "#,
     );
     fs::set_permissions(root.path().join("tool"), fs::Permissions::from_mode(0o755)).unwrap();
     let p = external::load(root.path(), false, Some(cache.path())).unwrap();
     let result = please::verify_project_at(
         p,
-        &please::provider::Configured::default(),
+        &please::provider::Configured,
         please::VerificationMode::AllRules,
         Some("check"),
         &mut |_| {},

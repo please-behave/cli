@@ -135,45 +135,11 @@ selected-text budget. No context is silently dropped. These are entry points,
 not an evidence boundary; dependencies can be inspected using targeted read-only
 queries. Full working-tree snapshots and file/line evidence validation remain.
 
-Before each model call, a bounded token-free `codex mcp list --json` reads
-configuration. Each discovered server is explicitly enabled only if named in
-the resolved provider configuration's `mcp_servers` allow list (default empty); a blank server table does
-not override merged Codex configuration. Invalid discovery blocks the review.
-Inline child-only overrides disable automatic skill context/search, skill-driven
-MCP installation, apps/plugins, subagents and web search, and bound retained tool
-outputs. Model/effort are configured separately; new scaffolds use `gpt-6.1-sol`
-and `medium`. Subagents are disabled through `features.multi_agent=false`, overriding
-the inherited feature setting. Authentication, AGENTS.md and Codex safety settings are retained.
-No user configuration or credentials are copied or rewritten.
-
-`review_contract` owns response wire types, allowed verdicts and the bounded output
-schema sent to Codex. Local parsing retains byte, coverage and evidence checks:
-JSON Schema character limits cannot enforce UTF-8 byte limits or file existence.
-The schema is limited to the provider-supported Structured Outputs subset; an
-incompatible model fails rather than silently dropping constraints.
-
-The provider trait returns a raw final document so tests can inject successful,
-failed or malformed responses without real credentials. Schema-shaped serde types
-reject unknown fields, wrong types, invalid statuses and duplicate object keys.
-Semantic checks require exact requested ID coverage, one verdict each, nonempty
-reasons, at most 20 findings per review and real in-manifest file/line references
-for substantive PASS/FAIL. Any invalid combined document makes every review in that batch
-ERROR, even if another verdict looked valid. ERROR can express model uncertainty.
-Grounded references are necessary, not proof of accurate conclusions.
-
-Please Behave inherits trusted local Codex login and applies the documented review overrides; it supplies `read-only`
-and `never` approval settings explicitly. It does not load credentials itself,
-copy tokens to CI, record raw provider traces or repair files. Read-only sandbox
-support depends on Codex and the platform. Unsupported CLI versions fail closed.
-
-Parameter declarations live in the existing Rule schema. Loaded Rules carry a
-binding of those declarations and import-local values. The shared `parameters`
-module resolves and validates only active Rules, and configures child environments.
-The planner counts distinct valid pairs of provider reference and review environment;
-execution groups Reviews by that pair and reuses the prepared context. Inherited parameter variables
-are removed before applying values. No global environment mutations occur.
-Missing check entrypoints and review prompts are retained for per-rule ERROR
-results; disabled Rules need neither implementation nor parameter resolution.
+Adapters receive prepared evidence and the common verdict schema through the
+[versioned protocol](adapter-protocol.md). They own authentication, tool access,
+model settings and provider response translation. The core supervises processes
+and validates verdict coverage, evidence paths, line ranges and input stability.
+No provider implementation or default is supplied.
 
 ## External source boundaries
 
@@ -217,27 +183,7 @@ runs first. Provider definitions merge globally, rejecting collisions except for
 repeated references to the same repository/commit/file. Review references resolve
 after merging all explicit imports, before publishing resolution state. No source
 files are rewritten. The legacy project provider remains separate and is selected
-only when a review omits its reference. Each Codex request resolves its batch's
-configuration, rejects mixed references and applies that configuration to discovery
-and execution. Optional per-rule plan fields preserve named settings in reports
-without changing the interpretation of older schema 3/4 documents.
-
-Generic CLI providers reuse named `ProviderConfig` definitions and the shared
-prompt and verdict validator. The production dispatcher selects Codex or CLI from
-the resolved request; no registry is introduced. CLI reviews run individually,
-while Codex groups still share a provider reference and parameter environment.
-Planning uses the same grouping distinction. A concurrent stdin writer shares the
-process runner deadline with output capture, so an unread pipe cannot block the
-caller. CLI stdout is the final JSON document; raw diagnostics are discarded.
-Runtime requirements inspect the effective child environment immediately before
-execution, after deterministic gating. Imported executable definitions retain the
-same explicit source trust boundary as checks. Generic tool sandboxing and wire
-envelope translation belong to the configured tool/wrapper, not Please Behave.
-
-File-change triggers filter enabled, point-selected Reviews inside the existing
-planner before preparing input or counting provider groups. `git_snapshot::changed_paths`
-resolves an explicit `PLEASE_CHANGE_BASE` and uses bounded NUL Git output for a
-net commit-to-worktree comparison, including untracked configuration. The baseline
-commit and omission decisions enter plan identity. No history inference, fetch,
-provider-specific CI resolution or additional scheduler is involved. Omitted reviews
-are excluded from required IDs/results; reports retain their omission metadata.
+only when a review omits its reference. All invocations use the same executable
+adapter boundary, with matching provider references, Rule parameter environments
+and diff selections batched together. Each review carries independently merged
+adapter settings. See the [adapter protocol](adapter-protocol.md).

@@ -74,7 +74,7 @@ can be wrong; a review PASS is evidence to inspect, not a guarantee of correctne
 | **Rule** | One thing Please Behave verifies. Every rule is either a check or a review. | “Unit tests pass” or “The documented CLI matches the implementation.” |
 | **Check** | A command whose exit status determines the result. It uses no AI provider and has no review-token cost. | Run `cargo test --locked`. |
 | **Review** | An AI request to evaluate written criteria against project files and return a structured verdict with a short explanation. | Compare documented commands with their implementation. |
-| **Provider** | The integration that executes AI reviews. Codex CLI or a configured external CLI. | Codex using `gpt-6.1-sol`. |
+| **Provider** | The integration that executes AI reviews. An external executable adapter. | A project-owned review adapter. |
 | **Report** | The saved results of a run, including explanations, detailed output and the files that were verified. | `.please/reports/last.json`. |
 
 A check is deterministic in how Please Behave processes its exit status; its reliability
@@ -89,9 +89,9 @@ the question reliably.
 - **Git**, with your project already in a Git working tree. Run Please Behave from its
   root directory, not a subdirectory.
 - The tools used by your checks, such as Cargo, npm or a linter, on your PATH.
-- **An AI provider only if you enable reviews.** Codex reviews need Codex CLI
-  and a local login; generic CLI reviews need their configured tool and credentials.
-  Checks work without an AI provider. See [provider setup](#configure-the-ai-provider).
+- **An adapter only if you enable reviews.** Configure an external executable
+  implementing the [adapter protocol](docs/adapter-protocol.md). Checks work without
+  any provider. See [provider setup](#configure-the-ai-provider).
 
 The Please Behave executable needs no Rust, Python or Node runtime. Rust is needed to
 build it from source; Python and Node are used by Please Behave's development tooling.
@@ -180,11 +180,11 @@ created file count. It does not install hooks or make a Git commit.
 
 `sync` validates configuration and reconciles declared external state after
 confirmation. It runs no checks or reviews. The first
-`run` should pass without Codex because the example review is disabled.
+`run` should pass without an adapter because the example review is disabled.
 This confirms that Please Behave works; it does not yet verify your application's quality.
 
 Next, [add a real check](#add-a-check) and replace or remove the example check.
-When you need AI judgment, [configure Codex](#configure-the-ai-provider),
+When you need AI judgment, [configure an adapter](#configure-the-ai-provider),
 [write a review](#add-a-review), validate again, then run `please run`.
 Commit your rules and criteria so other users can run the same verification.
 
@@ -220,7 +220,7 @@ At the selected execution point, enabled checks run first, followed by reviews.
 Checks dispatch in ID order among runnable checks and may finish out of order.
 Reports retain ID order within each kind. Disabled rules are validated but are not
 executed or included in results. Selected reviews with identical parameter
-environments share a Codex invocation.
+environments share an adapter invocation.
 
 If neither checks nor reviews are defined, Please Behave additionally prints
 `No rules defined yet.`. A successful empty run does not
@@ -245,7 +245,7 @@ please run --checks-only
 The selected execution point must contain checks only. A required review makes
 this invocation fail before any rule runs.
 
-This runs selected enabled checks only: no Codex discovery, MCP connections or
+This runs selected enabled checks only: no adapter processes or
 review-token usage. The report is explicitly marked as checks-only and omits
 reviews. A checks-only PASS says nothing about your review criteria.
 The whole configuration is still validated, including disabled and omitted rules.
@@ -275,7 +275,7 @@ please status --details
 ```
 
 Status uses English labels, including `Overall`, `Mode: Checks only` and
-`Codex tokens`. Details add `Selection`, `Required rules` and external rule
+`Adapter tokens`. Details add `Selection`, `Required rules` and external rule
 `Source` information where applicable.
 
 Status compares the saved **snapshot** (file hashes and Git HEAD recorded during
@@ -383,7 +383,7 @@ please run --at check
 
 Custom points such as `release` behave the same way. These commands work locally
 or from any workflow; Please Behave neither generates nor validates CI workflows.
-Checks-only runs need no AI credentials. Please Behave does not provision Codex login on
+Checks-only runs need no AI credentials. Please Behave does not provision provider authentication on
 hosted runners, and personal login credentials should not be copied into CI.
 
 ## Configuration
@@ -761,185 +761,62 @@ execution prevent PASS.
 
 ### Configure the AI provider
 
-
-The **provider** runs AI requests through built-in **Codex CLI** or a generic
-external CLI. The default Codex provider uses its existing local login. Install
-and authenticate Codex before enabling a Codex review. In the same terminal or environment that will run Please Behave, check:
-
-```sh
-command -v codex
-codex --version
-codex login
-```
-
-Please Behave starts the executable named `codex` through its inherited PATH, from the
-project root. Shell aliases, functions and startup files are not loaded. The built-in Codex executable path is fixed. Generic CLI providers configure their
-own command. IDEs and Git hooks must also have the Codex
-installation directory on PATH.
-
-Generated `.please/provider.toml`:
+Please Behave executes external adapters through a versioned JSON protocol. It
+ships no providers and chooses none implicitly. Install or write an adapter, then
+configure `.please/provider.toml` as the project default, or
+`.please/providers/quality.toml` as a named configuration:
 
 ```toml
-provider = "codex-cli"
+command = "python3"
+args = ["tools/review-adapter.py"]
 timeout_seconds = 180
-model = "gpt-6.1-sol"
-mcp_servers = []
-
-[review_profile]
-reasoning_effort = "medium"
-tool_output_token_limit = 2000
 ```
 
 | Field | Required / default | Meaning |
 | --- | --- | --- |
-| `provider` | Required | `"codex-cli"` or `"cli"`. |
-| `command` | Optional; `null` | Required for `cli`: executable name or path; nonblank, no NUL. Unsupported for Codex. |
-| `args` | Optional; `[]` | Literal CLI arguments, including empty arguments; no NUL. Unsupported for Codex. |
-| `requirements` | Optional table | Runtime prerequisites for this provider; omitted lists are empty. |
-| `requirements.env` | Optional; `[]` | Nonempty child environment variables required at execution. Names use ASCII letters, digits and underscores, starting with a letter or underscore. |
-| `requirements.executables` | Optional; `[]` | Required executable names or paths; nonblank, no NUL. |
-| `timeout_seconds` | Required | Integer `1..3600` (CLI also accepts `0` for no overall deadline): seconds per invocation, including stdin delivery. Codex includes MCP discovery, itself capped at 10 seconds. |
-| `model` | Optional; Codex default | Model identifier passed as `--model` for Codex or child environment variable `PLEASE_MODEL` for CLI; nonblank, no NUL. Generated files select GPT-6.1 Sol (`gpt-6.1-sol`); alternatives must be supported by your CLI/account. |
-| `mcp_servers` | Optional; `[]` | Names of Codex MCP servers allowed for reviews. Empty or omitted disables all of them. See below. |
-| `review_profile` | Optional table | Settings for batches using this provider configuration. |
-| `review_profile.reasoning_effort` | Optional; Codex default | `none`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max` or `ultra`. Actual support depends on the model/CLI. |
-| `review_profile.tool_output_token_limit` | Optional; `2000` | Integer `256..16384`: tokens retained per tool output in Codex history. This is not a limit on total tokens or cost. |
+| `command` | Required | Executable name or path; nonblank, no NUL. |
+| `args` | Optional; `[]` | Literal arguments, including empty arguments; no NUL. |
+| `timeout_seconds` | Required | `1..3600` seconds per invocation, including stdin delivery; `0` disables the deadline. |
+| `requirements` | Optional table | Runtime prerequisites; omitted lists are empty. |
+| `requirements.env` | Optional; `[]` | Required nonempty child environment variables; names only, never values. |
+| `requirements.executables` | Optional; `[]` | Required executables, resolved through child PATH or paths relative to the consumer root. |
+| `parameters` | Optional; `{}` | Arbitrary structured adapter settings; Please does not interpret their meaning. |
 
-Omitting `model` or `reasoning_effort` uses the corresponding Codex default.
-Unsupported models or settings produce ERROR; Please Behave does not silently substitute
-another model. Each review batch uses its resolved provider configuration.
+No shell, interpolation or argument expansion occurs. Adapters run in the consumer
+root and inherit the environment, including Rule parameters and
+`PLEASE_EXECUTION_POINT`. Configure authentication and tool permissions in the
+adapter. Trust adapters as you trust checks: they have Please Behave's permissions.
+Please installs no adapter dependencies and provides no provider sandbox.
 
-**MCP integrations.** MCP (Model Context Protocol) servers give Codex access to
-additional tools or data, such as a project knowledge graph. Define server commands,
-URLs, transports and credentials in Codex configuration. Please Behave only chooses which
-already configured servers a review call may use. To allow two, replace the
-top-level empty list in `provider.toml` with:
+A named configuration uses its filename stem as its ID: 1–80 ASCII letters,
+digits, hyphens or underscores, excluding the reserved `please-` prefix. Select it
+with `provider = "quality"` in `[review]`. Omission uses the explicit project
+default; a selected enabled review without either is blocked. Disabled reviews
+need no default. Unknown explicit references fail even when disabled. Adding named
+configurations never changes the default.
 
-```toml
-mcp_servers = ["project-memory", "browser"]
-```
+External Rule Sets can distribute `providers/<id>.toml` beside their selected
+`config.toml`. Existing import boundaries, immutable caches and offline execution
+apply. Repeated imports of the same immutable file share one definition; distinct
+definitions with the same ID fail. Local overrides are unsupported.
 
-Use actual configured names: at most 32 unique names, each 1–256 ASCII letters,
-digits, `_` or `-`; wildcards are not supported. Reviews using this configuration receive the same list.
+Adapter settings may be supplied in `[parameters]` in a provider definition and
+`[review.parameters]` in a Rule. Review values override matching provider keys;
+nested tables and arrays replace the entire value at that key. Settings are
+JSON-compatible TOML values, with no provider-specific validation in Please.
+This is separate from typed Rule parameters and their `PLEASE_PARAM_*` environment.
+Reviews batch only when their provider reference, resolved Rule parameter
+environment and `include_diff` agree. Every review carries its own merged settings.
 
-Before the AI call, Please Behave reads `codex mcp list --json` without starting a model
-or server. It disables all unlisted servers for the child process. An unknown
-allowed name, failed discovery, more than 256 discovered servers or unsafe server
-names in that listing blocks the review. An empty list never inherits all of
-your personal integrations.
+Runtime requirements are checked only for selected reviews, after deterministic
+checks and immediately before invocation. Plans do not execute adapters or check
+availability. Missing prerequisites, nonzero exits, timeouts and invalid responses
+produce review ERROR. Raw adapter stdout/stderr are never stored as diagnostics.
+Nonblocking review errors remain visible and follow the normal enforcement rules.
 
-**Provider execution.** Please Behave uses noninteractive, ephemeral Codex sessions with
-structured output, a read-only sandbox and no approvals. Automatic skill instructions,
-bundled skills, skill search/installation, apps/plugins, subagents and web search
-are disabled. Project AGENTS.md and ordinary Codex safety settings still apply.
-Allowed MCPs are trusted capabilities; they are not an additional permission sandbox.
-
-Please Behave does not rewrite your Codex configuration. It removes `OPENAI_API_KEY` and
-`CODEX_API_KEY` from Codex child processes; login-backed reviews still consume your
-account allowance. Missing CLI/login, incompatible CLI options or exhausted allowance
-produce ERROR. No credentials are copied to CI.
-
-
-`provider.toml` is optional; omission uses the generated provider settings above.
-When the file is present its required fields must be supplied.
-
-**Named configurations.** A complete executable setup can also live in
-`.please/providers/quality.toml`, with exactly the same fields and defaults as
-`provider.toml` above. The filename stem is its ID: 1–80 ASCII letters, digits,
-`-` or `_`, excluding the reserved `please-` prefix. Up to 256 named configurations
-are supported across the project and imports. Each file has the same 64 KiB
-metadata limit as other TOML configuration. Add `provider = "quality"` inside a
-review's `[review]` table to select it. Models cannot be overridden in reviews.
-
-For migration, copy your existing `provider.toml` into `providers/quality.toml`
-and add references to the reviews that should use it. Reviews without a reference
-continue using `provider.toml`; removing that file uses the generated defaults.
-Adding named configurations never changes the default provider.
-
-External rule sets distribute configurations in `providers/<id>.toml` beside the
-selected set's `config.toml`. Every such configuration is loaded and validated,
-including unused ones. IDs are global across local configuration and explicit
-imports. Reviews may reference configurations from another explicitly imported
-set, regardless of import order. Missing references fail, including in disabled
-reviews. Distinct definitions with the same ID fail; identical settings do not
-permit local overrides. Repeated imports of the same immutable provider file
-share its definition. No provider dependencies are downloaded automatically.
-Existing offline cache integrity and atomic resolution guarantees apply.
-
-Codex reviews batch together only when their provider reference and resolved
-parameter environment match. Generic CLI reviews execute individually. Different references use
-separate invocations, even if their settings match. Plans and saved reports record
-each explicit reference and its effective configuration. Provider files accept
-no credential fields. Codex uses its existing login; generic tools inherit
-credentials from the execution environment. Please Behave never records their values.
-
-**Generic CLI.** The repository's Gemini REST adapter uses Python's standard
-library and the existing CLI transport:
-
-```toml
-# .please/providers/gemini.toml
-provider = "cli"
-command = "python3"
-args = ["scripts/please-gemini-review.py"]
-model = "gemini-3.8-flash"
-timeout_seconds = 0
-
-[requirements]
-env = ["GEMINI_API_KEY"]
-executables = ["python3"]
-```
-
-The adapter reads the complete prompt from stdin and selects the configured model
-through `PLEASE_MODEL`. The same adapter serves repository governance.
-It sends a generateContent request and extracts the first completed candidate's
-text. Please Behave validates the unchanged review JSON. Requests time out after
-600 seconds. Transient connection failures and HTTP 429/500/502/503/504 retry up
-to five total attempts, with delays of 30/60/120/240 seconds; Retry-After can
-increase a delay up to 240 seconds. Timeouts and invalid responses are not retried.
-Diagnostics suppress raw request and response content. No Gemini CLI is needed.
-For tools that already accept stdin and return Please Behave JSON, configure their
-executable directly and put model flags in `args` instead of using `model`.
-
-Commands run directly from the consumer root. Arguments are literal: no shell
-operators, variable expansion, globbing, interpolation or substitution. Use an
-explicit executable path or inherited PATH. Prompt delivery uses a pipe, without
-a temporary prompt file. The prompt includes review instructions, prepared project
-context, evidence rules and the JSON response schema. Return one verdict for the
-requested review ID, with no fences, extra text or envelope:
-
-```json
-{"reviews":[{"id":"architecture-review","status":"PASS","reason":"Criteria satisfied","findings":[{"message":"Boundary is explicit","path":"src/main.rs","line":1}]}]}
-```
-
-The ID must match the prompt. PASS and FAIL require real in-manifest file/line
-evidence; ERROR expresses unavailable evidence or uncertainty. The existing
-[response contract](SPECIFICATION.md#out-001-structured-review-outcomes) applies.
-Malformed, incomplete or ungrounded responses are ERROR. Nonzero exits, missing
-commands and timeouts are ERROR regardless of output. Stdout and stderr are
-drained with bounded captures; stdout beyond 64 KiB is rejected. Raw output and
-invalid response details are excluded from diagnostics. Generic token usage is
-unavailable. Process trees use the same cleanup as checks; this is not a sandbox.
-
-Requirements are syntax-checked even for unused providers. Availability is checked
-only after point selection, deterministic checks and review parameter resolution,
-for the providers that will execute. Missing/empty variables or missing executables
-produce review ERROR; an unused provider never requires its credentials. Offline
-plans and `sync` do not check runtime availability. Executable requirements
-use the child's PATH or explicit paths relative to the consumer root. Environment
-values stay outside TOML and must be supplied to the terminal, CI or hook process.
-
-Generic providers cannot use Codex MCP controls or custom review profiles; omit
-those settings. They inherit the execution environment, rule parameters and
-`PLEASE_EXECUTION_POINT`; omitted `model` clears inherited `PLEASE_MODEL`.
-Codex keeps its MCP allow list, model/effort, login policy and batching unchanged.
-
-Trust executable providers as you trust checks. Imported provider commands follow
-the existing [external source trust model](docs/external-rule-sets.md#source-resources-and-trust):
-explicitly imported, validated, immutable cached definitions, without local
-overrides. Imported programs execute with your permissions. Please Behave supplies no
-generic tool sandbox; read-only settings and authentication belong to the chosen
-tool or wrapper. The repository Gemini adapter owns HTTP transport and retries; Please Behave retains
-selection, prompt assembly and verdict validation.
+See the [adapter protocol](docs/adapter-protocol.md) for request/response formats,
+versioning, migration and a [working dummy adapter](examples/adapters/dummy.py).
+Adapters can wrap CLI tools, HTTP APIs or local models without changes to Please.
 
 ### Add a review
 
@@ -969,7 +846,8 @@ consumer through the existing shared provider call, after deterministic checks.
 
 | Field | Required / default | Meaning |
 | --- | --- | --- |
-| `review.provider` | Optional; `null` (omitted in TOML) | Named provider ID; omission uses the legacy project provider. |
+| `review.provider` | Optional; `null` (omitted in TOML) | Named provider ID; omission requires an explicit project default for selected reviews. |
+| `review.parameters` | Optional; `{}` | Structured adapter settings overriding provider keys. |
 | `review.trigger` | Optional; `null` (omitted in TOML) | Select this review only for matching changed files. |
 | `review.trigger.changed_files` | Required | 1–64 repository-relative patterns, each at most 1024 UTF-8 bytes; any match selects the review. |
 | `review.include_diff` | Optional; `true` | Include the Git orientation diff in the prompt; independent of file triggers and context. Different settings use separate provider batches. |
@@ -1217,12 +1095,11 @@ These limits are built in, not additional configuration fields:
 | Snapshot | 8 MiB per file, 128 MiB total, 100,000 paths; Git file enumeration capped at 64 KiB; `.please` nesting limited to 16 levels. |
 | Snapshot coverage | Tracked and nonignored untracked files, plus `.please` even if ignored. `.git` and `.please/reports` are excluded. Unsupported symlinks, submodules, paths or exceeded limits prevent PASS. |
 | Input stability | Working files and HEAD must match before/after execution and before every AI call. Staging and pushed commits are not separately verified. |
-| AI response | 1 MiB final JSON document; summaries and findings have the limits described under reviews. |
+| AI response | 64 KiB adapter stdout; summaries and findings have the limits described under reviews. |
 | Saved report input | 128 MiB maximum when reading a saved report. |
 | Token usage | Available counters are summed across review batches. Optional reasoning/cache-write counters are subsets, not additions to the total. Missing telemetry remains unavailable. |
 
-Not currently supported: per-review model/MCP overrides,
-reviews restricted to a diff, staged/index or commit input, configurable run-wide
+Not currently supported: reviews restricted to a diff, staged/index or commit input, configurable run-wide
 token budgets, monetary cost estimates and cached results. A token-efficient
 shared call is not a result cache or a guaranteed prompt-cache hit. Planned work
 is listed in the [TODOs](docs/todo/README.md).

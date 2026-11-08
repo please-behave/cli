@@ -1,4 +1,4 @@
-"""Exercise the real CLI in an isolated, uncommitted Git repository. No Codex."""
+"""Exercise the real CLI in an isolated, uncommitted Git repository. No AI calls."""
 import json
 import os
 from pathlib import Path
@@ -28,7 +28,7 @@ with tempfile.TemporaryDirectory(prefix="please-smoke-") as temporary:
     run("--help")
     run("--version")
     run("help")
-    assert run("init") == "Initialized .please/ (10 files created).\n"
+    assert run("init") == "Initialized .please/ (9 files created).\n"
     initial = (root / ".please/config.toml").read_bytes()
     run("init", 2)
     assert (root / ".please/config.toml").read_bytes() == initial
@@ -55,6 +55,7 @@ with tempfile.TemporaryDirectory(prefix="please-smoke-") as temporary:
     check_path.write_text(check_path.read_text().replace("enabled = false", "enabled = true"))
     review_path = root / ".please/reviews/product-consistency/rule.toml"
     review_path.write_text(review_path.read_text().replace("enabled = false", "enabled = true"))
+    (root / ".please/provider.toml").write_text("command = 'missing-fake-adapter'\ntimeout_seconds = 5\n")
     # The failed check must skip the enabled review. Any provider call would fail this assertion.
     run("run", 1)
     report = json.loads(report_path.read_text())
@@ -67,4 +68,4 @@ with tempfile.TemporaryDirectory(prefix="please-smoke-") as temporary:
     assert not (root / ".git/index.lock").exists()
     commits = subprocess.run(["git", "rev-parse", "--verify", "HEAD"], cwd=root, capture_output=True)
     assert commits.returncode != 0
-    print("Smoke test passed: all commands, PASS/FAIL reports, skipped reviews, CURRENT/STALE, exact totals and five-path limit. No commits or Codex calls.")
+    print("Smoke test passed: all commands, PASS/FAIL reports, skipped reviews, CURRENT/STALE, exact totals and five-path limit. No commits or AI calls.")

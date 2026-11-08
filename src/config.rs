@@ -21,24 +21,6 @@ pub fn path(relative: impl AsRef<Path>) -> PathBuf {
     }
 }
 
-impl ProviderConfig {
-    /// Explicit initialization choices; omitted optional fields still use Codex defaults.
-    pub fn scaffold() -> Self {
-        Self {
-            provider: "codex-cli".into(),
-            timeout_seconds: 180,
-            model: Some("gpt-6.1-sol".into()),
-            mcp_servers: vec![],
-            command: None,
-            args: vec![],
-            requirements: RuntimeRequirements::default(),
-            review_profile: ReviewProfile {
-                reasoning_effort: Some("medium".into()),
-                ..ReviewProfile::default()
-            },
-        }
-    }
-}
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
@@ -67,39 +49,51 @@ impl Default for Execution {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct ProviderConfig {
-    pub provider: String,
-    #[serde(default)]
-    pub command: Option<String>,
+    pub command: String,
     #[serde(default)]
     pub args: Vec<String>,
     #[serde(default)]
     pub requirements: RuntimeRequirements,
     pub timeout_seconds: u64,
-    pub model: Option<String>,
-    #[serde(default)]
-    pub mcp_servers: Vec<String>,
-    #[serde(default)]
-    pub review_profile: ReviewProfile,
+    #[serde(default, deserialize_with = "adapter_parameters")]
+    pub parameters: BTreeMap<String, serde_json::Value>,
 }
+fn adapter_parameters<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> std::result::Result<BTreeMap<String, serde_json::Value>, D::Error> {
+    fn convert(value: toml::Value) -> Result<serde_json::Value> {
+        Ok(match value {
+            toml::Value::Float(n) => serde_json::Value::Number(
+                serde_json::Number::from_f64(n)
+                    .context("adapter parameters require finite numbers")?,
+            ),
+            toml::Value::Datetime(_) => {
+                anyhow::bail!("adapter parameters do not support TOML dates; use a string")
+            }
+            toml::Value::Array(values) => {
+                serde_json::Value::Array(values.into_iter().map(convert).collect::<Result<_>>()?)
+            }
+            toml::Value::Table(values) => serde_json::Value::Object(
+                values
+                    .into_iter()
+                    .map(|(k, v)| Ok((k, convert(v)?)))
+                    .collect::<Result<_>>()?,
+            ),
+            value => serde_json::to_value(value)?,
+        })
+    }
+    let values = BTreeMap::<String, toml::Value>::deserialize(deserializer)?;
+    values
+        .into_iter()
+        .map(|(k, v)| convert(v).map(|v| (k, v)).map_err(serde::de::Error::custom))
+        .collect()
+}
+
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct RuntimeRequirements {
     pub env: Vec<String>,
     pub executables: Vec<String>,
-}
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(default, deny_unknown_fields)]
-pub struct ReviewProfile {
-    pub reasoning_effort: Option<String>,
-    pub tool_output_token_limit: u32,
-}
-impl Default for ReviewProfile {
-    fn default() -> Self {
-        Self {
-            reasoning_effort: None,
-            tool_output_token_limit: DEFAULT_TOOL_OUTPUT_TOKENS,
-        }
-    }
 }
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -129,6 +123,7 @@ pub struct Check {
 }
 #[derive(Debug, Clone, Serialize)]
 pub struct Review {
+    pub adapter_parameters: BTreeMap<String, serde_json::Value>,
     pub include_diff: bool,
     pub trigger: Option<ReviewTrigger>,
     pub provider: Option<String>,
@@ -186,6 +181,8 @@ pub struct CheckDefinition {
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct ReviewDefinition {
+    #[serde(default, deserialize_with = "adapter_parameters")]
+    pub parameters: BTreeMap<String, serde_json::Value>,
     #[serde(default = "default_true")]
     pub include_diff: bool,
     pub trigger: Option<ReviewTrigger>,
@@ -205,7 +202,7 @@ pub struct ReviewTrigger {
 pub struct Project {
     pub root: PathBuf,
     pub config: Config,
-    pub provider: ProviderConfig,
+    pub provider: Option<ProviderConfig>,
     pub providers: BTreeMap<String, ProviderConfig>,
     pub checks: Vec<Check>,
     pub reviews: Vec<Review>,
@@ -370,11 +367,16 @@ pub(crate) fn validate(root: PathBuf, loaded: crate::discovery::Loaded) -> Resul
         ".please/config.toml: max_display_files must be 1..={MAX_DISPLAY_FILES}"
     );
     let provider = match root.join(self::path("provider.toml")).symlink_metadata() {
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => ProviderConfig::scaffold(),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => None,
         Err(e) => return Err(e.into()),
-        Ok(_) => crate::discovery::document(&root, &self::path("provider.toml"))?,
+        Ok(_) => Some(crate::discovery::document(
+            &root,
+            &self::path("provider.toml"),
+        )?),
     };
-    validate_provider(&provider).context("provider.toml")?;
+    if let Some(provider) = &provider {
+        validate_provider(provider).context("provider.toml")?;
+    }
     let mut providers = BTreeMap::new();
     for (path, id, config) in loaded.providers {
         let mut ids = BTreeSet::new();
@@ -490,33 +492,11 @@ pub(crate) fn validate(root: PathBuf, loaded: crate::discovery::Loaded) -> Resul
 
 /// Shared validation for legacy and named configurations.
 pub(crate) fn validate_provider(provider: &ProviderConfig) -> Result<()> {
+    nonempty(&provider.command, "adapter command")?;
     ensure!(
-        matches!(provider.provider.as_str(), "codex-cli" | "cli"),
-        "unsupported provider: {}; expected codex-cli or cli",
-        provider.provider
+        provider.args.iter().all(|arg| !arg.contains('\0')),
+        "adapter args must contain no NUL"
     );
-    if provider.provider == "cli" {
-        let command = provider.command.as_deref().unwrap_or_default();
-        ensure!(
-            !command.trim().is_empty() && !command.contains('\0'),
-            "cli command must be nonblank and contain no NUL"
-        );
-        ensure!(
-            provider.args.iter().all(|arg| !arg.contains('\0')),
-            "cli args must contain no NUL"
-        );
-        ensure!(
-            provider.mcp_servers.is_empty()
-                && provider.review_profile.reasoning_effort.is_none()
-                && provider.review_profile.tool_output_token_limit == DEFAULT_TOOL_OUTPUT_TOKENS,
-            "cli providers do not support Codex MCP or review profile settings"
-        );
-    } else {
-        ensure!(
-            provider.command.is_none() && provider.args.is_empty(),
-            "command and args require provider cli"
-        );
-    }
     for name in &provider.requirements.env {
         ensure!(
             !name.is_empty()
@@ -535,44 +515,10 @@ pub(crate) fn validate_provider(provider: &ProviderConfig) -> Result<()> {
             "invalid required executable"
         );
     }
-    if provider.provider != "cli" || provider.timeout_seconds != 0 {
+    if provider.timeout_seconds != 0 {
         timeout(provider.timeout_seconds)?;
     }
-    if let Some(model) = &provider.model {
-        nonempty(model, "model")?;
-        ensure!(!model.contains('\0'), "model must contain no NUL");
-    }
-    let profile = &provider.review_profile;
-    ensure!(
-        (MIN_TOOL_OUTPUT_TOKENS..=MAX_TOOL_OUTPUT_TOKENS)
-            .contains(&profile.tool_output_token_limit),
-        "tool_output_token_limit must be {MIN_TOOL_OUTPUT_TOKENS}..={MAX_TOOL_OUTPUT_TOKENS}"
-    );
-    if let Some(effort) = &profile.reasoning_effort {
-        ensure!(
-            [
-                "none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"
-            ]
-            .contains(&effort.as_str()),
-            "unsupported reasoning_effort"
-        );
-    }
-    ensure!(
-        provider.mcp_servers.len() <= MAX_MCP_SERVERS,
-        "at most {MAX_MCP_SERVERS} allowed MCP servers"
-    );
-    let mut servers = BTreeSet::new();
-    for server in &provider.mcp_servers {
-        nonempty(server, "MCP server name")?;
-        ensure!(
-            server.len() <= MAX_MCP_NAME_BYTES
-                && server
-                    .bytes()
-                    .all(|byte| byte.is_ascii_alphanumeric() || b"_-".contains(&byte))
-                && servers.insert(server),
-            "invalid or duplicate MCP server name"
-        );
-    }
+
     Ok(())
 }
 
@@ -590,10 +536,10 @@ impl Project {
         Ok(())
     }
 
-    pub fn review_provider(&self, review: &Review) -> &ProviderConfig {
+    pub fn review_provider(&self, review: &Review) -> Option<&ProviderConfig> {
         match &review.provider {
-            Some(id) => &self.providers[id],
-            None => &self.provider,
+            Some(id) => self.providers.get(id),
+            None => self.provider.as_ref(),
         }
     }
 }

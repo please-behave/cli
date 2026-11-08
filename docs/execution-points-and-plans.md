@@ -30,9 +30,9 @@ sets, required IDs, input identity, bounded context and declared provider settin
 Each review with an explicit provider reference also records `provider` (the named
 ID) and `provider_config` (its complete effective settings). Absent fields select
 the plan's legacy project provider. Model calls count distinct provider references
-and resolved parameter environments and include_diff settings for Codex; CLI reviews each count one call.
+and resolved Rule parameter environments and include_diff settings for adapters.
 Concurrency limits change execution strategy and are excluded from semantic plan
-identity. Resource declarations participate in check identity. No check, Codex
+identity. Resource declarations participate in check identity. No check, adapter
 request, network access or reconciliation occurs during preview.
 Incomplete snapshots or context preparation block execution. Preview does not
 certify a later source state. Reports use schema 4 and plans use schema 3. Blocking metadata distinguishes
