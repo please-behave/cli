@@ -270,8 +270,7 @@ fn empty_execution_and_integrity_failures_do_not_claim_rule_success() {
 }
 
 #[cfg(unix)]
-#[test]
-fn real_terminal_finishes_with_one_visible_row_per_check() {
+fn terminal_run(github_actions: bool) -> (String, String) {
     use std::{io::Read, os::fd::FromRawFd, process::Stdio};
     let root = project();
     named(&root, "first", "First check");
@@ -299,8 +298,14 @@ fn real_terminal_finishes_with_one_visible_row_per_check() {
     );
     let mut reader = unsafe { fs::File::from_raw_fd(master) };
     let writer = unsafe { fs::File::from_raw_fd(slave) };
-    let child = Command::new(env!("CARGO_BIN_EXE_please"))
-        .args(["run", "--at", "check"])
+    let mut command = Command::new(env!("CARGO_BIN_EXE_please"));
+    command.args(["run", "--at", "check"]);
+    if github_actions {
+        command.env("GITHUB_ACTIONS", "true").arg("--progress=tty");
+    } else {
+        command.env_remove("GITHUB_ACTIONS");
+    }
+    let child = command
         .current_dir(root.path())
         .env_remove("CI")
         .env("TERM", "xterm")
@@ -309,6 +314,9 @@ fn real_terminal_finishes_with_one_visible_row_per_check() {
         .stderr(writer)
         .spawn()
         .unwrap();
+    // Command retains its configured Stdio handles after spawn. Close the
+    // parent's slave descriptor so the reader can observe EOF when the child exits.
+    drop(command);
     // Drain while the slave is open: macOS can discard unread terminal output
     // when its final slave descriptor closes.
     let reading = std::thread::spawn(move || {
@@ -328,6 +336,25 @@ fn real_terminal_finishes_with_one_visible_row_per_check() {
     assert!(output.status.success());
     let bytes = reading.join().unwrap();
     let raw = String::from_utf8(bytes).unwrap();
+    (raw, String::from_utf8(output.stdout).unwrap())
+}
+
+#[cfg(unix)]
+#[test]
+fn github_actions_terminal_stays_append_only_with_explicit_tty() {
+    let (raw, summary) = terminal_run(true);
+    // A PTY translates ordinary newlines to CRLF; only escape sequences
+    // or bare carriage returns would indicate interactive output here.
+    assert!(!raw.contains('\u{1b}'), "{raw:?}");
+    assert!(!raw.replace("\r\n", "\n").contains('\r'), "{raw:?}");
+    assert!(raw.contains("RUNNING") && raw.matches("PASS").count() == 2);
+    assert!(summary.starts_with("PASS · 2 rules"));
+}
+
+#[cfg(unix)]
+#[test]
+fn real_terminal_finishes_with_one_visible_row_per_check() {
+    let (raw, summary) = terminal_run(false);
     assert!(raw.contains("\u{1b}[2A"), "{raw:?}");
     // Interpret the small cursor-control vocabulary used by progress, independently
     // of the renderer: the final screen contains two completed rows, no starts.
@@ -371,11 +398,7 @@ fn real_terminal_finishes_with_one_visible_row_per_check() {
             .all(|line| line.contains("PASS") && !line.contains("RUNNING"))
     );
     assert!(final_rows[1].contains("First check"));
-    assert!(
-        String::from_utf8(output.stdout)
-            .unwrap()
-            .starts_with("PASS · 2 rules")
-    );
+    assert!(summary.starts_with("PASS · 2 rules"));
 }
 
 #[test]
