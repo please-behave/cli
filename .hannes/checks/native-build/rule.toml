@@ -1,0 +1,8 @@
+id = "native-build"
+description = "Build the candidate native release executable"
+enabled = true
+run_at = ["pre-push", "check", "release"]
+
+[check]
+command = "cargo +stable build --release --locked --offline"
+timeout_seconds = 600

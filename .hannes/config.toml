@@ -1,0 +1,26 @@
+project = "hannes"
+max_display_files = 5
+
+[execution_points]
+custom = ["release"]
+
+[[imports]]
+git = "https://github.com/christianpflugradt/christianpflugradt-rulesets.git"
+path = "commit-msg/conventional-commits"
+ref = "86c1a09519de6e848e6f8a0110427ca8d136dd1c"
+
+[imports.rule_parameters.commit-message]
+scopes_file = ".hannes/commit-scopes.txt"
+
+[[imports]]
+git = "https://github.com/christianpflugradt/christianpflugradt-rulesets.git"
+path = "multi-point/security"
+ref = "86c1a09519de6e848e6f8a0110427ca8d136dd1c"
+
+[[imports]]
+git = "https://github.com/christianpflugradt/christianpflugradt-rulesets.git"
+path = "repository-conventions"
+ref = "86c1a09519de6e848e6f8a0110427ca8d136dd1c"
+
+[imports.rule_parameters.license]
+target = "LICENSE"

@@ -1,0 +1,12 @@
+{before-help}{about-with-newline}
+{usage-heading} {usage}
+
+Commands:
+  init    Initialize a new .please/ configuration once
+  sync    Validate configuration and synchronize declared state (--yes)
+  run     Execute rules (--at, --plan; --checks-only: deterministic checks only)
+  status  Show the last saved report (--details for full findings)
+  help    Show help
+
+Options:
+{options}

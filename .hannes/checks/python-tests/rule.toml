@@ -1,0 +1,8 @@
+id = "python-tests"
+description = "Test Python helpers and repository integration"
+enabled = true
+run_at = ["pre-push", "check"]
+
+[check]
+command = "python3 -m unittest discover -s scripts -p 'test_*.py'"
+timeout_seconds = 300

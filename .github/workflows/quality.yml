@@ -1,0 +1,82 @@
+name: Release builds
+
+on:
+  workflow_call:
+    inputs:
+      release-version:
+        description: Version to stamp, test and package for a release
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    name: Release build / ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: macos-15, target: aarch64-apple-darwin}
+          - {os: macos-15-intel, target: x86_64-apple-darwin}
+          - {os: ubuntu-24.04, target: x86_64-unknown-linux-gnu}
+          - {os: ubuntu-24.04-arm, target: aarch64-unknown-linux-gnu}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    env:
+      BUILD_TARGET: ${{ matrix.target }}
+      CARGO_BUILD_TARGET: ${{ matrix.target }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: '3.15'
+      - name: Read the exact governor release pin
+        id: governor
+        shell: bash
+        run: echo "version=$(cat .hannes-version)" >> "$GITHUB_OUTPUT"
+      - name: Install published Hannes through the public Action
+        if: runner.os == 'Linux'
+        uses: christianpflugradt/hannes@eedbc1dbb227110667a8b40bdcf8603bddb33726 # v0.14.1
+        with:
+          version: ${{ steps.governor.outputs.version }}
+          execution-point: check
+          run: 'false'
+      - name: Install published Hannes on macOS
+        if: runner.os == 'macOS'
+        run: python3 scripts/install-governor.py
+      - name: Reconcile declared Git hooks and external rules
+        run: hannes pass auf --auto-approve
+      - name: Stamp planned release version before verification
+        env:
+          RELEASE_VERSION: ${{ inputs.release-version }}
+        run: python3 scripts/set-release-version.py "$RELEASE_VERSION"
+      - name: Install candidate toolchain and dependencies
+        run: |
+          rustup toolchain install stable --profile minimal --component rustfmt --component clippy
+          rustup target add --toolchain stable ${{ matrix.target }}
+          cargo +stable fetch --locked
+      - name: Run native quality gate
+        run: python3 scripts/run-execution-point.py release
+      - name: Upload Hannes evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: quality-release-${{ matrix.target }}
+          path: .hannes/reports/*.json
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Package tested candidate executable
+        env:
+          RELEASE_TAG: v${{ inputs.release-version }}
+        run: python3 scripts/package-release.py
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: hannes-${{ matrix.target }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7

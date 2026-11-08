@@ -1,0 +1,8 @@
+id = "release-rules"
+description = "Test semantic release rules and lifecycle"
+enabled = true
+run_at = ["pre-push", "check"]
+
+[check]
+command = "npm --offline test"
+timeout_seconds = 180

@@ -1,0 +1,15 @@
+checks
+ci
+cli
+config
+deps
+docs
+git
+mise
+profiles
+provider
+release
+report
+reviews
+snapshot
+tests

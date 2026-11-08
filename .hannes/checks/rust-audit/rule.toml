@@ -1,0 +1,8 @@
+id = "rust-audit"
+description = "Audit Rust dependencies"
+enabled = true
+run_at = ["check"]
+
+[check]
+command = "cargo +stable audit"
+timeout_seconds = 300

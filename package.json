@@ -1,0 +1,20 @@
+{
+  "name": "please-behave-release-tooling",
+  "private": true,
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "type": "module",
+  "description": "Development-only tooling for Please Behave GitHub releases",
+  "engines": { "node": ">=24.15.0 <27" },
+  "scripts": {
+    "test": "node --test scripts/test-release-config.mjs && node scripts/test-release-lifecycle.mjs",
+    "release:plan": "node scripts/release-plan.mjs",
+    "release": "node scripts/publish-release.mjs"
+  },
+  "devDependencies": {
+    "@semantic-release/commit-analyzer": "13.0.1",
+    "@semantic-release/github": "12.0.10",
+    "@semantic-release/release-notes-generator": "14.1.1",
+    "conventional-changelog-conventionalcommits": "9.3.1",
+    "semantic-release": "25.0.9"
+  }
+}

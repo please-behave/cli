@@ -1,0 +1,8 @@
+id = "macos-build"
+description = "Build the macOS application without signing"
+enabled = false
+run_at = ["pre-push"]
+[check]
+entrypoint = "index.sh"
+interpreter = "sh"
+timeout_seconds = 600

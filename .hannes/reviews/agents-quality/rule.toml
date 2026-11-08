@@ -1,0 +1,20 @@
+id = "agents-quality"
+name = "AGENTS.md quality"
+description = "Evaluate actionable coding-agent guidance against the governance rubric"
+blocking = false
+run_at = ["check"]
+
+[review]
+provider = "gemini-flash"
+prompt = "prompt.md"
+include_diff = false
+files = ["AGENTS.md", "docs/agents-review-rubric.md"]
+
+[[review.context]]
+path = "AGENTS.md"
+
+[[review.context]]
+path = "docs/agents-review-rubric.md"
+
+[review.trigger]
+changed_files = ["AGENTS.md"]

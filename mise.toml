@@ -1,0 +1,56 @@
+[tools]
+rust = { version = "stable", profile = "minimal", components = "rustfmt,clippy" }
+python = "3.15.2"
+node = "26"
+
+[tasks.build]
+description = "Build the native release executable"
+run = "cargo build --release --locked"
+
+[tasks.deploy]
+description = "Download and install the latest Hannes release for this platform"
+run = "python3 scripts/deploy.py"
+run_windows = "python scripts/deploy.py"
+
+[tasks.release]
+description = "Start the GitHub Release workflow for remote main"
+run = "gh workflow run release.yml --ref main"
+
+[tasks."hooks:install"]
+description = "Install the explicit pre-commit, commit-msg and pre-push hooks"
+run = "sh scripts/setup-git-hooks.sh"
+
+[tasks."hooks:test"]
+description = "Test managed Git hooks with synthetic rules in an isolated repository"
+run = "python3 scripts/test_commit_hook.py"
+run_windows = "python scripts/test_commit_hook.py"
+
+[tasks.format]
+description = "Format Rust source"
+run = "cargo fmt --all"
+
+[tasks."format:check"]
+description = "Check Rust formatting"
+run = "cargo fmt --all -- --check"
+
+[tasks.lint]
+description = "Run Clippy with warnings treated as errors"
+run = "cargo clippy --all-targets --locked -- -D warnings"
+
+[tasks.test]
+description = "Run credential-free tests"
+run = "cargo test --locked"
+
+[tasks.smoke]
+description = "Smoke-test the release CLI in an isolated Git repository"
+depends = ["build"]
+run = "python3 scripts/smoke.py target/release/please"
+run_windows = "python scripts/smoke.py target/release/please.exe"
+
+[tasks."docs:check"]
+description = "Check documentation links, configuration reference and executable examples"
+run = ["python3 scripts/check-docs.py", "cargo test --locked --test documentation"]
+
+[tasks.check]
+description = "Manually run the Hannes pre-push gate (agents use Git hooks)"
+run = "python3 scripts/run-execution-point.py pre-push"

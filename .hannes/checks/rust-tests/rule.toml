@@ -1,0 +1,8 @@
+id = "rust-tests"
+description = "Run unit acceptance documentation and compatibility tests"
+enabled = true
+run_at = ["pre-push", "check", "release"]
+
+[check]
+command = "cargo +stable --offline test --locked"
+timeout_seconds = 600

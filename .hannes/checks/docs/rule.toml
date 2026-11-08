@@ -1,0 +1,8 @@
+id = "docs"
+description = "Validate documentation links and specification references"
+enabled = true
+run_at = ["pre-commit", "pre-push", "check"]
+
+[check]
+command = "python3 scripts/check-docs.py"
+timeout_seconds = 60

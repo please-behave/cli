@@ -1,0 +1,32 @@
+/target/
+/dist/
+/node_modules/
+.DS_Store
+.hannes/reports/*
+!.hannes/reports/.gitignore
+.please/reports/*
+!.please/reports/.gitignore
+
+# Local codebase-memory MCP setup and graph data
+/.codex/config.toml
+/.codebase-memory/
+/.codebase-memory-local/
+
+# Local generated Git hook wrappers
+/custom-hooks/
+
+# Developer overrides and credentials
+/mise.local.toml
+/mise.*.local.toml
+.env
+.env.*
+!.env.example
+
+# Python helper artifacts and editor/OS files
+/.idea/
+__pycache__/
+*.py[cod]
+*.swp
+*.swo
+*~
+Thumbs.db

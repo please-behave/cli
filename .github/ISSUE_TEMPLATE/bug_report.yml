@@ -1,0 +1,32 @@
+name: Bug report
+description: Report incorrect CLI behavior.
+title: "[Bug]: "
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Please Behave version
+      description: Output of please --version.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Operating system and architecture
+      placeholder: macOS, Apple Silicon
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps and minimal configuration
+      description: Include the command and relevant TOML. Remove secrets and private source.
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected and actual behavior
+      description: Include relevant output or exit codes, with sensitive data removed.
+    validations:
+      required: true
