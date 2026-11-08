@@ -68,7 +68,7 @@ class ReleaseTests(unittest.TestCase):
         self.assertIn("needs: [plan, checks, quality]", publisher)
         self.assertIn("contents: write", publisher)
         self.assertIn("persist-credentials: false", publisher)
-        for required in ("actions/download-artifact@", "pattern: hannes-*",
+        for required in ("actions/download-artifact@", "pattern: please-*",
                          "python3 scripts/checksums.py", "python3 scripts/check-release-artifacts.py", "npm run release",
                          "EXPECTED_RELEASE_VERSION: ${{ needs.plan.outputs.version }}"):
             self.assertIn(required, publisher)

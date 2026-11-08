@@ -40,16 +40,160 @@ jobs:
   checks:
     needs: plan
     if: needs.plan.outputs.release == 'true'
-    uses: ./.github/workflows/ci.yml
-    secrets:
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      BUILD_TARGET: x86_64-unknown-linux-gnu
+      CARGO_BUILD_TARGET: x86_64-unknown-linux-gnu
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: '3.15'
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '26'
+          package-manager-cache: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: stable
+          cache: false
+      - name: Prepare tools and dependencies
+        run: bash scripts/prepare-ci.sh
+      - name: Check documentation and repository instructions
+        run: |
+          python3 scripts/check-word-count.py AGENTS.md 1200
+          python3 scripts/check-docs.py
+      - name: Validate release commit
+        env:
+          COMMIT_HEAD: ${{ github.sha }}
+        run: python3 scripts/check-commits.py
+      - name: Test Python helpers without legacy governor integration tests
+        run: |
+          python3 - <<'PYTHON'
+          import unittest
+          from pathlib import Path
+          suite = unittest.TestSuite()
+          for path in sorted(Path("scripts").glob("test_*.py")):
+              if path.name not in {"test_commit_hook.py", "test_governance.py"}:
+                  suite.addTests(unittest.defaultTestLoader.discover("scripts", pattern=path.name))
+          result = unittest.TextTestRunner(verbosity=2).run(suite)
+          raise SystemExit(not result.wasSuccessful())
+          PYTHON
+      - name: Test release tooling
+        run: npm --offline test
+      - name: Validate workflow syntax and expressions
+        run: actionlint -color
+      - name: Check minimum supported Rust
+        run: cargo +1.85.0 --offline check --all-targets --locked
+      - name: Audit Rust dependencies
+        run: cargo +stable audit
+      - name: Audit release tooling dependencies
+        run: npm audit --audit-level=high
+      - name: Retrieve pinned independent security and license checks
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: christianpflugradt/christianpflugradt-rulesets
+          ref: 86c1a09519de6e848e6f8a0110427ca8d136dd1c
+          path: .release-rules
+          persist-credentials: false
+      - name: Keep check sources outside the scanned working tree
+        run: mv .release-rules "$RUNNER_TEMP/release-rules"
+      - name: Check sensitive filenames, secrets and license directly
+        shell: python
+        run: |
+          import os
+          from pathlib import Path
+          import runpy
+          import shutil
+          import subprocess
+          import tempfile
+
+          rules = Path(os.environ["RUNNER_TEMP"]) / "release-rules/rules/checks"
+          sensitive = runpy.run_path(str(rules / "sensitive-files/check.py"))
+          raw = sensitive["command"]("git", "ls-files", "-z", "--cached", "--others", "--exclude-standard")
+          blocked = [os.fsdecode(p) for p in raw.split(b"\0")
+                     if p and os.path.lexists(os.fsdecode(p)) and sensitive["prohibited"](os.fsdecode(p))]
+          if blocked:
+              raise SystemExit("Prohibited sensitive filenames: " + repr(blocked))
+          scanner = shutil.which("gitleaks")
+          if scanner is None:
+              raise SystemExit("Gitleaks is required")
+          secrets = runpy.run_path(str(rules / "secret-scan/check.py"))
+          with tempfile.TemporaryDirectory() as temporary:
+              snapshot = Path(temporary) / "snapshot"
+              snapshot.mkdir()
+              report = Path(temporary) / "report.json"
+              secrets["populate_worktree"](snapshot)
+              env = {k: v for k, v in os.environ.items()
+                     if k not in {"GITLEAKS_CONFIG", "GITLEAKS_CONFIG_TOML"}}
+              result = subprocess.run([scanner, "dir", "--no-banner", "--redact", "--exit-code", "10",
+                                       "--report-format", "json", "--report-path", str(report), "."],
+                                      cwd=snapshot, env=env, capture_output=True)
+              if secrets["findings_from"](report, result.returncode):
+                  raise SystemExit("Gitleaks detected potential secrets")
+          license_path = Path("LICENSE")
+          references = list((rules / "license/licenses").glob("*.txt"))
+          if license_path.is_symlink() or not license_path.is_file() or not references:
+              raise SystemExit("License or reference files are missing or invalid")
+          if not any(license_path.read_bytes() == reference.read_bytes() for reference in references):
+              raise SystemExit("LICENSE does not match an approved reference")
 
   quality:
     needs: plan
     if: needs.plan.outputs.release == 'true'
-    uses: ./.github/workflows/quality.yml
-    with:
-      release-version: ${{ needs.plan.outputs.version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: macos-15, target: aarch64-apple-darwin}
+          - {os: macos-15-intel, target: x86_64-apple-darwin}
+          - {os: ubuntu-24.04, target: x86_64-unknown-linux-gnu}
+          - {os: ubuntu-24.04-arm, target: aarch64-unknown-linux-gnu}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    env:
+      BUILD_TARGET: ${{ matrix.target }}
+      CARGO_BUILD_TARGET: ${{ matrix.target }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: '3.15'
+      - name: Stamp planned release version before verification
+        env:
+          RELEASE_VERSION: ${{ needs.plan.outputs.version }}
+        run: python3 scripts/set-release-version.py "$RELEASE_VERSION"
+      - name: Install candidate toolchain and dependencies
+        run: |
+          rustup toolchain install stable --profile minimal --component rustfmt --component clippy
+          rustup target add --toolchain stable ${{ matrix.target }}
+          cargo +stable fetch --locked
+      - name: Verify Rust formatting
+        run: cargo +stable fmt --all -- --check
+      - name: Lint Rust with warnings denied
+        run: cargo +stable --offline clippy --all-targets --locked -- -D warnings
+      - name: Run Rust tests
+        run: cargo +stable --offline test --locked
+      - name: Build native release executable
+        run: cargo +stable build --release --locked --offline
+      - name: Smoke-test native executable
+        run: python3 scripts/smoke.py
+      - name: Package tested candidate executable
+        env:
+          RELEASE_TAG: v${{ needs.plan.outputs.version }}
+        run: python3 scripts/package-release.py
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: please-${{ matrix.target }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
 
   publish:
     needs: [plan, checks, quality]
@@ -72,7 +216,7 @@ jobs:
       - run: npm ci --ignore-scripts
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          pattern: hannes-*
+          pattern: please-*
           path: dist
           merge-multiple: true
       - name: Checksum all native archives
