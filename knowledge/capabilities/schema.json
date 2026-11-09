@@ -1,14 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Capability",
-  "description": "Guiding question: What can Please do?\n\nA capability describes a distinct ability of Please, independent of its technical implementation. It captures what the product provides or is intended to provide, rather than how it is implemented. Examples include executing deterministic checks, importing external rulesets, and integrating LLM providers.",
+  "description": "Guiding question: What can Please do?\n\nA capability describes a distinct ability of Please, independent of its technical implementation. It captures the agreed product scope rather than implementation progress. Examples include executing deterministic checks, importing external rulesets, and integrating LLM providers.",
   "type": "object",
   "additionalProperties": false,
   "required": [
     "id",
     "name",
-    "description",
-    "status"
+    "description"
   ],
   "properties": {
     "id": {
@@ -26,19 +25,15 @@
     "description": {
       "type": "string",
       "minLength": 1,
-      "description": "Describes what Please can do, using complete sentences.",
+      "description": "Describes what Please must be capable of, using complete sentences.",
       "examples": [
         "Please executes deterministic checks at configured execution points and records their results."
       ]
     },
-    "status": {
-      "type": "string",
-      "enum": [
-        "planned",
-        "implemented",
-        "removed"
-      ],
-      "description": "Lifecycle status: planned means the capability is intended but unavailable; implemented means it is available for use; removed means it is no longer available and is retained for historical reference."
+    "obsolete": {
+      "type": "boolean",
+      "const": true,
+      "description": "Marks a capability as historical and no longer part of the current product specification. Omit this property for active capabilities."
     }
   }
 }

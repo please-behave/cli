@@ -1,4 +1,3 @@
 id: CAP-0014
 name: AI Provider Configuration
 description: Please supports configurable AI providers, including Codex CLI and generic command-line integrations, with independently selectable provider configurations.
-status: implemented

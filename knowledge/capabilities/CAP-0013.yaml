@@ -1,4 +1,3 @@
 id: CAP-0013
 name: Execution Integrity
 description: Please verifies the repository state before and during governance execution to detect relevant changes and prevent evaluations against inconsistent source snapshots.
-status: implemented

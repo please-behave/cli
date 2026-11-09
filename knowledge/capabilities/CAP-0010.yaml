@@ -1,4 +1,3 @@
 id: CAP-0010
 name: AI-Based Code Review
 description: Please evaluates source code against written requirements and review criteria using AI providers, producing structured verdicts and supporting evidence.
-status: implemented

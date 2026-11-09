@@ -1,0 +1,29 @@
+id: DEC-0020
+name: Cooperative Git Hook Management
+context: >-
+  Git hooks are shared integration points that may already contain
+  commands managed by users or other tools. Please Behave must
+  integrate with these hooks without assuming exclusive ownership
+  of their files. Changes to the governance configuration may
+  require hook integrations to be added, updated, or removed.
+decision: >-
+  Please Behave manages only its own explicitly identifiable
+  sections within Git hook files. Synchronization adds, updates,
+  or removes these sections according to the current configuration
+  while preserving unrelated content. Existing hooks must remain
+  functional. If a hook cannot be modified safely, synchronization
+  must fail rather than overwrite or corrupt unrelated content.
+  More sophisticated hook management mechanisms are outside the
+  current scope.
+rationale: >-
+  Cooperative management allows Please Behave to coexist with
+  other tools without introducing additional hook infrastructure.
+  Restricting modifications to owned sections minimizes unintended
+  side effects and keeps synchronization predictable. Failing
+  when safe modification cannot be guaranteed prioritizes
+  repository integrity over automatic reconciliation. The
+  approach is sufficient for current requirements and avoids
+  premature complexity.
+capabilities:
+  - CAP-0015
+

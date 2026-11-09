@@ -1,4 +1,3 @@
 id: CAP-0016
 name: Result Reporting
 description: Please persists governance execution results, including rule verdicts, captured output, supporting evidence, and repository state, for subsequent inspection.
-status: implemented

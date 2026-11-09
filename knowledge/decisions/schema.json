@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Decision",
-  "description": "Guiding question: Why was this approach chosen?\n\nA decision records a deliberate choice, the circumstances that motivated it, and the reasoning behind it. Decisions are immutable once recorded. A subsequent decision may supersede an earlier one without modifying the original. Examples include choosing resource-based scheduling over dependency graphs or using Git hooks for local governance.",
+  "description": "Guiding question: Why was this approach chosen?\n\nA decision records a deliberate architectural choice, the circumstances that motivated it, and the reasoning behind it. Decisions are immutable once recorded. A subsequent decision may supersede an earlier one without modifying the original.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -22,7 +22,7 @@
       "type": "string",
       "minLength": 1,
       "description": "Short, descriptive name of the decision.",
-      "examples": ["Resource-Based Scheduling"]
+      "examples": ["Explicit Check Dependencies"]
     },
     "context": {
       "type": "string",

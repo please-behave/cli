@@ -1,4 +1,3 @@
 id: CAP-0007
 name: Execution Point Management
 description: Please executes governance rules at predefined or custom execution points, allowing different checks and reviews to apply at different stages of development.
-status: implemented

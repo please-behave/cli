@@ -1,4 +1,3 @@
 id: CAP-0004
 name: Rule Set Management
 description: Please groups rules into reusable rule sets that determine which rules apply at specific execution points.
-status: implemented

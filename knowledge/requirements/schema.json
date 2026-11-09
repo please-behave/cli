@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Requirement",
+  "description": "Guiding question: What must Please demonstrably satisfy?\n\nA requirement defines a binding, unambiguous, and verifiable condition concerning the behavior or properties of Please. Requirements describe the agreed product specification independently of implementation progress and validation results. A requirement is binding unless explicitly marked as obsolete.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "name",
+    "description"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^REQ-[0-9]{4}$",
+      "description": "Permanent, unique identifier. IDs must never be reused.",
+      "examples": ["REQ-0001"]
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Short, descriptive name of the requirement.",
+      "examples": ["Immutable Git References"]
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Defines a binding, unambiguous, and verifiable condition that Please must satisfy. It describes required behavior or properties without prescribing unnecessary implementation details.",
+      "examples": [
+        "Please must support importing external rule sets using immutable Git commit references."
+      ]
+    },
+    "capabilities": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^CAP-[0-9]{4}$"
+      },
+      "description": "Capabilities directly related to this requirement."
+    },
+    "use_cases": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^UC-[0-9]{4}$"
+      },
+      "description": "Use cases directly related to this requirement."
+    },
+    "obsolete": {
+      "type": "boolean",
+      "const": true,
+      "description": "Marks a requirement as historical and no longer binding. Omit this property for active requirements."
+    }
+  }
+}

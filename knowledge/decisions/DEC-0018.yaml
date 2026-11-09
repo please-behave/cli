@@ -5,32 +5,29 @@ context: >-
   resources unnecessarily when deterministic validation has already
   established that an execution cannot succeed. Repeated development
   attempts may fail deterministic checks before eventually producing
-  a successful result. At the same time, non-blocking checks are
-  explicitly permitted to fail without preventing further governance
-  execution.
+  a successful result.
 decision: >-
   Please executes deterministic checks before starting AI reviews.
   The two execution phases must not overlap. AI reviews may start
-  only after the deterministic check phase has completed and its
-  aggregate blocking outcome is successful. Failures of non-blocking
-  checks do not prevent AI reviews. Blocking failures and execution
-  errors prevent AI reviews. If fail-fast terminates the check phase
-  early, AI reviews must not start. Skipped checks caused by failed
-  dependencies do not independently determine the aggregate outcome;
-  the blocking status of the originating failure remains authoritative.
-  The execution report must distinguish reviews that were not executed
-  because the check phase did not satisfy the gating condition.
-  This behavior is mandatory for now; configurable overrides may be
-  introduced through a future decision.
+  only after the deterministic check phase has completed successfully.
+  Any check failure or execution error prevents AI reviews.
+  If fail-fast terminates the check phase early, AI reviews must not
+  start. Skipped checks caused by failed dependencies do not
+  independently determine the aggregate outcome; the originating
+  failure remains authoritative. The execution report must distinguish
+  reviews that were not executed because the check phase did not
+  satisfy the gating condition. This behavior is mandatory for now;
+  configurable overrides may be introduced through a future decision.
 rationale: >-
   Separating deterministic validation from AI reviews avoids spending
   provider resources on executions that cannot pass their mandatory
-  checks. Using the aggregate blocking outcome rather than requiring
-  every check to pass preserves the intended semantics of non-blocking
-  checks. Preventing reviews after incomplete fail-fast execution
-  avoids evaluating partially validated results. A fixed default
-  keeps execution predictable and cost-conscious while allowing
-  future extensions if justified by concrete use cases.
+  checks. Since deterministic checks are always blocking (DEC-0006),
+  any check failure prevents the execution from succeeding and makes
+  subsequent AI reviews unnecessary. Preventing reviews after
+  incomplete fail-fast execution avoids evaluating partially validated
+  results. A fixed default keeps execution predictable and
+  cost-conscious while allowing future extensions if justified by
+  concrete use cases.
 capabilities:
   - CAP-0007
   - CAP-0008

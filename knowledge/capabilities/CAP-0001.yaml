@@ -1,4 +1,3 @@
 id: CAP-0001
 name: Project Initialization
 description: Please initializes a Git repository with a ready-to-use governance configuration, including example rules and provider settings.
-status: implemented

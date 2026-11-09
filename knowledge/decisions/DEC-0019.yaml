@@ -1,0 +1,25 @@
+id: DEC-0019
+name: One-Time Project Initialization
+context: >-
+  Project initialization creates the initial governance configuration
+  and directory structure. Re-running initialization against an
+  existing configuration would require determining whether the
+  configuration is compatible, outdated, incomplete, or contains
+  unrelated files.
+decision: >-
+  Please allows project initialization only once. If the .please
+  directory already exists, initialization must fail with a non-zero
+  exit code without modifying existing files. Initialization does
+  not perform configuration migrations, compatibility checks, or
+  reconciliation of existing configurations. Support for these
+  operations may be introduced separately in the future.
+rationale: >-
+  A successful initialization must indicate that the initial
+  configuration was actually created. Treating an existing
+  configuration as a successful no-op could incorrectly suggest
+  that it is valid or up to date. Avoiding implicit migrations and
+  reconciliation keeps initialization predictable and prevents
+  unintended changes to existing governance configurations.
+capabilities:
+  - CAP-0001
+
