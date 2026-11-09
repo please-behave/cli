@@ -677,9 +677,11 @@ The public GitHub Action is maintained independently in
 [please-behave/action](https://github.com/please-behave/action). Its repository
 owns the Action implementation, inputs, supported runners and acceptance tests.
 The Action revision and selected CLI release are independent. Ubuntu CI uses
-Action v1.0.0 pinned to `00f52401b8272b530fde5f7b6af7f65a1157dbc2`, with
-installation-only mode and the CLI version read from `.please-version`.
-Synchronization and governance execution remain explicit subsequent steps.
+Action v1.1.0 pinned to `e932d80af960ea29d3da4ff77c35e1b1378dc9ba`, with
+the CLI version read from `.please-version`. Installation-only mode precedes
+explicit synchronization; the published Action then executes `check`, including
+applicable reviews, with Job Summaries enabled. CI retains the CLI report and
+Action Summary; local wrapper runs also retain the companion execution record.
 The Action supports Ubuntu runners; native release builds retain their independent gates.
 
 Supported hosted CI/release targets are macOS Apple Silicon, macOS Intel and
@@ -790,8 +792,9 @@ checkouts before testing and packaging; committed versions remain unchanged.
 Semantic Release creates tags, Git notes, GitHub Releases and release notes,
 without generating a changelog or release commit. Release tags target the tested
 source revision. Publication refuses an advanced main branch or invalid artifacts.
-Reports use schema 4 and a companion execution record
-stores governor version/digest, execution point, checked commit and exit code.
+Reports use schema 4. Local wrapper invocations also write a companion execution
+record with governor version/digest, execution point, checked commit and exit code.
+CI uses the published Action Summary and CLI report instead of that record.
 See [repository self-integration](docs/self-governance.md) for coverage and setup.
 
 Git hooks required by enabled effective assignments are derived automatically

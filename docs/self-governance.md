@@ -203,17 +203,21 @@ future work.
 [.please-version](../.please-version) pins the separately installed governor to
 v0.3.0. Local `mise deploy` uses the checksum-verifying
 [scripts/deploy.py](../scripts/deploy.py) installer. Ubuntu workflows use
-[Please Behave Action v1.0.0](https://github.com/please-behave/action/releases/tag/v1.0.0),
-pinned to `00f52401b8272b530fde5f7b6af7f65a1157dbc2`, with the version read
+[Please Behave Action v1.1.0](https://github.com/please-behave/action/releases/tag/v1.1.0),
+pinned to `e932d80af960ea29d3da4ff77c35e1b1378dc9ba`, with the version read
 from `.please-version` and `run: 'false'`. The Action adds the installed release
 to PATH. Renovate proposes CLI version-pin and Action SHA updates without
 automerging governor version changes.
 
 The [CI workflow](../.github/workflows/ci.yml) prepares dependencies, installs the
 released governor, runs `please sync --yes`, establishes PLEASE_CHANGE_BASE and
-runs all 17 deterministic checks followed by applicable reviews at `check`.
-Reports and execution metadata are uploaded from `.please/reports/`; the review
-summary reads the same report. Provider failures remain errors.
+invokes the same published Action to run all 17 deterministic checks followed by
+applicable reviews at `check`, with Job Summaries enabled. The execution invocation
+installs the same pinned CLI release again. CI uploads `.please/reports/last.json`;
+the AGENTS.md review summary also reads that report. Provider failures remain
+errors. CI uses the CLI report and Action Summary instead of `execution.json`.
+Local wrapper runs still record governor version/digest, execution point, checked
+commit and exit code in that companion file.
 The [release workflow](../.github/workflows/release.yml) retains independent
 quality gates, source/version guards and artifact verification. Its Ubuntu checks
 job uses the Action to install the governor for Python integration tests. Native

@@ -131,9 +131,11 @@ without building or publishing again. Partial publication still needs inspection
 
 Published v0.1.0 provides the four native archives and `SHA256SUMS`. Build jobs
 transfer candidate archives and metadata using matching `please-*` artifact labels.
-Ubuntu CI installs the governor through [Action v1.0.0](https://github.com/please-behave/action/releases/tag/v1.0.0),
-pinned to `00f52401b8272b530fde5f7b6af7f65a1157dbc2`. The CLI version comes
-from `.please-version`; installation-only mode preserves explicit governance execution.
+Ubuntu CI installs the governor through [Action v1.1.0](https://github.com/please-behave/action/releases/tag/v1.1.0),
+pinned to `e932d80af960ea29d3da4ff77c35e1b1378dc9ba`. The CLI version comes
+from `.please-version`. CI installs before explicit synchronization, then runs
+`check` through the published Action with Job Summaries enabled. The release
+checks job retains installation-only mode for its independent integration tests.
 
 | Platform | Rust target | Archive |
 | --- | --- | --- |
