@@ -136,6 +136,27 @@ pub fn execute_prepared(
     provider: &dyn Provider,
     execution_point: &str,
 ) -> (Vec<Item>, Option<TokenUsage>) {
+    execute_prepared_observed(
+        project,
+        active,
+        snapshot,
+        input,
+        provider,
+        execution_point,
+        &mut |_, _| true,
+    )
+}
+
+/// Observe each not-yet-started adapter batch and optionally stop scheduling it.
+pub(crate) fn execute_prepared_observed(
+    project: &Project,
+    active: &[&Review],
+    snapshot: &Snapshot,
+    input: &crate::review_input::PreparedReviewInput,
+    provider: &dyn Provider,
+    execution_point: &str,
+    before_batch: &mut dyn FnMut(&[&Review], &[Item]) -> bool,
+) -> (Vec<Item>, Option<TokenUsage>) {
     let mut groups = std::collections::BTreeMap::<
         (Option<String>, crate::parameters::Environment, bool),
         Vec<&Review>,
@@ -170,6 +191,19 @@ pub fn execute_prepared(
     }
     let mut usages = Vec::new();
     for ((_, parameters, _), reviews) in groups {
+        if !before_batch(&reviews, &items) {
+            items.extend(reviews.iter().map(|review| {
+                let mut item = Item::simple(
+                    &review.id,
+                    "review",
+                    Status::NotRun,
+                    "Fail-fast triggered; no provider call made".into(),
+                );
+                item.blocking = review.blocking;
+                item
+            }));
+            continue;
+        }
         // A snapshot check is required before every provider invocation, including
         // later parameter batches. Never reuse prepared evidence after edits.
         let stable = crate::git_snapshot::capture(&project.root).is_ok_and(|current| {

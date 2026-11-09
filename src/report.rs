@@ -110,10 +110,21 @@ pub struct Report {
     pub checks_only: bool,
     pub plan: crate::planner::Plan,
 }
+/// Whether a completed result prevents successful governance execution.
+pub(crate) fn prevents_success(item: &Item) -> bool {
+    match item.status {
+        Status::Error => item.kind != "review" || item.blocking || item.configuration_error,
+        Status::Fail => item.blocking,
+        Status::NotRun => true,
+        Status::Pass => false,
+    }
+}
+
 pub fn overall(items: &[Item]) -> Status {
-    if items.iter().any(|x| {
-        x.status == Status::Error && (x.kind != "review" || x.blocking || x.configuration_error)
-    }) {
+    if items
+        .iter()
+        .any(|x| x.status == Status::Error && prevents_success(x))
+    {
         Status::Error
     } else if items.iter().any(|x| x.status == Status::Fail && x.blocking) {
         Status::Fail

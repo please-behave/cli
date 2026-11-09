@@ -48,6 +48,7 @@ fn execute(cli: Cli) -> Result<i32> {
             progress,
             checks_only,
             max_parallel,
+            fail_fast,
             at,
             plan,
             json,
@@ -112,7 +113,7 @@ fn execute(cli: Cli) -> Result<i32> {
             let (hook_context, _) =
                 please::reconciliation::prepare(&project, invocation, at.as_deref(), false)?;
             let no_rules = project.checks.is_empty() && project.reviews.is_empty();
-            let report = please::verify_project_with_context(
+            let report = please::verify_project_with_fail_fast(
                 project,
                 &Configured,
                 if checks_only {
@@ -122,6 +123,7 @@ fn execute(cli: Cli) -> Result<i32> {
                 },
                 at.as_deref(),
                 hook_context.as_ref(),
+                fail_fast,
                 &mut |event| {
                     // Progress must be visible before a slow command or adapter call finishes.
                     // Losing the progress stream must not prevent writing the report.

@@ -45,6 +45,11 @@ pub enum Words {
         checks_only: bool,
         #[arg(long, help = "Maximum concurrent checks (default: configuration or 4)")]
         max_parallel: Option<std::num::NonZeroUsize>,
+        #[arg(
+            long,
+            help = "Stop scheduling after a blocking failure or execution error"
+        )]
+        fail_fast: bool,
         #[arg(long, help = "Run rules at this execution point (default: pre-push)")]
         at: Option<String>,
         #[arg(

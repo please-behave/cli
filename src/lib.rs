@@ -107,11 +107,24 @@ pub fn verify_project_at(
 
 /// Execute rules after the command lifecycle has validated and reconciled the project.
 pub fn verify_project_with_context(
+    project: config::Project,
+    provider: &dyn provider::Provider,
+    mode: VerificationMode,
+    at: Option<&str>,
+    hook: Option<&reconciliation::HookContext>,
+    progress: &mut dyn FnMut(Progress<'_>),
+) -> Result<Report> {
+    verify_project_with_fail_fast(project, provider, mode, at, hook, false, progress)
+}
+
+/// Execute with invocation-only fail-fast scheduling; existing entry points run all rules.
+pub fn verify_project_with_fail_fast(
     mut project: config::Project,
     provider: &dyn provider::Provider,
     mode: VerificationMode,
     at: Option<&str>,
     hook: Option<&reconciliation::HookContext>,
+    fail_fast: bool,
     progress: &mut dyn FnMut(Progress<'_>),
 ) -> Result<Report> {
     let checks_only = mode == VerificationMode::ChecksOnly;
@@ -161,6 +174,7 @@ pub fn verify_project_with_context(
         items.extend(checks::schedule(
             &checks,
             project.config.execution.max_parallel,
+            fail_fast,
             |check| checks::execute_with_context(&project, check, &plan.at, hook),
             &mut |event| {
                 let index = match event {
@@ -239,26 +253,7 @@ pub fn verify_project_with_context(
             }
         }
         if report::overall(&items) == Status::Pass {
-            progress(Progress::ReviewBatch {
-                count: active.len(),
-                calls: plan.planned_model_calls,
-                timeout_seconds: active
-                    .iter()
-                    .filter_map(|r| project.review_provider(r).map(|p| p.timeout_seconds))
-                    .max()
-                    .unwrap_or(0),
-            });
-            for (offset, review) in active.iter().enumerate() {
-                progress(Progress::RuleStarted {
-                    number: check_count + offset + 1,
-                    total,
-                    kind: "review",
-                    id: &review.id,
-                    name: &names[&review.id],
-                    description: &review.description,
-                });
-            }
-            let (results, usage) = reviews::execute_prepared(
+            let (results, usage) = reviews::execute_prepared_observed(
                 &project,
                 &active,
                 &snapshot,
@@ -267,6 +262,32 @@ pub fn verify_project_with_context(
                 })?,
                 provider,
                 &plan.at,
+                &mut |batch, completed| {
+                    if fail_fast && completed.iter().any(report::prevents_success) {
+                        return false;
+                    }
+                    progress(Progress::ReviewBatch {
+                        count: batch.len(),
+                        calls: 1,
+                        timeout_seconds: batch
+                            .iter()
+                            .filter_map(|r| project.review_provider(r).map(|p| p.timeout_seconds))
+                            .max()
+                            .unwrap_or(0),
+                    });
+                    for review in batch {
+                        let offset = active.iter().position(|r| r.id == review.id).unwrap();
+                        progress(Progress::RuleStarted {
+                            number: check_count + offset + 1,
+                            total,
+                            kind: "review",
+                            id: &review.id,
+                            name: &names[&review.id],
+                            description: &review.description,
+                        });
+                    }
+                    true
+                },
             );
             provider_usage = usage;
             for (offset, item) in results.iter().enumerate() {
@@ -290,7 +311,11 @@ pub fn verify_project_with_context(
                     &review.id,
                     "review",
                     Status::NotRun,
-                    "Deterministic checks or snapshot failed; no provider call made".into(),
+                    if fail_fast && items.iter().any(report::prevents_success) {
+                        "Fail-fast triggered by deterministic checks or snapshot; no provider call made".into()
+                    } else {
+                        "Deterministic checks or snapshot failed; no provider call made".into()
+                    },
                 );
                 progress(Progress::RuleFinished {
                     number: check_count + offset + 1,

@@ -23,7 +23,10 @@ assignments once. Validation, CLI planning and execution share that result.
 Review file-change triggers then filter enabled reviews at the requested point,
 before context preparation or provider requirements. Checks run before scheduled
 reviews, deduplicated and dispatched in ID order among runnable checks. Reports
-retain ID order; resource waits and concurrent completion do not change selection. Every scheduled rule is required. Checks-only execution rejects required reviews before any command starts.
+retain ID order; resource waits and concurrent completion do not change selection. Every scheduled rule is required.
+`run --fail-fast` may leave selected rules `NOT_RUN` after a blocking failure or
+fatal execution error; completed and already running work retains its results.
+This invocation-only option does not change plan identity or selected IDs. Checks-only execution rejects required reviews before any command starts.
 
 Plans include the selected point, rule sources, effective points, contributing
 sets, required IDs, input identity, bounded context and declared provider settings.

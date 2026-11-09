@@ -223,7 +223,7 @@ that a later input is identical. Provider availability is not checked offline.
 `--checks-only` runs checks only, without adapter processes or model calls. Reviews are excluded from progress/results and the limited scope is
 recorded in plans and reports; terminal output warns only about actual omissions.
 Full configuration validation still runs.
-Every selected rule must execute; non-blocking FAIL and non-blocking provider/review ERROR are nonfatal.
+Every selected rule must execute unless `--fail-fast` stops scheduling; non-blocking FAIL and non-blocking provider/review ERROR are nonfatal.
 Invalid review parameters and missing prompts remain fatal. A point requiring reviews rejects checks-only
 execution before any check starts. Empty execution points succeed without proving
 any rule PASS.
@@ -358,7 +358,7 @@ one invocation only. Checks without a resource have no exclusion restrictions.
 Checks sharing mutable state must declare the same resource. Waiting checks use
 no execution slots, and later runnable checks may start ahead of them. All checks
 finish before review gating; failures, timeouts and worker errors release resources
-and do not stop remaining checks. Dispatch prefers canonical ID order among
+and do not stop remaining checks by default. Dispatch prefers canonical ID order among
 runnable checks; saved results retain canonical order regardless of completion.
 No dependency graph, resource list or build-tool-specific behavior is supported.
 
@@ -372,6 +372,26 @@ Report schema 4 and plan schema 3 are unchanged.
 
 Acceptance: `tests/parallel.rs` covers scheduling, configuration and report behavior;
 `tests/progress.rs` covers interactive and append-only rendering.
+
+### Invocation-level fail-fast
+
+`please run --fail-fast` stops scheduling after a blocking FAIL or fatal ERROR
+becomes known. The default continues all independent work. Check ERROR is fatal
+regardless of blocking; advisory review FAIL/ERROR does not stop scheduling.
+Review parameter/prompt errors remain fatal. Already running checks and reviews
+in an invoked adapter batch finish normally, and every completed result is saved.
+Later review batches are not invoked after fail-fast triggers. No persistent
+`fail_fast` configuration field is supported. Offline plans retain the full
+selection because early termination depends on execution outcomes.
+
+Unstarted selected rules retain their position and blocking metadata, with
+`NOT_RUN`, no captured output, and an explicit fail-fast reason. Progress never
+announces these rules as started. NOT_RUN does not replace a triggering FAIL
+(exit 1) or ERROR (exit 2). Existing report and plan schemas are unchanged.
+
+Acceptance: `tests/fail_fast.rs` covers CLI defaults, serial stopping, errors,
+advisory reviews, batch boundaries and saved reporting; scheduler unit tests use
+channels to verify parallel completion and stopping without timing assumptions.
 
 ## PARAM-001: Rule parameters
 

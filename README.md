@@ -206,6 +206,7 @@ The supported commands are:
 | --- | --- | --- |
 | `--yes` | `sync` | Approve the displayed integration changes without a prompt, including in CI. Defaults to off. |
 | `--checks-only` | `run` | Run only checks; do not call an AI provider. |
+| `--fail-fast` | `run` | Stop scheduling after a blocking failure or fatal execution error; defaults to off. |
 | `--max-parallel N` | `run` | Positive maximum concurrent checks; overrides configuration (default `4`). |
 | `--at NAME` | `run` | Select a known execution point (default `pre-push`). |
 | `--progress=auto`, `--progress=plain`, `--progress=tty` | `run` | Progress display; defaults to `auto`. Terminal rows update in place; CI and redirected streams use append-only output. |
@@ -261,7 +262,7 @@ output is saved instead of flooding the terminal.
 | `PASS` | The check exited successfully, or the AI found the review criterion satisfied with evidence. |
 | `FAIL` | The check failed, or the AI found a concrete violation of the criterion. |
 | `ERROR` | Verification could not be completed, for example because of a timeout, missing executable, invalid AI output or missing evidence. |
-| `NOT_RUN` | A review was skipped because checks failed. It has no review verdict. |
+| `NOT_RUN` | A rule was not started because checks failed or fail-fast stopped scheduling. The reason explains why. |
 
 A run succeeds if no blocking failure exists and its input remains stable.
 Non-blocking FAIL and provider/review ERROR remain visible and permit overall PASS.
@@ -481,10 +482,19 @@ Resource names are exact, case-sensitive opaque identifiers. They coordinate
 local and imported checks within one invocation, without namespacing by import.
 They do not lock other Please invocations. Resource-waiting checks occupy no
 execution slots; later independent checks can start first. Failures and timeouts
-do not stop remaining checks. Results retain canonical ID order. Existing rule
+do not stop remaining checks by default. Results retain canonical ID order. Existing rule
 files remain valid, but checks relying on serial execution need resources or a
 limit of 1. Older CLI releases reject these new configuration fields; upgrade
 pinned consumers before adding them to shared rulesets.
+
+Use `please run --at check --fail-fast` to stop scheduling after a blocking
+failure or fatal execution error becomes known. Already running checks finish;
+all completed results are retained. Unstarted rules appear as `NOT_RUN` with a
+fail-fast reason. Non-blocking failures and advisory review errors do not trigger
+fail-fast; check errors and review parameter/prompt errors do. Reviews in an
+already invoked adapter batch finish together; later batches are skipped.
+The option applies only to that invocation, has no persistent configuration
+field, and does not change offline plan selection or cancel running processes.
 
 ### Fields shared by checks and reviews
 

@@ -130,6 +130,7 @@ pub(crate) enum Event<'a> {
 pub(crate) fn schedule(
     checks: &[&Check],
     max_parallel: std::num::NonZeroUsize,
+    fail_fast: bool,
     execute: impl Fn(&Check) -> Item + Sync,
     progress: &mut dyn FnMut(Event<'_>),
 ) -> Vec<Item> {
@@ -162,9 +163,23 @@ pub(crate) fn schedule(
         for index in &pending {
             progress(Event::Queued(*index, None));
         }
+        let mut stopped = false;
         while !pending.is_empty() || !running.is_empty() {
+            if stopped {
+                for index in std::mem::take(&mut pending) {
+                    let mut item = Item::simple(
+                        &checks[index].id,
+                        "check",
+                        Status::NotRun,
+                        "Fail-fast triggered; no command started".into(),
+                    );
+                    item.blocking = checks[index].blocking;
+                    progress(Event::Finished(index, &item));
+                    results[index] = Some(item);
+                }
+            }
             // A blocked resource never claims a slot; scan past it.
-            while running.len() < max_parallel.get() {
+            while !stopped && running.len() < max_parallel.get() {
                 let Some(index) = pending.iter().copied().find(|&index| {
                     checks[index]
                         .resource
@@ -195,6 +210,7 @@ pub(crate) fn schedule(
                             format!("Cannot start check worker: {cause}"),
                             started.elapsed(),
                         );
+                        stopped |= fail_fast && crate::report::prevents_success(&item);
                         progress(Event::Finished(index, &item));
                         results[index] = Some(item);
                     }
@@ -230,6 +246,7 @@ pub(crate) fn schedule(
                     if let Some(resource) = &checks[index].resource {
                         resources.remove(resource.as_str());
                     }
+                    stopped |= fail_fast && crate::report::prevents_success(&item);
                     progress(Event::Finished(index, &item));
                     results[index] = Some(item);
                 }
@@ -290,6 +307,7 @@ mod tests {
                 schedule(
                     &checks,
                     2.try_into().unwrap(),
+                    false,
                     |check| {
                         let index = usize::from(check.id.as_bytes()[0] - b'a');
                         started.send(index).unwrap();
@@ -331,6 +349,7 @@ mod tests {
         let results = schedule(
             &checks,
             4.try_into().unwrap(),
+            false,
             |check| {
                 assert_ne!(check.id, "a", "simulated worker failure");
                 Item::simple(&check.id, "check", Status::Pass, String::new())
@@ -340,5 +359,95 @@ mod tests {
         assert_eq!(results[0].status, Status::Error);
         assert!(results[0].reason.contains("worker terminated"));
         assert_eq!(results[1].status, Status::Pass);
+    }
+    #[test]
+    fn fail_fast_drains_running_workers_without_starting_pending_checks() {
+        for second_status in [Status::Pass, Status::Fail] {
+            let checks = [
+                check("a", Some("shared")),
+                check("b", None),
+                check("c", Some("shared")),
+                check("d", None),
+            ];
+            let checks: Vec<_> = checks.iter().collect();
+            let (started, starts) = mpsc::channel();
+            let (finished, finishes) = mpsc::channel();
+            let channels: Vec<_> = (0..2).map(|_| mpsc::channel()).collect();
+            let releases: Vec<_> = channels.iter().map(|(s, _)| s.clone()).collect();
+            let waits: Vec<_> = channels.into_iter().map(|(_, r)| Mutex::new(r)).collect();
+            thread::scope(|scope| {
+                let handle = scope.spawn(|| {
+                    schedule(
+                        &checks,
+                        2.try_into().unwrap(),
+                        true,
+                        |check| {
+                            let index = usize::from(check.id.as_bytes()[0] - b'a');
+                            started.send(index).unwrap();
+                            waits[index]
+                                .lock()
+                                .unwrap()
+                                .recv_timeout(Duration::from_secs(5))
+                                .unwrap();
+                            Item::simple(
+                                &check.id,
+                                "check",
+                                if index == 0 {
+                                    Status::Fail
+                                } else {
+                                    second_status
+                                },
+                                "completed".into(),
+                            )
+                        },
+                        &mut |event| {
+                            if let Event::Finished(index, _) = event {
+                                finished.send(index).unwrap();
+                            }
+                        },
+                    )
+                });
+                let mut first = [
+                    starts.recv_timeout(Duration::from_secs(5)).unwrap(),
+                    starts.recv_timeout(Duration::from_secs(5)).unwrap(),
+                ];
+                first.sort();
+                assert_eq!(first, [0, 1]);
+                releases[0].send(()).unwrap();
+                assert_eq!(finishes.recv_timeout(Duration::from_secs(5)).unwrap(), 0);
+                // Observe the stopped pending work before allowing b to finish.
+                assert_eq!(finishes.recv_timeout(Duration::from_secs(5)).unwrap(), 2);
+                assert_eq!(finishes.recv_timeout(Duration::from_secs(5)).unwrap(), 3);
+                assert!(starts.try_recv().is_err());
+                releases[1].send(()).unwrap();
+                let results = handle.join().unwrap();
+                assert_eq!(
+                    results.iter().map(|r| r.status).collect::<Vec<_>>(),
+                    [Status::Fail, second_status, Status::NotRun, Status::NotRun]
+                );
+                assert!(results[2].reason.contains("Fail-fast"));
+                assert!(starts.try_recv().is_err());
+            });
+        }
+    }
+
+    #[test]
+    fn fail_fast_worker_error_stops_even_an_advisory_check() {
+        let mut checks = [check("a", None), check("b", None)];
+        checks[0].blocking = false;
+        let checks: Vec<_> = checks.iter().collect();
+        let results = schedule(
+            &checks,
+            1.try_into().unwrap(),
+            true,
+            |check| {
+                assert_ne!(check.id, "a", "simulated worker failure");
+                Item::simple(&check.id, "check", Status::Pass, String::new())
+            },
+            &mut |_| {},
+        );
+        assert_eq!(results[0].status, Status::Error);
+        assert_eq!(results[1].status, Status::NotRun);
+        assert!(!results[0].blocking);
     }
 }
