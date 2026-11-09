@@ -4,5 +4,5 @@ enabled = true
 run_at = ["pre-push", "check"]
 
 [check]
-command = "python3 -m unittest discover -s scripts -p 'test_*.py'"
+command = "python3 -B -m unittest discover -s scripts -p 'test_*.py'"
 timeout_seconds = 300
