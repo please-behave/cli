@@ -268,6 +268,7 @@ pub fn verify_project_with_fail_fast(
             }
         }
         if report::overall(&items) == Status::Pass {
+            let mut reported_reviews = std::collections::BTreeSet::new();
             let (results, usage) = reviews::execute_prepared_observed(
                 &project,
                 &active,
@@ -278,6 +279,20 @@ pub fn verify_project_with_fail_fast(
                 provider,
                 &plan.at,
                 &mut |batch, completed| {
+                    // Publish the previous batch before starting another one so
+                    // the progress board does not keep completed reviews running.
+                    for item in completed {
+                        if reported_reviews.insert(item.id.clone()) {
+                            let offset = active.iter().position(|r| r.id == item.id).unwrap();
+                            progress(Progress::RuleFinished {
+                                number: check_count + offset + 1,
+                                total,
+                                item,
+                                name: &names[&item.id],
+                                description: &active[offset].description,
+                            });
+                        }
+                    }
                     if fail_fast && completed.iter().any(report::prevents_success) {
                         return false;
                     }
@@ -306,6 +321,9 @@ pub fn verify_project_with_fail_fast(
             );
             provider_usage = usage;
             for (offset, item) in results.iter().enumerate() {
+                if reported_reviews.contains(&item.id) {
+                    continue;
+                }
                 progress(Progress::RuleFinished {
                     number: check_count + offset + 1,
                     total,

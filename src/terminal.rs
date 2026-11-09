@@ -153,7 +153,7 @@ fn fit(text: &str, width: usize) -> String {
 }
 
 fn progress_row(
-    index: (usize, usize),
+    index: (Option<usize>, usize),
     state: (&str, Tone),
     label: (&str, &str),
     elapsed: Option<u64>,
@@ -161,9 +161,12 @@ fn progress_row(
     width: Option<usize>,
 ) -> String {
     let (number, total) = index;
+    let position = number
+        .map(|n| format!("[{n}/{total}] "))
+        .unwrap_or_default();
     let (state, tone) = state;
     let (name, description) = label;
-    let prefix = format!("[{number}/{total}] {state:<7} · ");
+    let prefix = format!("{position}{state:<7} · ");
     let suffix = elapsed
         .map(|ms| format!(" · {}", duration(ms)))
         .unwrap_or_default();
@@ -177,18 +180,23 @@ fn progress_row(
         })
         .unwrap_or(label);
     format!(
-        "[{number}/{total}] {}{} · {label}{suffix}\n",
+        "{position}{}{} · {label}{suffix}\n",
         paint(state, tone, color),
         " ".repeat(7usize.saturating_sub(state.chars().count()))
     )
 }
 
-fn progress_event(event: &crate::Progress<'_>, color: bool, width: Option<usize>) -> String {
+fn progress_event(
+    event: &crate::Progress<'_>,
+    color: bool,
+    width: Option<usize>,
+    display_number: Option<usize>,
+) -> String {
     use crate::Progress;
     match event {
         Progress::Plan { .. } | Progress::Phase(_) | Progress::Tick => String::new(),
         Progress::RuleQueued {
-            number,
+            number: _,
             total,
             name,
             description,
@@ -197,7 +205,7 @@ fn progress_event(event: &crate::Progress<'_>, color: bool, width: Option<usize>
             // Capacity-only queueing is useful on the board, but noisy in logs.
             if let Some(resource) = resource {
                 progress_row(
-                    (*number, *total),
+                    (display_number, *total),
                     ("WAITING", Tone::Muted),
                     (name, &format!("resource {}", clean(resource))),
                     None,
@@ -206,7 +214,7 @@ fn progress_event(event: &crate::Progress<'_>, color: bool, width: Option<usize>
                 )
             } else if width.is_some() {
                 progress_row(
-                    (*number, *total),
+                    (display_number, *total),
                     ("PENDING", Tone::Muted),
                     (name, description),
                     None,
@@ -218,13 +226,13 @@ fn progress_event(event: &crate::Progress<'_>, color: bool, width: Option<usize>
             }
         }
         Progress::RuleStarted {
-            number,
+            number: _,
             total,
             name,
             description,
             ..
         } => progress_row(
-            (*number, *total),
+            (display_number, *total),
             ("RUNNING", Tone::Accent),
             (name, description),
             None,
@@ -232,7 +240,7 @@ fn progress_event(event: &crate::Progress<'_>, color: bool, width: Option<usize>
             width,
         ),
         Progress::RuleFinished {
-            number,
+            number: _,
             total,
             item,
             name,
@@ -245,7 +253,7 @@ fn progress_event(event: &crate::Progress<'_>, color: bool, width: Option<usize>
                 Status::NotRun | Status::Cancelled => Tone::Muted,
             };
             let mut row = progress_row(
-                (*number, *total),
+                (display_number, *total),
                 (item.status.label(), tone),
                 (name, description),
                 Some(item.duration_ms),
@@ -291,8 +299,17 @@ fn progress_event(event: &crate::Progress<'_>, color: bool, width: Option<usize>
     }
 }
 
+/// Render one event using its supplied position. Use ProgressRenderer for an
+/// execution stream with start-order numbering and completion counts.
 pub fn render_progress(event: &crate::Progress<'_>, color: bool) -> String {
-    progress_event(event, color, None)
+    let number = match event {
+        crate::Progress::RuleStarted { number, .. } => Some(*number),
+        crate::Progress::RuleFinished { number, item, .. } if item.status != Status::NotRun => {
+            Some(*number)
+        }
+        _ => None,
+    };
+    progress_event(event, color, None, number)
 }
 
 /// Stateful terminal output replaces running rows, including shared review batches.
@@ -310,6 +327,7 @@ pub struct ProgressRenderer {
     color: bool,
     width: usize,
     rows: std::collections::BTreeMap<usize, ProgressRow>,
+    start_numbers: std::collections::BTreeMap<usize, usize>,
     visible: usize,
     height: usize,
     total: usize,
@@ -322,6 +340,7 @@ impl ProgressRenderer {
             color,
             width,
             rows: Default::default(),
+            start_numbers: Default::default(),
             visible: 0,
             height,
             total: 0,
@@ -334,9 +353,6 @@ impl ProgressRenderer {
     /// Supply the clock explicitly for deterministic elapsed-time rendering.
     pub fn render_at(&mut self, event: &crate::Progress<'_>, now: std::time::Instant) -> String {
         use crate::Progress;
-        if !self.redraw {
-            return render_progress(event, self.color);
-        }
         let (number, running, finished, failed) = match event {
             Progress::Plan { total } => {
                 self.total = *total;
@@ -382,6 +398,14 @@ impl ProgressRenderer {
             }
             Progress::Phase(_) => return String::new(),
         };
+        if running && !self.start_numbers.contains_key(&number) {
+            self.start_numbers
+                .insert(number, self.start_numbers.len() + 1);
+        }
+        let display_number = self.start_numbers.get(&number).copied();
+        if !self.redraw && number == 0 {
+            return render_progress(event, self.color);
+        }
         if number != 0 {
             let width = if running {
                 self.width.saturating_sub(12)
@@ -393,13 +417,9 @@ impl ProgressRenderer {
                 ProgressRow {
                     text: match event {
                         Progress::RuleFinished {
-                            number,
-                            total,
-                            item,
-                            name,
-                            ..
+                            total, item, name, ..
                         } if item.status != Status::Pass => progress_row(
-                            (*number, *total),
+                            (display_number, *total),
                             (
                                 item.status.label(),
                                 if failed { Tone::Failure } else { Tone::Muted },
@@ -409,7 +429,7 @@ impl ProgressRenderer {
                             self.color,
                             Some(width),
                         ),
-                        _ => progress_event(event, self.color, Some(width)),
+                        _ => progress_event(event, self.color, Some(width), display_number),
                     },
                     started: running.then_some(now),
                     finished,
@@ -425,6 +445,17 @@ impl ProgressRenderer {
             );
         }
         let completed = self.rows.values().filter(|r| r.finished).count();
+        let running_count = self.rows.values().filter(|r| r.started.is_some()).count();
+        if !self.redraw {
+            let mut text = progress_event(event, self.color, None, display_number);
+            if finished {
+                text.push_str(&format!(
+                    "Progress: {completed}/{} completed · {running_count} running\n",
+                    self.total
+                ));
+            }
+            return text;
+        }
         // Coalesce bursts of queue/start/completion events, but always publish
         // the final state. The coordinator sends ticks even without completions.
         if completed != self.total
@@ -455,11 +486,19 @@ impl ProgressRenderer {
             )
         });
         selected.truncate(capacity);
-        selected.sort_by_key(|(number, _)| **number);
+        selected.sort_by_key(|(number, _)| {
+            (
+                self.start_numbers
+                    .get(number)
+                    .copied()
+                    .unwrap_or(usize::MAX),
+                **number,
+            )
+        });
         let hidden = self.rows.len().saturating_sub(selected.len());
         let failures = self.rows.values().filter(|r| r.failed).count();
         let summary = format!(
-            "Progress: {completed}/{} completed · {failures} failed{}",
+            "Progress: {completed}/{} completed · {running_count} running · {failures} failed{}",
             self.total,
             if hidden > 0 {
                 format!(" · {hidden} hidden; please status --details")

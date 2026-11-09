@@ -363,7 +363,13 @@ runnable checks; saved results retain canonical order regardless of completion.
 No resource list or build-tool-specific behavior is supported.
 
 Interactive progress shows pending, resource-waiting, running and final rule
-states, running elapsed times and completed/total counts. Refreshes are bounded;
+states, running elapsed times and completed/total and running counts. Visible
+rule numbers are assigned in actual start-event order and retained on completion;
+they are not plan positions or completion counts. Pending, waiting and never-started
+NOT_RUN rules have no start number. Started rows precede unstarted rows and retain
+start order, including members of shared review calls. Plain output uses the same
+start numbers and reports completed/total and running counts after final events.
+Canonical plan positions and saved result order remain unchanged. Refreshes are bounded;
 short terminals show a bounded selection of rows and hidden-state counts. Plain
 logs attribute waiting, starts and results without raw subprocess output. CI,
 GitHub Actions and nonterminal streams never use cursor controls, including with

@@ -1330,7 +1330,7 @@ fn failed_checks_report_skipped_reviews_without_claiming_they_started() {
     assert_eq!(report.overall, Status::Fail);
     assert!(output.contains("[1/3] PASS    · always-ok"));
     assert!(output.contains("[2/3] FAIL    · deliberately-failing"));
-    assert!(output.contains("[3/3] NOT_RUN · product-consistency"));
+    assert!(output.contains("NOT_RUN · product-consistency"));
     assert!(!output.contains("RUNNING review") && !output.contains("Adapter:"));
     assert_eq!(
         terminal::render_outcome(&report, 2000, false),

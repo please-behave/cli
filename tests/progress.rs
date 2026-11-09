@@ -496,3 +496,161 @@ fn elapsed_ticks_waiting_states_and_short_boards_are_bounded() {
     });
     assert!(plain.contains("shared") && !plain.contains('\u{1b}'));
 }
+
+#[test]
+fn start_numbers_survive_out_of_order_completion_and_unstarted_results() {
+    for redraw in [false, true] {
+        let mut renderer = terminal::ProgressRenderer::new(redraw, false, 120, 24);
+        let now = std::time::Instant::now();
+        for number in 1..=4 {
+            let text = renderer.render_at(
+                &Progress::RuleQueued {
+                    number,
+                    total: 4,
+                    name: "Pending",
+                    description: "Files",
+                    resource: None,
+                },
+                now,
+            );
+            assert!(!text.contains("[1/4]"));
+        }
+        for (number, name) in [(3, "Third"), (1, "First")] {
+            let text = renderer.render_at(
+                &Progress::RuleStarted {
+                    number,
+                    total: 4,
+                    kind: "check",
+                    id: name,
+                    name,
+                    description: "Files",
+                },
+                now,
+            );
+            if !redraw {
+                let expected = if number == 3 { 1 } else { 2 };
+                assert!(
+                    text.starts_with(&format!("[{expected}/4] RUNNING")),
+                    "{text}"
+                );
+            }
+        }
+        let frame = renderer.render_at(&Progress::Tick, now + std::time::Duration::from_secs(1));
+        if redraw {
+            assert!(frame.contains("0/4 completed · 2 running"), "{frame}");
+            assert!(frame.find("[1/4] RUNNING").unwrap() < frame.find("[2/4] RUNNING").unwrap());
+            assert!(frame.find("Third").unwrap() < frame.find("First").unwrap());
+            assert!(frame.find("First").unwrap() < frame.find("PENDING").unwrap());
+        }
+        let pass = report::Item::simple("first", "check", Status::Pass, String::new());
+        let text = renderer.render_at(
+            &Progress::RuleFinished {
+                number: 1,
+                total: 4,
+                item: &pass,
+                name: "First",
+                description: "Files",
+            },
+            now + std::time::Duration::from_secs(2),
+        );
+        assert!(text.contains("[2/4] PASS"), "{text}");
+        assert!(text.contains("1/4 completed · 1 running"), "{text}");
+        let skipped = report::Item::simple(
+            "second",
+            "check",
+            Status::NotRun,
+            "Dependency failed".into(),
+        );
+        let text = renderer.render_at(
+            &Progress::RuleFinished {
+                number: 2,
+                total: 4,
+                item: &skipped,
+                name: "Second",
+                description: "Files",
+            },
+            now + std::time::Duration::from_secs(3),
+        );
+        assert!(text.contains("NOT_RUN"), "{text}");
+        assert!(!text.contains("[3/4]"), "{text}");
+        let text = renderer.render_at(
+            &Progress::RuleQueued {
+                number: 4,
+                total: 4,
+                name: "Fourth",
+                description: "Files",
+                resource: Some("shared"),
+            },
+            now + std::time::Duration::from_secs(4),
+        );
+        assert!(
+            text.contains("WAITING") && !text.contains("[4/4]"),
+            "{text}"
+        );
+        let text = renderer.render_at(
+            &Progress::RuleFinished {
+                number: 3,
+                total: 4,
+                item: &pass,
+                name: "Third",
+                description: "Files",
+            },
+            now + std::time::Duration::from_secs(5),
+        );
+        assert!(text.contains("[1/4] PASS"), "{text}");
+        assert!(text.contains("3/4 completed · 0 running"), "{text}");
+        if redraw {
+            assert!(text.find("Third").unwrap() < text.find("First").unwrap());
+        }
+    }
+}
+
+#[test]
+fn cli_numbers_history_order_but_preserves_saved_order() {
+    let root = project();
+    fs::write(
+        root.path().join(".git/please-scheduling.json"),
+        r#"{"estimates":{"check":{"first":1,"second":10000}}}"#,
+    )
+    .unwrap();
+    let output = Command::new(env!("CARGO_BIN_EXE_please"))
+        .args([
+            "run",
+            "--at",
+            "check",
+            "--max-parallel",
+            "1",
+            "--progress=plain",
+        ])
+        .current_dir(root.path())
+        .env("NO_COLOR", "1")
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let text = String::from_utf8(output.stderr).unwrap();
+    assert!(text.contains("[1/2] RUNNING · second"), "{text}");
+    assert!(text.contains("[1/2] PASS    · second"), "{text}");
+    assert!(text.contains("[2/2] RUNNING · first"), "{text}");
+    let saved = report::read(root.path()).unwrap();
+    assert_eq!(
+        saved
+            .results
+            .iter()
+            .map(|r| r.id.as_str())
+            .collect::<Vec<_>>(),
+        ["first", "second"]
+    );
+    assert_eq!(
+        saved
+            .plan
+            .scheduled
+            .iter()
+            .map(|r| r.id.as_str())
+            .collect::<Vec<_>>(),
+        ["first", "second"]
+    );
+}

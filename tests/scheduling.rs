@@ -125,17 +125,32 @@ fn review_history_orders_whole_batches_and_preserves_result_order() {
     let execute = || {
         let mut starts = Vec::new();
         let mut batches = Vec::new();
+        let mut running = std::collections::BTreeSet::new();
+        let mut renderer = please::terminal::ProgressRenderer::new(false, false, 80, 24);
+        let mut output = String::new();
         let report = please::verify_project_at(
             config::load(root.path()).unwrap(),
             &Mock,
             please::VerificationMode::AllRules,
             Some("check"),
-            &mut |event| match event {
-                Progress::RuleStarted {
-                    kind: "review", id, ..
-                } => starts.push(id.to_owned()),
-                Progress::ReviewBatch { count, .. } => batches.push(count),
-                _ => (),
+            &mut |event| {
+                output.push_str(&renderer.render(&event));
+                match event {
+                    Progress::RuleStarted {
+                        kind: "review", id, ..
+                    } => {
+                        assert!(running.insert(id.to_owned()));
+                        starts.push(id.to_owned());
+                    }
+                    Progress::RuleFinished { item, .. } if item.kind == "review" => {
+                        assert!(running.remove(&item.id));
+                    }
+                    Progress::ReviewBatch { count, .. } => {
+                        assert!(running.is_empty(), "previous batch still shown as running");
+                        batches.push(count);
+                    }
+                    _ => (),
+                }
             },
         )
         .unwrap();
@@ -149,6 +164,19 @@ fn review_history_orders_whole_batches_and_preserves_result_order() {
                 .collect::<Vec<_>>(),
             ["r-a", "r-b", "r-c"]
         );
+        assert!(running.is_empty());
+        for (index, id) in starts.iter().enumerate() {
+            let number = index + 3;
+            assert!(
+                output.contains(&format!("[{number}/5] RUNNING · {id}")),
+                "{output}"
+            );
+            assert!(
+                output.contains(&format!("[{number}/5] PASS    · {id}")),
+                "{output}"
+            );
+        }
+        assert!(output.contains("5/5 completed · 0 running"));
         (starts, batches)
     };
     assert_eq!(

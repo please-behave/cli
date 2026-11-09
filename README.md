@@ -229,7 +229,12 @@ establish that your project passed any quality rules.
 
 During execution, each rule shows its short name, description, status and duration.
 An interactive terminal shows pending, resource-waiting, running and completed
-rows, running elapsed times and completed/total counts. Refreshes are limited to
+rows, running elapsed times and completed/total and running counts. Rule numbers
+follow actual start order and stay with the rule through completion; they are
+separate from the completed count. Started rows appear first in start order.
+Pending, waiting and never-started `NOT_RUN` rules have no start number. Plain
+output uses the same numbering and reports counts after each final result.
+Plans and saved results retain their canonical order. Refreshes are limited to
 ten per second; short terminals show selected rows with hidden counts. In CI,
 GitHub Actions, redirected stderr or `--progress=plain`, named starts, resource
 waits and results are appended without cursor controls, even with `--progress=tty`.
