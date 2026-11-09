@@ -15,6 +15,8 @@ pub const PLAN_SCHEMA_VERSION: u32 = 3;
 #[serde(deny_unknown_fields)]
 pub struct Rule {
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider_origin: Option<crate::external::Origin>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub review_input: Option<crate::config::ReviewInput>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub depends_on: Vec<String>,
@@ -249,6 +251,10 @@ pub fn build_with_context(
         let provider = review.and_then(|r| r.provider.clone());
         let provider_config = provider.as_ref().map(|id| project.providers[id].clone());
         let rule = Rule {
+            provider_origin: provider
+                .as_ref()
+                .and_then(|id| project.external_providers.get(id))
+                .map(|source| source.origin.clone()),
             review_input: review
                 .filter(|r| r.input == crate::config::ReviewInput::CommitHeader)
                 .map(|r| r.input),
@@ -476,6 +482,7 @@ pub fn build_with_context(
         "at": name, "checks_only": checks_only, "checks": checks, "reviews": reviews,
         "provider": plan.provider, "named_providers": named_providers, "head": snapshot.head, "files": files, "context": excerpts,
         "commit_header": plan.input.commit_header,
+        "provider_origins": project.external_providers.iter().map(|(id, source)| (id, &source.origin)).collect::<std::collections::BTreeMap<_,_>>(),
         "complete": snapshot.complete, "change_base": plan.change_base, "scheduled": plan.scheduled, "omitted": plan.omitted,
     });
     plan.plan_id = format!("{:x}", Sha256::digest(serde_json::to_vec(&identity)?));

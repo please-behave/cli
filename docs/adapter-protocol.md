@@ -17,6 +17,13 @@ live under `.please/providers/adapters/`, elsewhere in the project or outside it
 The process inherits the environment, including resolved `PLEASE_PARAM_*` Rule
 parameters and the validated `PLEASE_EXECUTION_POINT`.
 
+Independent provider packages can be selected through `[[provider_imports]]`.
+Their `provider.toml` uses this same adapter contract. Explicit `@provider/`,
+`@source/` and `@repo/` tokens in command/args/executable requirements resolve to
+verified resources; local and legacy Rule Set-provider arguments remain literal.
+Distribution does not change the working directory, environment, protocol or
+provider requirements. See [provider imports](configuration.md#import-providers-from-git).
+
 Each invocation receives exactly one UTF-8 JSON object on stdin followed by EOF.
 Write exactly one JSON object to stdout and exit zero. All requested reviews must
 be represented exactly once. Stderr is drained but suppressed; do not depend on
@@ -151,6 +158,9 @@ For header PASS/FAIL, provide at least one finding like:
 ```json
 {"source":"commit-header","message":"The summary names a concrete action in the imperative.","path":null,"line":1}
 ```
+
+The header generation schema requires at least one finding, including for PASS.
+Adapter-generated technical ERROR responses may still omit findings.
 
 `source` is an optional addition to the response wire type, required only for
 header evidence; file findings continue to omit it. Header reviews reject file

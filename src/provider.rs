@@ -143,8 +143,11 @@ fn executable_available(command: &Command, root: &Path, executable: &str) -> boo
     })
 }
 
-fn requirements(command: &Command, request: &Request<'_>) -> Result<()> {
-    let config = request.provider_config()?;
+fn requirements(
+    command: &Command,
+    root: &Path,
+    config: &crate::config::ProviderConfig,
+) -> Result<()> {
     for name in &config.requirements.env {
         ensure!(
             child_env(command, std::ffi::OsStr::new(name)).is_some_and(|value| !value.is_empty()),
@@ -153,7 +156,7 @@ fn requirements(command: &Command, request: &Request<'_>) -> Result<()> {
     }
     for executable in &config.requirements.executables {
         ensure!(
-            executable_available(command, &request.project.root, executable),
+            executable_available(command, root, executable),
             "required executable is unavailable: {executable}"
         );
     }
@@ -170,13 +173,21 @@ struct AdapterResponse {
 
 fn execute(request: &Request<'_>) -> Result<Response> {
     let config = request.provider_config()?;
-    let mut command = Command::new(&config.command);
+    let resolved = request
+        .reviews
+        .first()
+        .and_then(|review| review.provider.as_ref())
+        .and_then(|id| request.project.external_providers.get(id))
+        .map(|source| source.resolve(config, &request.project.root))
+        .transpose()?;
+    let runtime = resolved.as_ref().unwrap_or(config);
+    let mut command = Command::new(&runtime.command);
     command
-        .args(&config.args)
+        .args(&runtime.args)
         .current_dir(&request.project.root);
     crate::parameters::configure(&mut command, request.parameters);
     command.env("PLEASE_EXECUTION_POINT", request.execution_point);
-    requirements(&command, request)?;
+    requirements(&command, &request.project.root, runtime)?;
     let ids = request
         .reviews
         .iter()

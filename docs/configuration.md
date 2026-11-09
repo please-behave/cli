@@ -76,7 +76,8 @@ custom = ["release"]
 | `execution.fail_fast_termination_grace_seconds` | Optional; `5` | Integer `1..3600`: grace period between SIGTERM and forced termination, validated even when termination is disabled. |
 | `execution_points` | Optional table | Additional execution contexts. |
 | `execution_points.custom` | Optional; `[]` | Unique names of 1–80 lowercase ASCII letters, digits, `-`, `_`, starting with a letter/digit. Built-in names are reserved. |
-| `imports` | Optional; `[]` | External references, declared only here as `[[imports]]`. |
+| `imports` | Optional; `[]` | External Rule Set references, declared only here as `[[imports]]`. |
+| `provider_imports` | Optional; `[]` | Independent external named provider packages, declared as `[[provider_imports]]`. |
 
 Built-in points are `pre-commit`, `commit-msg`, `pre-push` and `check`. The first
 three use Git hooks. `check` is invoked explicitly with `please run --at check`
@@ -751,6 +752,66 @@ contents require `please sync`. Multiple sets at one repository/commit share
 one checkout. Full hashes pin content; branches/tags can move when refreshed.
 
 See [external source structure, cache and trust](https://github.com/please-behave/cli/blob/main/docs/external-rule-sets.md).
+
+### Import providers from Git
+
+Providers can be distributed independently of Rule Sets. Add an explicit,
+independently pinned import to the consumer's `.please/config.toml`:
+
+```toml
+[[provider_imports]]
+id = "quality"
+git = "https://github.com/company/governance-providers.git"
+path = "providers/quality"
+ref = "v1.2.0"
+```
+
+| Field | Required / default | Meaning |
+| --- | --- | --- |
+| `id` | Required | Named provider exposed to reviews; the ordinary provider ID rules apply. |
+| `git` | Required | Git repository selector, with the same authentication and trust rules as Rule Set imports. |
+| `path` | Required | Repository-relative directory containing `provider.toml` and adapter resources. |
+| `ref` | Required | Exact branch, tag or full commit hash; full hashes pin reviewed content. |
+
+The selected directory contains a normal `provider.toml`, for example:
+
+```toml
+command = "python3"
+args = ["@provider/adapter.py"]
+timeout_seconds = 70
+
+[requirements]
+executables = ["python3"]
+env = ["QUALITY_API_KEY"]
+```
+
+The consumer needs no matching `.please/providers/quality.toml` or adapter copy.
+A local or imported Review selects it using `provider = "quality"`. Rule Set
+and provider imports may name the same repository or separate repositories,
+with independently selected paths/revisions. No imports are inferred, nested
+or fetched during execution. Provider packages need no Rule Set or execution point.
+All imports share the 256-import bound; named provider IDs are global. Duplicate
+IDs, including local/imported collisions, fail; there is no implicit override.
+Existing providers distributed inside Rule Sets remain supported.
+
+Only independent provider packages resolve explicit tokens in `command`, `args`
+and `requirements.executables`: `@provider/` selects the package directory,
+`@source/` its repository root and `@repo/` the consumer root. `@@` escapes one
+leading @; other unknown @ prefixes fail. Referenced paths must exist and cannot
+use absolute suffixes, parent traversal or symlinks. Resolved paths remain single
+literal arguments, including spaces. Ordinary tokens still use PATH or the
+consumer root. Local and legacy Rule Set-provider arguments keep their literal
+behavior. There is no shell expansion, dependency installation or sandbox.
+
+Run `please sync` to resolve and validate both import kinds, without executing
+adapters. A failed sync preserves the previous combined state. Later plans,
+hooks and execution use verified immutable cached revisions offline; corrupt or
+missing resources fail. Cache integrity failures are fatal even for advisory
+reviews. Runtime PATH/environment requirements are checked only for selected
+reviews, after deterministic checks. Plans/reports retain `provider_origin`
+(repository hash, selected path/ref and resolved commit), which participates in
+plan identity. Provider resources stay in the cache; removing the import stops
+using them without deleting the shared cache.
 
 ### Reports and other files
 

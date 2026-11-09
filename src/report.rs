@@ -211,6 +211,10 @@ pub fn read(root: &Path) -> Result<Report> {
                 && (rule.provider.is_none() || rule.kind == "review"),
             "inconsistent report provider metadata"
         );
+        ensure!(
+            rule.provider_origin.is_none() || (rule.kind == "review" && rule.provider.is_some()),
+            "inconsistent external provider provenance"
+        );
         if let Some(config) = &rule.provider_config {
             crate::config::validate_provider(config)
                 .context("invalid report provider configuration")?;

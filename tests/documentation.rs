@@ -136,6 +136,16 @@ fn every_configuration_field_required_marker_and_default_is_documented() {
         section(README, "Import rule sets from Git"),
         "",
     );
+    contract(
+        &please::external::ProviderImport {
+            id: "quality".into(),
+            git: "https://example.invalid/providers.git".into(),
+            path: "providers/quality".into(),
+            reference: "main".into(),
+        },
+        section(README, "Import providers from Git"),
+        "",
+    );
     let rule = config::RuleDefinition {
         id: "example".into(),
         depends_on: Some(vec![]),

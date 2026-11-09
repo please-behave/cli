@@ -480,6 +480,7 @@ pub(crate) fn init(root: &Path) -> Result<usize> {
         execution: Default::default(),
         execution_points: Default::default(),
         imports: vec![],
+        provider_imports: vec![],
     };
     let (entrypoint, pass, fail) = if cfg!(windows) {
         ("index.cmd", "@git --version\r\n", "@exit /b 1\r\n")

@@ -259,9 +259,25 @@ pub(crate) fn execute_prepared_observed(
             && crate::git_snapshot::capture(&project.root).is_ok_and(|current| {
                 crate::git_snapshot::compare(snapshot, &current, 0).state == "CURRENT"
             });
+        let provider_integrity = || -> Result<()> {
+            if let Some((source, config)) = reviews
+                .first()
+                .and_then(|review| review.provider.as_ref())
+                .and_then(|id| {
+                    project
+                        .external_providers
+                        .get(id)
+                        .zip(project.providers.get(id))
+                })
+            {
+                source.resolve(config, &project.root)?;
+            }
+            Ok(())
+        };
+        let invalid_provider = provider_integrity().err();
         let batch_input = input.for_source(source);
         let start = Instant::now();
-        let response = if stable {
+        let response = if stable && invalid_provider.is_none() {
             provider.review_with_usage(&Request {
                 project,
                 reviews: &reviews,
@@ -279,12 +295,19 @@ pub(crate) fn execute_prepared_observed(
             }
         };
         usages.push(response.usage);
-        let result = response
+        let invalid_provider = invalid_provider.or_else(|| provider_integrity().err());
+        let result = if let Some(error) = &invalid_provider {
+            Err(anyhow::anyhow!(
+                "Invalid external provider resources: {error:#}"
+            ))
+        } else {
+            response
             .verdict
             .and_then(|json| {
                 input.ensure_stable()?;
                 parse_with_header(project, &reviews, snapshot, &json, batch_input.commit_header.as_deref()).map_err(|_| anyhow::anyhow!("Invalid adapter review response; structured verdict and evidence requirements were not met"))
-            });
+            })
+        };
         let mut results = match result {
             Ok(items) => items,
             Err(error) => reviews
@@ -295,6 +318,7 @@ pub(crate) fn execute_prepared_observed(
         for item in &mut results {
             item.duration_ms = start.elapsed().as_millis() as u64;
             item.blocking = reviews.iter().find(|r| r.id == item.id).unwrap().blocking;
+            item.configuration_error = invalid_provider.is_some();
         }
         items.extend(results);
     }

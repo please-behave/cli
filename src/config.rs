@@ -33,6 +33,8 @@ pub struct Config {
     pub execution_points: ExecutionPoints,
     #[serde(default)]
     pub imports: Vec<crate::external::Import>,
+    #[serde(default)]
+    pub provider_imports: Vec<crate::external::ProviderImport>,
 }
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(default, deny_unknown_fields)]
@@ -226,6 +228,7 @@ pub struct Project {
     pub config: Config,
     pub provider: Option<ProviderConfig>,
     pub providers: BTreeMap<String, ProviderConfig>,
+    pub external_providers: BTreeMap<String, crate::external::ProviderSource>,
     pub checks: Vec<Check>,
     pub reviews: Vec<Review>,
     pub rule_sets: Vec<RuleSet>,
@@ -333,7 +336,7 @@ fn nonempty(value: &str, name: &str) -> Result<()> {
     );
     Ok(())
 }
-fn identity(id: &str, description: &str, ids: &mut BTreeSet<String>) -> Result<()> {
+pub(crate) fn identity(id: &str, description: &str, ids: &mut BTreeSet<String>) -> Result<()> {
     ensure!(
         !id.is_empty()
             && id.len() <= MAX_ID_BYTES
@@ -520,6 +523,7 @@ pub(crate) fn validate(root: PathBuf, loaded: crate::discovery::Loaded) -> Resul
         config,
         provider,
         providers,
+        external_providers: BTreeMap::new(),
         checks,
         reviews,
         rule_sets,

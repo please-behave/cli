@@ -203,20 +203,26 @@ Checks use the consumer root. Review prompts resolve within their Rule directori
 the loader enforces containment. Checks receive PLEASE_RULE_DIRECTORY for resources. No argument rewriting or working-directory
 switch occurs. Providers, snapshots, selection and reports remain shared.
 
-The repository uses the same unversioned Rule model with published Please Behave v0.1.0 as its
-governor. Candidate binaries are exercised only in isolated fixture repositories. No hook installation, remote services or releases
+The repository uses the same unversioned Rule model with the published Please
+Behave release pinned in `.please-version` as its governor. Candidate binaries are exercised only in isolated fixture repositories. No hook installation, remote services or releases
 are triggered by loading configuration.
 
 Named provider configurations reuse `ProviderConfig` and the ordinary bounded,
 symlink-free TOML loader. Local files live in `.please/providers/`; imported files
-live in `providers/` inside the selected set directory. Scope-local rule validation
+live in `providers/` inside the selected set directory. Independent
+`provider_imports` instead select a package directory containing `provider.toml`
+and adapter resources, with a consumer-assigned ID. Both import kinds share
+cache retrieval and atomic resolution state; neither infers dependencies.
+Independent package references resolve into the verified cache at invocation,
+without copying adapters into the consumer. Provider origins participate in plan
+identity and remain visible in reports. Scope-local rule validation
 runs first. Provider definitions merge globally, rejecting collisions except for
 repeated references to the same repository/commit/file. Review references resolve
 after merging all explicit imports, before publishing resolution state. No source
 files are rewritten. The explicit project default remains separate and is selected
 only when a review omits its reference. All invocations use the same executable
 adapter boundary, with matching provider references, Rule parameter environments
-and diff selections batched together. Each review carries independently merged
+input sources and diff selections batched together. Each review carries independently merged
 adapter settings. See the [adapter protocol](adapter-protocol.md).
 
 File-change triggers filter enabled, point-selected Reviews inside the existing

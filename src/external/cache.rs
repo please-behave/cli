@@ -400,7 +400,7 @@ fn digest(root: &Path) -> Result<String> {
     Ok(format!("{:x}", hasher.finalize()))
 }
 
-fn validate_revision(revision: &Path, commit: &str) -> Result<PathBuf> {
+pub(super) fn validate_revision(revision: &Path, commit: &str) -> Result<PathBuf> {
     ensure!(
         !revision.symlink_metadata()?.file_type().is_symlink(),
         "unsafe cached revision"

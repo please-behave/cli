@@ -216,8 +216,38 @@ prevent scripts from accessing other paths, credentials or the network. Import
 executable Rules only from trusted sources. Imported generic CLI provider commands
 use this same trust boundary and execute from the consumer root with its inherited
 environment. They may reference installed programs or consumer-provided wrappers;
-Please Behave does not resolve provider commands as confined Rule resources. Review every
+Legacy Rule Set-provider command arguments stay literal; independent provider
+packages below add explicit cached-resource references. Review every
 imported provider definition before approving source refresh. There is no process sandbox.
+
+## Independent provider packages
+
+`[[provider_imports]]` selects a named provider independently of any Rule Set,
+using `id`, `git`, `path` and `ref`. The selected directory contains `provider.toml`
+and adapter resources. Rulesets and providers may come from separate repositories;
+sharing a source revision still reuses the same immutable checkout. No empty
+provider-only Rule Set or execution point is required. Existing Rule Set-bundled
+providers above remain compatible. See the
+[provider import reference](configuration.md#import-providers-from-git) for a
+complete consumer and package example.
+
+No provider files are copied into the consumer. Imported command/args and
+executable requirements can use `@provider/` for the selected directory,
+`@source/` for its repository and `@repo/` for the consumer. Path confinement,
+symlink rejection and cache receipts apply. `@@` escapes a literal @. Plain
+arguments keep their existing consumer-root semantics. These references are
+specific to independent packages; existing local/Rule Set-provider arguments
+retain their literal behavior. This makes adapter distribution explicit without
+adding provider-specific code to Please Behave.
+
+Both import kinds publish one resolution state atomically. Provider IDs must be
+unique across local files, Rule Set exports and independent packages. Repeated
+IDs in independent imports fail even when selected content is identical. References
+resolve after loading all declared sources. Plans/reports retain provider origin
+metadata and stable raw reference tokens; resolved machine-specific cache paths
+are runtime details. An unavailable/corrupt imported provider blocks execution,
+even for an advisory review. Adapter authentication and tools are still checked
+only when a selected review reaches its provider call.
 
 ## Recovery and limits
 

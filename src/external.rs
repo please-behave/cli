@@ -29,6 +29,81 @@ pub struct Import {
     pub rule_parameters: BTreeMap<String, BTreeMap<String, toml::Value>>,
 }
 
+/// A named provider package selected independently of Rule Sets.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct ProviderImport {
+    pub id: String,
+    pub git: String,
+    pub path: String,
+    #[serde(rename = "ref")]
+    pub reference: String,
+}
+impl ProviderImport {
+    fn selector(&self) -> Import {
+        Import {
+            git: self.git.clone(),
+            path: self.path.clone(),
+            reference: self.reference.clone(),
+            execution_points: BTreeMap::new(),
+            rule_parameters: BTreeMap::new(),
+        }
+    }
+}
+
+/// Runtime cache location stays private; public provenance contains no cache paths.
+#[derive(Debug)]
+pub struct ProviderSource {
+    pub origin: Origin,
+    root: PathBuf,
+}
+impl ProviderSource {
+    pub(crate) fn resolve(
+        &self,
+        provider: &config::ProviderConfig,
+        repo: &Path,
+    ) -> Result<config::ProviderConfig> {
+        cache::validate_revision(
+            self.root
+                .parent()
+                .context("missing provider cache revision")?,
+            &self.origin.commit,
+        )
+        .context("external provider cache unavailable or corrupt; run please sync")?;
+        let mut provider = provider.clone();
+        for token in std::iter::once(&mut provider.command)
+            .chain(&mut provider.args)
+            .chain(&mut provider.requirements.executables)
+        {
+            if let Some(literal) = token.strip_prefix("@@") {
+                *token = format!("@{literal}");
+                continue;
+            }
+            if !token.starts_with('@') {
+                continue;
+            }
+            let (prefix, suffix) = token
+                .split_once('/')
+                .context("external provider references require @provider/, @source/ or @repo/")?;
+            config::relative(Path::new(suffix))
+                .context("unsafe external provider resource path")?;
+            let (root, relative): (&Path, PathBuf) = match prefix {
+                "@provider" => (&self.root, Path::new(&self.origin.path).join(suffix)),
+                "@source" => (&self.root, PathBuf::from(suffix)),
+                "@repo" => (repo, PathBuf::from(suffix)),
+                _ => anyhow::bail!(
+                    "unknown external provider path reference; escape a literal @ with @@"
+                ),
+            };
+            *token = config::source_path(root, &relative)?
+                .to_str()
+                .context("provider resource path must be UTF-8")?
+                .to_owned();
+        }
+        Ok(provider)
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Origin {
@@ -116,10 +191,10 @@ impl Import {
                 && !self.reference.chars().any(char::is_control),
             "invalid Git reference"
         );
-        config::relative(Path::new(&self.path)).context("invalid external rule-set path")?;
+        config::relative(Path::new(&self.path)).context("invalid external import path")?;
         ensure!(
             !self.path.chars().any(char::is_control),
-            "invalid external rule-set path"
+            "invalid external import path"
         );
         self.path = Path::new(&self.path)
             .components()
@@ -156,23 +231,35 @@ pub(crate) fn load_with_changes(
     let root = root.canonicalize()?;
     crate::git_snapshot::require_root(&root)?;
     let loaded = crate::discovery::load(&root)?;
-    let mut imports = loaded.config.imports.clone();
-    for import in &mut imports {
+    let mut imports: Vec<_> = loaded
+        .config
+        .imports
+        .iter()
+        .cloned()
+        .map(|import| (import, None))
+        .collect();
+    let mut provider_ids = std::collections::BTreeSet::new();
+    for provider in &loaded.config.provider_imports {
+        config::identity(&provider.id, "external provider", &mut provider_ids)?;
+        imports.push((provider.selector(), Some(provider.id.clone())));
+    }
+    for (import, _) in &mut imports {
         import.validate(&root)?;
     }
-    imports.sort_by_key(|import| {
+    imports.sort_by_key(|(import, provider)| {
         (
             import.key(),
+            provider.clone(),
             serde_json::to_string(&import.rule_parameters).unwrap(),
         )
     });
     ensure!(
         imports.len() <= MAX_RULES,
-        "at most {MAX_RULES} external rule sets"
+        "at most {MAX_RULES} external Rule Set and provider imports"
     );
     // Validate scope-local semantics first; provider references resolve after merging imports.
     let mut project = config::validate(root.clone(), loaded)?;
-    for import in &imports {
+    for (import, _) in &imports {
         for (source, target) in &import.execution_points {
             let entity = format!(
                 "import {:?} @ {:?}: execution_points {source:?} -> {target:?}",
@@ -263,9 +350,12 @@ pub(crate) fn load_with_changes(
     let mut checkouts: BTreeMap<(String, String), PathBuf> = BTreeMap::new();
     let mut bindings: BTreeMap<String, usize> = BTreeMap::new();
     let mut provider_sources = BTreeMap::new();
-    for import in imports {
+    for (import, provider_id) in imports {
         let repository = import.repository();
-        let key = import.key();
+        let key = match &provider_id {
+            Some(id) => hash(serde_json::to_vec(&("provider", id, import.key()))?),
+            None => import.key(),
+        };
         let origin = if refresh {
             let ref_key = (repository.clone(), import.reference.clone());
             let commit = if let Some(commit) = resolved.get(&ref_key) {
@@ -321,14 +411,39 @@ pub(crate) fn load_with_changes(
         let boundary =
             config::source_path(&checkout, Path::new(&import.path)).with_context(|| {
                 format!(
-                    "missing or unsafe external rule-set directory {:?}",
+                    "missing or unsafe external import directory {:?}",
                     import.path
                 )
             })?;
-        ensure!(
-            boundary.is_dir(),
-            "external rule-set path is not a directory"
-        );
+        ensure!(boundary.is_dir(), "external import path is not a directory");
+        if let Some(id) = provider_id {
+            ensure!(
+                !project.providers.contains_key(&id),
+                "duplicate provider identifier {id:?}; provider overrides are unsupported"
+            );
+            ensure!(
+                project.providers.len() < MAX_RULES,
+                "at most {MAX_RULES} named providers including imports"
+            );
+            let provider: config::ProviderConfig = crate::discovery::document(
+                &checkout,
+                &Path::new(&import.path).join("provider.toml"),
+            )
+            .with_context(|| format!("invalid external provider {id:?}"))?;
+            config::validate_provider(&provider)
+                .with_context(|| format!("invalid external provider {id:?}"))?;
+            let source = ProviderSource {
+                origin: origin.clone(),
+                root: checkout,
+            };
+            source
+                .resolve(&provider, &root)
+                .with_context(|| format!("invalid external provider resources for {id:?}"))?;
+            project.providers.insert(id.clone(), provider);
+            project.external_providers.insert(id, source);
+            next.resolutions.insert(key, origin);
+            continue;
+        }
         let mut definitions = crate::discovery::load_external(
             &checkout,
             Path::new(&import.path),

@@ -109,6 +109,49 @@ Imported code has Please Behave's permissions and must be trusted; path confinem
 not a sandbox. Credential-bearing HTTP URLs are rejected and diagnostics never
 echo Git stderr or secret repository selectors.
 
+## EXT-002: Independent external providers
+
+Consumer config.toml accepts `[[provider_imports]]` with `id`, `git`, `path` and
+`ref`. Each selects one directory containing `provider.toml` and adapter resources
+in an independently pinned Git source. The file uses the existing provider
+configuration contract, without nested imports. Rules refer to the consumer's
+explicit `id`; no provider imports are inferred from Rule references. Rulesets
+and providers may use the same or different repositories, paths and revisions.
+All named provider IDs remain global: local/imported collisions and repeated
+IDs fail, including identical repeated imports. No overrides are inferred.
+Existing Rule Set-distributed providers remain supported unchanged.
+
+`please sync` resolves both import kinds through the shared immutable Git cache
+and atomically publishes their combined resolution state only after validation.
+Failures preserve prior state. Removal of the last import removes resolution
+state. No provider code is copied into the consumer, executed or installed during
+sync. Provider imports need no Rules, Rule Sets or execution points of their own.
+Normal execution and plans use validated cached revisions offline; missing or
+corrupt revisions block instead of downloading or substituting definitions.
+
+Only independently imported providers interpret literal tokens in command, args
+and requirements.executables: `@provider/` selects the provider directory,
+`@source/` the imported repository root and `@repo/` the consumer root. `@@` escapes
+one leading @. Unknown @ prefixes, absolute suffixes, traversal, missing resources
+and symlink components fail validation, including for unused providers. Ordinary
+tokens retain PATH/consumer-root semantics; no shell evaluation is introduced.
+Local and legacy Rule Set-distributed provider arguments retain their literal
+behavior. Runtime PATH/environment availability requirements still gate only selected
+reviews after deterministic checks.
+
+Imported provider provenance identifies repository hash, selected path/ref and
+resolved commit in plans/reports, and participates in plan identity. Cache
+integrity is rechecked before launching an imported adapter. Existing adapter
+protocol, review evidence, blocking, timeout and output contracts remain intact.
+Cache resource failures remain fatal for advisory reviews.
+The product includes no provider or model by default. Imports execute trusted
+code with the user's permissions; Git credentials and dependencies remain external.
+
+Acceptance: `tests/provider_imports.rs::separate_provider_and_ruleset_repositories_run_offline`
+covers independent sources, cached adapter execution and provenance. Further
+fixtures cover shared sources, collisions, resource boundaries, atomic failure,
+tampering and absence of implicit downloads/provider calls.
+
 ## CFG-001: Configuration and initialization
 
 New projects use `.please/` exclusively; `.hannes/` is not discovered or migrated.
@@ -127,7 +170,7 @@ directories as defined in EXT-001; local definitions use only the paths above.
 Supporting files inside rule directories are data, never governance documents.
 
 Project settings are project, max_display_files (default 5), execution_points,
-execution and imports. The README defines all fields and bounds. Review prompt filenames
+execution, imports and provider_imports. The README defines all fields and bounds. Review prompt filenames
 must be single nonempty names directly in a Rule directory: no separators,
 absolute paths, parent traversal, symlinks or special files. Review prompts are
 UTF-8 Markdown without frontmatter requirements. Check entrypoints follow CHK-001.
@@ -162,7 +205,9 @@ Only configured criteria and the captured header are supplied as review evidence
 without HEAD, file manifest, excerpts or diff. The provider-neutral adapter request
 retains protocol version 1 and exposes `input.commit_header`. No model or provider
 is built into the product. Header PASS/FAIL findings require
-`source = "commit-header"`, `path = null`, `line = 1`; ordinary reviews retain
+`source = "commit-header"`, `path = null`, `line = 1`; the generation schema
+requires at least one finding, including for PASS. Adapter-generated technical
+ERROR may still have no findings. Ordinary reviews retain
 their existing file evidence contract and omit `source`.
 
 The header is captured during planning, participates in plan identity and is
@@ -979,6 +1024,7 @@ Public documentation explains supported behavior; proposals remain in the roadma
 | PROV-002 | `tests/cli_providers.rs::stdin_results_and_provider_isolation` |
 | HDR-001 | `tests/commit_header.rs::commit_header_hook_and_adapter_contract` |
 | PROV-001 | `tests/named_providers.rs::named_references_load_without_changing_legacy_defaults` |
+| EXT-002 | `tests/provider_imports.rs::separate_provider_and_ruleset_repositories_run_offline` |
 | EXT-001 | `tests/external_rule_sets.rs::shared_rules_are_reused_across_sets_and_points_offline` |
 | RULE-001 | `tests/execution_points.rs::resolution_obeys_membership_override_union_and_disabled_rules` |
 | REC-001 | `tests/reconciliation.rs::approval_updates_removals_and_idempotency` |

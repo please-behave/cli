@@ -55,6 +55,7 @@ pub fn schema(ids: &[&str]) -> Value {
 /// Header evidence is invocation input rather than a repository file.
 pub fn header_schema(ids: &[&str]) -> Value {
     let mut value = schema(ids);
+    value["properties"]["reviews"]["items"]["properties"]["findings"]["minItems"] = json!(1);
     let finding = &mut value["properties"]["reviews"]["items"]["properties"]["findings"]["items"];
     finding["required"]
         .as_array_mut()

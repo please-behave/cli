@@ -113,6 +113,7 @@ if request['reviews'][0]['input'] == 'worktree':
         finding = {'source': 'commit-header', 'path': None, 'line': 1, 'message': 'Wrong source'}
     print(json.dumps({'protocol_version': 1, 'reviews': [{'id': request['reviews'][0]['id'], 'status': 'PASS', 'reason': 'File reviewed', 'findings': [finding]}]}))
     sys.exit(0)
+assert request['response_schema']['properties']['reviews']['items']['properties']['findings']['minItems'] == 1
 assert request['head'] is None
 assert request['input']['excerpts'] == []
 assert request['input']['manifest'] == []

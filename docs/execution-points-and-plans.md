@@ -93,3 +93,11 @@ and header stability are independent integrity gates. Reports keep schema 4 and
 plans schema 3 with additive optional fields; older reports without header fields
 remain readable. The saved header belongs to that invocation; status continues
 to measure the working-tree snapshot's freshness.
+
+Independent provider imports use the same immutable Git cache and atomic
+resolution state as Rule Sets. They select no Rules or execution points. Named
+references resolve after all explicit sources load. Scheduled reviews retain
+optional `provider_origin` alongside raw provider configuration, and the selected
+provider revision participates in semantic plan identity. No cache paths are
+serialized as provider configuration and no provider availability calls run in
+preview. The additional provenance field is optional when reading older plans.
