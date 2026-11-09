@@ -612,6 +612,12 @@ pub fn render_plan(plan: &crate::planner::Plan, color: bool) -> String {
             clean(&rule.description),
             clean(&rule.selected_by.join(", "))
         ));
+        if !rule.depends_on.is_empty() {
+            text.push_str(&format!(
+                "    Depends on: {}\n",
+                clean(&rule.depends_on.join(", "))
+            ));
+        }
     }
     if plan.scheduled.is_empty() {
         text.push_str("No active rules selected; no rule PASS established.\n");

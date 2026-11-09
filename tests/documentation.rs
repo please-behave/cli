@@ -80,11 +80,16 @@ fn contract<T: Serialize + DeserializeOwned>(sample: &T, text: &str, prefix: &st
                 let defaults = serde_json::to_value(parsed).unwrap();
                 let empty = if key == "parameters" {
                     serde_json::json!({})
+                } else if key == "depends_on" {
+                    Value::Null
                 } else {
                     Value::Array(vec![])
                 };
                 let default = defaults.pointer(&pointer).unwrap_or_else(|| {
-                    assert!(matches!(key.as_str(), "files" | "context" | "parameters"));
+                    assert!(matches!(
+                        key.as_str(),
+                        "files" | "context" | "parameters" | "depends_on"
+                    ));
                     &empty
                 });
                 let expected = match (key.as_str(), default) {
@@ -133,6 +138,7 @@ fn every_configuration_field_required_marker_and_default_is_documented() {
     );
     let rule = config::RuleDefinition {
         id: "example".into(),
+        depends_on: Some(vec![]),
         name: Some("Example".into()),
         description: "Example".into(),
         enabled: true,

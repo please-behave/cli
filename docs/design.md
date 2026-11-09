@@ -94,7 +94,8 @@ detection. String quoting and escaping are defined in the configuration referenc
 The consumer remains the working directory; PLEASE_RULE_DIRECTORY supplies the
 absolute Rule directory. Exit 0 is PASS, 1 is FAIL and 2 is ERROR; unexpected
 numeric exits produce an explicit FAIL diagnostic.
-Check ERROR, NOT_RUN and CANCELLED prevent success; advisory review errors remain visible.
+Check ERROR, fail-fast NOT_RUN and CANCELLED prevent success; dependency NOT_RUN
+inherits the originating outcome. Advisory review errors remain visible.
 
 Commands run through a bounded scheduler without an implicit shell. Both pipes are drained
 concurrently to EOF, retaining only the first 64 KiB each and their complete byte
@@ -110,7 +111,9 @@ This is not a hostile-process sandbox.
 
 Reports contain UTC timestamps, repository/project, HEAD, manifest/fingerprint,
 per-item status/duration/evidence/output and overall result. ERROR takes precedence,
-then blocking FAIL; NOT_RUN and CANCELLED block success but do not replace an existing FAIL with ERROR.
+then blocking FAIL; fail-fast NOT_RUN and CANCELLED block success but do not replace an existing FAIL with ERROR.
+Dependency skips carry an optional blocked_by identity and do not independently
+block success; saved reports validate that it names a declared non-PASS prerequisite.
 Provider review durations reflect their batch invocation, not individual model timings;
 do not sum them. Available token usage is summed across batches;
 missing counters stay unavailable and are never estimated.
@@ -217,3 +220,13 @@ net commit-to-worktree comparison, including untracked configuration. The baseli
 commit and omission decisions enter plan identity. No history inference, fetch,
 provider-specific CI resolution or additional scheduler is involved. Omitted reviews
 are excluded from required IDs/results; reports retain their omission metadata.
+
+Check dependencies follow DEC-0016; review gating follows DEC-0018. Discovery
+canonicalizes top-level depends_on; import merging qualifies bare references within
+their binding. The planner validates exact references against the effective check
+selection and rejects cycles before execution. The existing scheduler dispatches
+only checks with all prerequisites PASS and an available resource. Pending dependency
+waits consume no worker slots. Known unsuccessful prerequisites propagate NOT_RUN
+before fail-fast marks unrelated pending work. The report's aggregate outcome
+ignores dependency skips and retains the originating failure's enforcement. Reviews
+remain in the separate phase behind that aggregate gate and snapshot validation.

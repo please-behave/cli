@@ -14,6 +14,8 @@ pub const PLAN_SCHEMA_VERSION: u32 = 3;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Rule {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub depends_on: Vec<String>,
     pub id: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
@@ -234,6 +236,12 @@ pub fn build(
         let provider = review.and_then(|r| r.provider.clone());
         let provider_config = provider.as_ref().map(|id| project.providers[id].clone());
         let rule = Rule {
+            depends_on: project
+                .checks
+                .iter()
+                .find(|r| r.id == *id)
+                .map(|r| r.depends_on.clone())
+                .unwrap_or_default(),
             provider,
             provider_config,
             id: id.clone(),
@@ -269,6 +277,7 @@ pub fn build(
             scheduled.push(rule);
         }
     }
+    validate_dependencies(project, &scheduled)?;
     let selection_complete = !omitted.iter().any(|r| r.reason == "checks_only");
     if !selection_complete {
         blocking_reasons.push("Execution point requires every selected rule; checks-only cannot omit required reviews".into());
@@ -451,4 +460,68 @@ pub fn build(
 pub fn apply(project: &mut Project, plan: &Plan) {
     project.checks.retain(|r| plan.schedules(&r.id));
     project.reviews.retain(|r| plan.schedules(&r.id));
+}
+
+/// Resolve only exact identities in the effective selection; never expand it.
+fn validate_dependencies(project: &Project, scheduled: &[Rule]) -> Result<()> {
+    use std::collections::BTreeMap;
+    let checks: BTreeMap<_, _> = scheduled
+        .iter()
+        .filter(|r| r.kind == "check")
+        .map(|r| (r.id.as_str(), r))
+        .collect();
+    for rule in checks.values() {
+        for dependency in &rule.depends_on {
+            anyhow::ensure!(
+                !project.reviews.iter().any(|r| r.id == *dependency),
+                "Check {}: depends_on {dependency:?} refers to an AI review; only check dependencies are supported",
+                rule.id
+            );
+            if !checks.contains_key(dependency.as_str()) {
+                let candidates: Vec<_> = project
+                    .checks
+                    .iter()
+                    .filter(|c| c.id.rsplit(':').next() == Some(dependency.as_str()))
+                    .map(|c| c.id.as_str())
+                    .collect();
+                anyhow::ensure!(
+                    candidates.len() <= 1,
+                    "Check {}: ambiguous depends_on identity {dependency:?}; use an exact namespaced check ID: {}",
+                    rule.id,
+                    candidates.join(", ")
+                );
+                anyhow::bail!(
+                    "Check {}: depends_on {dependency:?} is not selected at this execution point; explicitly select the enabled prerequisite using its exact check ID",
+                    rule.id
+                );
+            }
+            anyhow::ensure!(
+                *dependency != rule.id,
+                "Check {}: depends_on self-dependency",
+                rule.id
+            );
+        }
+    }
+    let mut remaining: BTreeSet<_> = checks.keys().copied().collect();
+    while !remaining.is_empty() {
+        let ready: Vec<_> = remaining
+            .iter()
+            .copied()
+            .filter(|id| {
+                checks[id]
+                    .depends_on
+                    .iter()
+                    .all(|d| !remaining.contains(d.as_str()))
+            })
+            .collect();
+        anyhow::ensure!(
+            !ready.is_empty(),
+            "Check dependency cycle involving: {}",
+            remaining.iter().copied().collect::<Vec<_>>().join(", ")
+        );
+        for id in ready {
+            remaining.remove(id);
+        }
+    }
+    Ok(())
 }

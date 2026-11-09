@@ -254,6 +254,13 @@ fn load_rules(
                 loaded.checks.push((
                     path.clone(),
                     Check {
+                        depends_on: rule
+                            .depends_on
+                            .unwrap_or_default()
+                            .into_iter()
+                            .collect::<std::collections::BTreeSet<_>>()
+                            .into_iter()
+                            .collect(),
                         resource: check.resource,
                         id: rule.id.clone(),
                         name,
@@ -272,6 +279,11 @@ fn load_rules(
                 ));
             }
             ("reviews", None, Some(review)) => {
+                ensure!(
+                    rule.depends_on.is_none(),
+                    "{}: depends_on is supported only for deterministic checks; reviews cannot declare dependencies",
+                    path.display()
+                );
                 let prompt = resource(root, &dir, &review.prompt)?;
                 ensure!(
                     Path::new(&review.prompt)
@@ -381,6 +393,7 @@ pub(crate) fn init(root: &Path) -> Result<usize> {
     let check = |id: &str, description: &str, enabled: bool| -> Result<String> {
         Ok(toml::to_string(&RuleDefinition {
             id: id.into(),
+            depends_on: None,
             name: None,
             description: description.into(),
             enabled,
@@ -399,6 +412,7 @@ pub(crate) fn init(root: &Path) -> Result<usize> {
     };
     let review = RuleDefinition {
         id: "product-consistency".into(),
+        depends_on: None,
         name: None,
         description: "Evaluate behavior against documented expectations".into(),
         enabled: false,

@@ -65,6 +65,9 @@ pub struct Item {
     pub blocking: bool,
     #[serde(default, skip_serializing_if = "is_false")]
     pub configuration_error: bool,
+    /// Immediate failed prerequisite; its originating outcome determines enforcement.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub blocked_by: Option<String>,
     pub duration_ms: u64,
     pub reason: String,
     pub findings: Vec<Finding>,
@@ -83,6 +86,7 @@ impl Item {
             status,
             blocking: true,
             configuration_error: false,
+            blocked_by: None,
             duration_ms: 0,
             reason,
             findings: vec![],
@@ -117,7 +121,8 @@ pub(crate) fn prevents_success(item: &Item) -> bool {
     match item.status {
         Status::Error => item.kind != "review" || item.blocking || item.configuration_error,
         Status::Fail => item.blocking,
-        Status::NotRun | Status::Cancelled => true,
+        Status::NotRun => item.blocked_by.is_none(),
+        Status::Cancelled => true,
         Status::Pass => false,
     }
 }
@@ -132,7 +137,7 @@ pub fn overall(items: &[Item]) -> Status {
         Status::Fail
     } else if items
         .iter()
-        .any(|x| matches!(x.status, Status::NotRun | Status::Cancelled))
+        .any(|x| matches!(x.status, Status::NotRun | Status::Cancelled) && prevents_success(x))
     {
         Status::Error
     } else {
@@ -243,6 +248,37 @@ pub fn read(root: &Path) -> Result<Report> {
             || (item.kind == "review" && item.status == Status::Error)),
         "inconsistent review configuration error"
     );
+    for item in &report.results {
+        if let Some(dependency) = &item.blocked_by {
+            ensure!(
+                item.kind == "check"
+                    && item.status == Status::NotRun
+                    && item.duration_ms == 0
+                    && item.exit_code.is_none()
+                    && item.stdout.is_none()
+                    && item.stderr.is_none()
+                    && item.findings.is_empty()
+                    && plan
+                        .scheduled
+                        .iter()
+                        .any(|r| r.id == item.id && r.depends_on.contains(dependency))
+                    && report.results.iter().any(|r| r.id == *dependency
+                        && r.kind == "check"
+                        && r.status != Status::Pass),
+                "inconsistent dependency skip metadata"
+            );
+            let mut seen = std::collections::BTreeSet::new();
+            let mut current = item;
+            while let Some(id) = &current.blocked_by {
+                ensure!(seen.insert(&current.id), "cyclic dependency skip metadata");
+                current = report
+                    .results
+                    .iter()
+                    .find(|r| r.id == *id)
+                    .ok_or_else(|| anyhow::anyhow!("missing dependency skip result"))?;
+            }
+        }
+    }
     let required: std::collections::BTreeSet<_> = plan.required_ids.iter().collect();
     ensure!(
         required.len() == plan.required_ids.len()

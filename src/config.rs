@@ -109,6 +109,8 @@ pub struct ReviewContext {
 /// A loaded check retaining its source boundary and declaring directory for execution.
 #[derive(Debug, Clone, Serialize)]
 pub struct Check {
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub depends_on: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub resource: Option<String>,
     pub id: String,
@@ -157,6 +159,8 @@ fn default_timeout() -> u64 {
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct RuleDefinition {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub depends_on: Option<Vec<String>>,
     pub id: String,
     pub name: Option<String>,
     pub description: String,
@@ -410,6 +414,9 @@ pub(crate) fn validate(root: PathBuf, loaded: crate::discovery::Loaded) -> Resul
         (|| -> Result<()> {
             identity(&check.id, &check.description, &mut ids)?;
             timeout(check.timeout_seconds)?;
+            for dependency in &check.depends_on {
+                ensure!(!dependency.is_empty() && dependency.trim() == dependency && !dependency.chars().any(char::is_control), "depends_on: expected nonempty exact check identities without control characters or surrounding whitespace");
+            }
             if let Some(resource) = &check.resource {
                 ensure!(
                     !resource.is_empty()

@@ -172,6 +172,20 @@ pub(crate) fn schedule(
         item.duration_ms = elapsed.as_millis() as u64;
         item
     };
+    let identities: BTreeMap<_, _> = checks
+        .iter()
+        .enumerate()
+        .map(|(i, c)| (c.id.as_str(), i))
+        .collect();
+    let dependencies: Vec<Vec<usize>> = checks
+        .iter()
+        .map(|c| {
+            c.depends_on
+                .iter()
+                .map(|d| identities[d.as_str()])
+                .collect()
+        })
+        .collect();
     thread::scope(|scope| {
         let (sender, receiver) = mpsc::channel();
         let mut pending: BTreeSet<_> = (0..checks.len()).collect();
@@ -184,6 +198,36 @@ pub(crate) fn schedule(
         }
         let mut stopped = false;
         while !pending.is_empty() || !running.is_empty() {
+            // Propagate known prerequisite outcomes before fail-fast marks unrelated
+            // pending work. A dependency skip inherits the originating outcome.
+            loop {
+                let blocked = pending.iter().find_map(|&index| {
+                    dependencies[index].iter().find_map(|&dependency| {
+                        results[dependency]
+                            .as_ref()
+                            .filter(|item| item.status != Status::Pass)
+                            .map(|item| (index, dependency, item.status))
+                    })
+                });
+                let Some((index, dependency, status)) = blocked else {
+                    break;
+                };
+                let mut item = Item::simple(
+                    &checks[index].id,
+                    "check",
+                    Status::NotRun,
+                    format!(
+                        "Dependency {} completed with {}; no command started",
+                        checks[dependency].id,
+                        status.label()
+                    ),
+                );
+                item.blocking = checks[index].blocking;
+                item.blocked_by = Some(checks[dependency].id.clone());
+                pending.remove(&index);
+                progress(Event::Finished(index, &item));
+                results[index] = Some(item);
+            }
             if stopped {
                 for index in std::mem::take(&mut pending) {
                     let mut item = Item::simple(
@@ -200,7 +244,11 @@ pub(crate) fn schedule(
             // A blocked resource never claims a slot; scan past it.
             while !stopped && running.len() < max_parallel.get() {
                 let Some(index) = pending.iter().copied().find(|&index| {
-                    checks[index]
+                    dependencies[index].iter().all(|&d| {
+                        results[d]
+                            .as_ref()
+                            .is_some_and(|item| item.status == Status::Pass)
+                    }) && checks[index]
                         .resource
                         .as_deref()
                         .is_none_or(|r| !resources.contains(r))
@@ -301,6 +349,7 @@ mod tests {
 
     fn check(id: &str, resource: Option<&str>) -> Check {
         Check {
+            depends_on: vec![],
             id: id.into(),
             name: id.into(),
             description: id.into(),
@@ -368,6 +417,63 @@ mod tests {
             assert_eq!(
                 results.iter().map(|i| i.id.as_str()).collect::<Vec<_>>(),
                 ["a", "b", "c", "d"]
+            );
+        });
+    }
+
+    #[test]
+    fn dependency_waiters_leave_capacity_for_independent_checks() {
+        let mut checks = [
+            check("a", None),
+            check("b", None),
+            check("c", None),
+            check("z", None),
+        ];
+        checks[0].depends_on = vec!["z".into()];
+        checks[1].depends_on = vec!["a".into()];
+        let checks: Vec<_> = checks.iter().collect();
+        let (started, starts) = mpsc::channel();
+        let channels: Vec<_> = (0..4).map(|_| mpsc::channel()).collect();
+        let releases: Vec<_> = channels.iter().map(|(s, _)| s.clone()).collect();
+        let waits: Vec<_> = channels.into_iter().map(|(_, r)| Mutex::new(r)).collect();
+        thread::scope(|scope| {
+            let handle = scope.spawn(|| {
+                schedule(
+                    &checks,
+                    2.try_into().unwrap(),
+                    false,
+                    None,
+                    |check| {
+                        let index = checks.iter().position(|c| c.id == check.id).unwrap();
+                        started.send(index).unwrap();
+                        waits[index]
+                            .lock()
+                            .unwrap()
+                            .recv_timeout(Duration::from_secs(5))
+                            .unwrap();
+                        Item::simple(&check.id, "check", Status::Pass, String::new())
+                    },
+                    &mut |_| {},
+                )
+            });
+            let mut first = [
+                starts.recv_timeout(Duration::from_secs(5)).unwrap(),
+                starts.recv_timeout(Duration::from_secs(5)).unwrap(),
+            ];
+            first.sort();
+            assert_eq!(first, [2, 3]);
+            releases[3].send(()).unwrap();
+            assert_eq!(starts.recv_timeout(Duration::from_secs(5)).unwrap(), 0);
+            releases[0].send(()).unwrap();
+            assert_eq!(starts.recv_timeout(Duration::from_secs(5)).unwrap(), 1);
+            releases[1].send(()).unwrap();
+            releases[2].send(()).unwrap();
+            assert!(
+                handle
+                    .join()
+                    .unwrap()
+                    .iter()
+                    .all(|i| i.status == Status::Pass)
             );
         });
     }

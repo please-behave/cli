@@ -453,6 +453,11 @@ pub(crate) fn load_with_changes(
                     .cloned()
                     .unwrap_or_default(),
             );
+            for dependency in &mut check.depends_on {
+                if !dependency.contains(':') {
+                    *dependency = format!("{prefix}{dependency}");
+                }
+            }
             check.id = format!("{prefix}{}", check.id);
         }
         for review in &mut external.reviews {

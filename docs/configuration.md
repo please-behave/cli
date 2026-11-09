@@ -133,6 +133,36 @@ names receive a short origin suffix and an occurrence number when necessary.
 Plans and reports save labels so status remains readable after configuration changes.
 Full technical IDs and import provenance are available in JSON and details.
 
+Checks can declare top-level prerequisites independently of execution points:
+
+```toml
+id = "smoke"
+description = "Smoke test after a successful build"
+run_at = ["check"]
+depends_on = ["build"]
+
+[check]
+command = "./scripts/smoke.sh"
+```
+
+Explicitly select an enabled `build` check at the same point. Dependencies never
+select extra rules. Use exact IDs, not names: imported bare references stay within
+that import binding; consumer references to imports require the full namespaced
+ID from a JSON plan. Cross-import short-name lookup is unsupported. Missing,
+unselected, ambiguous, self or cyclic dependencies fail before execution. Disabled
+checks validate dependency syntax without resolving targets. Duplicate entries
+are ignored and ordering does not matter. AI reviews cannot declare dependencies
+(even `[]`) or serve as prerequisites.
+
+Only PASS satisfies a prerequisite, including advisory checks. Dependency waits
+use no execution slots; resource exclusions remain in force. Failed, errored or
+skipped prerequisites propagate `NOT_RUN` transitively, with `blocked_by` and a
+reason identifying the immediate prerequisite and outcome. Independent checks
+continue by default. Dependency skips inherit the originating failure's aggregate
+effect: advisory failures and their skips allow reviews, while blocking failures,
+execution errors and incomplete fail-fast execution prevent reviews. Check and
+review phases never overlap. Gated reviews report `NOT_RUN` with a check-phase reason.
+
 ### Rule parameters
 
 Checks and reviews use the same parameters. Declare each parameter in its rule's
@@ -242,6 +272,7 @@ produce a clear startup ERROR.
 | `check.entrypoint` | Optional; `null`; required unless `command` is set | Deprecated file syntax: filename in this Rule directory, or path containing `/` relative to the rule-source root (see below). |
 | `check.command` | Optional; `null`; required unless `entrypoint` is set | Preferred: string containing executable and arguments. Deprecated arrays remain supported. Mutually exclusive with `entrypoint` and `interpreter`. |
 | `check.interpreter` | Optional; `null` | Deprecated file syntax: executable used to run an entrypoint. Omitted means direct execution; forbidden with `command`. |
+| `depends_on` | Optional; `null` (equivalent to `[]` for checks) | Top-level exact prerequisite check IDs. Checks only; forbidden on reviews. |
 | `check.resource` | Optional; `null` | Exclusive, case-sensitive resource name; nonempty, no control characters or surrounding whitespace. |
 | `check.timeout_seconds` | Optional; `30` | Integer `1..3600`; deadline including output capture. |
 
@@ -570,7 +601,7 @@ please run --at release --plan --json
 ```
 
 Checks finish before reviews; reports retain ID order within each kind. Empty points succeed. Every scheduled rule
-must execute; `--checks-only` cannot omit required reviews. An offline plan
+must execute unless dependencies or fail-fast prevent it; `--checks-only` cannot omit required reviews. An offline plan
 prepares the same selection without rules, provider calls or reconciliation.
 
 ### Import rule sets from Git
@@ -692,7 +723,8 @@ See [external source structure, cache and trust](https://github.com/please-behav
 Reports use schema 4 and plans use schema 3. These output schema numbers describe
 machine-readable results, not configuration variants. Results record blocking,
 status, evidence, durations and captured output. ERROR always takes precedence;
-blocking FAIL follows; unexecuted selected rules prevent success. Disabled rules
+blocking FAIL follows; fail-fast skips and cancellations prevent success. Dependency
+skips inherit the originating outcome. Disabled rules
 are listed in plans and stay out of results. JSON records FAIL even when the
 overall outcome is PASS because that violation is non-blocking.
 

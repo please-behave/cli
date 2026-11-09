@@ -327,7 +327,7 @@ pub fn verify_project_with_fail_fast(
                     if fail_fast && items.iter().any(report::prevents_success) {
                         "Fail-fast triggered by deterministic checks or snapshot; no provider call made".into()
                     } else {
-                        "Deterministic checks or snapshot failed; no provider call made".into()
+                        "Deterministic check phase or snapshot failed; no provider call made".into()
                     },
                 );
                 progress(Progress::RuleFinished {

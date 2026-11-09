@@ -223,7 +223,7 @@ that a later input is identical. Provider availability is not checked offline.
 `--checks-only` runs checks only, without adapter processes or model calls. Reviews are excluded from progress/results and the limited scope is
 recorded in plans and reports; terminal output warns only about actual omissions.
 Full configuration validation still runs.
-Every selected rule must execute unless `--fail-fast` stops scheduling; non-blocking FAIL and non-blocking provider/review ERROR are nonfatal.
+Every selected rule must execute unless dependencies or `--fail-fast` prevent scheduling; non-blocking FAIL and non-blocking provider/review ERROR are nonfatal.
 Invalid review parameters and missing prompts remain fatal. A point requiring reviews rejects checks-only
 execution before any check starts. Empty execution points succeed without proving
 any rule PASS.
@@ -360,7 +360,7 @@ no execution slots, and later runnable checks may start ahead of them. All check
 finish before review gating; failures, timeouts and worker errors release resources
 and do not stop remaining checks by default. Dispatch prefers canonical ID order among
 runnable checks; saved results retain canonical order regardless of completion.
-No dependency graph, resource list or build-tool-specific behavior is supported.
+No resource list or build-tool-specific behavior is supported.
 
 Interactive progress shows pending, resource-waiting, running and final rule
 states, running elapsed times and completed/total counts. Refreshes are bounded;
@@ -372,6 +372,40 @@ Report schema 4 and plan schema 3 are unchanged.
 
 Acceptance: `tests/parallel.rs` covers scheduling, configuration and report behavior;
 `tests/progress.rs` covers interactive and append-only rendering.
+
+### Explicit check dependencies
+
+A deterministic check may declare top-level `depends_on` (default absent, equivalent
+to `[]`). Reviews cannot declare this property, even as an empty list, and cannot
+be dependency targets. Dependencies use exact check IDs, never display names.
+Imported bare references are qualified within their own import binding; consumer
+references to imports require the full namespaced identity shown in JSON plans.
+No short-name lookup across imports or implicit rule selection occurs.
+
+Resolve dependencies against the enabled checks selected at the requested point,
+after Rule Set assignments and import mappings. Reject missing or unselected targets,
+ambiguous unqualified imported identities, self-dependencies and cycles before
+any command starts. Disabled checks retain syntax validation but do not resolve
+dependencies. Dependency order and duplicates do not affect semantic plan identity.
+Plans record canonical dependency IDs on scheduled checks.
+
+Only PASS satisfies a dependency, regardless of its blocking flag. Checks waiting
+for dependencies or resources occupy no worker slot. A failed, errored, cancelled
+or skipped prerequisite produces NOT_RUN for its dependents, with `blocked_by`
+identifying the immediate prerequisite and a reason naming its outcome. Propagate
+these skips transitively. Dependency skips do not independently change the aggregate
+outcome; the originating failure's blocking status remains authoritative.
+Independent checks continue unless explicit fail-fast stops scheduling. Fail-fast
+skips without a completed blocking prerequisite retain the ordinary fail-fast reason.
+
+Checks and reviews never overlap. Reviews start only after the check phase's
+aggregate blocking outcome is successful. Advisory check failures and their
+dependency skips permit reviews; blocking failures, execution errors, incomplete
+fail-fast execution and snapshot failures prevent them. Uninvoked reviews are
+NOT_RUN with an explicit check-phase gating reason.
+
+Acceptance: `tests/dependencies.rs` covers validation, chains, branching, resource
+conflicts, failure propagation, fail-fast, saved reports and check-gated reviews.
 
 ### Invocation-level fail-fast
 
@@ -552,7 +586,8 @@ when initialized input allows it. Invalid configuration preserves the prior
 report. Save UTC timestamp, repository/project, provider, input identity, rule
 results, durations, findings, output and available usage. Check ERROR and blocking
 review ERROR, parameter errors and missing prompts take precedence over blocking FAIL; non-blocking review ERROR stays
-visible and permits overall PASS. NOT_RUN and CANCELLED block success without replacing an existing blocking FAIL with ERROR.
+visible and permits overall PASS. Fail-fast NOT_RUN and CANCELLED block success without replacing an existing blocking FAIL with ERROR.
+Dependency NOT_RUN inherits the originating outcome and does not independently block reviews or success.
 Disabled Rules stay out of results; blocking failed Checks leave selected Reviews NOT_RUN.
 
 Report schema 4 records plan schema 3, required IDs, blocking and rule provenance.

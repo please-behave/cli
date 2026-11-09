@@ -23,7 +23,7 @@ assignments once. Validation, CLI planning and execution share that result.
 Review file-change triggers then filter enabled reviews at the requested point,
 before context preparation or provider requirements. Checks run before scheduled
 reviews, deduplicated and dispatched in ID order among runnable checks. Reports
-retain ID order; resource waits and concurrent completion do not change selection. Every scheduled rule is required.
+retain ID order; resource waits and concurrent completion do not change selection. Every scheduled rule is required; dependency skips inherit the originating outcome.
 `run --fail-fast` may leave selected rules `NOT_RUN` after a blocking failure or
 fatal execution error. Completed work retains its results; running checks finish
 by default or become `CANCELLED` when configured termination interrupts them.
@@ -36,7 +36,7 @@ ID) and `provider_config` (its complete effective settings). Absent fields selec
 the plan's legacy project provider. Model calls count distinct provider references
 and resolved Rule parameter environments and include_diff settings for adapters.
 Concurrency limits and fail-fast termination settings change execution strategy and are excluded from semantic plan
-identity. Resource declarations participate in check identity. No check, adapter
+identity. Resource declarations and canonical dependency IDs participate in check identity. No check, adapter
 request, network access or reconciliation occurs during preview.
 Incomplete snapshots or context preparation block execution. Preview does not
 certify a later source state. Reports use schema 4 and plans use schema 3. Blocking metadata distinguishes
@@ -69,3 +69,14 @@ retain the resolved commit. See [external sets](external-rule-sets.md).
 The repository's self-integration uses the separate published Please Behave v0.1.0
 governor with the same unversioned Rule model. Its CI setup calls `please sync --yes` before executing the
 configured point. See [repository self-integration](self-governance.md).
+
+Checks alone may declare top-level `depends_on`. Resolve exact IDs within the
+effective enabled selection, after assignments and import mapping; no additional
+rules are selected. Imported bare references use their own binding namespace.
+Invalid references and cycles block preview and execution before any command runs.
+Plans record sorted, deduplicated `depends_on` IDs. Reviews neither declare nor
+satisfy dependencies. Dependency skips use NOT_RUN with `blocked_by` and the
+prerequisite outcome in the reason. They inherit the original failure's enforcement;
+non-blocking failures and their dependent skips permit reviews. Check errors,
+blocking failures, incomplete fail-fast execution and input errors prevent reviews.
+The check phase always finishes before review invocation.

@@ -44,6 +44,69 @@ fn commit(root: &Path) -> String {
     git(root, &["commit", "--quiet", "-m", "fixture"]);
     git(root, &["rev-parse", "HEAD"])
 }
+
+#[cfg(unix)]
+#[test]
+fn check_dependencies_are_qualified_per_binding_and_consumer_references_are_exact() {
+    let f = Fixture::new();
+    write(
+        &f.remote,
+        "repository/config.toml",
+        "id = 'quality'\ndescription = 'Dependencies'\nrun_at = ['check']\nrules = ['repository/checks/build', 'repository/checks/test']\n",
+    );
+    for (id, depends) in [("build", "[]"), ("test", "['build']")] {
+        write(
+            &f.remote,
+            &format!("repository/checks/{id}/rule.toml"),
+            &format!(
+                "id = '{id}'\ndescription = 'Dependency check'\ndepends_on = {depends}\n[check]\ncommand = 'git --version'\n"
+            ),
+        );
+    }
+    let revision = commit(&f.remote);
+    f.imports(&[("repository", &revision), ("repository", &revision)]);
+    let mut loaded = f.load(true).unwrap();
+    let tests: Vec<_> = loaded
+        .checks
+        .iter()
+        .filter(|c| c.id.ends_with(":test"))
+        .collect();
+    assert_eq!(tests.len(), 2);
+    assert_ne!(tests[0].depends_on, tests[1].depends_on);
+    for check in tests {
+        assert_eq!(
+            check.depends_on,
+            [check.id.strip_suffix("test").unwrap().to_owned() + "build"]
+        );
+    }
+    let imported = loaded
+        .checks
+        .iter()
+        .find(|c| c.id.ends_with(":test"))
+        .unwrap()
+        .id
+        .clone();
+    support::check(&f.root, "consumer", &["check"], "exit 0");
+    let path = f.root.join(".please/checks/consumer/rule.toml");
+    let text = fs::read_to_string(&path).unwrap();
+    fs::write(&path, format!("depends_on = [{imported:?}]\n{text}")).unwrap();
+    loaded = f.load(false).unwrap();
+    let report = please::verify_project_at(
+        loaded,
+        &Never,
+        please::VerificationMode::AllRules,
+        Some("check"),
+        &mut |_| {},
+    )
+    .unwrap();
+    assert_eq!(report.overall, Status::Pass);
+    assert_eq!(please::report::read(&f.root).unwrap().results.len(), 5);
+    fs::write(&path, format!("depends_on = ['test']\n{text}")).unwrap();
+    let error = planner::build(&f.load(false).unwrap(), Some("check"), false)
+        .err()
+        .unwrap();
+    assert!(format!("{error:#}").contains("ambiguous"));
+}
 fn definitions(root: &Path, path: &str, script: &str) {
     write(
         root,
