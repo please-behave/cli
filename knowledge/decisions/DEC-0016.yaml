@@ -1,0 +1,44 @@
+id: DEC-0016
+name: Explicit Rule Dependencies
+context: >-
+  Please executes deterministic checks and AI reviews concurrently while
+  respecting resource constraints. Some rules require successful completion
+  of other rules, such as a smoke test depending on a build. Previously,
+  users could influence execution order through configuration, but ordering
+  alone does not guarantee that prerequisites have completed successfully.
+  Automatic scheduling optimization requires these correctness constraints
+  to be expressed explicitly.
+decision: >-
+  Rule definitions may declare dependencies on other rules through an
+  optional depends_on property. Dependencies apply uniformly to
+  deterministic checks and AI reviews and reference stable rule identities,
+  including namespaces. Dependencies must resolve within the effective
+  execution selection and must not implicitly select additional rules.
+  Missing dependencies, ambiguous identities, self-dependencies, and cycles
+  are configuration errors. A rule may execute only after all declared
+  dependencies have completed with PASS, regardless of their blocking
+  configuration. Rules whose prerequisites fail, encounter execution
+  errors, or are skipped must not execute and are reported as skipped
+  with an explicit reason. Dependency effects propagate transitively.
+  Independent rules remain eligible for execution unless explicit
+  fail-fast behavior prevents further scheduling. Existing resource
+  constraints remain authoritative. Configurations without dependencies
+  retain their existing execution semantics.
+rationale: >-
+  Explicit dependencies separate correctness constraints from scheduling
+  preferences. They enable safe parallel execution and future scheduling
+  optimization without requiring users to manually arrange rule order.
+  Applying dependencies at the rule level preserves the unified governance
+  model and avoids separate execution mechanisms for checks and reviews.
+  Requiring explicit selection prevents dependencies from silently
+  expanding execution scope. Preserving resource constraints allows
+  dependency ordering and exclusive resource access to coexist.
+  Reporting skipped dependents separately from actual failures preserves
+  accurate execution and audit information.
+capabilities:
+  - CAP-0003
+  - CAP-0007
+  - CAP-0009
+  - CAP-0012
+  - CAP-0013
+  - CAP-0016
