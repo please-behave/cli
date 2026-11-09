@@ -1,43 +1,43 @@
 id: DEC-0016
-name: Explicit Rule Dependencies
+name: Explicit Check Dependencies
 context: >-
-  Please executes deterministic checks and AI reviews concurrently while
-  respecting resource constraints. Some rules require successful completion
-  of other rules, such as a smoke test depending on a build. Previously,
-  users could influence execution order through configuration, but ordering
-  alone does not guarantee that prerequisites have completed successfully.
-  Automatic scheduling optimization requires these correctness constraints
-  to be expressed explicitly.
+  Please executes deterministic checks concurrently while respecting
+  resource constraints. Some checks require successful completion of
+  other checks, such as a smoke test depending on a build. Previously,
+  users could influence execution order through configuration, but
+  ordering alone does not guarantee that prerequisites have completed
+  successfully. Automatic scheduling optimization requires these
+  correctness constraints to be expressed explicitly.
 decision: >-
-  Rule definitions may declare dependencies on other rules through an
-  optional depends_on property. Dependencies apply uniformly to
-  deterministic checks and AI reviews and reference stable rule identities,
-  including namespaces. Dependencies must resolve within the effective
-  execution selection and must not implicitly select additional rules.
-  Missing dependencies, ambiguous identities, self-dependencies, and cycles
-  are configuration errors. A rule may execute only after all declared
-  dependencies have completed with PASS, regardless of their blocking
-  configuration. Rules whose prerequisites fail, encounter execution
-  errors, or are skipped must not execute and are reported as skipped
-  with an explicit reason. Dependency effects propagate transitively.
-  Independent rules remain eligible for execution unless explicit
-  fail-fast behavior prevents further scheduling. Existing resource
-  constraints remain authoritative. Configurations without dependencies
-  retain their existing execution semantics.
+  Deterministic checks may declare dependencies on other deterministic
+  checks through an optional depends_on property. AI reviews cannot
+  declare dependencies and cannot be referenced as dependencies.
+  Dependencies reference stable check identities, including namespaces,
+  and must resolve within the effective execution selection. Missing
+  dependencies, ambiguous identities, self-dependencies, and cycles
+  are configuration errors. A check may execute only after all declared
+  dependencies have completed with PASS. Checks whose prerequisites
+  fail, encounter execution errors, or are skipped must not execute
+  and are reported as skipped with an explicit reason. Dependency
+  effects propagate transitively. Independent checks remain eligible
+  for execution unless explicit fail-fast behavior prevents further
+  scheduling. Existing resource constraints remain authoritative.
+  Configurations without dependencies retain their existing check
+  execution semantics.
 rationale: >-
-  Explicit dependencies separate correctness constraints from scheduling
-  preferences. They enable safe parallel execution and future scheduling
-  optimization without requiring users to manually arrange rule order.
-  Applying dependencies at the rule level preserves the unified governance
-  model and avoids separate execution mechanisms for checks and reviews.
-  Requiring explicit selection prevents dependencies from silently
-  expanding execution scope. Preserving resource constraints allows
-  dependency ordering and exclusive resource access to coexist.
-  Reporting skipped dependents separately from actual failures preserves
-  accurate execution and audit information.
+  Explicit check dependencies separate correctness constraints from
+  scheduling preferences and enable safe parallel execution without
+  requiring users to manually arrange checks. Restricting dependencies
+  to deterministic checks keeps the dependency model simple and
+  focused. Requiring explicit selection prevents dependencies from
+  silently expanding execution scope. Resource constraints remain
+  independent of dependency ordering. Reporting skipped dependents
+  separately from actual failures preserves accurate execution and
+  audit information.
 capabilities:
   - CAP-0003
   - CAP-0007
+  - CAP-0008
   - CAP-0009
   - CAP-0012
   - CAP-0013
