@@ -644,6 +644,144 @@ fn ignored_configuration_is_still_fingerprinted() {
     assert_eq!(changes.state, "STALE");
     assert_eq!(changes.total_files, Some(1));
 }
+
+#[test]
+fn ignored_artifacts_do_not_change_verification_inputs() {
+    let d = project();
+    let root = d.path();
+    fs::write(root.join(".gitignore"), ".please/\n*.cache\n").unwrap();
+    let before = git_snapshot::capture(root).unwrap();
+    support::write(root, ".please/adapters/__pycache__/adapter.pyc", "bytecode");
+    support::write(root, ".please/generated/output.cache", "generated");
+    support::write(root, "build.cache", "generated");
+    let after = git_snapshot::capture(root).unwrap();
+    assert!(before.complete && after.complete);
+    assert_eq!(before.fingerprint, after.fingerprint);
+    fs::write(root.join("build.cache"), "changed").unwrap();
+    fs::remove_dir_all(path(root, "adapters/__pycache__")).unwrap();
+    assert_eq!(
+        before.fingerprint,
+        git_snapshot::capture(root).unwrap().fingerprint
+    );
+
+    // Tracked contents are inputs even when an ignore pattern matches.
+    git(root, &["add", "-f", ".please/generated/output.cache"]);
+    let tracked = git_snapshot::capture(root).unwrap();
+    assert!(tracked.files.contains_key(".please/generated/output.cache"));
+    support::write(root, ".please/generated/output.cache", "changed");
+    assert_eq!(
+        git_snapshot::compare(&tracked, &git_snapshot::capture(root).unwrap(), 5).total_files,
+        Some(1)
+    );
+}
+
+#[test]
+fn ignored_governance_inputs_remain_fingerprinted() {
+    let d = project();
+    let root = d.path();
+    fs::write(root.join(".gitignore"), ".please/\nprivate/\n").unwrap();
+    support::check(root, "referenced", &["check"], "exit 0\n");
+    support::write(root, ".please/adapters/adapter.py", "# adapter\n");
+    support::write(
+        root,
+        ".please/provider.toml",
+        "command = 'python3'\nargs = ['.please/adapters/adapter.py']\ntimeout_seconds = 30\n",
+    );
+    support::write(
+        root,
+        ".please/providers/named.toml",
+        "command = '.please/adapters/named'\ntimeout_seconds = 30\n",
+    );
+    support::write(root, ".please/adapters/named", "# adapter\n");
+    support::write(
+        root,
+        ".please/rule-sets/quality.toml",
+        "id = 'quality'\ndescription = 'Quality'\nrules = ['referenced']\nrun_at = ['check']\n",
+    );
+    support::write(root, "private/parameter.txt", "parameter\n");
+    support::write(root, "private/repo.txt", "repository reference\n");
+    support::write(root, "private/source.txt", "source reference\n");
+    let rule = path(root, "checks/referenced/rule.toml");
+    let text = fs::read_to_string(&rule).unwrap();
+    let text = text.replace(
+        "sh @rule/entrypoint",
+        "sh @rule/entrypoint @repo/private/repo.txt @source/private/source.txt",
+    );
+    fs::write(
+        &rule,
+        format!("{text}\n[parameters.input]\ntype = 'file'\nvalue = 'private/parameter.txt'\n"),
+    )
+    .unwrap();
+    support::write(root, "private/evidence.md", "# Evidence\n");
+    let rule = path(root, "reviews/product-consistency/rule.toml");
+    let text = fs::read_to_string(&rule).unwrap();
+    fs::write(
+        &rule,
+        format!("{text}\n[[review.context]]\npath = 'private/evidence.md'\n"),
+    )
+    .unwrap();
+
+    let before = git_snapshot::capture(root).unwrap();
+    assert!(before.complete, "{:?}", before.limitations);
+    for input in [
+        ".please/config.toml",
+        ".please/checks/always-ok/index.sh",
+        ".please/checks/referenced/rule.toml",
+        ".please/checks/referenced/entrypoint",
+        ".please/reviews/product-consistency/prompt.md",
+        ".please/rule-sets/quality.toml",
+        ".please/provider.toml",
+        ".please/providers/named.toml",
+        ".please/adapters/adapter.py",
+        ".please/adapters/named",
+        "private/parameter.txt",
+        "private/repo.txt",
+        "private/source.txt",
+        "private/evidence.md",
+    ] {
+        assert!(before.files.contains_key(input), "{input}");
+        let original = fs::read(root.join(input)).unwrap();
+        let mut changed = original.clone();
+        changed.extend_from_slice(b"\n# changed\n");
+        fs::write(root.join(input), changed).unwrap();
+        let after = git_snapshot::capture(root).unwrap();
+        assert!(after.complete, "{input}: {:?}", after.limitations);
+        let changes = git_snapshot::compare(&before, &after, 5);
+        assert_eq!(changes.total_files, Some(1), "{input}");
+        assert_eq!(changes.sample_paths, [input], "{input}");
+        fs::write(root.join(input), original).unwrap();
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn checks_can_generate_ignored_bytecode_without_invalidating_verification() {
+    let d = project();
+    fs::write(d.path().join(".gitignore"), ".please/\n").unwrap();
+    support::check(
+        d.path(),
+        "bytecode",
+        &["pre-push"],
+        "mkdir -p .please/adapters/__pycache__\nprintf bytecode > .please/adapters/__pycache__/adapter.pyc\n",
+    );
+    let report = please::verify(d.path(), &Never).unwrap();
+    assert_eq!(report.overall, Status::Pass);
+    assert!(
+        !report
+            .snapshot
+            .files
+            .contains_key(".please/adapters/__pycache__/adapter.pyc")
+    );
+    assert_eq!(
+        git_snapshot::compare(
+            &report.snapshot,
+            &git_snapshot::capture(d.path()).unwrap(),
+            5
+        )
+        .state,
+        "CURRENT"
+    );
+}
 #[test]
 fn no_report_corrupt_report_schema_and_no_color() {
     let d = project();

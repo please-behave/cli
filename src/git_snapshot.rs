@@ -71,39 +71,24 @@ fn excluded(path: &Path) -> bool {
 }
 fn add_config(
     root: &Path,
-    directory: &Path,
     paths: &mut BTreeSet<String>,
     limitations: &mut Vec<String>,
-    depth: usize,
 ) -> Result<()> {
-    if excluded(directory) {
-        return Ok(());
-    }
-    if depth > MAX_CONFIG_DEPTH {
-        limitations.push(format!("configuration nesting exceeds {MAX_CONFIG_DEPTH}"));
-        return Ok(());
-    }
-    let full = root.join(directory);
-    if !full.exists() {
-        return Ok(());
-    }
-    if full.symlink_metadata()?.file_type().is_symlink() {
-        limitations.push(format!("symlink: {}", directory.display()));
-        return Ok(());
-    }
-    for entry in fs::read_dir(full)? {
-        let entry = entry?;
-        let path = directory.join(entry.file_name());
+    for path in crate::discovery::snapshot_inputs(root)? {
         if excluded(&path) {
+            continue;
+        }
+        if path.starts_with(crate::config::path(""))
+            && path.components().count() > MAX_CONFIG_DEPTH + 2
+        {
+            limitations.push(format!("configuration nesting exceeds {MAX_CONFIG_DEPTH}"));
             continue;
         }
         if paths.len() >= MAX_FILES {
             limitations.push(format!("file count exceeds {MAX_FILES}"));
             break;
         }
-        if entry.file_type()?.is_dir() {
-            add_config(root, &path, paths, limitations, depth + 1)?;
-        } else if let Some(s) = path.to_str() {
+        if let Some(s) = path.to_str() {
             #[cfg(windows)]
             let path = s.replace('\\', "/");
             #[cfg(not(windows))]
@@ -166,13 +151,7 @@ pub fn capture(root: &Path) -> Result<Snapshot> {
             paths.insert(raw.to_owned());
         }
     }
-    add_config(
-        root,
-        &crate::config::path(""),
-        &mut paths,
-        &mut limitations,
-        0,
-    )?;
+    add_config(root, &mut paths, &mut limitations)?;
     let mut files = BTreeMap::new();
     let mut total = 0;
     for path in paths {
@@ -388,6 +367,12 @@ pub fn changed_paths(root: &Path, base: &str) -> Result<(String, BTreeSet<String
             .all(|entry| entry.starts_with("H ")),
         "change comparison requires ordinary tracked files; remove assume-unchanged/skip-worktree flags and resolve index conflicts"
     );
+    let tracked: BTreeSet<_> = index
+        .stdout
+        .text
+        .split_terminator('\0')
+        .map(|entry| &entry[2..])
+        .collect();
     let mut paths = BTreeSet::new();
     for arguments in [
         vec![
@@ -402,15 +387,6 @@ pub fn changed_paths(root: &Path, base: &str) -> Result<(String, BTreeSet<String
             "--",
         ],
         vec!["ls-files", "--others", "--exclude-standard", "-z"],
-        vec![
-            "ls-files",
-            "--others",
-            "--ignored",
-            "--exclude-standard",
-            "-z",
-            "--",
-            ".please/",
-        ],
     ] {
         let output = crate::process::run(git(root).args(arguments), Duration::from_secs(30))?;
         ensure!(
@@ -430,5 +406,18 @@ pub fn changed_paths(root: &Path, base: &str) -> Result<(String, BTreeSet<String
             ensure!(paths.len() <= MAX_FILES, "changed path limit exceeded");
         }
     }
+    let mut inputs = BTreeSet::new();
+    let mut limitations = Vec::new();
+    add_config(root, &mut inputs, &mut limitations)?;
+    ensure!(
+        limitations.is_empty(),
+        "incomplete governance input comparison: {limitations:?}"
+    );
+    paths.extend(
+        inputs
+            .into_iter()
+            .filter(|path| !tracked.contains(path.as_str())),
+    );
+    ensure!(paths.len() <= MAX_FILES, "changed path limit exceeded");
     Ok((commit, paths))
 }

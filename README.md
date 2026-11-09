@@ -949,8 +949,9 @@ PLEASE_CHANGE_BASE=main please run --at check
 
 Please Behave resolves the reference once and records its commit ID as `change_base` in
 the plan. It compares that commit directly with current working files: committed,
-staged and unstaged net changes, nonignored untracked files and ignored `.please/`
-files except reports. Renames match old and new paths. Changes reverted back to
+staged and unstaged net changes, nonignored untracked files and declared governance
+inputs even when ignored, except reports. Unreferenced ignored artifacts are excluded.
+Renames match old and new paths. Changes reverted back to
 the baseline do not trigger a review. Locally, choose the intended starting commit;
 use `HEAD` explicitly when only uncommitted changes matter. In CI, fetch the intended
 baseline and provide its commit ID. For a multi-commit PR, the caller can compute
@@ -1156,11 +1157,18 @@ These limits are built in, not additional configuration fields:
 | Review criteria | 32 KiB per prompt file; 256 KiB combined, including disabled reviews. |
 | Initial AI hints | Up to 200 file-list entries and 32 KiB of diff, with truncation indicated. Necessary evidence still needs inspection. |
 | Snapshot | 8 MiB per file, 128 MiB total, 100,000 paths; Git file enumeration capped at 64 KiB; `.please` nesting limited to 16 levels. |
-| Snapshot coverage | Tracked and nonignored untracked files, plus `.please` even if ignored. `.git` and `.please/reports` are excluded. Unsupported symlinks, submodules, paths or exceeded limits prevent PASS. |
+| Snapshot coverage | Tracked and nonignored untracked files, plus declared governance inputs even if ignored. Unreferenced ignored artifacts, `.git` and `.please/reports` are excluded. Unsupported symlinks, submodules, paths or exceeded limits prevent PASS. |
 | Input stability | Working files and HEAD must match before/after execution and before every AI call. Staging and pushed commits are not separately verified. |
 | AI response | 64 KiB adapter stdout; summaries and findings have the limits described under reviews. |
 | Saved report input | 128 MiB maximum when reading a saved report. |
 | Token usage | Available counters are summed across review batches. Optional reasoning/cache-write counters are subsets, not additions to the total. Missing telemetry remains unavailable. |
+
+Declared governance inputs include local configuration documents, rule prompts and
+entrypoints, review entry/context files, and existing local files named by check
+commands, provider commands/arguments or parameter values. They remain covered even
+when ignored, including disabled definitions. Check path references retain their
+declared boundaries. Transitive script dependencies are not inferred; ignored
+caches such as `.please/adapters/__pycache__/` are excluded unless explicitly named.
 
 Not currently supported: reviews restricted to a diff, staged/index or commit input, configurable run-wide
 token budgets, monetary cost estimates and cached results. A token-efficient

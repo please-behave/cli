@@ -167,7 +167,13 @@ fn net_comparison_covers_commits_worktree_add_delete_rename_and_unusual_names() 
     write(root.path(), "space and\nnewline", "new\n");
     write(root.path(), ".gitignore", "ignored\n.please/\n");
     write(root.path(), "ignored", "ignored\n");
-    write(root.path(), ".please/rubric.md", "ignored config\n");
+    write(root.path(), ".please/rubric.md", "ignored artifact\n");
+    review(root.path(), "", "");
+    write(
+        root.path(),
+        ".please/adapters/__pycache__/adapter.pyc",
+        "bytecode\n",
+    );
     write(root.path(), ".please/reports/private", "excluded\n");
     let (resolved, paths) = git_snapshot::changed_paths(root.path(), &base).unwrap();
     assert_eq!(resolved, base);
@@ -180,14 +186,19 @@ fn net_comparison_covers_commits_worktree_add_delete_rename_and_unusual_names() 
         "new",
         "staged",
         "space and\nnewline",
-        ".please/rubric.md",
+        ".please/reviews/test/rule.toml",
+        ".please/reviews/test/prompt.md",
     ] {
         assert!(paths.contains(name), "{name}");
     }
     assert!(!paths.contains("ignored"));
+    assert!(!paths.contains(".please/rubric.md"));
+    assert!(!paths.contains(".please/adapters/__pycache__/adapter.pyc"));
     assert!(!paths.contains(".please/reports/private"));
     let (_, head_paths) = git_snapshot::changed_paths(root.path(), "HEAD").unwrap();
     assert!(!head_paths.contains("earlier"));
+    assert!(!head_paths.contains(".please/config.toml"));
+    assert!(!head_paths.contains(".please/provider.toml"));
 }
 
 #[test]

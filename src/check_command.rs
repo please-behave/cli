@@ -77,6 +77,28 @@ fn reference(argument: &str) -> anyhow::Result<Option<(&str, &str)>> {
 }
 
 impl Command {
+    /// Explicit references and literal arguments can name local snapshot inputs.
+    pub(crate) fn input_paths(
+        &self,
+        repo: &std::path::Path,
+        rule: &std::path::Path,
+    ) -> anyhow::Result<Vec<std::path::PathBuf>> {
+        self.arguments
+            .iter()
+            .map(|argument| {
+                if self.original.is_some() {
+                    if let Some((prefix, suffix)) = reference(argument)? {
+                        return Ok(if prefix == "@rule" { rule } else { repo }.join(suffix));
+                    }
+                    if let Some(literal) = argument.strip_prefix("@@") {
+                        return Ok(repo.join(format!("@{literal}")));
+                    }
+                }
+                Ok(repo.join(argument))
+            })
+            .collect()
+    }
+
     pub(crate) fn resolve(
         &self,
         repo: &std::path::Path,

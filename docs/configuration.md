@@ -538,8 +538,9 @@ PLEASE_CHANGE_BASE=main please run --at check
 
 Please Behave resolves the reference once and records its commit ID as `change_base` in
 the plan. It compares that commit directly with current working files: committed,
-staged and unstaged net changes, nonignored untracked files and ignored `.please/`
-files except reports. Renames match old and new paths. Changes reverted back to
+staged and unstaged net changes, nonignored untracked files and declared governance
+inputs even when ignored, except reports. Unreferenced ignored artifacts are excluded.
+Renames match old and new paths. Changes reverted back to
 the baseline do not trigger a review. Locally, choose the intended starting commit;
 use `HEAD` explicitly when only uncommitted changes matter. In CI, fetch the intended
 baseline and provide its commit ID. For a multi-commit PR, the caller can compute

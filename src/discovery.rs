@@ -6,9 +6,107 @@ use crate::{
 };
 use anyhow::{Context, Result, ensure};
 use std::{
+    collections::BTreeSet,
     fs,
     path::{Path, PathBuf},
 };
+
+/// Enumerate declared local inputs without resolving imports or executing tools.
+pub(crate) fn snapshot_inputs(root: &Path) -> Result<BTreeSet<PathBuf>> {
+    fn argument(root: &Path, value: &Path, paths: &mut BTreeSet<PathBuf>) {
+        let full = root.join(value);
+        if let Ok(relative) = full.strip_prefix(root) {
+            if config::relative(relative).is_ok() && full.is_file() {
+                paths.insert(relative.to_path_buf());
+            }
+        }
+    }
+    fn parameters(
+        root: &Path,
+        values: impl Iterator<Item = toml::Value>,
+        paths: &mut BTreeSet<PathBuf>,
+    ) {
+        for value in values {
+            if let Some(value) = value.as_str() {
+                argument(root, Path::new(value), paths);
+            }
+        }
+    }
+    fn provider(root: &Path, path: &Path, paths: &mut BTreeSet<PathBuf>) -> Result<()> {
+        let provider: config::ProviderConfig = document(root, path)?;
+        paths.insert(path.to_owned());
+        for value in std::iter::once(&provider.command).chain(&provider.args) {
+            argument(root, Path::new(value), paths);
+        }
+        Ok(())
+    }
+
+    let directory = config::path("");
+    let central = directory.join("config.toml");
+    let mut paths = BTreeSet::new();
+    if !root.join(&central).try_exists()? {
+        return Ok(paths);
+    }
+    let config: Config = document(root, &central)?;
+    paths.insert(central);
+    for import in config.imports {
+        parameters(
+            root,
+            import
+                .rule_parameters
+                .into_values()
+                .flat_map(|v| v.into_values()),
+            &mut paths,
+        );
+    }
+    for path in entries(root, &directory.join("rule-sets"))? {
+        paths.insert(path);
+    }
+    let legacy = directory.join("provider.toml");
+    if root.join(&legacy).try_exists()? {
+        provider(root, &legacy, &mut paths)?;
+    }
+    for path in entries(root, &directory.join("providers"))? {
+        if !root.join(&path).is_dir() {
+            provider(root, &path, &mut paths)?;
+        }
+    }
+    for kind in ["checks", "reviews"] {
+        for dir in entries(root, &directory.join(kind))? {
+            let path = dir.join("rule.toml");
+            let rule: RuleDefinition = document(root, &path)?;
+            paths.insert(path);
+            parameters(
+                root,
+                rule.parameters.into_values().filter_map(|p| p.value),
+                &mut paths,
+            );
+            if let Some(check) = rule.check {
+                if let Some(entrypoint) = check.entrypoint {
+                    let entrypoint = check_entrypoint(root, &dir, &entrypoint)?;
+                    paths.insert(entrypoint.strip_prefix(root)?.to_path_buf());
+                }
+                if let Some(command) = check.command {
+                    for path in command.input_paths(root, &root.join(&dir))? {
+                        argument(root, &path, &mut paths);
+                    }
+                }
+            }
+            if let Some(review) = rule.review {
+                let prompt = resource(root, &dir, &review.prompt)?;
+                paths.insert(prompt.strip_prefix(root)?.to_path_buf());
+                for path in review
+                    .files
+                    .iter()
+                    .chain(review.context.iter().map(|c| &c.path))
+                {
+                    argument(root, Path::new(path), &mut paths);
+                }
+            }
+        }
+    }
+    Ok(paths)
+}
 
 pub(crate) struct Loaded {
     pub config: Config,

@@ -56,9 +56,15 @@ No provider or network participates. See [usage and recovery](usage.md#optional-
 
 A snapshot is Git HEAD plus a sorted manifest of SHA-256 hashes, byte sizes and
 executable flags for current tracked files and nonignored untracked files returned
-by `git ls-files --cached --others --exclude-standard -z`. All `.please/` files
-are explicitly included even if ignored, except `.please/reports/`. `.git/` is
-excluded. Ignored build products, caches and secrets are outside scope; a tracked
+by `git ls-files --cached --others --exclude-standard -z`. Local configuration
+documents, rule prompts/entrypoints, review entry/context files, and existing
+local files explicitly named by check commands, provider commands/arguments or
+parameter values are also included even when ignored. Check path references
+retain their declared boundaries. Discovery is read-only and does not resolve
+external imports. It includes disabled definitions but does not infer transitive
+script dependencies. Ignored artifacts are not recursively scanned beneath
+`.please/`. `.git/` and `.please/reports/` are always excluded. Ignored build
+products, caches and secrets outside declared inputs are outside scope; a tracked
 file stays in scope even if an ignore rule matches it. Deleted files are absent
 from the manifest. There are no temporary commits, Git index writes or content
 backups. Git subprocesses use `GIT_OPTIONAL_LOCKS=0` and do not run diff helpers.

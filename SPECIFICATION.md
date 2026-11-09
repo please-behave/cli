@@ -508,7 +508,8 @@ Reviews without triggers retain ordinary selection.
 For enabled reviews at the requested point, `PLEASE_CHANGE_BASE` explicitly names
 a locally available Git commit/ref. Resolve it once to a commit ID; compare that
 commit directly to current working files, including staged/unstaged changes and
-nonignored untracked files (plus ignored `.please/` files except reports).
+nonignored untracked files, plus declared governance inputs even when ignored
+(excluding reports). Unreferenced ignored artifacts do not trigger reviews.
 Use net differences, not per-commit history; renames match both old and new paths.
 CI supplies a fetched baseline commit, such as the PR merge base computed by its
 caller. Never infer HEAD^, a remote branch or GitHub context. Shallow repositories
@@ -561,9 +562,17 @@ counters invalidate the response. No monetary estimate or total token budget is 
 ## INP-001: Snapshots and stability
 
 Input is Git HEAD plus a sorted manifest of current tracked and nonignored
-untracked files, with SHA-256 hashes, sizes and executable flags. Include `.please`
-even when ignored, but exclude `.git` and `.please/reports`. No temporary commits,
-index mutations, content backups, external diff helpers or optional Git locks.
+untracked files, with SHA-256 hashes, sizes and executable flags. Also include
+local governance configuration documents, rule prompts and entrypoints, review
+entry/context files, and existing local files explicitly named by check commands,
+provider commands/arguments or parameter values, even when ignored. Check path
+references use their declared repository/source/rule boundaries. These inputs
+include disabled definitions so enabling them cannot reuse stale evidence.
+Do not recursively include ignored artifacts beneath `.please/`, such as Python
+bytecode, or infer transitive script dependencies. Tracked files remain included
+even when an ignore pattern matches. Always exclude `.git` and `.please/reports`.
+No temporary commits, index mutations, content backups, external diff helpers or
+optional Git locks.
 
 Bound snapshots to 8 MiB/file, 128 MiB total, 100,000 paths, 64 KiB of Git file-list
 capture and 16 levels of configuration nesting. Unsupported symlinks, submodules,
@@ -578,6 +587,8 @@ for incomplete/unavailable comparison. Staging alone does not change content;
 HEAD changes do. Show bounded changed paths and exact totals only when coverage
 allows. Do not invent line deltas: the baseline stores hashes, not prior content.
 A working-tree PASS does not certify staged/pushed commits or deployed artifacts.
+Acceptance: `tests/acceptance.rs::ignored_artifacts_do_not_change_verification_inputs`
+and `tests/acceptance.rs::ignored_governance_inputs_remain_fingerprinted`.
 
 ## RPT-001: Reporting and CLI outcomes
 
