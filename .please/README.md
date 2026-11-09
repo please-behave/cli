@@ -12,6 +12,8 @@ tools and Python scripts relative to the consuming repository root. Cargo, Pytho
 helper and JavaScript tests each have one Rule and run at pre-push and again in CI. Cargo build, test,
 Clippy and MSRV commands and npm tests explicitly select offline mode.
 Each local Rule declares its own run_at; there are no local Rule Sets.
+The native-smoke Check depends on native-build passing at pre-push, check and
+release. Independent Checks remain eligible for parallel execution.
 `config.toml` declares custom points and pins all three external imports to the
 same migrated revision. All four imported Checks use string commands with
 `@rule/` or `@source/` references.
@@ -26,11 +28,15 @@ please run --at pre-commit --plan
 please status --details
 ```
 
-The exact published governor pin is v0.1.0 in .please-version, shared by local
+The exact published governor pin is recorded in .please-version, shared by local
 hooks and GitHub Actions. The AGENTS.md review excludes the Git diff and its
 Gemini REST provider delegates deadlines to the adapter.
 Do not use a candidate built from this checkout as the governor.
-Agents rely on pre-commit and pre-push feedback instead of running checks manually.
+Agents rely on pre-commit and pre-push for final validation; targeted diagnostic
+checks remain permitted by AGENTS.md.
+Use `--fail-fast` only for targeted diagnosis when the first blocker is enough;
+normal hooks, CI and release validation collect independent findings. Configuration
+explicitly keeps running checks alive after fail-fast triggers.
 The manual `mise check` task remains available to developers and delegates to
 Please Behave at pre-push.
 

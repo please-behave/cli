@@ -1,6 +1,9 @@
 project = "Please Behave"
 max_display_files = 5
 
+[execution]
+fail_fast_terminate_running_instances = false
+
 [execution_points]
 custom = ["release"]
 

@@ -81,6 +81,9 @@ rules above. Do not migrate early or close an issue while required stages remain
   hooks or substitute manual validation for their checks.
 - `pre-commit` validates formatting and documentation; `pre-push` runs the
   complete local suite.
+- Use `--fail-fast` only for targeted diagnosis when the first blocker is enough.
+  Keep normal hooks, CI and release validation complete. Running checks finish;
+  skipped or cancelled rules do not establish successful validation.
 - Fix reported hook failures and retry the Git operation. Inspect saved reports
   with `please status --details` without rerunning checks.
 - Source formatting commands are permitted. Tests must remain offline and must

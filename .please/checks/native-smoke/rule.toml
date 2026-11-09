@@ -2,6 +2,7 @@ id = "native-smoke"
 description = "Smoke-test the candidate executable"
 enabled = true
 run_at = ["pre-push", "check", "release"]
+depends_on = ["native-build"]
 
 [check]
 resource = "cargo"

@@ -50,8 +50,11 @@ commands above are for developers.
 
 The named [gemini-flash provider](../.please/providers/gemini-flash.toml) invokes
 [.please/adapters/gemini.py](../.please/adapters/gemini.py) through the generic CLI
-transport, using Python's standard library. The configured model is
-gemini-3.8-flash, passed as PLEASE_MODEL. No Gemini CLI or HTTP dependency is needed.
+adapter protocol, using Python's standard library. The configured model is
+gemini-3.8-flash, supplied through the provider's `[parameters]` table and each
+review's merged adapter settings. All reviews in a batch must select the same
+model. The adapter reads the versioned JSON request and sends its complete `prompt`.
+No Gemini CLI or HTTP dependency is needed.
 Authentication uses the GEMINI_API_KEY environment variable in x-goog-api-key.
 
 One POST to `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent`
@@ -60,7 +63,8 @@ sets responseMimeType to application/json and maxOutputTokens to 8192. The adapt
 selects the first candidate, requires finishReason STOP and concatenates its text
 parts. It rejects missing, blocked, malformed, duplicate-key, empty, oversized or
 incomplete envelopes. HTTP 200 alone proves no review outcome. Extracted text is
-returned unchanged; Please Behave validates IDs, verdicts, JSON shape and source evidence.
+wrapped in the versioned adapter response; Please Behave validates IDs, verdicts,
+JSON shape and source evidence.
 It never removes fences, repairs JSON or fabricates PASS.
 
 There are at most five attempts. HTTP 429, 500, 502, 503 and 504 and transient
@@ -74,9 +78,8 @@ deadlines.
 No fallback model or provider is selected.
 
 Normal success is quiet. Each scheduled retry prints one safe diagnostic to
-stderr. Please Behave forwards only fixed Gemini diagnostic formats and bounded numeric
-fields; arbitrary provider stderr stays private. Final provider errors remain in
-reports and CLI output. API error envelopes are parsed when possible, but HTTP
+stderr, which Please Behave suppresses. Safe final provider errors become review
+ERROR results in the versioned response and remain visible in reports. API error envelopes are parsed when possible, but HTTP
 status controls retries and API message content is never logged. Redirects are
 rejected to prevent forwarding the API key. Responses use the existing 64 KiB
 capture bound; usage statistics are not imported.

@@ -100,10 +100,10 @@ def inspect_error(error):
         error.close()
 
 
-def run(prompt):
-    key, model = os.environ.get("GEMINI_API_KEY"), os.environ.get("PLEASE_MODEL")
-    if not key or not model:
-        raise ProviderError("Gemini API requires GEMINI_API_KEY and PLEASE_MODEL.")
+def run(prompt, model):
+    key = os.environ.get("GEMINI_API_KEY")
+    if not key:
+        raise ProviderError("Gemini API requires GEMINI_API_KEY.")
     if isinstance(prompt, bytes):
         prompt = prompt.decode("utf-8")
     payload = json.dumps({"contents": [{"role": "user", "parts": [{"text": prompt}]}],
@@ -139,10 +139,34 @@ def run(prompt):
         time.sleep(delay)
 
 
+def review(request):
+    if type(request.get("protocol_version")) is not int or request["protocol_version"] != 1:
+        raise ProviderError("Unsupported adapter protocol.")
+    reviews = request["reviews"]
+    if not isinstance(reviews, list) or not reviews or not isinstance(request["prompt"], str):
+        raise ProviderError("Invalid adapter request.")
+    models = [item["parameters"].get("model") for item in reviews]
+    if any(not isinstance(model, str) or not model.strip() for model in models):
+        raise ProviderError("Gemini adapter requires a model parameter for every review.")
+    if len(set(models)) != 1:
+        raise ProviderError("Gemini adapter requires the same model for all reviews in a batch.")
+    try:
+        verdict = json.loads(run(request["prompt"], models[0]), object_pairs_hook=unique_object)
+        if not isinstance(verdict, dict) or set(verdict) != {"reviews"}:
+            raise ProviderError("Gemini API returned an invalid verdict document.")
+        return {"protocol_version": 1, "reviews": verdict["reviews"]}
+    except ProviderError as error:
+        return {"protocol_version": 1, "reviews": [
+            {"id": item["id"], "status": "ERROR", "reason": str(error), "findings": []}
+            for item in reviews
+        ]}
+
+
 if __name__ == "__main__":
     try:
-        sys.stdout.write(run(sys.stdin.buffer.read()))
+        request = json.load(sys.stdin, object_pairs_hook=unique_object)
+        sys.stdout.write(json.dumps(review(request)))
     except ProviderError as error:
         sys.exit(str(error))
-    except (OSError, ValueError, KeyError):
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
         sys.exit("Gemini API review failed; raw output suppressed.")

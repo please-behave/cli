@@ -75,12 +75,14 @@ use independent synthetic configurations.
 
 The 15 local [checks](../.please/checks) use string commands. Python scripts run
 as `python3 scripts/<name>.py`, relative to the consuming repository root.
-The published v0.1.0 governor supports these commands and explicit path
+The published v0.3.0 governor supports these commands and explicit path
 references for the four imported Checks. There are no local index.sh launchers.
 Local Rule directories and IDs use descriptive names without numeric prefixes.
 The local commit-message Rule and the imported Rule have distinct identities:
-imports retain their git-prefixed binding namespace. ID sorting still places
-native-build before native-smoke, which consumes the candidate executable.
+imports retain their git-prefixed binding namespace. The native-smoke Check
+declares `depends_on = ["native-build"]` at every point where it runs, so it tests
+the candidate executable only after a successful build. Both Checks retain their
+shared `cargo` resource lock. Other local Checks have no execution prerequisites.
 Each local Rule declares its execution points directly; this repository defines
 no local Rule Sets. External Rule Sets supply commit-message, security and
 license checks at full Git commit pins.
@@ -126,10 +128,16 @@ only checks formatting.
 
 ## Agent workflow
 
-Agents receive validation feedback from Git commit and push. They must not run
-checks, tests, linters or builds manually, including mise check, mise docs:check,
-individual Cargo/npm commands or direct Please Behave execution. Source formatting is
-allowed. The fast formatting and documentation checks run at pre-commit; pre-push
+Agents receive final validation feedback from Git commit and push. They must not
+manually run comprehensive validation as a final quality gate, including mise check,
+mise docs:check, full Cargo/npm suites or direct Please Behave execution of a full
+point. Source formatting and targeted diagnostic checks are permitted by AGENTS.md;
+use `--fail-fast` only when finding the first blocker is sufficient. Normal hooks, CI and release
+validation run without fail-fast to collect independent findings. The explicit
+`execution.fail_fast_terminate_running_instances = false` setting lets running
+checks finish when a diagnostic invocation uses fail-fast. Skipped or cancelled
+rules do not establish successful validation.
+The fast formatting and documentation checks run at pre-commit; pre-push
 runs the complete local suite, including those checks again. There is no result
 cache, so a manual full run before pushing would repeat the suite.
 
@@ -193,7 +201,7 @@ future work.
 ## CI, pinning and Renovate
 
 [.please-version](../.please-version) pins the separately installed governor to
-v0.1.0. Local `mise deploy` uses the checksum-verifying
+v0.3.0. Local `mise deploy` uses the checksum-verifying
 [scripts/deploy.py](../scripts/deploy.py) installer. Ubuntu workflows use
 [Please Behave Action v1.0.0](https://github.com/please-behave/action/releases/tag/v1.0.0),
 pinned to `00f52401b8272b530fde5f7b6af7f65a1157dbc2`, with the version read

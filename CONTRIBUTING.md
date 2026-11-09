@@ -26,8 +26,9 @@ points, prerequisites, CI pinning and Renovate updates. Prepare dependencies
 explicitly before running the offline local hooks.
 
 Commit and push to receive validation feedback from the installed Please Behave hooks.
-Agents must not manually run checks, tests, linters or builds, including
-`mise run check` and `mise docs:check`. Source formatting is allowed. Developers
+Agents must not manually run comprehensive final validation, including
+`mise run check` and `mise docs:check`. Source formatting and targeted diagnosis
+are allowed as described in AGENTS.md. Developers
 can use `mise run check` for an explicit manual run of Please Behave at pre-push.
 
 Tests must remain offline and credential-free; mock Codex instead of calling it.
@@ -105,7 +106,8 @@ Contributions use the project's [PolyForm Noncommercial License 1.0.0](LICENSE).
 
 Native reconciliation tests use temporary repositories and real Git commits/pushes;
 they run with the Rust suite at pre-push. Keep tests offline and never
-change developer/global Git configuration. The repository integration uses published Please Behave v0.1.0 with `--yes`.
+change developer/global Git configuration. The repository integration uses the
+published Please Behave release pinned in `.please-version` with `--yes`.
 Do not substitute a candidate built from this checkout.
 
 For release tooling changes, use the Node version in `mise.toml`, prepare npm

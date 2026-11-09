@@ -1,8 +1,9 @@
-provider = "cli"
 command = "python3"
 args = [".please/adapters/gemini.py"]
-model = "gemini-3.8-flash"
 timeout_seconds = 0
+
+[parameters]
+model = "gemini-3.8-flash"
 
 [requirements]
 executables = ["python3"]
