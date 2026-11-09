@@ -1,0 +1,32 @@
+id: DEC-0015
+name: Execution-Scoped Configuration Validation
+context: >-
+  Please configurations may define multiple execution points with
+  different rules, providers, and runtime dependencies. Some execution
+  points may only be usable in specific environments, such as CI
+  pipelines with credentials that are intentionally unavailable
+  during local development. Validating every runtime dependency
+  regardless of execution selection would unnecessarily prevent
+  otherwise valid executions.
+decision: >-
+  Please distinguishes structural configuration validation from
+  execution-specific validation. Structural requirements are validated
+  when configuration is loaded. Runtime dependencies, provider
+  requirements, and rule-specific prerequisites are validated only
+  for the rules selected for the current invocation. Validation
+  must establish that selected rules can execute before their
+  execution begins. Missing requirements belonging exclusively to
+  unselected rules must not prevent execution. Rule identity
+  conflicts are validated within the effective execution selection.
+rationale: >-
+  Execution-scoped validation allows a single project configuration
+  to support local development and CI environments with different
+  available tools, credentials, and providers. It avoids coupling
+  unrelated execution points while preserving strict validation
+  of the rules that actually matter. Separating structural validity
+  from runtime readiness also produces more relevant diagnostics
+  without weakening governance enforcement.
+capabilities:
+  - CAP-0002
+  - CAP-0007
+  - CAP-0014

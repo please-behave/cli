@@ -1,0 +1,23 @@
+id: DEC-0012
+name: Consumer-Controlled Rule Set Versioning
+context: >-
+  External rule sets may be shared across teams, repositories, or entire
+  organizations. Different consumers require different update strategies,
+  ranging from tightly controlled releases to immediate adoption of
+  centrally maintained rules. These strategies depend on organizational
+  processes and cannot be prescribed universally.
+decision: >-
+  Please supports both immutable and moving Git references for external
+  rule sets. Consumers determine their own versioning and update strategy
+  through the references and repository paths they configure. Please does
+  not impose a particular versioning scheme, automatically detect available
+  updates, or offer interactive update confirmation.
+rationale: >-
+  Organizations must be free to choose between reproducible, explicitly
+  pinned rule sets and centrally managed rules that evolve through moving
+  references. Versioned directories, Git tags, commit hashes, and branches
+  provide sufficient flexibility without introducing a dedicated version
+  management mechanism into Please. Update coordination remains an
+  organizational responsibility.
+capabilities:
+  - CAP-0005

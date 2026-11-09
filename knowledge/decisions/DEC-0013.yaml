@@ -1,0 +1,29 @@
+id: DEC-0013
+name: Configurable Fail-Fast Execution
+context: >-
+  Governance execution serves different purposes. Local development may
+  benefit from immediate feedback when a blocking check fails, while CI
+  pipelines and future audit systems benefit from complete execution
+  results. Parallel execution further complicates early termination
+  because multiple checks may already be running when a failure occurs.
+decision: >-
+  Please executes all independent checks and AI reviews by default,
+  collecting their results even when individual checks fail. The
+  --fail-fast CLI option allows an invocation to stop scheduling further
+  checks after the first blocking failure or execution error. Already
+  running checks are not required to be cancelled. Non-blocking AI review
+  failures do not trigger fail-fast. Fail-fast is an invocation-level
+  option and cannot be enabled as a persistent configuration default.
+  Reports must distinguish completed execution from early termination.
+rationale: >-
+  Complete execution provides comprehensive feedback and supports future
+  auditability without requiring repeated runs to discover additional
+  failures. An explicit CLI option preserves fast feedback for developers
+  without encouraging incomplete governance results as a project-wide
+  default. Keeping this behavior outside persistent configuration also
+  allows local and CI workflows to choose independently without changing
+  the governance definition.
+capabilities:
+  - CAP-0009
+  - CAP-0013
+  - CAP-0016

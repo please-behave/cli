@@ -1,0 +1,36 @@
+id: DEC-0014
+name: Explicit Rule Namespaces and Stable Rule Identity
+context: >-
+  Rules may originate from local definitions or independently maintained
+  external rule sets. Different sources may define rules with identical
+  names, and the same rule may be selected at multiple execution points.
+  Rule implementations may also be reused with different parameters.
+  Without stable identities and unambiguous resolution, rule selection,
+  execution, and reporting become difficult to reason about.
+decision: >-
+  Rules are identified by their fully qualified names, consisting of
+  an optional namespace and a rule name. Namespaces are explicitly
+  defined by the rule set and cannot be remapped by consumers. They
+  are never derived implicitly from repository URLs or directory paths.
+  Rule identities must be unique within the effective execution
+  selection. Duplicate identities are configuration errors, even when
+  their definitions are identical. A rule may be selected at multiple
+  execution points without changing its configuration. Execution
+  points select rules but do not override their parameters. Different
+  parameterizations of the same underlying implementation require
+  distinct rule definitions. Each rule identity may be executed at
+  most once per run.
+rationale: >-
+  Explicit namespaces allow independently maintained rule sets to
+  coexist without requiring global naming coordination. Stable rule
+  identities simplify configuration resolution, result reporting,
+  and future auditing. Separating rule definitions from execution
+  points preserves predictable behavior while allowing scripts and
+  other implementations to be reused. Restricting uniqueness to
+  the effective execution selection avoids rejecting unrelated
+  configurations that are never executed together.
+capabilities:
+  - CAP-0003
+  - CAP-0004
+  - CAP-0005
+  - CAP-0007
