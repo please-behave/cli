@@ -218,7 +218,7 @@ The supported commands are:
 | `-V`, `--version` | `please` | Show the version. |
 
 At the selected execution point, enabled checks run first, followed by reviews.
-Checks dispatch in ID order among runnable checks and may finish out of order.
+Checks dispatch by estimated remaining dependency-path duration and may finish out of order.
 Reports retain ID order within each kind. Disabled rules are validated but are not
 executed or included in results. Selected reviews with identical parameter
 environments share an adapter invocation.
@@ -491,6 +491,28 @@ do not stop remaining checks by default. Results retain canonical ID order. Exis
 files remain valid, but checks relying on serial execution need resources or a
 limit of 1. Older CLI releases reject these new configuration fields; upgrade
 pinned consumers before adding them to shared rulesets.
+
+Scheduling prefers runnable checks with the longest estimated remaining dependency
+path, including the check itself and the longest chain of selected dependents.
+Equal estimates use canonical ID order. Dependencies, resources and concurrency
+limits remain authoritative; waiting rules reserve no slots. Review batches run
+serially after checks, preferring the largest member estimate with stable batch
+order for ties. Existing batching stays intact.
+
+Duration history is local to each Git worktree, in Git's `please-scheduling.json`
+path (`.git/please-scheduling.json` in a normal checkout). It stores one estimate
+per rule kind and exact ID, including import namespaces. Only PASS updates it:
+the first sample initializes it, then each sample averages equally with the prior
+estimate, rounded down to milliseconds with a minimum of 1 ms. Unknown rules use
+1000 ms. Batched reviews use the shared call duration per member. Successful rules
+update even when another rule fails. Missing, corrupt or unavailable history uses
+fallback estimates; write failures do not affect verification. Atomic replacement
+prevents partial writes, but simultaneous invocations may lose updates. Delete the
+file to reset history. History is never committed, synchronized or persisted by CI
+integration. No priority configuration is required or supported. Offline plans do
+not read or write history; plan identity and report order stay unchanged. This is
+a heuristic, without an optimality guarantee or resource-contention prediction;
+editing a rule retains its estimate while its identity stays unchanged.
 
 Use `please run --at check --fail-fast` to stop scheduling after a blocking
 failure or fatal execution error becomes known. Already running checks finish by default;
@@ -1160,6 +1182,7 @@ These limits are built in, not additional configuration fields:
 | Snapshot coverage | Tracked and nonignored untracked files, plus declared governance inputs even if ignored. Unreferenced ignored artifacts, `.git` and `.please/reports` are excluded. Unsupported symlinks, submodules, paths or exceeded limits prevent PASS. |
 | Input stability | Working files and HEAD must match before/after execution and before every AI call. Staging and pushed commits are not separately verified. |
 | AI response | 64 KiB adapter stdout; summaries and findings have the limits described under reviews. |
+| Scheduling history | 1 MiB local cache; oversized or invalid input uses defaults, and oversized updates are not saved. |
 | Saved report input | 128 MiB maximum when reading a saved report. |
 | Token usage | Available counters are summed across review batches. Optional reasoning/cache-write counters are subsets, not additions to the total. Missing telemetry remains unavailable. |
 

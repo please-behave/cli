@@ -150,6 +150,7 @@ pub(crate) fn schedule(
     max_parallel: std::num::NonZeroUsize,
     fail_fast: bool,
     cancellation: Option<&process::Cancellation>,
+    history: &crate::scheduling::History,
     execute: impl Fn(&Check) -> Item + Sync,
     progress: &mut dyn FnMut(Event<'_>),
 ) -> Vec<Item> {
@@ -186,6 +187,19 @@ pub(crate) fn schedule(
                 .collect()
         })
         .collect();
+    let priorities = crate::scheduling::priorities(
+        &dependencies,
+        checks
+            .iter()
+            .map(|c| history.estimate("check", &c.id))
+            .collect(),
+    );
+    let mut order: Vec<_> = (0..checks.len()).collect();
+    order.sort_by(|&a, &b| {
+        priorities[b]
+            .cmp(&priorities[a])
+            .then_with(|| checks[a].id.cmp(&checks[b].id))
+    });
     thread::scope(|scope| {
         let (sender, receiver) = mpsc::channel();
         let mut pending: BTreeSet<_> = (0..checks.len()).collect();
@@ -243,16 +257,21 @@ pub(crate) fn schedule(
             }
             // A blocked resource never claims a slot; scan past it.
             while !stopped && running.len() < max_parallel.get() {
-                let Some(index) = pending.iter().copied().find(|&index| {
-                    dependencies[index].iter().all(|&d| {
-                        results[d]
-                            .as_ref()
-                            .is_some_and(|item| item.status == Status::Pass)
-                    }) && checks[index]
-                        .resource
-                        .as_deref()
-                        .is_none_or(|r| !resources.contains(r))
-                }) else {
+                let Some(index) = order
+                    .iter()
+                    .copied()
+                    .filter(|index| pending.contains(index))
+                    .find(|&index| {
+                        dependencies[index].iter().all(|&d| {
+                            results[d]
+                                .as_ref()
+                                .is_some_and(|item| item.status == Status::Pass)
+                        }) && checks[index]
+                            .resource
+                            .as_deref()
+                            .is_none_or(|r| !resources.contains(r))
+                    })
+                else {
                     break;
                 };
                 pending.remove(&index);
@@ -387,6 +406,7 @@ mod tests {
                     2.try_into().unwrap(),
                     false,
                     None,
+                    &crate::scheduling::History::default(),
                     |check| {
                         let index = usize::from(check.id.as_bytes()[0] - b'a');
                         started.send(index).unwrap();
@@ -443,6 +463,7 @@ mod tests {
                     2.try_into().unwrap(),
                     false,
                     None,
+                    &crate::scheduling::History::default(),
                     |check| {
                         let index = checks.iter().position(|c| c.id == check.id).unwrap();
                         started.send(index).unwrap();
@@ -479,6 +500,91 @@ mod tests {
     }
 
     #[test]
+    fn history_prioritizes_paths_and_skips_resource_waiters() {
+        let mut rules = [
+            check("a", Some("shared")),
+            check("b", Some("shared")),
+            check("c", None),
+            check("d", None),
+            check("e", None),
+        ];
+        rules[3].depends_on = vec!["b".into()];
+        let checks: Vec<_> = rules.iter().collect();
+        let history =
+            serde_json::from_str(r#"{"estimates":{"check":{"a":10,"b":1,"c":20,"d":100,"e":5}}}"#)
+                .unwrap();
+        let (started, starts) = mpsc::channel();
+        let channels: Vec<_> = (0..5).map(|_| mpsc::channel()).collect();
+        let releases: Vec<_> = channels.iter().map(|(s, _)| s.clone()).collect();
+        let waits: Vec<_> = channels.into_iter().map(|(_, r)| Mutex::new(r)).collect();
+        thread::scope(|scope| {
+            let handle = scope.spawn(|| {
+                schedule(
+                    &checks,
+                    2.try_into().unwrap(),
+                    false,
+                    None,
+                    &history,
+                    |check| {
+                        let index = usize::from(check.id.as_bytes()[0] - b'a');
+                        waits[index]
+                            .lock()
+                            .unwrap()
+                            .recv_timeout(Duration::from_secs(5))
+                            .unwrap();
+                        Item::simple(&check.id, "check", Status::Pass, String::new())
+                    },
+                    &mut |event| {
+                        if let Event::Started(index) = event {
+                            started.send(index).unwrap();
+                        }
+                    },
+                )
+            });
+            // b's dependent path outweighs c, although b itself is short.
+            assert_eq!(starts.recv_timeout(Duration::from_secs(5)).unwrap(), 1);
+            assert_eq!(starts.recv_timeout(Duration::from_secs(5)).unwrap(), 2);
+            releases[2].send(()).unwrap();
+            // a has higher priority than e but cannot hold a slot for its lock.
+            assert_eq!(starts.recv_timeout(Duration::from_secs(5)).unwrap(), 4);
+            releases[1].send(()).unwrap();
+            assert_eq!(starts.recv_timeout(Duration::from_secs(5)).unwrap(), 3);
+            releases[4].send(()).unwrap();
+            assert_eq!(starts.recv_timeout(Duration::from_secs(5)).unwrap(), 0);
+            releases[0].send(()).unwrap();
+            releases[3].send(()).unwrap();
+            let results = handle.join().unwrap();
+            assert_eq!(
+                results.iter().map(|r| r.id.as_str()).collect::<Vec<_>>(),
+                ["a", "b", "c", "d", "e"]
+            );
+            assert!(results.iter().all(|r| r.status == Status::Pass));
+        });
+    }
+
+    #[test]
+    fn equal_priorities_use_id_order_and_cold_history_uses_paths() {
+        let mut rules = [check("a", None), check("b", None), check("z", None)];
+        rules[1].depends_on = vec!["z".into()];
+        let checks: Vec<_> = rules.iter().collect();
+        let mut starts = Vec::new();
+        schedule(
+            &checks,
+            1.try_into().unwrap(),
+            false,
+            None,
+            &crate::scheduling::History::default(),
+            |check| Item::simple(&check.id, "check", Status::Pass, String::new()),
+            &mut |event| {
+                if let Event::Started(index) = event {
+                    starts.push(index);
+                }
+            },
+        );
+        assert_eq!(starts, [2, 0, 1]);
+    }
+
+    #[test]
     fn worker_panics_release_resources_and_do_not_stop_checks() {
         let checks = [check("a", Some("shared")), check("b", Some("shared"))];
         let checks: Vec<_> = checks.iter().collect();
@@ -487,6 +593,7 @@ mod tests {
             4.try_into().unwrap(),
             false,
             None,
+            &crate::scheduling::History::default(),
             |check| {
                 assert_ne!(check.id, "a", "simulated worker failure");
                 Item::simple(&check.id, "check", Status::Pass, String::new())
@@ -519,6 +626,7 @@ mod tests {
                         2.try_into().unwrap(),
                         true,
                         None,
+                        &crate::scheduling::History::default(),
                         |check| {
                             let index = usize::from(check.id.as_bytes()[0] - b'a');
                             started.send(index).unwrap();
@@ -579,6 +687,7 @@ mod tests {
             1.try_into().unwrap(),
             true,
             None,
+            &crate::scheduling::History::default(),
             |check| {
                 assert_ne!(check.id, "a", "simulated worker failure");
                 Item::simple(&check.id, "check", Status::Pass, String::new())

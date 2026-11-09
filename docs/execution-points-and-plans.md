@@ -22,7 +22,8 @@ The loader records source paths. The domain resolver computes effective
 assignments once. Validation, CLI planning and execution share that result.
 Review file-change triggers then filter enabled reviews at the requested point,
 before context preparation or provider requirements. Checks run before scheduled
-reviews, deduplicated and dispatched in ID order among runnable checks. Reports
+reviews, deduplicated and dispatched by estimated remaining dependency-path
+duration among runnable checks, with canonical ID order for ties. Reports
 retain ID order; resource waits and concurrent completion do not change selection. Every scheduled rule is required; dependency skips inherit the originating outcome.
 `run --fail-fast` may leave selected rules `NOT_RUN` after a blocking failure or
 fatal execution error. Completed work retains its results; running checks finish
@@ -35,7 +36,7 @@ Each review with an explicit provider reference also records `provider` (the nam
 ID) and `provider_config` (its complete effective settings). Absent fields select
 the plan's legacy project provider. Model calls count distinct provider references
 and resolved Rule parameter environments and include_diff settings for adapters.
-Concurrency limits and fail-fast termination settings change execution strategy and are excluded from semantic plan
+Local scheduling history, concurrency limits and fail-fast termination settings change execution strategy and are excluded from semantic plan
 identity. Resource declarations and canonical dependency IDs participate in check identity. No check, adapter
 request, network access or reconciliation occurs during preview.
 Incomplete snapshots or context preparation block execution. Preview does not

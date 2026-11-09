@@ -189,6 +189,18 @@ pub(crate) fn execute_prepared_observed(
             }
         }
     }
+    let history = crate::scheduling::History::load(&project.root);
+    let mut groups: Vec<_> = groups.into_iter().collect();
+    // Stable sorting preserves the existing deterministic batch order on ties.
+    groups.sort_by_cached_key(|(_, reviews)| {
+        std::cmp::Reverse(
+            reviews
+                .iter()
+                .map(|r| history.estimate("review", &r.id))
+                .max()
+                .unwrap_or(0),
+        )
+    });
     let mut usages = Vec::new();
     for ((_, parameters, _), reviews) in groups {
         if !before_batch(&reviews, &items) {

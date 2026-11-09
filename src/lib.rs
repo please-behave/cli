@@ -18,6 +18,7 @@ pub mod review_input;
 pub mod review_trigger;
 pub mod reviews;
 pub mod rules;
+mod scheduling;
 pub mod terminal;
 
 use anyhow::Result;
@@ -186,6 +187,7 @@ pub fn verify_project_with_fail_fast(
             project.config.execution.max_parallel,
             fail_fast,
             cancellation.as_ref(),
+            &scheduling::History::load(&project.root),
             |check| {
                 checks::execute_cancellable(&project, check, &plan.at, hook, cancellation.as_ref())
             },
@@ -375,6 +377,7 @@ pub fn verify_project_with_fail_fast(
         plan,
     };
     progress(Progress::Phase("Saving report …"));
+    scheduling::History::save_results(&project.root, &report.results);
     report::write(&project.root, &report)?;
     Ok(report)
 }

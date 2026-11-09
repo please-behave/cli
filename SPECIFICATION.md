@@ -62,7 +62,7 @@ Standalone enabled rules use their own assignments. Repeated references within
 a Rule Set contribute one membership. Enabled rules need an effective
 point. Disabled rules remain validated but never run. All references must resolve
 within the same scope, including disabled and overridden assignments. A rule runs
-once per point within each binding; checks precede reviews, each kind sorted by ID.
+once per point within each binding; checks precede reviews; plans and results sort each kind by ID.
 Built-in points
 are pre-commit, commit-msg, pre-push and check. The first three use managed Git
 hooks; check is invoked explicitly and never automatically. Custom names come only
@@ -358,7 +358,7 @@ one invocation only. Checks without a resource have no exclusion restrictions.
 Checks sharing mutable state must declare the same resource. Waiting checks use
 no execution slots, and later runnable checks may start ahead of them. All checks
 finish before review gating; failures, timeouts and worker errors release resources
-and do not stop remaining checks by default. Dispatch prefers canonical ID order among
+and do not stop remaining checks by default. Dispatch uses the history-based priority below among
 runnable checks; saved results retain canonical order regardless of completion.
 No resource list or build-tool-specific behavior is supported.
 
@@ -372,6 +372,34 @@ Report schema 4 and plan schema 3 are unchanged.
 
 Acceptance: `tests/parallel.rs` covers scheduling, configuration and report behavior;
 `tests/progress.rs` covers interactive and append-only rendering.
+
+### History-based scheduling
+
+Runnable checks prefer the largest estimated remaining dependency path: their own
+estimated duration plus the maximum path through their selected dependents. Equal
+priorities use canonical ID order. Eligibility, resource locks and concurrency
+remain authoritative; waiting work reserves no slots. Review batches remain serial
+after checks and prefer the largest member estimate, retaining existing batching
+and stable batch order for ties. Plans and reports retain canonical rule order;
+history does not participate in semantic plan identity or offline previews.
+
+Store one duration estimate per rule kind and exact stable ID (including import
+binding namespaces) in Git's worktree-local `please-scheduling.json`. First PASS
+sets the estimate; later PASS results average the previous estimate and duration
+with equal weight, rounded down and bounded below by 1 ms. Other outcomes never
+update history. Unknown rules use 1000 ms. Batched reviews use their measured
+shared invocation duration per member. Updates occur after execution, independently
+of aggregate verification success. Missing, invalid or unavailable cache data uses
+fallbacks (cache size is bounded to 1 MiB); cache write failures never change verification outcomes. Writes replace
+the cache atomically; concurrent invocations may lose updates. History is local,
+non-versioned, never synchronized or persisted by CI integration, and can be reset
+by deleting the file. No priorities, weights or durations are user-configurable.
+The heuristic does not predict resource contention or guarantee an optimal plan;
+rule edits retain estimates while their identity remains unchanged.
+
+Acceptance: scheduler unit tests use supplied durations and channel-controlled
+workers; `tests/scheduling.rs` covers persistence, identity, previews and cache
+failure fallback with offline deterministic checks.
 
 ### Explicit check dependencies
 
