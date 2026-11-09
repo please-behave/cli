@@ -6,6 +6,7 @@
   "extends": [
     "config:best-practices"
   ],
+  "platformAutomerge": false,
   "customManagers": [
     {
       "customType": "regex",
@@ -21,6 +22,15 @@
     }
   ],
   "packageRules": [
+    {
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "pin",
+        "digest"
+      ],
+      "automerge": true
+    },
     {
       "matchPackageNames": [
         "please-behave/cli"
