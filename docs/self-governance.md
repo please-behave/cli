@@ -209,6 +209,11 @@ from `.please-version` and `run: 'false'`. The Action adds the installed release
 to PATH. Renovate proposes CLI version-pin and Action SHA updates without
 automerging governor version changes.
 
+Renovate applies a minimum release age of seven days, or fourteen days for major
+updates. This is best effort: updates without a release timestamp may proceed.
+GitHub tag timestamps may not reflect republished content, and this policy does
+not guarantee the age of every transitive lockfile dependency.
+
 The [CI workflow](../.github/workflows/ci.yml) prepares dependencies, installs the
 released governor, runs `please sync --yes`, establishes PLEASE_CHANGE_BASE and
 invokes the same published Action to run all 17 deterministic checks followed by
