@@ -5,12 +5,12 @@ max_display_files = 5
 fail_fast_terminate_running_instances = false
 
 [execution_points]
-custom = ["release"]
+custom = ["release-readiness", "release-candidate"]
 
 [[imports]]
 git = "https://github.com/christianpflugradt/please-behave-rulesets.git"
 path = "commit-msg/conventional-commits"
-ref = "ae4a769b59b6ab8beb5cf7ea322065ad28070e34"
+ref = "4825ec7d61ea01bd40cef3a126f107ef924f1666"
 
 [imports.rule_parameters.commit-message]
 scopes_file = ".please/commit-scopes.txt"
@@ -18,12 +18,30 @@ scopes_file = ".please/commit-scopes.txt"
 [[imports]]
 git = "https://github.com/christianpflugradt/please-behave-rulesets.git"
 path = "multi-point/security"
-ref = "ae4a769b59b6ab8beb5cf7ea322065ad28070e34"
+ref = "4825ec7d61ea01bd40cef3a126f107ef924f1666"
 
 [[imports]]
 git = "https://github.com/christianpflugradt/please-behave-rulesets.git"
 path = "repository-conventions"
-ref = "ae4a769b59b6ab8beb5cf7ea322065ad28070e34"
+ref = "4825ec7d61ea01bd40cef3a126f107ef924f1666"
 
 [imports.rule_parameters.license]
+target = "LICENSE"
+
+[[imports]]
+git = "https://github.com/christianpflugradt/please-behave-rulesets.git"
+path = "release/readiness"
+ref = "4825ec7d61ea01bd40cef3a126f107ef924f1666"
+
+[imports.rule_parameters.github-ci-success]
+policy = ".please/release-ci.json"
+
+[imports.rule_parameters.sensitive-files]
+snapshot = "head"
+
+[imports.rule_parameters.secret-scan]
+snapshot = "head"
+
+[imports.rule_parameters.license]
+snapshot = "head"
 target = "LICENSE"

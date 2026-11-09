@@ -67,7 +67,7 @@ mappings deduplicate execution. Built-ins cannot be mapped. Plans
 use previously validated cached revisions; sync refreshes sources. Origins
 retain the resolved commit. See [external sets](external-rule-sets.md).
 
-The repository's self-integration uses the separate published Please Behave v0.1.0
+The repository's self-integration uses the separate published Please Behave version pinned in `.please-version`
 governor with the same unversioned Rule model. Its CI setup calls `please sync --yes` before executing the
 configured point. See [repository self-integration](self-governance.md).
 

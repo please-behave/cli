@@ -41,13 +41,14 @@ async function testLifecycle() {
     writeFileSync(join(cwd, ".gitignore"), "dist/\n");
     git("add", "."); git("commit", "-m", "feat: initialize fixture"); git("push", "--set-upstream", "origin", "main");
     env.GITHUB_SHA = git("rev-parse", "HEAD");
+    env.GITHUB_RUN_ID = "123"; env.GITHUB_RUN_ATTEMPT = "1";
     function archives(version) {
       env.EXPECTED_RELEASE_VERSION = version;
       rmSync(join(cwd, "dist"), { recursive: true, force: true });
       execFileSync("python3", ["-c", `
 import hashlib, io, json, os, pathlib, tarfile
 version=os.environ['EXPECTED_RELEASE_VERSION']
-dist=pathlib.Path('dist'); (dist/'metadata').mkdir(parents=True)
+dist=pathlib.Path('dist'); (dist/'metadata').mkdir(parents=True); (dist/'smoke').mkdir()
 targets=['aarch64-apple-darwin','x86_64-apple-darwin','x86_64-unknown-linux-gnu','aarch64-unknown-linux-gnu']
 for target in targets:
     name=f'please-v{version}-{target}'
@@ -57,7 +58,10 @@ for target in targets:
         for file,data in [('please',binary),('README.md',pathlib.Path('README.md').read_bytes()),('LICENSE',pathlib.Path('LICENSE').read_bytes())]:
             member=tarfile.TarInfo(f'{name}/{file}');member.size=len(data);member.mode=0o755 if file=='please' else 0o644
             output.addfile(member,io.BytesIO(data))
-    (dist/'metadata'/f'{target}.json').write_text(json.dumps(dict(version=version,source_sha=os.environ['GITHUB_SHA'],target=target,binary_version=f'please {version}',archive_sha256=hashlib.sha256(archive.read_bytes()).hexdigest(),binary_sha256=hashlib.sha256(binary).hexdigest())))
+    context=dict(version=version,source_sha=os.environ['GITHUB_SHA'],target=target,release_run_id=os.environ['GITHUB_RUN_ID'],release_run_attempt=os.environ['GITHUB_RUN_ATTEMPT'])
+    binary_hash=hashlib.sha256(binary).hexdigest()
+    (dist/'smoke'/f'{target}.json').write_text(json.dumps(dict(**context,binary_sha256=binary_hash)))
+    (dist/'metadata'/f'{target}.json').write_text(json.dumps(dict(**context,binary_version=f'please {version}',archive_sha256=hashlib.sha256(archive.read_bytes()).hexdigest(),binary_sha256=binary_hash,smoke_binary_sha256=binary_hash)))
 (dist/'SHA256SUMS').write_text(''.join(f'{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}\\n' for p in sorted(dist.glob('*.tar.gz'))))
 `], { cwd, env });
     }

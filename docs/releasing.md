@@ -2,7 +2,7 @@
 
 Releases are started manually from **Actions → Release → Run workflow → main**.
 No hand-written version tag is needed. CI runs automatically on pushes to main
-and pull requests. Releases run independent quality gates and native builds before publishing.
+and pull requests. Releases verify exact-commit CI evidence, current security prerequisites and four native candidates before publishing.
 
 CI runs have no project-defined concurrency limit or automatic cancellation of
 older runs. Releases execute one at a time to avoid competing version/tag writes.
@@ -85,30 +85,66 @@ Please Behave. Dependencies are locked in `package-lock.json`.
 
 ## Release sequence
 
-1. Planning on main uses a Semantic Release dry run to calculate the proposed
-   version from the existing release tags. Prepare/publish plugins do
-   not run; no tag, commit or release is created at this stage.
-2. Release checks retain independent tooling, minimum Rust, dependency audits,
-   security and license gates. Python integration tests use the published governor
-   pinned in `.please-version`. Each native runner stamps Cargo.toml/Cargo.lock
-   before formatting, Clippy, tests, candidate build and executable smoke test.
-   Normal CI runs all 17 checks on Linux through the governor at `check`.
-3. Packaging verifies `please --version` matches the proposed version. It archives
-   the tested executable, README and LICENSE, and records hashes, target and
-   source commit as internal artifact metadata.
-4. Only after CI and all native quality jobs pass, publish downloads the four
-   archives and calculates `SHA256SUMS`. A mandatory direct call to
-   `python3 scripts/check-release-artifacts.py` verifies completeness, archive/binary
-   hashes, executable permissions, packaged documentation, metadata, source commit,
-   planned version and checksums. The publication guard then checks the planned
-   version and that local/remote main still match the tested source before any
-   release tag is created. Publish installs no Please Behave, managed
-   Git hooks, Rust, Go, actionlint or Gitleaks and runs no governance checks.
-5. Semantic Release calculates the version again, checks
-   it against the plan, generates notes, tags the tested source SHA, pushes the tag
-   and Git notes, and publishes archives, checksums, README and LICENSE to GitHub
-   Releases. Nothing is published to npm or crates.io. Issue/PR comments and release
-   labels are disabled. No changelog or release commit is generated.
+1. `plan` (Plan) uses a Semantic Release dry run on main to calculate the proposed
+   version and bind it to the dispatched source SHA. Prepare/publish plugins do
+   not run; no tag, commit or release is created.
+2. `release-readiness` (Release Readiness) and `release-candidate` (Release Candidate)
+   depend only on Plan and execute independently in parallel when a release is needed.
+   Readiness invokes the published governor at `release-readiness --checks-only`.
+   The pinned external `release/readiness` set verifies successful push CI for the
+   exact source commit, expected repository/workflow, main branch and required jobs,
+   plus committed-source sensitive filenames, secrets and license. Local Rules run
+   current Rust/npm audits and validate the release-tip commit. General documentation,
+   Python/JavaScript test suites, workflow checks and MSRV are reused through CI proof.
+3. The four-platform Candidate matrix installs the same pinned published governor
+   outside the checkout using `scripts/deploy.py`, synchronizes imports and stamps
+   Cargo.toml/Cargo.lock before taking the verification snapshot. The
+   `release-candidate` point retains formatting, Clippy, Rust tests, optimized build
+   and every real CLI smoke scenario on each native host. Packaging depends on
+   successful formatting, lint, tests and smoke; smoke depends on build.
+4. Smoke records a receipt binding the binary hash before/after testing to the
+   planned version, source, target, workflow run and attempt. Packaging checks the
+   executable version and copies exactly those tested bytes, with README and LICENSE.
+   `release-package-verify` validates each individual archive before upload. Artifacts
+   are named `please-RUN_ID-RUN_ATTEMPT-TARGET`; metadata and smoke receipts travel
+   with the archives but are not public release assets.
+5. `publish` (Publish) requires Plan, Readiness and the entire Candidate matrix to
+   succeed. It downloads only current-run/current-attempt artifacts and generates
+   complete `SHA256SUMS`. A mandatory direct call to
+   `python3 scripts/check-release-artifacts.py` verifies exactly four archives and
+   their evidence, source/version/run identity, archive/binary/smoke hashes, executable
+   permissions, allowed members and README/LICENSE bytes. It never rebuilds binaries.
+   Publish installs no Please Behave, managed hooks, Rust, Go, actionlint or Gitleaks.
+6. Semantic Release recalculates the version, requires it to match the plan, and
+   checks local HEAD, the dispatched SHA and remote main before creating a tag.
+   It generates notes, tags the tested source, pushes the tag/Git notes and publishes
+   archives, checksums, README and LICENSE. Nothing goes to npm or crates.io. No
+   changelog, release commit, issue/PR comment or release label is generated.
+
+### CI proof and reruns
+
+`.please/release-ci.json` explicitly requires the `Check` job in
+`.github/workflows/ci.yml`, in `please-behave/cli`, for a push to main at the exact
+release SHA. Current CI has one Linux x64 job; four-platform coverage is supplied
+by Release Candidate. Consumers with a CI matrix must list every required entry
+by a stable, unique job name. Individual workflow steps are not configured or checked.
+
+Readiness resolves repository/workflow IDs and selects the newest matching run,
+without filtering for success. Missing, pending or failed runs block. Successful
+partial CI reruns are supported: each required job's newest execution within that
+same run must succeed, while retained successes from earlier attempts count.
+Unrelated runs never combine and an older green run cannot replace a newer failed
+or incomplete run. API failures, ambiguous identities and incomplete evidence
+produce ERROR. Readiness needs `actions: read` and `contents: read`; it never
+starts CI, waits indefinitely or uses its own release run as proof. CI must remain
+independent of release validation. Evidence is observed at verification time and
+is not a lock against subsequent reruns. See the pinned external Ruleset README
+for API bounds and trust limitations.
+
+Release artifact transfer is stricter: all four packages must exist in the current
+Release run attempt. Rerunning only Publish or a subset of Candidate jobs cannot
+reuse artifacts from an earlier attempt; rerun the entire Release workflow if needed.
+This does not restrict partial reruns of the independent CI workflow.
 
 Cargo.toml and Cargo.lock retain their committed development version. Version
 stamping happens only in the native build checkouts, before compilation and tests;
@@ -129,13 +165,13 @@ without building or publishing again. Partial publication still needs inspection
 
 ## Native downloads
 
-Published v0.1.0 provides the four native archives and `SHA256SUMS`. Build jobs
-transfer candidate archives and metadata using matching `please-*` artifact labels.
-Ubuntu CI installs the governor through [Action v1.1.0](https://github.com/please-behave/action/releases/tag/v1.1.0),
-pinned to `e932d80af960ea29d3da4ff77c35e1b1378dc9ba`. The CLI version comes
-from `.please-version`. CI installs before explicit synchronization, then runs
-`check` through the published Action with Job Summaries enabled. The release
-checks job retains installation-only mode for its independent integration tests.
+Published releases provide four native archives and `SHA256SUMS`. Build jobs
+transfer archives, metadata and smoke receipts using run/attempt-specific artifact
+names. Ubuntu CI and Readiness use the SHA-pinned [Action v1.1.1](https://github.com/please-behave/action/releases/tag/v1.1.1)
+with the governor version from `.please-version`. Candidate uses the existing
+cross-platform `scripts/deploy.py` installer under `$RUNNER_TEMP`, preserving
+checksum and executable-version verification without changing the Action repository.
+The governor is always a published binary, separate from the candidate under test.
 
 | Platform | Rust target | Archive |
 | --- | --- | --- |

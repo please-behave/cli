@@ -1,7 +1,7 @@
 id = "format"
 description = "Verify Rust formatting"
 enabled = true
-run_at = ["pre-commit", "pre-push", "check", "release"]
+run_at = ["pre-commit", "pre-push", "check", "release-candidate"]
 
 [check]
 command = "cargo +stable fmt --all -- --check"

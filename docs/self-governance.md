@@ -71,28 +71,34 @@ use independent synthetic configurations.
 | commit-msg | commit-message plus imported commit-message |
 | pre-push (default) | format, docs, python-tests, agents-size, release-rules, clippy, rust-tests, native-build, native-smoke, workflows, msrv plus imported license, secret-scan and sensitive-files |
 | check | All pre-push checks plus commit-range, rust-audit and npm-audit: 17 checks total; conditional agents-quality Review |
-| release | format, clippy, rust-tests, native-build, native-smoke |
+| release-readiness | commit-range, rust-audit, npm-audit plus imported github-ci-success, sensitive-files, secret-scan and license |
+| release-candidate | format, clippy, rust-tests, native-build, native-smoke, release-package, release-package-verify |
 
-The 15 local [checks](../.please/checks) use string commands. Python scripts run
+The 17 local [checks](../.please/checks) use string commands. Python scripts run
 as `python3 scripts/<name>.py`, relative to the consuming repository root.
 The published v0.3.1 governor supports these commands and explicit path
-references for the four imported Checks. There are no local index.sh launchers.
+references for imported Checks. There are no local index.sh launchers.
 Local Rule directories and IDs use descriptive names without numeric prefixes.
 The local commit-message Rule and the imported Rule have distinct identities:
 imports retain their git-prefixed binding namespace. The native-smoke Check
 declares `depends_on = ["native-build"]` at every point where it runs, so it tests
-the candidate executable only after a successful build. Both Checks retain their
-shared `cargo` resource lock. Other local Checks have no execution prerequisites.
+the candidate executable only after a successful build. Build, smoke, Clippy and
+Rust tests share the `cargo` resource lock. Packaging
+depends on format, Clippy, Rust tests and smoke; individual artifact verification
+depends on packaging. Failed prerequisites block their dependents.
 Each local Rule declares its execution points directly; this repository defines
-no local Rule Sets. External Rule Sets supply commit-message, security and
-license checks at full Git commit pins.
+no local Rule Sets. External Rule Sets supply commit-message, security, license
+and CI-proof checks
+at the same reviewed full Git commit pin.
 
 The imported commit-message, secret-scan and sensitive-files Checks use
 `command = "sh @rule/index.sh"`. The license Check uses
 `command = "python3 @source/scripts/file-reference.py"` for its shared script.
 These references resolve from the cached Rule directory and imported repository
 root respectively, while execution stays in the consuming repository root.
-Scripts, parameters, timeouts and exit-code handling are unchanged.
+Existing import parameters and execution-point semantics are unchanged. The new
+release/readiness binding explicitly selects committed `head` snapshots for the
+three security/license Rules and supplies the CI policy as a file parameter.
 
 All Rust unit, integration, acceptance and documentation tests run in one Cargo
 Rule. Python helper tests use one unittest discovery Rule; test modules use
@@ -109,7 +115,9 @@ and release regression tests, Conventional Commits, actionlint, minimum Rust 1.8
 Rust/npm dependency audits remain required at the points shown above. Audits
 need advisory feeds. Release artifact verification runs directly in the publish
 job after download and checksum generation; it requires EXPECTED_RELEASE_VERSION,
-GITHUB_SHA and a complete dist/ artifact set.
+GITHUB_SHA, GITHUB_RUN_ID, GITHUB_RUN_ATTEMPT and a complete dist/ artifact set.
+Candidate verification uses the same verifier for its single BUILD_TARGET, before
+aggregate checksum generation. Both verify the successful smoke receipt.
 These checks cannot all be meaningfully executed in an unprepared local checkout.
 
 For manual developer use:
@@ -203,8 +211,8 @@ future work.
 [.please-version](../.please-version) pins the separately installed governor to
 v0.3.1. Local `mise deploy` uses the checksum-verifying
 [scripts/deploy.py](../scripts/deploy.py) installer. Ubuntu workflows use
-[Please Behave Action v1.1.0](https://github.com/please-behave/action/releases/tag/v1.1.0),
-pinned to `e932d80af960ea29d3da4ff77c35e1b1378dc9ba`, with the version read
+[Please Behave Action v1.1.1](https://github.com/please-behave/action/releases/tag/v1.1.1),
+pinned to `3f726664f6a18193ac1bfa0f542e34ba76f24523`, with the version read
 from `.please-version` and `run: 'false'`. The Action adds the installed release
 to PATH. Renovate proposes CLI version-pin and Action SHA updates without
 automerging governor version changes.
@@ -223,7 +231,15 @@ the AGENTS.md review summary also reads that report. Provider failures remain
 errors. CI uses the CLI report and Action Summary instead of `execution.json`.
 Local wrapper runs still record governor version/digest, execution point, checked
 commit and exit code in that companion file.
-The [release workflow](../.github/workflows/release.yml) retains independent
-quality gates, source/version guards and artifact verification. Its Ubuntu checks
-job uses the Action to install the governor for Python integration tests. Native
-builds verify candidates directly on all four platforms. Publishing remains explicit.
+The [release workflow](../.github/workflows/release.yml) separates Semantic Release
+planning/publication from Please Behave validation. Parallel `release-readiness`
+and four-platform `release-candidate` jobs use matching execution points and both
+must succeed before Publish. Readiness uses installation-only Action mode once,
+current audits and the external readiness set. Candidate installs the same governor
+through `scripts/deploy.py` outside the checkout on all four native hosts. Neither
+uses a candidate binary for governance. Both upload diagnostic reports.
+The CI proof accepts successful partial reruns within the newest matching push run,
+using each required job's newest execution across its attempts. It checks jobs,
+not steps. Source security/license rules explicitly read HEAD. General CI suites
+are not rerun in Readiness. Publish runs only direct artifact integrity checks and
+Semantic Release, with no governor invocation. See [release sequence](releasing.md#release-sequence).

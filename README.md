@@ -328,8 +328,8 @@ The public Please Behave Action is maintained separately in
 usage, inputs and supported platforms. It installs an explicitly selected CLI
 release, verifies its archive checksum and optionally runs `please run --at` in
 the consumer checkout. The Action revision and CLI release version are independent.
-The CLI repository uses Action v1.1.0 pinned to
-`e932d80af960ea29d3da4ff77c35e1b1378dc9ba` in Ubuntu workflows. It reads the CLI
+The CLI repository uses Action v1.1.1 pinned to
+`3f726664f6a18193ac1bfa0f542e34ba76f24523` in Ubuntu workflows. It reads the CLI
 version from `.please-version`, installs it before explicit synchronization, then
 invokes the published Action at `check` with Job Summaries enabled. CI uploads the
 CLI report; local wrapper invocations also retain separate execution metadata.
@@ -469,10 +469,12 @@ and never triggered automatically. It needs no declaration or CI workflow.
 Consumers decide where to invoke it, including multiple workflows; Please Behave does
 not generate workflows, discover them or validate CI integration. Declare custom
 points in the consumer, including unmapped custom points used by imports.
-`release` is an ordinary custom point. In this repository it runs formatting,
-Clippy, Rust tests, a native build and an executable smoke test after version
-stamping and before packaging. GitHub Actions handles packaging, collected
-artifact verification and publication; see the [release sequence](docs/releasing.md#release-sequence).
+Custom execution points have no special CLI behavior. This repository uses
+`release-readiness` for exact-commit CI proof, current audits and source prerequisites,
+and `release-candidate` for native validation, smoke testing, packaging and individual
+archive verification. They run in parallel after Semantic Release planning.
+Publish verifies the complete archive set directly before Semantic Release publishes;
+see the [release sequence](docs/releasing.md#release-sequence).
 The default execution point is `pre-push`.
 
 Checks run concurrently by default. `please run --at check --max-parallel 6`

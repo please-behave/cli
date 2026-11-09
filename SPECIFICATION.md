@@ -683,7 +683,7 @@ The public GitHub Action is maintained independently in
 [please-behave/action](https://github.com/please-behave/action). Its repository
 owns the Action implementation, inputs, supported runners and acceptance tests.
 The Action revision and selected CLI release are independent. Ubuntu CI uses
-Action v1.1.0 pinned to `e932d80af960ea29d3da4ff77c35e1b1378dc9ba`, with
+Action v1.1.1 pinned to `3f726664f6a18193ac1bfa0f542e34ba76f24523`, with
 the CLI version read from `.please-version`. Installation-only mode precedes
 explicit synchronization; the published Action then executes `check`, including
 applicable reviews, with Job Summaries enabled. CI retains the CLI report and
@@ -744,20 +744,40 @@ directly, without local Rule Sets. Pre-commit runs formatting and documentation
 validation; pre-push runs the complete local suite, keeping all Rust tests in
 one Rule. Python helper tests use one unittest discovery Rule and JavaScript
 release tests use one npm Rule. All three test suites, workflow validation and
-minimum-Rust checks run at pre-push and again in CI. The repository has 15 local
-Checks and one conditional document Review; dependency audits remain at check with advisory access. Agents use Git
+minimum-Rust checks run at pre-push and again in CI. The repository has 17 local
+Checks and one conditional document Review; dependency audits run at check and
+release-readiness with advisory access. Agents use Git
 commit/push feedback instead of manually running checks,
 tests, linters or builds. They may read saved reports without rerunning Rules.
 The manual mise check task delegates to published Please Behave at pre-push.
-All three external Rule Set imports pin the same migrated full Git commit.
-Their parameters and execution-point assignments remain unchanged.
-The custom release point selects format, clippy, rust-tests, native-build and
-native-smoke on each release host after version stamping and before packaging.
-It uses the published governor's existing custom-point support. Artifact verification
-is release orchestration: the workflow directly invokes
-scripts/check-release-artifacts.py after download and checksum generation, before
-publication. A failed verification blocks publication. No artifact execution point
-is configured.
+All four external Rule Set imports pin the same reviewed full Git commit.
+The three existing imports preserve their execution-point and parameter semantics.
+Release jobs and execution points are `release-readiness` and `release-candidate`.
+Both jobs depend only on Semantic Release planning and run in parallel. Publish
+requires successful completion of both. Plan and Publish never invoke Please Behave.
+Readiness uses the pinned external `release/readiness` set for exact-commit GitHub
+push-CI proof and committed-source security/license checks; local rules retain
+current Rust/npm audits and release-tip commit validation. The CI policy names
+required jobs, not individual steps. The latest matching run must succeed; partial
+reruns may retain successful jobs from earlier attempts of that same run. Missing,
+pending, failed, untrusted or incomplete evidence never establishes PASS.
+General CI test suites, documentation, workflow and MSRV checks are reused through
+that proof, rather than rerun during release readiness.
+Candidate selects format, clippy, rust-tests, native-build, native-smoke,
+release-package and release-package-verify on all four native hosts. Existing
+native test coverage is retained. The published governor is installed outside the
+checkout through scripts/deploy.py; its pin is unchanged. Version stamping occurs
+before Please Behave snapshots inputs. Packaging depends on successful formatting,
+lint, tests and smoke; smoke depends on build. The binary hash before/after smoke
+must agree with the packaged bytes. Each archive is verified before upload.
+Artifact names/metadata bind the source, version, target, workflow run and attempt.
+Publish downloads only the current run/attempt artifacts and directly invokes
+scripts/check-release-artifacts.py after checksum generation. It verifies exactly
+four archives, metadata, smoke identity, hashes, archive contents/permissions and
+README/LICENSE bytes. No rebuild occurs. Incomplete Release reruns require a full
+rerun when artifacts from the current attempt are missing. CI partial reruns remain
+supported independently. Semantic Release's planned-version and remote-main guards
+remain mandatory before tagging. No artifact execution point is configured.
 The commit-msg point additionally imports the conventional-commits set at a full
 Git commit pin. Its scopes_file parameter uses .please/commit-scopes.txt, which
 must match the scopes in .githooks/commit-policy. The existing local message check
@@ -790,7 +810,7 @@ commands and npm tests explicitly select offline mode. The execution-point wrapp
 offline mode and disables Rustup auto-install for Git-backed invocations.
 CI invokes please sync --yes once before execution. Execution never repairs
 hooks noninteractively. Publish installs no governor or managed hooks and runs no
-governance checks. It requires successful CI and native build jobs, then verifies the
+governance checks. It requires successful readiness and native candidate jobs, then verifies the
 complete artifact set and checksums through the direct workflow step. The
 publication guard additionally checks the planned version and tested source SHA
 before tagging. Native builds stamp Cargo.toml/Cargo.lock only in their disposable

@@ -1,7 +1,7 @@
 id = "commit-range"
 description = "Validate CI commits and pull request title"
 enabled = true
-run_at = ["check"]
+run_at = ["check", "release-readiness"]
 
 [check]
 command = "python3 scripts/check-commits.py"

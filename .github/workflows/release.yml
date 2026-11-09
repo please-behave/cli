@@ -12,6 +12,7 @@ concurrency:
 
 jobs:
   plan:
+    name: Plan
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -20,9 +21,11 @@ jobs:
     outputs:
       release: ${{ steps.plan.outputs.release }}
       version: ${{ steps.plan.outputs.version }}
+      source_sha: ${{ steps.plan.outputs.source_sha }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
@@ -36,17 +39,19 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: npm run release:plan
 
-  checks:
+  release-readiness:
+    name: Release Readiness
     needs: plan
     if: needs.plan.outputs.release == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 90
-    env:
-      BUILD_TARGET: x86_64-unknown-linux-gnu
-      CARGO_BUILD_TARGET: x86_64-unknown-linux-gnu
+    permissions:
+      contents: read
+      actions: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          ref: ${{ needs.plan.outputs.source_sha }}
           persist-credentials: false
           fetch-depth: 0
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
@@ -56,20 +61,10 @@ jobs:
         with:
           node-version: '26'
           package-manager-cache: false
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version: stable
-          cache: false
-      - name: Prepare tools and dependencies
-        run: bash scripts/prepare-ci.sh
-      - name: Check documentation and repository instructions
+      - name: Prepare current security audits
         run: |
-          python3 scripts/check-word-count.py AGENTS.md 1200
-          python3 scripts/check-docs.py
-      - name: Validate release commit
-        env:
-          COMMIT_HEAD: ${{ github.sha }}
-        run: python3 scripts/check-commits.py
+          npm ci --ignore-scripts
+          bash scripts/prepare-release-readiness.sh
       - name: Read pinned governor version
         id: governor
         run: echo "version=$(cat .please-version)" >> "$GITHUB_OUTPUT"
@@ -78,68 +73,25 @@ jobs:
         with:
           version: ${{ steps.governor.outputs.version }}
           run: 'false'
-      - name: Test Python helpers and governor integration
-        run: python3 -m unittest discover -s scripts -p 'test_*.py'
-      - name: Test release tooling
-        run: npm --offline test
-      - name: Validate workflow syntax and expressions
-        run: actionlint -color
-      - name: Check minimum supported Rust
-        run: cargo +1.85.0 --offline check --all-targets --locked
-      - name: Audit Rust dependencies
-        run: cargo +stable audit
-      - name: Audit release tooling dependencies
-        run: npm audit --audit-level=high
-      - name: Retrieve pinned independent security and license checks
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Resolve pinned Rule Sets
+        run: please sync --yes
+      - name: Verify release readiness
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          COMMIT_HEAD: ${{ github.sha }}
+        run: please run --at release-readiness --checks-only
+      - name: Upload readiness report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          repository: christianpflugradt/please-behave-rulesets
-          ref: ae4a769b59b6ab8beb5cf7ea322065ad28070e34
-          path: .release-rules
-          persist-credentials: false
-      - name: Keep check sources outside the scanned working tree
-        run: mv .release-rules "$RUNNER_TEMP/release-rules"
-      - name: Check sensitive filenames, secrets and license directly
-        shell: python
-        run: |
-          import os
-          from pathlib import Path
-          import runpy
-          import shutil
-          import subprocess
-          import tempfile
+          name: release-readiness-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .please/reports/last.json
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 7
 
-          rules = Path(os.environ["RUNNER_TEMP"]) / "release-rules/rules/checks"
-          sensitive = runpy.run_path(str(rules / "sensitive-files/check.py"))
-          raw = sensitive["command"]("git", "ls-files", "-z", "--cached", "--others", "--exclude-standard")
-          blocked = [os.fsdecode(p) for p in raw.split(b"\0")
-                     if p and os.path.lexists(os.fsdecode(p)) and sensitive["prohibited"](os.fsdecode(p))]
-          if blocked:
-              raise SystemExit("Prohibited sensitive filenames: " + repr(blocked))
-          scanner = shutil.which("gitleaks")
-          if scanner is None:
-              raise SystemExit("Gitleaks is required")
-          secrets = runpy.run_path(str(rules / "secret-scan/check.py"))
-          with tempfile.TemporaryDirectory() as temporary:
-              snapshot = Path(temporary) / "snapshot"
-              snapshot.mkdir()
-              report = Path(temporary) / "report.json"
-              secrets["populate_worktree"](snapshot)
-              env = {k: v for k, v in os.environ.items()
-                     if k not in {"GITLEAKS_CONFIG", "GITLEAKS_CONFIG_TOML"}}
-              result = subprocess.run([scanner, "dir", "--no-banner", "--redact", "--exit-code", "10",
-                                       "--report-format", "json", "--report-path", str(report), "."],
-                                      cwd=snapshot, env=env, capture_output=True)
-              if secrets["findings_from"](report, result.returncode):
-                  raise SystemExit("Gitleaks detected potential secrets")
-          license_path = Path("LICENSE")
-          references = list((rules / "license/licenses").glob("*.txt"))
-          if license_path.is_symlink() or not license_path.is_file() or not references:
-              raise SystemExit("License or reference files are missing or invalid")
-          if not any(license_path.read_bytes() == reference.read_bytes() for reference in references):
-              raise SystemExit("LICENSE does not match an approved reference")
-
-  quality:
+  release-candidate:
+    name: Release Candidate (${{ matrix.target }})
     needs: plan
     if: needs.plan.outputs.release == 'true'
     strategy:
@@ -155,45 +107,56 @@ jobs:
     env:
       BUILD_TARGET: ${{ matrix.target }}
       CARGO_BUILD_TARGET: ${{ matrix.target }}
+      RELEASE_TAG: v${{ needs.plan.outputs.version }}
+      EXPECTED_RELEASE_VERSION: ${{ needs.plan.outputs.version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          ref: ${{ needs.plan.outputs.source_sha }}
           persist-credentials: false
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: '3.15'
-      - name: Stamp planned release version before verification
+      - name: Install pinned native governor outside the checkout
         env:
-          RELEASE_VERSION: ${{ needs.plan.outputs.version }}
-        run: python3 scripts/set-release-version.py "$RELEASE_VERSION"
+          CARGO_INSTALL_ROOT: ${{ runner.temp }}/please-governor
+        run: |
+          python3 scripts/deploy.py
+          echo "$CARGO_INSTALL_ROOT/bin" >> "$GITHUB_PATH"
+      - name: Resolve pinned Rule Sets
+        run: please sync --yes
+      - name: Stamp planned release version before verification
+        run: python3 scripts/set-release-version.py "$EXPECTED_RELEASE_VERSION"
       - name: Install candidate toolchain and dependencies
         run: |
           rustup toolchain install stable --profile minimal --component rustfmt --component clippy
-          rustup target add --toolchain stable ${{ matrix.target }}
+          rustup target add --toolchain stable "$BUILD_TARGET"
           cargo +stable fetch --locked
-      - name: Verify Rust formatting
-        run: cargo +stable fmt --all -- --check
-      - name: Lint Rust with warnings denied
-        run: cargo +stable --offline clippy --all-targets --locked -- -D warnings
-      - name: Run Rust tests
-        run: cargo +stable --offline test --locked
-      - name: Build native release executable
-        run: cargo +stable build --release --locked --offline
-      - name: Smoke-test native executable
-        run: python3 scripts/smoke.py
-      - name: Package tested candidate executable
-        env:
-          RELEASE_TAG: v${{ needs.plan.outputs.version }}
-        run: python3 scripts/package-release.py
+      - name: Validate and package native candidate
+        run: please run --at release-candidate --checks-only
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: please-${{ matrix.target }}
+          name: please-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.target }}
           path: dist/
           if-no-files-found: error
           retention-days: 7
+      - name: Upload candidate report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-candidate-report-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.target }}
+          path: .please/reports/last.json
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 7
 
   publish:
-    needs: [plan, checks, quality]
+    name: Publish
+    needs: [plan, release-readiness, release-candidate]
+    if: >-
+      needs.plan.outputs.release == 'true' &&
+      needs.release-readiness.result == 'success' &&
+      needs.release-candidate.result == 'success'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -201,6 +164,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          ref: ${{ needs.plan.outputs.source_sha }}
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
@@ -213,7 +177,7 @@ jobs:
       - run: npm ci --ignore-scripts
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          pattern: please-*
+          pattern: please-${{ github.run_id }}-${{ github.run_attempt }}-*
           path: dist
           merge-multiple: true
       - name: Checksum all native archives

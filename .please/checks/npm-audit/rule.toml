@@ -1,7 +1,7 @@
 id = "npm-audit"
 description = "Audit npm high and critical advisories"
 enabled = true
-run_at = ["check"]
+run_at = ["check", "release-readiness"]
 
 [check]
 command = "npm audit --audit-level=high"

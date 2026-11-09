@@ -13,6 +13,7 @@ import tarfile
 import tempfile
 import tomllib
 import unittest
+from unittest.mock import patch
 
 SCRIPTS = Path(__file__).resolve().parent
 
@@ -29,6 +30,17 @@ verification = load("verify-release")
 
 
 class ReleaseTests(unittest.TestCase):
+    def setUp(self):
+        environment = patch.dict(os.environ, GITHUB_RUN_ID="123", GITHUB_RUN_ATTEMPT="1")
+        environment.start()
+        self.addCleanup(environment.stop)
+
+    def write_smoke(self, dist, version, sha, target, binary_hash):
+        folder = dist / "smoke"
+        folder.mkdir(exist_ok=True)
+        (folder / f"{target}.json").write_text(json.dumps(dict(
+            **verification.release_context(version, sha, target), binary_sha256=binary_hash)))
+
     def test_package_metadata_matches_lockfile(self):
         root = SCRIPTS.parent
         package = tomllib.loads((root / "Cargo.toml").read_text())["package"]
@@ -57,6 +69,7 @@ class ReleaseTests(unittest.TestCase):
                 self.assertIn("Binary version mismatch", result.stderr)
                 self.assertFalse((root / f"dist/please-v0.1.0-{target}.tar.gz").exists())
                 binary.write_text("#!/bin/sh\nprintf 'please 0.1.0\\n'\n")
+                self.write_smoke(root / "dist", "0.1.0", "a" * 40, target, verification.digest(binary.read_bytes()))
                 subprocess.run([sys.executable, str(SCRIPTS / "package-release.py")], cwd=root, env=env, check=True)
             subprocess.run([sys.executable, str(SCRIPTS / "checksums.py")], cwd=root, check=True)
             subprocess.run([sys.executable, str(SCRIPTS / "check-release-artifacts.py")], cwd=root,
@@ -65,10 +78,10 @@ class ReleaseTests(unittest.TestCase):
     def test_publish_requires_verified_artifacts_before_publication(self):
         release = (SCRIPTS.parent / ".github/workflows/release.yml").read_text()
         publisher = release.split("  publish:\n", 1)[1]
-        self.assertIn("needs: [plan, checks, quality]", publisher)
+        self.assertIn("needs: [plan, release-readiness, release-candidate]", publisher)
         self.assertIn("contents: write", publisher)
         self.assertIn("persist-credentials: false", publisher)
-        for required in ("actions/download-artifact@", "pattern: please-*",
+        for required in ("actions/download-artifact@", "pattern: please-${{ github.run_id }}-${{ github.run_attempt }}-*",
                          "python3 scripts/checksums.py", "python3 scripts/check-release-artifacts.py", "npm run release",
                          "EXPECTED_RELEASE_VERSION: ${{ needs.plan.outputs.version }}"):
             self.assertIn(required, publisher)
@@ -117,10 +130,11 @@ class ReleaseTests(unittest.TestCase):
                         member.mode = 0o755 if file == "please" else 0o644
                         member.size = len(data)
                         output.addfile(member, io.BytesIO(data))
-                metadata = dict(version="1.2.3", source_sha="a" * 40, target=target, binary_version="please 1.2.3",
+                metadata = dict(**verification.release_context("1.2.3", "a" * 40, target), binary_version="please 1.2.3",
                                 archive_sha256=verification.digest(archive.read_bytes()),
-                                binary_sha256=verification.digest(binary))
+                                binary_sha256=verification.digest(binary), smoke_binary_sha256=verification.digest(binary))
                 (dist / "metadata" / f"{target}.json").write_text(json.dumps(metadata))
+                self.write_smoke(dist, "1.2.3", "a" * 40, target, verification.digest(binary))
             sums = "".join(f"{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}\n"
                            for p in sorted(dist.glob("*.tar.gz")))
             subprocess.run([sys.executable, str(SCRIPTS / "checksums.py")], cwd=root, check=True)
@@ -176,7 +190,8 @@ class ReleaseTests(unittest.TestCase):
         self.assertIn("BUILD_TARGET: x86_64-unknown-linux-gnu", ci)
 
     def test_artifact_gate_blocks_missing_corrupt_version_and_source(self):
-        for failure in (None, "missing", "corrupt", "version", "source", "missing-version", "missing-source"):
+        for failure in (None, "missing", "corrupt", "version", "source", "missing-version", "missing-source",
+                        "run", "attempt", "missing-smoke", "smoke", "permissions", "readme", "license", "link", "extra"):
             with self.subTest(failure=failure), tempfile.TemporaryDirectory() as temporary:
                 root = Path(temporary)
                 (root / "scripts").mkdir()
@@ -196,17 +211,54 @@ class ReleaseTests(unittest.TestCase):
                             member.size = len(content)
                             member.mode = 0o755 if filename == "please" else 0o644
                             output.addfile(member, io.BytesIO(content))
-                    metadata = dict(version="1.2.3", source_sha="a" * 40, target=target, binary_version="please 1.2.3",
-                                    archive_sha256=verification.digest(archive.read_bytes()), binary_sha256=verification.digest(data))
+                    metadata = dict(**verification.release_context("1.2.3", "a" * 40, target), binary_version="please 1.2.3",
+                                    archive_sha256=verification.digest(archive.read_bytes()), binary_sha256=verification.digest(data), smoke_binary_sha256=verification.digest(data))
                     (dist / "metadata" / f"{target}.json").write_text(json.dumps(metadata))
+                    self.write_smoke(dist, "1.2.3", "a" * 40, target, verification.digest(data))
                 (dist / "SHA256SUMS").write_text("".join(f"{verification.digest(p.read_bytes())}  {p.name}\n" for p in sorted(dist.glob("*.tar.gz"))))
                 archive = next(dist.glob("*.tar.gz"))
                 if failure == "missing":
                     archive.unlink()
                 elif failure == "corrupt":
                     archive.write_bytes(b"corrupted archive")
+                if failure in ("permissions", "readme", "license", "link"):
+                    original = archive.read_bytes()
+                    with tarfile.open(fileobj=io.BytesIO(original), mode="r:gz") as source:
+                        with tarfile.open(archive, "w:gz") as output:
+                            for member in source.getmembers():
+                                content = source.extractfile(member).read()
+                                if failure == "permissions" and member.name.endswith("/please"):
+                                    member.mode = 0o644
+                                if (failure == "readme" and member.name.endswith("/README.md")) or (failure == "license" and member.name.endswith("/LICENSE")):
+                                    content = b"changed packaged documentation"
+                                    member.size = len(content)
+                                output.addfile(member, io.BytesIO(content))
+                            if failure == "link":
+                                link = tarfile.TarInfo("unexpected-link")
+                                link.type = tarfile.SYMTYPE
+                                link.linkname = "/outside"
+                                output.addfile(link)
+                    meta = dist / "metadata" / (archive.name.removesuffix(".tar.gz").removeprefix("please-v1.2.3-") + ".json")
+                    record = json.loads(meta.read_text())
+                    record["archive_sha256"] = verification.digest(archive.read_bytes())
+                    meta.write_text(json.dumps(record))
+                    (dist / "SHA256SUMS").write_text("".join(f"{verification.digest(p.read_bytes())}  {p.name}\n" for p in sorted(dist.glob("*.tar.gz"))))
+                if failure == "extra":
+                    (dist / "unexpected.tar.gz").write_bytes(b"extra")
+                if failure in ("missing-smoke", "smoke"):
+                    receipt = next((dist / "smoke").glob("*.json"))
+                    if failure == "missing-smoke":
+                        receipt.unlink()
+                    else:
+                        record = json.loads(receipt.read_text())
+                        record["binary_sha256"] = "0" * 64
+                        receipt.write_text(json.dumps(record))
                 env = dict(os.environ, EXPECTED_RELEASE_VERSION="9.9.9" if failure == "version" else "1.2.3",
                            GITHUB_SHA=("b" if failure == "source" else "a") * 40)
+                if failure == "run":
+                    env["GITHUB_RUN_ID"] = "124"
+                if failure == "attempt":
+                    env["GITHUB_RUN_ATTEMPT"] = "2"
                 if failure == "missing-version":
                     env.pop("EXPECTED_RELEASE_VERSION")
                 elif failure == "missing-source":
@@ -218,6 +270,109 @@ class ReleaseTests(unittest.TestCase):
                     self.assertIn("Verified 4 archives", result.stdout)
                 else:
                     self.assertNotEqual(result.returncode, 0, result.stderr or result.stdout)
+
+    def test_release_job_contract_permissions_and_selection(self):
+        workflow = (SCRIPTS.parent / ".github/workflows/release.yml").read_text()
+        jobs = re.split(r"^  ([a-z-]+):\n", workflow.split("jobs:\n", 1)[1], flags=re.M)
+        jobs = dict(zip(jobs[1::2], jobs[2::2]))
+        self.assertEqual(set(jobs), {"plan", "release-readiness", "release-candidate", "publish"})
+        for name in ("release-readiness", "release-candidate"):
+            self.assertIn("needs: plan", jobs[name])
+            self.assertIn("needs.plan.outputs.release == 'true'", jobs[name])
+            self.assertIn(f"please run --at {name} --checks-only", jobs[name])
+            self.assertNotIn("continue-on-error", jobs[name])
+        self.assertIn("actions: read", jobs["release-readiness"])
+        for name in ("plan", "release-candidate", "publish"):
+            self.assertNotIn("actions: write", jobs[name])
+        self.assertIn("scripts/deploy.py", jobs["release-candidate"])
+        self.assertIn("runner.temp", jobs["release-candidate"])
+        self.assertNotIn("setup-node", jobs["release-candidate"])
+        for name in ("plan", "publish"):
+            self.assertNotIn("please run", jobs[name])
+            self.assertNotIn("please sync", jobs[name])
+            self.assertNotIn("please-behave/action@", jobs[name])
+        for name in ("release-readiness", "release-candidate"):
+            self.assertIn(f"needs.{name}.result == 'success'", jobs["publish"])
+        self.assertNotIn("always()", jobs["publish"])
+        self.assertNotIn("cargo", jobs["publish"])
+        for repeated in ("scripts/prepare-ci.sh", "unittest discover", "npm --offline test", "actionlint", "+1.85.0"):
+            self.assertNotIn(repeated, workflow)
+        self.assertIn("group: release-main", workflow)
+        self.assertIn("cancel-in-progress: false", workflow)
+        self.assertIn("workflow_dispatch:", workflow)
+        config = tomllib.loads((SCRIPTS.parent / ".please/config.toml").read_text())
+        self.assertEqual(config["execution_points"]["custom"], ["release-readiness", "release-candidate"])
+        self.assertEqual(len({item["ref"] for item in config["imports"]}), 1)
+        release_import, = [item for item in config["imports"] if item["path"] == "release/readiness"]
+        self.assertRegex(release_import["ref"], r"^[0-9a-f]{40}$")
+        self.assertEqual(release_import["rule_parameters"]["license"], dict(snapshot="head", target="LICENSE"))
+        policy = json.loads((SCRIPTS.parent / ".please/release-ci.json").read_text())
+        self.assertEqual(policy["required_jobs"], ["Check"])
+        self.assertNotIn("required_steps", policy)
+        definitions = [tomllib.loads(p.read_text()) for p in (SCRIPTS.parent / ".please/checks").glob("*/rule.toml")]
+        by_id = {rule["id"]: rule for rule in definitions}
+        self.assertEqual({r["id"] for r in definitions if "release-candidate" in r["run_at"]},
+                         {"format", "clippy", "rust-tests", "native-build", "native-smoke", "release-package", "release-package-verify"})
+        self.assertEqual({r["id"] for r in definitions if "release-readiness" in r["run_at"]},
+                         {"rust-audit", "npm-audit", "commit-range"})
+        self.assertEqual(by_id["native-smoke"]["depends_on"], ["native-build"])
+        self.assertEqual(set(by_id["release-package"]["depends_on"]), {"format", "clippy", "rust-tests", "native-smoke"})
+        self.assertEqual(by_id["release-package-verify"]["depends_on"], ["release-package"])
+        for name in ("format", "clippy", "rust-tests", "native-build", "native-smoke"):
+            self.assertIn("check", by_id[name]["run_at"])
+            self.assertIn("pre-push", by_id[name]["run_at"])
+
+    def test_single_candidate_verification_and_smoke_binary_binding(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for filename in ("Cargo.toml", "README.md", "LICENSE"):
+                shutil.copy2(SCRIPTS.parent / filename, root / filename)
+            target = verification.TARGETS[0]
+            binary = root / f"target/{target}/release/please"
+            binary.parent.mkdir(parents=True)
+            binary.write_text("#!/bin/sh\nprintf 'please 0.1.0\\n'\n")
+            binary.chmod(0o755)
+            dist = root / "dist"
+            dist.mkdir()
+            env = dict(os.environ, RELEASE_TAG="v0.1.0", EXPECTED_RELEASE_VERSION="0.1.0", GITHUB_SHA="a" * 40, BUILD_TARGET=target)
+            def package():
+                return subprocess.run([sys.executable, str(SCRIPTS / "package-release.py")], cwd=root, env=env, capture_output=True)
+            self.assertNotEqual(package().returncode, 0)  # Missing smoke evidence.
+            self.write_smoke(dist, "0.1.0", "a" * 40, target, verification.digest(binary.read_bytes()))
+            self.assertEqual(package().returncode, 0)
+            def verify(**changes):
+                return subprocess.run([sys.executable, str(SCRIPTS / "check-release-artifacts.py"), "--candidate"],
+                                      cwd=root, env=dict(env, **changes), capture_output=True)
+            self.assertEqual(verify().returncode, 0)
+            for changes in (dict(GITHUB_RUN_ID="124"), dict(GITHUB_RUN_ATTEMPT="2"), dict(GITHUB_SHA="b" * 40),
+                            dict(EXPECTED_RELEASE_VERSION="0.2.0"), dict(BUILD_TARGET=verification.TARGETS[1])):
+                self.assertNotEqual(verify(**changes).returncode, 0)
+            binary.write_text(binary.read_text() + "# changed after smoke\n")
+            self.assertNotEqual(package().returncode, 0)
+            receipt = dist / "smoke" / f"{target}.json"
+            data = json.loads(receipt.read_text())
+            data["binary_sha256"] = "0" * 64
+            receipt.write_text(json.dumps(data))
+            self.assertNotEqual(verify().returncode, 0)
+
+    def test_smoke_receipt_requires_the_complete_real_smoke_test(self):
+        governor = os.environ.get("PLEASE_EXECUTABLE") or shutil.which("please")
+        self.assertIsNotNone(governor, "published governor must be prepared for integration tests")
+        version = subprocess.check_output([governor, "--version"], text=True).strip().removeprefix("please ")
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            target = verification.TARGETS[0]
+            env = dict(os.environ, RELEASE_TAG=f"v{version}", GITHUB_SHA="a" * 40, BUILD_TARGET=target)
+            result = subprocess.run([sys.executable, str(SCRIPTS / "smoke.py"), governor], cwd=root, env=env, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            receipt = root / "dist/smoke" / f"{target}.json"
+            self.assertEqual(json.loads(receipt.read_text())["binary_sha256"], verification.digest(Path(governor).read_bytes()))
+            fake = root / "fake"
+            fake.write_text(f"#!/bin/sh\nprintf 'please {version}\\n'\n")
+            fake.chmod(0o755)
+            result = subprocess.run([sys.executable, str(SCRIPTS / "smoke.py"), str(fake)], cwd=root, env=env, capture_output=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertFalse(receipt.exists(), "failed smoke must remove any previous receipt")
 
     def test_missing_or_extra_archives_are_rejected(self):
         with tempfile.TemporaryDirectory() as temporary:
