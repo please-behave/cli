@@ -29,6 +29,7 @@ pub enum Status {
     Fail,
     Error,
     NotRun,
+    Cancelled,
 }
 impl Status {
     pub fn label(self) -> &'static str {
@@ -37,6 +38,7 @@ impl Status {
             Self::Fail => "FAIL",
             Self::Error => "ERROR",
             Self::NotRun => "NOT_RUN",
+            Self::Cancelled => "CANCELLED",
         }
     }
     pub fn exit_code(self) -> i32 {
@@ -115,7 +117,7 @@ pub(crate) fn prevents_success(item: &Item) -> bool {
     match item.status {
         Status::Error => item.kind != "review" || item.blocking || item.configuration_error,
         Status::Fail => item.blocking,
-        Status::NotRun => true,
+        Status::NotRun | Status::Cancelled => true,
         Status::Pass => false,
     }
 }
@@ -128,7 +130,10 @@ pub fn overall(items: &[Item]) -> Status {
         Status::Error
     } else if items.iter().any(|x| x.status == Status::Fail && x.blocking) {
         Status::Fail
-    } else if items.iter().any(|x| x.status == Status::NotRun) {
+    } else if items
+        .iter()
+        .any(|x| matches!(x.status, Status::NotRun | Status::Cancelled))
+    {
         Status::Error
     } else {
         Status::Pass

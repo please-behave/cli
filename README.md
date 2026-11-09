@@ -263,6 +263,7 @@ output is saved instead of flooding the terminal.
 | `FAIL` | The check failed, or the AI found a concrete violation of the criterion. |
 | `ERROR` | Verification could not be completed, for example because of a timeout, missing executable, invalid AI output or missing evidence. |
 | `NOT_RUN` | A rule was not started because checks failed or fail-fast stopped scheduling. The reason explains why. |
+| `CANCELLED` | A running check was interrupted after fail-fast triggered; captured partial output is retained. |
 
 A run succeeds if no blocking failure exists and its input remains stable.
 Non-blocking FAIL and provider/review ERROR remain visible and permit overall PASS.
@@ -437,6 +438,8 @@ project = "My_App"
 
 [execution]
 max_parallel = 4
+fail_fast_terminate_running_instances = false
+fail_fast_termination_grace_seconds = 5
 
 [execution_points]
 custom = ["release"]
@@ -448,6 +451,8 @@ custom = ["release"]
 | `max_display_files` | Optional; `5` | Integer `1..5`: changed paths shown in status. |
 | `execution` | Optional table | Check scheduling settings. |
 | `execution.max_parallel` | Optional; `4` | Positive integer: maximum running checks; `1` runs serially. |
+| `execution.fail_fast_terminate_running_instances` | Optional; `false` | Terminate running checks when invocation-level fail-fast triggers; requires Unix process groups. |
+| `execution.fail_fast_termination_grace_seconds` | Optional; `5` | Integer `1..3600`: grace period between SIGTERM and forced termination, validated even when termination is disabled. |
 | `execution_points` | Optional table | Additional execution contexts. |
 | `execution_points.custom` | Optional; `[]` | Unique names of 1–80 lowercase ASCII letters, digits, `-`, `_`, starting with a letter/digit. Built-in names are reserved. |
 | `imports` | Optional; `[]` | External references, declared only here as `[[imports]]`. |
@@ -488,13 +493,29 @@ limit of 1. Older CLI releases reject these new configuration fields; upgrade
 pinned consumers before adding them to shared rulesets.
 
 Use `please run --at check --fail-fast` to stop scheduling after a blocking
-failure or fatal execution error becomes known. Already running checks finish;
+failure or fatal execution error becomes known. Already running checks finish by default;
 all completed results are retained. Unstarted rules appear as `NOT_RUN` with a
 fail-fast reason. Non-blocking failures and advisory review errors do not trigger
 fail-fast; check errors and review parameter/prompt errors do. Reviews in an
 already invoked adapter batch finish together; later batches are skipped.
-The option applies only to that invocation, has no persistent configuration
-field, and does not change offline plan selection or cancel running processes.
+Fail-fast is enabled only for that invocation; there is no persistent enablement
+field, and offline plan selection is unchanged.
+
+To terminate running checks when fail-fast triggers, set
+`execution.fail_fast_terminate_running_instances = true`. This does not enable
+fail-fast; the invocation still needs `--fail-fast`. On supported macOS/Linux
+platforms, Please sends SIGTERM to each check's process group, waits up to
+`execution.fail_fast_termination_grace_seconds` (default 5), then sends SIGKILL
+if processes remain. This includes descendants whose direct parent already exited;
+deliberately detached processes can escape. Other platforms reject enabled termination.
+Interrupted checks become `CANCELLED`, retaining partial stdout/stderr, duration
+and any exit code. Checks completed before cancellation keep their results.
+Cancellations preserve the triggering FAIL/ERROR and its exit code; final snapshot
+validation still applies. Interrupted builds may leave incomplete artifacts or
+working-file changes; Please performs no rollback or repair. Review batches
+are unaffected. Termination settings do not change semantic plan identity.
+Older CLI releases reject these configuration fields and cannot read reports
+containing `CANCELLED`; upgrade consumers before using them.
 
 ### Fields shared by checks and reviews
 

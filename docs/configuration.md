@@ -59,6 +59,8 @@ project = "My_App"
 
 [execution]
 max_parallel = 4
+fail_fast_terminate_running_instances = false
+fail_fast_termination_grace_seconds = 5
 
 [execution_points]
 custom = ["release"]
@@ -70,6 +72,8 @@ custom = ["release"]
 | `max_display_files` | Optional; `5` | Integer `1..5`: changed paths shown in status. |
 | `execution` | Optional table | Check scheduling settings. |
 | `execution.max_parallel` | Optional; `4` | Positive integer: maximum running checks; `1` runs serially. |
+| `execution.fail_fast_terminate_running_instances` | Optional; `false` | Terminate running checks when invocation-level fail-fast triggers; requires Unix process groups. |
+| `execution.fail_fast_termination_grace_seconds` | Optional; `5` | Integer `1..3600`: grace period between SIGTERM and forced termination, validated even when termination is disabled. |
 | `execution_points` | Optional table | Additional execution contexts. |
 | `execution_points.custom` | Optional; `[]` | Unique names of 1–80 lowercase ASCII letters, digits, `-`, `_`, starting with a letter/digit. Built-in names are reserved. |
 | `imports` | Optional; `[]` | External references, declared only here as `[[imports]]`. |
@@ -104,6 +108,10 @@ do not stop remaining checks. Results retain canonical ID order. Existing rule
 files remain valid, but checks relying on serial execution need resources or a
 limit of 1. Older CLI releases reject these new configuration fields; upgrade
 pinned consumers before adding them to shared rulesets.
+
+Fail-fast termination is optional under `[execution]` and takes effect only with
+`run --fail-fast`. See the [fail-fast behavior](../README.md#project-settings) for
+process groups, cancellation, grace periods and interrupted-build limitations.
 
 ### Fields shared by checks and reviews
 

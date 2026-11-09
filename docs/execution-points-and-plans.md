@@ -25,7 +25,8 @@ before context preparation or provider requirements. Checks run before scheduled
 reviews, deduplicated and dispatched in ID order among runnable checks. Reports
 retain ID order; resource waits and concurrent completion do not change selection. Every scheduled rule is required.
 `run --fail-fast` may leave selected rules `NOT_RUN` after a blocking failure or
-fatal execution error; completed and already running work retains its results.
+fatal execution error. Completed work retains its results; running checks finish
+by default or become `CANCELLED` when configured termination interrupts them.
 This invocation-only option does not change plan identity or selected IDs. Checks-only execution rejects required reviews before any command starts.
 
 Plans include the selected point, rule sources, effective points, contributing
@@ -34,7 +35,7 @@ Each review with an explicit provider reference also records `provider` (the nam
 ID) and `provider_config` (its complete effective settings). Absent fields select
 the plan's legacy project provider. Model calls count distinct provider references
 and resolved Rule parameter environments and include_diff settings for adapters.
-Concurrency limits change execution strategy and are excluded from semantic plan
+Concurrency limits and fail-fast termination settings change execution strategy and are excluded from semantic plan
 identity. Resource declarations participate in check identity. No check, adapter
 request, network access or reconciliation occurs during preview.
 Incomplete snapshots or context preparation block execution. Preview does not

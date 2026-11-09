@@ -38,11 +38,15 @@ pub struct Config {
 #[serde(default, deny_unknown_fields)]
 pub struct Execution {
     pub max_parallel: std::num::NonZeroUsize,
+    pub fail_fast_terminate_running_instances: bool,
+    pub fail_fast_termination_grace_seconds: u64,
 }
 impl Default for Execution {
     fn default() -> Self {
         Self {
             max_parallel: std::num::NonZeroUsize::new(DEFAULT_MAX_PARALLEL).unwrap(),
+            fail_fast_terminate_running_instances: false,
+            fail_fast_termination_grace_seconds: DEFAULT_FAIL_FAST_TERMINATION_GRACE_SECONDS,
         }
     }
 }
@@ -365,6 +369,14 @@ pub(crate) fn validate(root: PathBuf, loaded: crate::discovery::Loaded) -> Resul
         )
         .collect();
     let config = loaded.config;
+    ensure!(
+        (1..=MAX_TIMEOUT_SECONDS).contains(&config.execution.fail_fast_termination_grace_seconds),
+        ".please/config.toml: execution.fail_fast_termination_grace_seconds must be 1..={MAX_TIMEOUT_SECONDS}"
+    );
+    ensure!(
+        cfg!(unix) || !config.execution.fail_fast_terminate_running_instances,
+        ".please/config.toml: execution.fail_fast_terminate_running_instances requires Unix process groups"
+    );
     nonempty(&config.project, "project").context(".please/config.toml")?;
     ensure!(
         (1..=MAX_DISPLAY_FILES).contains(&config.max_display_files),

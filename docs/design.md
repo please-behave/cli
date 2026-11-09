@@ -94,19 +94,23 @@ detection. String quoting and escaping are defined in the configuration referenc
 The consumer remains the working directory; PLEASE_RULE_DIRECTORY supplies the
 absolute Rule directory. Exit 0 is PASS, 1 is FAIL and 2 is ERROR; unexpected
 numeric exits produce an explicit FAIL diagnostic.
-Only completed FAIL can be non-blocking; ERROR and NOT_RUN always prevent success.
+Check ERROR, NOT_RUN and CANCELLED prevent success; advisory review errors remain visible.
 
-Commands run sequentially without an implicit shell. Both pipes are drained
+Commands run through a bounded scheduler without an implicit shell. Both pipes are drained
 concurrently to EOF, retaining only the first 64 KiB each and their complete byte
 totals. Truncation is recorded. Timeouts, signal termination, spawn failures and
 capture failures are ERROR. POSIX processes run in separate groups
 and descendants are killed on exit/timeout. Windows uses `taskkill /T /F` for timeout
 cleanup; detached descendants may escape termination. Pipes remaining open beyond
-two seconds produce ERROR. This is not a hostile-process sandbox.
+two seconds produce ERROR. Optional fail-fast termination sends SIGTERM to running
+check groups, waits the configured grace period, then sends SIGKILL if necessary. A surviving descendant
+receives the same grace even when its direct parent exits first. Cancellation
+retains captured output and is reported as CANCELLED; reviews are unaffected.
+This is not a hostile-process sandbox.
 
 Reports contain UTC timestamps, repository/project, HEAD, manifest/fingerprint,
 per-item status/duration/evidence/output and overall result. ERROR takes precedence,
-then blocking FAIL; NOT_RUN is blocking but does not replace an existing FAIL with ERROR.
+then blocking FAIL; NOT_RUN and CANCELLED block success but do not replace an existing FAIL with ERROR.
 Provider review durations reflect their batch invocation, not individual model timings;
 do not sum them. Available token usage is summed across batches;
 missing counters stay unavailable and are never estimated.

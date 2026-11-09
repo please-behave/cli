@@ -17,6 +17,16 @@ pub fn execute_with_context(
     execution_point: &str,
     hook: Option<&crate::reconciliation::HookContext>,
 ) -> Item {
+    execute_cancellable(project, check, execution_point, hook, None)
+}
+
+pub(crate) fn execute_cancellable(
+    project: &Project,
+    check: &Check,
+    execution_point: &str,
+    hook: Option<&crate::reconciliation::HookContext>,
+    cancellation: Option<&process::Cancellation>,
+) -> Item {
     let start = Instant::now();
     let mut item = Item::simple(&check.id, "check", Status::Error, String::new());
     item.blocking = check.blocking;
@@ -82,16 +92,24 @@ pub fn execute_with_context(
     if let Some(hook) = hook {
         hook.configure(&mut command);
     }
-    match process::run(&mut command, Duration::from_secs(check.timeout_seconds)) {
+    match process::run_cancellable(
+        &mut command,
+        Duration::from_secs(check.timeout_seconds),
+        cancellation,
+    ) {
         Ok(output) => {
-            item.status = if output.timed_out || matches!(output.status.code(), None | Some(2)) {
+            item.status = if output.cancelled {
+                Status::Cancelled
+            } else if output.timed_out || matches!(output.status.code(), None | Some(2)) {
                 Status::Error
             } else if output.status.success() {
                 Status::Pass
             } else {
                 Status::Fail
             };
-            item.reason = if output.timed_out {
+            item.reason = if output.cancelled {
+                "Fail-fast triggered; running check cancelled (SIGTERM, then SIGKILL if needed); partial output retained".into()
+            } else if output.timed_out {
                 "Command timed out".into()
             } else if output.status.code().is_none() {
                 "Check terminated by signal; execution could not complete".into()
@@ -131,6 +149,7 @@ pub(crate) fn schedule(
     checks: &[&Check],
     max_parallel: std::num::NonZeroUsize,
     fail_fast: bool,
+    cancellation: Option<&process::Cancellation>,
     execute: impl Fn(&Check) -> Item + Sync,
     progress: &mut dyn FnMut(Event<'_>),
 ) -> Vec<Item> {
@@ -211,6 +230,11 @@ pub(crate) fn schedule(
                             started.elapsed(),
                         );
                         stopped |= fail_fast && crate::report::prevents_success(&item);
+                        if stopped {
+                            if let Some(cancellation) = cancellation {
+                                cancellation.request();
+                            }
+                        }
                         progress(Event::Finished(index, &item));
                         results[index] = Some(item);
                     }
@@ -247,6 +271,11 @@ pub(crate) fn schedule(
                         resources.remove(resource.as_str());
                     }
                     stopped |= fail_fast && crate::report::prevents_success(&item);
+                    if stopped {
+                        if let Some(cancellation) = cancellation {
+                            cancellation.request();
+                        }
+                    }
                     progress(Event::Finished(index, &item));
                     results[index] = Some(item);
                 }
@@ -308,6 +337,7 @@ mod tests {
                     &checks,
                     2.try_into().unwrap(),
                     false,
+                    None,
                     |check| {
                         let index = usize::from(check.id.as_bytes()[0] - b'a');
                         started.send(index).unwrap();
@@ -350,6 +380,7 @@ mod tests {
             &checks,
             4.try_into().unwrap(),
             false,
+            None,
             |check| {
                 assert_ne!(check.id, "a", "simulated worker failure");
                 Item::simple(&check.id, "check", Status::Pass, String::new())
@@ -381,6 +412,7 @@ mod tests {
                         &checks,
                         2.try_into().unwrap(),
                         true,
+                        None,
                         |check| {
                             let index = usize::from(check.id.as_bytes()[0] - b'a');
                             started.send(index).unwrap();
@@ -440,6 +472,7 @@ mod tests {
             &checks,
             1.try_into().unwrap(),
             true,
+            None,
             |check| {
                 assert_ne!(check.id, "a", "simulated worker failure");
                 Item::simple(&check.id, "check", Status::Pass, String::new())

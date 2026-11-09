@@ -96,7 +96,8 @@ Please Behave should support quality gates that prevent progression when require
 
 Every selected rule executes by default. Explicit invocation-level fail-fast may
 stop scheduling after a blocking failure or fatal execution error; already
-running rules finish. Rules explicitly declare whether completed
+running checks finish by default, with optional graceful termination and explicit
+cancellation results. Rules explicitly declare whether completed
 violations block success; the default is blocking. An inability to complete a blocking review or any deterministic check prevents a
 successful overall result; advisory review errors remain visible.
 

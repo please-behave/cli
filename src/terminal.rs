@@ -71,7 +71,7 @@ fn status(status: Status, color: bool) -> String {
         Status::Pass => Tone::Success,
         Status::Fail => Tone::Failure,
         Status::Error => Tone::Warning,
-        Status::NotRun => Tone::Muted,
+        Status::NotRun | Status::Cancelled => Tone::Muted,
     };
     paint(status.label(), tone, color)
 }
@@ -242,7 +242,7 @@ fn progress_event(event: &crate::Progress<'_>, color: bool, width: Option<usize>
                 Status::Pass => Tone::Success,
                 Status::Fail => Tone::Failure,
                 Status::Error => Tone::Warning,
-                Status::NotRun => Tone::Muted,
+                Status::NotRun | Status::Cancelled => Tone::Muted,
             };
             let mut row = progress_row(
                 (*number, *total),
@@ -535,12 +535,20 @@ pub fn render_outcome(report: &Report, elapsed_ms: u64, color: bool) -> String {
             .iter()
             .filter(|r| r.status == Status::NotRun)
             .count();
+        let cancelled = report
+            .results
+            .iter()
+            .filter(|r| r.status == Status::Cancelled)
+            .count();
         let mut summary = format!("{count} rules");
         if failed > 0 {
             summary.push_str(&format!(" · {failed} failed"));
         }
         if errors > 0 {
             summary.push_str(&format!(" · {errors} errors"));
+        }
+        if cancelled > 0 {
+            summary.push_str(&format!(" · {cancelled} cancelled"));
         }
         if skipped > 0 {
             summary.push_str(&format!(" · {skipped} not executed"));

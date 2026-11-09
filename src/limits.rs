@@ -1,5 +1,6 @@
 //! Shared public-contract bounds. Keep README tables and boundary tests in sync.
 pub const DEFAULT_MAX_PARALLEL: usize = 4;
+pub const DEFAULT_FAIL_FAST_TERMINATION_GRACE_SECONDS: u64 = 5;
 pub const CONFIG_DIRECTORY: &str = ".please";
 pub const MAX_METADATA_BYTES: u64 = 64 * 1024;
 pub const MAX_INSTRUCTION_BYTES: u64 = 32 * 1024;

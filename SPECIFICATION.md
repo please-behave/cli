@@ -378,8 +378,25 @@ Acceptance: `tests/parallel.rs` covers scheduling, configuration and report beha
 `please run --fail-fast` stops scheduling after a blocking FAIL or fatal ERROR
 becomes known. The default continues all independent work. Check ERROR is fatal
 regardless of blocking; advisory review FAIL/ERROR does not stop scheduling.
-Review parameter/prompt errors remain fatal. Already running checks and reviews
-in an invoked adapter batch finish normally, and every completed result is saved.
+Review parameter/prompt errors remain fatal. Already running checks finish normally
+by default. Optional `[execution] fail_fast_terminate_running_instances = true`
+requests termination of running checks after fail-fast triggers. This setting does
+not enable fail-fast. `fail_fast_termination_grace_seconds` defaults to 5 and accepts
+integers 1..=3600, even when termination is disabled. Both fields are optional and
+excluded from semantic plan identity. No additional CLI flags are supported.
+On supported macOS/Linux platforms, termination sends SIGTERM to each check's
+process group, then SIGKILL after the grace period if processes remain, including
+when the direct child has already exited. Deliberately detached descendants may
+escape; this is not a process sandbox. Other platforms reject enabled termination
+rather than silently skipping graceful termination.
+Interrupted checks are `CANCELLED`, with an explicit reason, elapsed duration,
+exit code when available and captured partial stdout/stderr. Checks completed
+before cancellation retain their ordinary results. Cancellation never replaces
+the triggering FAIL (exit 1) or ERROR (exit 2); without a triggering failure it
+prevents success. Interrupted commands may leave incomplete builds or working-file
+changes; Please Behave performs no rollback or repair. Final snapshot validation
+still applies. Reviews in an invoked adapter batch finish normally,
+and every completed result is saved.
 Later review batches are not invoked after fail-fast triggers. No persistent
 `fail_fast` configuration field is supported. Offline plans retain the full
 selection because early termination depends on execution outcomes.
@@ -389,7 +406,9 @@ Unstarted selected rules retain their position and blocking metadata, with
 announces these rules as started. NOT_RUN does not replace a triggering FAIL
 (exit 1) or ERROR (exit 2). Existing report and plan schemas are unchanged.
 
-Acceptance: `tests/fail_fast.rs` covers CLI defaults, serial stopping, errors,
+Acceptance: `tests/fail_fast.rs` covers termination configuration, graceful group
+termination, escalation, partial output, saved cancellation and unchanged defaults
+using offline subprocess fixtures, plus CLI defaults, serial stopping, errors,
 advisory reviews, batch boundaries and saved reporting; scheduler unit tests use
 channels to verify parallel completion and stopping without timing assumptions.
 
@@ -533,7 +552,7 @@ when initialized input allows it. Invalid configuration preserves the prior
 report. Save UTC timestamp, repository/project, provider, input identity, rule
 results, durations, findings, output and available usage. Check ERROR and blocking
 review ERROR, parameter errors and missing prompts take precedence over blocking FAIL; non-blocking review ERROR stays
-visible and permits overall PASS. NOT_RUN blocks success without replacing an existing blocking FAIL with ERROR.
+visible and permits overall PASS. NOT_RUN and CANCELLED block success without replacing an existing blocking FAIL with ERROR.
 Disabled Rules stay out of results; blocking failed Checks leave selected Reviews NOT_RUN.
 
 Report schema 4 records plan schema 3, required IDs, blocking and rule provenance.
@@ -552,7 +571,7 @@ state on completion; descriptions must not wrap the row. Color is independent.
 Announce shared provider calls without claiming individual model completion or
 summing shared durations. Hide internal phases and successful process-exit reasons.
 Normal execution uses English: `RUNNING`, `provider call` / `provider calls`,
-and summary labels `rules`, `failed`, `errors` and `not executed`.
+and summary labels `rules`, `failed`, `errors`, `cancelled` and `not executed`.
 Empty execution prints `No rules executed`.
 Failures show actionable reasons and findings; raw captured output stays in details.
 Execution ends with one overall status/count/duration line, without a duplicate

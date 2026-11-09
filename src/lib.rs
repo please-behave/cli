@@ -170,12 +170,25 @@ pub fn verify_project_with_fail_fast(
         ));
     }
     let checks: Vec<_> = project.checks.iter().filter(|c| c.enabled).collect();
+    let cancellation = (fail_fast
+        && project
+            .config
+            .execution
+            .fail_fast_terminate_running_instances)
+        .then(|| {
+            process::Cancellation::new(std::time::Duration::from_secs(
+                project.config.execution.fail_fast_termination_grace_seconds,
+            ))
+        });
     if plan.executable() {
         items.extend(checks::schedule(
             &checks,
             project.config.execution.max_parallel,
             fail_fast,
-            |check| checks::execute_with_context(&project, check, &plan.at, hook),
+            cancellation.as_ref(),
+            |check| {
+                checks::execute_cancellable(&project, check, &plan.at, hook, cancellation.as_ref())
+            },
             &mut |event| {
                 let index = match event {
                     checks::Event::Queued(index, _)

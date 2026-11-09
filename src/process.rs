@@ -3,7 +3,10 @@ use serde::{Deserialize, Serialize};
 use std::{
     io::{Read, Write},
     process::{Command, ExitStatus, Stdio},
-    sync::mpsc,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        mpsc,
+    },
     thread,
     time::{Duration, Instant},
 };
@@ -22,7 +25,48 @@ pub struct Output {
     pub stdout: Capture,
     pub stderr: Capture,
     pub timed_out: bool,
+    pub cancelled: bool,
     pub duration_ms: u64,
+}
+/// Shared by one scheduler invocation and its check processes only.
+pub(crate) struct Cancellation {
+    requested: AtomicBool,
+    grace: Duration,
+}
+impl Cancellation {
+    pub(crate) fn new(grace: Duration) -> Self {
+        Self {
+            requested: AtomicBool::new(false),
+            grace,
+        }
+    }
+    pub(crate) fn request(&self) {
+        self.requested.store(true, Ordering::Relaxed);
+    }
+}
+
+#[cfg(unix)]
+fn request_termination(child: &std::process::Child) -> Result<()> {
+    // Children have private groups; include descendants even after the leader exits.
+    if unsafe { libc::kill(-(child.id() as i32), libc::SIGTERM) } == -1 {
+        let error = std::io::Error::last_os_error();
+        if error.raw_os_error() != Some(libc::ESRCH) {
+            return Err(error).context("cannot terminate check process group gracefully");
+        }
+    }
+    Ok(())
+}
+#[cfg(not(unix))]
+fn request_termination(_: &std::process::Child) -> Result<()> {
+    bail!("graceful check termination requires Unix process groups")
+}
+#[cfg(unix)]
+fn group_running(child: &std::process::Child) -> bool {
+    unsafe { libc::kill(-(child.id() as i32), 0) == 0 }
+}
+#[cfg(not(unix))]
+fn group_running(_: &std::process::Child) -> bool {
+    true
 }
 type Observer = Box<dyn FnMut(&[u8]) + Send>;
 fn drain(mut stream: impl Read, mut observer: Option<Observer>) -> Result<Capture> {
@@ -69,7 +113,15 @@ fn terminate_tree(child: &mut std::process::Child) {
 }
 
 pub fn run(command: &mut Command, timeout: Duration) -> Result<Output> {
-    run_observed(command, timeout, None, None, None)
+    run_observed(command, timeout, None, None, None, None)
+}
+
+pub(crate) fn run_cancellable(
+    command: &mut Command,
+    timeout: Duration,
+    cancellation: Option<&Cancellation>,
+) -> Result<Output> {
+    run_observed(command, timeout, None, None, None, cancellation)
 }
 
 /// Observe stdout while draining it, including bytes beyond the retained capture.
@@ -79,7 +131,7 @@ pub fn run_with_stdout_observer(
     timeout: Duration,
     observer: impl FnMut(&[u8]) + Send + 'static,
 ) -> Result<Output> {
-    run_observed(command, timeout, Some(Box::new(observer)), None, None)
+    run_observed(command, timeout, Some(Box::new(observer)), None, None, None)
 }
 
 /// Deliver stdin concurrently with output capture under the same process deadline.
@@ -95,6 +147,7 @@ pub fn run_with_input(
         timeout,
         Some(Box::new(observer)),
         Some(input),
+        None,
         None,
     )
 }
@@ -114,6 +167,7 @@ pub fn run_with_input_diagnostics(
         Some(Box::new(observer)),
         Some(input),
         Some(Box::new(diagnostics)),
+        None,
     )
 }
 
@@ -123,6 +177,7 @@ fn run_observed(
     mut observer: Option<Observer>,
     input: Option<Vec<u8>>,
     mut diagnostics: Option<Observer>,
+    cancellation: Option<&Cancellation>,
 ) -> Result<Output> {
     command.stdout(Stdio::piped()).stderr(Stdio::piped());
     #[cfg(unix)]
@@ -163,9 +218,19 @@ fn run_observed(
     }
     drop(sender);
     let mut timed_out = false;
+    let mut cancelling_since = None;
+    let mut completed = None;
     let status = loop {
         match child.try_wait() {
-            Ok(Some(status)) => break status,
+            Ok(Some(status)) => {
+                if cancelling_since.is_none() {
+                    break status;
+                }
+                completed = Some(status);
+                if !group_running(&child) {
+                    break status;
+                }
+            }
             Ok(None) => {}
             Err(e) => {
                 terminate_tree(&mut child);
@@ -173,7 +238,25 @@ fn run_observed(
                 return Err(e.into());
             }
         }
-        if start.elapsed() >= timeout {
+        if let Some(cancellation) = cancellation {
+            if cancelling_since.is_none() && cancellation.requested.load(Ordering::Relaxed) {
+                if let Err(error) = request_termination(&child) {
+                    terminate_tree(&mut child);
+                    let _ = child.wait();
+                    return Err(error);
+                }
+                cancelling_since = Some(Instant::now());
+            }
+        }
+        if let Some(since) = cancelling_since {
+            if since.elapsed() >= cancellation.expect("cancellation requested").grace {
+                terminate_tree(&mut child);
+                break match completed {
+                    Some(status) => status,
+                    None => child.wait()?,
+                };
+            }
+        } else if start.elapsed() >= timeout {
             timed_out = true;
             terminate_tree(&mut child);
             break child.wait()?;
@@ -195,7 +278,7 @@ fn run_observed(
             }
         }
     }
-    if !timed_out {
+    if !timed_out && cancelling_since.is_none() {
         if let Some(receiver) = input_result {
             receiver
                 .recv_timeout(Duration::from_secs(2))
@@ -208,6 +291,7 @@ fn run_observed(
         stdout: stdout.unwrap(),
         stderr: stderr.unwrap(),
         timed_out,
+        cancelled: cancelling_since.is_some(),
         duration_ms: start.elapsed().as_millis() as u64,
     })
 }
