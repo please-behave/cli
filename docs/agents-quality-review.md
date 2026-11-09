@@ -86,7 +86,7 @@ capture bound; usage statistics are not imported.
 
 ## CI results and baseline
 
-The existing Quality checks job fetches full history. Its
+The existing Check job fetches full history. Its
 [baseline helper](../scripts/review-change-base.py) uses the PR head/base merge-base
 for pull requests, the event's before commit for pushes, and HEAD for manual release
 verification. Missing event commits are fetched explicitly; invalid, zero, unavailable

@@ -10,8 +10,8 @@ on:
 permissions:
   contents: read
 jobs:
-  checks:
-    name: Quality checks
+  check:
+    name: Check
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     env:
