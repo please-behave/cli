@@ -14,6 +14,8 @@ pub const PLAN_SCHEMA_VERSION: u32 = 3;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Rule {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub review_input: Option<crate::config::ReviewInput>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub depends_on: Vec<String>,
     pub id: String,
@@ -46,6 +48,8 @@ pub struct Omission {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Input {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub commit_header: Option<String>,
     pub kind: String,
     pub head: Option<String>,
     pub fingerprint: String,
@@ -160,6 +164,15 @@ pub fn build(
     requested: Option<&str>,
     checks_only: bool,
 ) -> Result<PreparedPlan> {
+    build_with_context(project, requested, checks_only, None)
+}
+
+pub fn build_with_context(
+    project: &Project,
+    requested: Option<&str>,
+    checks_only: bool,
+    hook: Option<&crate::reconciliation::HookContext>,
+) -> Result<PreparedPlan> {
     let name = requested.unwrap_or("pre-push");
     anyhow::ensure!(
         project.effective.points.contains(name),
@@ -236,6 +249,9 @@ pub fn build(
         let provider = review.and_then(|r| r.provider.clone());
         let provider_config = provider.as_ref().map(|id| project.providers[id].clone());
         let rule = Rule {
+            review_input: review
+                .filter(|r| r.input == crate::config::ReviewInput::CommitHeader)
+                .map(|r| r.input),
             depends_on: project
                 .checks
                 .iter()
@@ -330,7 +346,9 @@ pub fn build(
         .dedup_by(|a, b| a.path == b.path && a.headings == b.headings);
     let mut review_input = None;
     if !active.is_empty() && blocking_reasons.is_empty() {
-        match crate::review_input::PreparedReviewInput::prepare(project, &active, &snapshot) {
+        match crate::review_input::PreparedReviewInput::prepare_with_context(
+            project, &active, &snapshot, hook,
+        ) {
             Ok(input) => {
                 context.selected_bytes = input.excerpts.iter().map(|e| e.text.len()).sum();
                 context.sections = input
@@ -372,6 +390,9 @@ pub fn build(
         blocking_reasons,
         at: name.into(),
         input: Input {
+            commit_header: review_input
+                .as_ref()
+                .and_then(|input| input.commit_header.clone()),
             kind: "worktree".into(),
             head: snapshot.head.clone(),
             fingerprint: snapshot.fingerprint.clone(),
@@ -394,7 +415,14 @@ pub fn build(
                     .parameters
                     .resolve(&project.root, &review.id)
                     .ok()
-                    .map(|environment| (review.provider.clone(), environment, review.include_diff))
+                    .map(|environment| {
+                        (
+                            review.provider.clone(),
+                            environment,
+                            review.include_diff,
+                            review.input,
+                        )
+                    })
             })
             .collect::<BTreeSet<_>>()
             .len(),
@@ -447,6 +475,7 @@ pub fn build(
         "project": project.config.project,
         "at": name, "checks_only": checks_only, "checks": checks, "reviews": reviews,
         "provider": plan.provider, "named_providers": named_providers, "head": snapshot.head, "files": files, "context": excerpts,
+        "commit_header": plan.input.commit_header,
         "complete": snapshot.complete, "change_base": plan.change_base, "scheduled": plan.scheduled, "omitted": plan.omitted,
     });
     plan.plan_id = format!("{:x}", Sha256::digest(serde_json::to_vec(&identity)?));

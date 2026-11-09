@@ -146,6 +146,38 @@ before enabling reviews.
 Acceptance: `tests/acceptance.rs::init_exact_paths_and_repeated_initialization_rejected`
 and `tests/acceptance.rs::init_rejects_existing_configuration_entries_without_writes`.
 
+## HDR-001: Commit-header reviews
+
+`review.input` selects `worktree` (default) or `commit-header`. Header reviews
+require the validated managed `commit-msg` hook with exactly one regular,
+nonsymlink message file. Only its first line is read: at most 4096 UTF-8 bytes,
+excluding LF or CRLF, nonempty and without control characters. The body is never
+read as review evidence. Direct runs and offline previews without hook context
+are blocked when a header review is selected. Disabled or unselected header
+reviews do not require a message file.
+
+Header reviews reject file/context selections and file-change triggers; they
+always omit the diff. Their adapter batches are separate from worktree reviews.
+Only configured criteria and the captured header are supplied as review evidence,
+without HEAD, file manifest, excerpts or diff. The provider-neutral adapter request
+retains protocol version 1 and exposes `input.commit_header`. No model or provider
+is built into the product. Header PASS/FAIL findings require
+`source = "commit-header"`, `path = null`, `line = 1`; ordinary reviews retain
+their existing file evidence contract and omit `source`.
+
+The header is captured during planning, participates in plan identity and is
+saved as `plan.input.commit_header` in reports. Recheck it after deterministic
+checks, before and after each adapter call and before saving the result. Missing,
+unreadable, invalid or changed headers prevent success; no stale verdict is
+accepted. Changes confined to the body do not invalidate a header-only review.
+Saved status evaluates working-tree freshness; the saved header is evidence of
+that hook invocation, not a new candidate message. Existing checks-first gating,
+blocking/advisory semantics and adapter failure handling apply unchanged.
+
+Acceptance: `tests/commit_header.rs::commit_header_hook_and_adapter_contract`
+covers real Git hooks, isolation, verdict evidence, gating, input bounds and
+header stability using offline fake adapters.
+
 ## PROV-001: Named adapter configurations
 
 All AI reviews use external executable adapters. No provider implementation or
@@ -178,13 +210,14 @@ tables. Merge top-level keys, with each review value replacing the provider valu
 at that key; nested tables and arrays are replaced whole. Please validates only
 JSON compatibility and transports values without interpreting provider meaning.
 Existing Rule parameter environments remain separate and are delivered as before.
-Batching requires equal provider references, Rule parameter environments and diff
-selection. Each review retains its own effective adapter parameters.
+Batching requires equal provider references, Rule parameter environments, input
+sources and diff selection. Each review retains its own effective adapter parameters.
 
 Responses require protocol_version = 1 and reviews matching the common verdict
 contract. Optional usage contains common token counters; absent usage remains
 unavailable. Each requested ID must occur exactly once with PASS, FAIL or ERROR.
-PASS/FAIL require existing manifest evidence and valid line numbers. Technical
+PASS/FAIL require source-appropriate evidence: existing manifest paths and valid
+line numbers for worktree reviews, or captured header evidence under HDR-001. Technical
 adapter failures may exit nonzero; no verdict is accepted on nonzero exit.
 Unsupported versions, unknown fields, malformed, incomplete, oversized or invalid
 responses produce ERROR. Raw stdout/stderr and parser details are suppressed.
@@ -202,8 +235,9 @@ for schemas, migration and a working dummy adapter.
 ## SEL-001: Selection and offline plans
 
 `--at NAME` selects a known execution point, defaulting to pre-push. Selection
-uses only centrally resolved effective assignments. Only worktree input is
-supported. Rules run once, checks first; results retain ID order within each kind.
+uses only centrally resolved effective assignments. Execution snapshots use the
+worktree; HDR-001 adds captured invocation evidence for commit-header reviews.
+Rules run once, checks first; results retain ID order within each kind.
 
 `--plan` uses the same selection/preparation as execution. Its human-readable
 output uses English labels and explanations, preserving configured values and
@@ -575,8 +609,8 @@ and provider settings, not a second interpretation of evidence selection.
 Require exactly one verdict per requested ID and no unexpected IDs. Verdicts are
 PASS, FAIL or ERROR. Each has a nonblank one-line summary of at most 120 characters
 and at most 20 findings, each with a nonblank message of at most 2000 UTF-8 bytes.
-Finding path and line keys are required but nullable. PASS/FAIL require at least
-one existing in-manifest file and positive, in-range line reference. Grounded
+Finding path and line keys are required but nullable. Worktree PASS/FAIL require
+at least one existing in-manifest file and positive, in-range line reference. Grounded
 references do not prove an LLM conclusion correct. Invalid types, unknown/duplicate
 keys, malformed/missing/duplicate results and incomplete coverage make the batch
 ERROR. Adapter stdout, including the envelope, is limited to 64 KiB. The shared
@@ -943,6 +977,7 @@ Public documentation explains supported behavior; proposals remain in the roadma
 | --- | --- |
 | TRIG-001 | `tests/review_triggers.rs::preview_and_execution_agree_and_nonmatches_need_no_provider_or_context` |
 | PROV-002 | `tests/cli_providers.rs::stdin_results_and_provider_isolation` |
+| HDR-001 | `tests/commit_header.rs::commit_header_hook_and_adapter_contract` |
 | PROV-001 | `tests/named_providers.rs::named_references_load_without_changing_legacy_defaults` |
 | EXT-001 | `tests/external_rule_sets.rs::shared_rules_are_reused_across_sets_and_points_offline` |
 | RULE-001 | `tests/execution_points.rs::resolution_obeys_membership_override_union_and_disabled_rules` |
@@ -972,7 +1007,8 @@ loads `.hannes/`. Repository-owned adapters live under `.please/adapters/` and b
 to development governance, not the product.
 
 Rule and provider IDs reserve `please-`. Generated integrity results use
-`please-plan`, `please-snapshot` and `please-tree-stability`, with report schema 4
+`please-plan`, `please-snapshot`, `please-tree-stability` and
+`please-commit-header-stability`, with report schema 4
 and existing execution semantics unchanged. Public library phase callbacks use
 English messages. Acceptance: `tests/runtime_namespace.rs` covers namespace
 isolation, reserved IDs, phase messages and integrity report IDs.

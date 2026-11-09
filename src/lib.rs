@@ -136,7 +136,7 @@ pub fn verify_project_with_fail_fast(
         plan,
         snapshot,
         review_input,
-    } = planner::build(&project, at, checks_only)?;
+    } = planner::build_with_context(&project, at, checks_only, hook)?;
     anyhow::ensure!(
         plan.selection_complete,
         "Execution point requires reviews; --checks-only cannot omit required rules"
@@ -365,6 +365,16 @@ pub fn verify_project_with_fail_fast(
         progress(Progress::Phase("Checking final working file state …"));
         if let Some(error) = stability_error(&project.root, &snapshot) {
             items.push(error);
+        }
+    }
+    if let Some(input) = &review_input {
+        if let Err(error) = input.ensure_stable() {
+            items.push(Item::simple(
+                "please-commit-header-stability",
+                "integrity",
+                Status::Error,
+                format!("Commit header unavailable or changed: {error:#}"),
+            ));
         }
     }
     for item in &mut items {

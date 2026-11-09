@@ -407,7 +407,9 @@ fn load_rules(
                 loaded.reviews.push((
                     path.clone(),
                     Review {
-                        include_diff: review.include_diff,
+                        input: review.input,
+                        include_diff: review.include_diff
+                            && review.input == config::ReviewInput::Worktree,
                         trigger: review.trigger,
                         provider: review.provider,
                         adapter_parameters: review.parameters,
@@ -519,6 +521,7 @@ pub(crate) fn init(root: &Path) -> Result<usize> {
         parameters: Default::default(),
         check: None,
         review: Some(crate::config::ReviewDefinition {
+            input: Default::default(),
             parameters: Default::default(),
             include_diff: true,
             trigger: None,

@@ -153,6 +153,7 @@ fn every_configuration_field_required_marker_and_default_is_documented() {
             timeout_seconds: 30,
         }),
         review: Some(config::ReviewDefinition {
+            input: Default::default(),
             parameters: Default::default(),
             include_diff: true,
             trigger: Some(config::ReviewTrigger {

@@ -10,7 +10,7 @@ use std::{
 pub use crate::limits::MAX_CONTEXT_BYTES;
 use crate::limits::{MAX_CONTEXT_FILE_BYTES as MAX_CONTEXT_FILE, MAX_CONTEXT_FILES};
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Excerpt {
     pub path: String,
     pub start_line: usize,

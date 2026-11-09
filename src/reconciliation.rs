@@ -24,12 +24,26 @@ pub struct HookInvocation {
     pub arguments: Vec<OsString>,
 }
 
-/// Validated context supplied only to deterministic checker processes.
+/// Validated Git invocation; raw hook arguments are supplied only to checks.
 pub struct HookContext {
     invocation: HookInvocation,
     owner: String,
 }
 impl HookContext {
+    pub(crate) fn commit_message_path(&self, root: &Path) -> Result<PathBuf> {
+        ensure!(
+            self.invocation.event == "commit-msg" && self.invocation.arguments.len() == 1,
+            "commit-header review requires exactly one message file from the managed commit-msg hook"
+        );
+        let path = PathBuf::from(&self.invocation.arguments[0]);
+        let path = if path.is_absolute() {
+            path
+        } else {
+            root.join(path)
+        };
+        safe_path(&path)?;
+        Ok(path)
+    }
     pub fn configure(&self, command: &mut Command) {
         command.env(GUARD, &self.owner);
         command.env("PLEASE_GIT_HOOK", &self.invocation.event);

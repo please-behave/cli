@@ -457,7 +457,7 @@ nested tables and arrays replace the entire value at that key. Settings are
 JSON-compatible TOML values, with no provider-specific validation in Please.
 This is separate from typed Rule parameters and their `PLEASE_PARAM_*` environment.
 Reviews batch only when their provider reference, resolved Rule parameter
-environment and `include_diff` agree. Every review carries its own merged settings.
+environment, input source and `include_diff` agree. Every review carries its own merged settings.
 
 Runtime requirements are checked only for selected reviews, after deterministic
 checks and immediately before invocation. Plans do not execute adapters or check
@@ -497,6 +497,7 @@ consumer through the existing shared provider call, after deterministic checks.
 
 | Field | Required / default | Meaning |
 | --- | --- | --- |
+| `review.input` | Optional; `"worktree"` | Evidence source: `worktree` or `commit-header`. Header reviews require the managed `commit-msg` hook. |
 | `review.provider` | Optional; `null` (omitted in TOML) | Named provider ID; omission requires an explicit default for selected reviews. |
 | `review.parameters` | Optional; `{}` | Structured adapter settings overriding provider keys. |
 | `review.trigger` | Optional; `null` (omitted in TOML) | Select this review only for matching changed files. |
@@ -507,6 +508,36 @@ consumer through the existing shared provider call, after deterministic checks.
 | `review.context` | Optional; `[]` | Up to 32 document selections as `[[review.context]]`. |
 | `review.context.path` | Required | Existing UTF-8 consumer-relative file. |
 | `review.context.headings` | Optional; `[]` | Up to 32 nonblank exact ATX Markdown headings; empty selects the whole document. |
+
+For a lightweight commit-header review, select the invocation input explicitly:
+
+```toml
+id = "commit-wording"
+description = "Require a specific English imperative commit summary"
+run_at = ["commit-msg"]
+
+[review]
+input = "commit-header"
+provider = "commit-quality"
+prompt = "prompt.md"
+```
+
+Configure `commit-quality` as an ordinary named executable adapter. The product
+supplies no model or provider. Header reviews always omit the diff and reject
+`files`, `context` and file-change triggers. They run after deterministic checks,
+in separate adapter batches from worktree reviews. Only the first line of Git's
+message file is evidence: 1–4096 UTF-8 bytes excluding LF/CRLF, without control
+characters. The body, source files, file manifest and HEAD are not sent to their
+adapter. See the [adapter protocol](adapter-protocol.md) for header findings.
+
+A selected header review blocks direct `please run --at commit-msg` and offline
+preview because those invocations have no validated message-file argument.
+`please sync` installs the managed hook; Git supplies the message when committing
+or amending. The header is captured during planning, included in plan identity
+and saved as `plan.input.commit_header`. Changes to the header during checks or
+review invalidate verification; body-only changes do not. Saved status compares
+working-tree freshness and retains the reviewed invocation's header; it does not
+revalidate a new candidate message. Header reviews are blocking by default.
 
 Context includes subsections and preserves original lines. Code-block headings
 are ignored; missing or ambiguous headings are errors. Overlapping selections
@@ -562,7 +593,9 @@ reviews still wait for the global deterministic-check gate. Snapshot and context
 limits remain unchanged.
 
 The provider must return exactly one PASS/FAIL/ERROR per requested ID. PASS/FAIL
-need an existing in-snapshot file and positive line reference. Malformed JSON,
+need an existing in-snapshot file and positive line reference for worktree reviews.
+Header reviews instead require `source = "commit-header"`, `path = null` and
+`line = 1` against the captured header. Malformed JSON,
 missing/duplicate verdicts, invalid evidence and provider failures produce ERROR.
 Summaries are single lines up to 120 characters; at most 20 findings per review,
 2000 bytes each. Non-blocking FAIL is visible; incomplete verification stays fatal.

@@ -51,3 +51,17 @@ pub fn schema(ids: &[&str]) -> Value {
         }}
     }})
 }
+
+/// Header evidence is invocation input rather than a repository file.
+pub fn header_schema(ids: &[&str]) -> Value {
+    let mut value = schema(ids);
+    let finding = &mut value["properties"]["reviews"]["items"]["properties"]["findings"]["items"];
+    finding["required"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!("source"));
+    finding["properties"]["source"] = json!({"type":"string", "enum":["commit-header"]});
+    finding["properties"]["path"] = json!({"type":"null"});
+    finding["properties"]["line"] = json!({"type":"integer", "enum":[1]});
+    value
+}

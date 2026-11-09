@@ -236,3 +236,10 @@ waits consume no worker slots. Known unsuccessful prerequisites propagate NOT_RU
 before fail-fast marks unrelated pending work. The report's aggregate outcome
 ignores dependency skips and retains the originating failure's enforcement. Reviews
 remain in the separate phase behind that aggregate gate and snapshot validation.
+
+Commit-header reviews explicitly select a separate evidence source. The validated
+managed hook supplies the message path only to core preparation; adapters receive
+its bounded first line, never the raw path or Git hook arguments. Header contents
+participate in plan identity and are checked for stability independently of the
+working-tree snapshot. Input source separates adapter batches, and the verdict
+validator requires header-specific evidence rather than a fabricated file location.

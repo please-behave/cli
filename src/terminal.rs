@@ -272,11 +272,17 @@ fn progress_event(
                     let line = format!(
                         "  {}{}",
                         short_summary(&finding.message),
-                        finding
-                            .path
-                            .as_ref()
-                            .map(|path| format!(" [{}:{}]", clean(path), finding.line.unwrap_or(0)))
-                            .unwrap_or_default()
+                        if finding.source.is_some() {
+                            " [commit-header:1]".into()
+                        } else {
+                            finding
+                                .path
+                                .as_ref()
+                                .map(|path| {
+                                    format!(" [{}:{}]", clean(path), finding.line.unwrap_or(0))
+                                })
+                                .unwrap_or_default()
+                        }
                     );
                     row.push_str(
                         &width
@@ -675,6 +681,12 @@ pub fn render_plan(plan: &crate::planner::Plan, color: bool) -> String {
             clean(&plan.required_ids.join(", "))
         ));
     }
+    if let Some(header) = &plan.input.commit_header {
+        text.push_str(&format!(
+            "Commit header (saved invocation input): {}\n",
+            clean(header)
+        ));
+    }
     if let Some(config) = &plan.provider {
         text.push_str(&format!(
             "Default adapter: {} · Timeout: {} s\n",
@@ -775,6 +787,12 @@ pub fn render(report: &Report, color: bool) -> String {
         if !report.results.iter().any(|item| item.kind == "check") {
             text.push_str("No active checks configured.\n");
         }
+    }
+    if let Some(header) = &report.plan.input.commit_header {
+        text.push_str(&format!(
+            "Commit header (saved invocation input): {}\n",
+            clean(header)
+        ));
     }
     text.push_str(&format!(
         "\n{:<9} {:<24} {:<9} {:<9} SUMMARY\n",
@@ -896,20 +914,24 @@ pub fn render_details(report: &Report, color: bool) -> String {
             clean(&item_reason(item))
         ));
         for finding in &item.findings {
-            let reference = finding
-                .path
-                .as_ref()
-                .map(|path| {
-                    format!(
-                        " [{}:{}]",
-                        clean(path),
-                        finding
-                            .line
-                            .map(|line| line.to_string())
-                            .unwrap_or_else(|| "?".into())
-                    )
-                })
-                .unwrap_or_default();
+            let reference = if finding.source.is_some() {
+                " [commit-header:1]".into()
+            } else {
+                finding
+                    .path
+                    .as_ref()
+                    .map(|path| {
+                        format!(
+                            " [{}:{}]",
+                            clean(path),
+                            finding
+                                .line
+                                .map(|line| line.to_string())
+                                .unwrap_or_else(|| "?".into())
+                        )
+                    })
+                    .unwrap_or_default()
+            };
             text.push_str(&format!("  - {}{}\n", clean(&finding.message), reference));
         }
         for (name, capture) in [("stdout", &item.stdout), ("stderr", &item.stderr)] {

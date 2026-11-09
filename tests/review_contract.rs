@@ -45,6 +45,7 @@ fn schema_and_wire_types_cover_the_same_fields_and_verdicts() {
             status: Status::Pass,
             reason: "Evidence inspected".into(),
             findings: vec![Finding {
+                source: None,
                 message: "Found it".into(),
                 path: None,
                 line: None,
@@ -103,6 +104,7 @@ fn review_contract_enforces_boundaries_and_semantic_evidence_locally() {
         "blank-message",
         "zero-line",
         "missing-path",
+        "header-evidence",
         "extra-id",
         "duplicate-id",
         "not-run",
@@ -123,6 +125,10 @@ fn review_contract_enforces_boundaries_and_semantic_evidence_locally() {
             "blank-message" => verdict["findings"][0]["message"] = "  ".into(),
             "zero-line" => verdict["findings"][0]["line"] = 0.into(),
             "missing-path" => verdict["findings"][0]["path"] = "missing.rs".into(),
+            "header-evidence" => {
+                verdict["findings"][0]["source"] = "commit-header".into();
+                verdict["findings"][0]["path"] = Value::Null;
+            }
             "extra-id" => verdict["id"] = "not-requested".into(),
             "duplicate-id" => value["reviews"]
                 .as_array_mut()

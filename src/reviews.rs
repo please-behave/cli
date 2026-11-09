@@ -17,6 +17,16 @@ pub fn parse(
     snapshot: &Snapshot,
     json: &str,
 ) -> Result<Vec<Item>> {
+    parse_with_header(project, active, snapshot, json, None)
+}
+
+fn parse_with_header(
+    project: &Project,
+    active: &[&Review],
+    snapshot: &Snapshot,
+    json: &str,
+    header: Option<&str>,
+) -> Result<Vec<Item>> {
     ensure!(
         json.len() as u64 <= crate::limits::MAX_PROVIDER_RESPONSE_BYTES,
         "provider JSON exceeds {} bytes",
@@ -54,6 +64,8 @@ pub fn parse(
             verdict.findings.len() <= crate::limits::MAX_FINDINGS,
             "too many findings"
         );
+        let header_review = active.iter().find(|r| r.id == verdict.id).unwrap().input
+            == crate::config::ReviewInput::CommitHeader;
         let mut grounded = false;
         for finding in &verdict.findings {
             ensure!(
@@ -62,6 +74,21 @@ pub fn parse(
                 "invalid finding message"
             );
             ensure!(finding.line != Some(0), "evidence line must be positive");
+            if header_review {
+                ensure!(
+                    header.is_some()
+                        && finding.source == Some(crate::report::EvidenceSource::CommitHeader)
+                        && finding.path.is_none()
+                        && finding.line == Some(1),
+                    "commit-header findings require captured header evidence, source commit-header, null path and line 1"
+                );
+                grounded = true;
+                continue;
+            }
+            ensure!(
+                finding.source.is_none(),
+                "file reviews cannot cite commit-header evidence"
+            );
             if let Some(path) = &finding.path {
                 ensure!(
                     snapshot.files.contains_key(path),
@@ -158,7 +185,12 @@ pub(crate) fn execute_prepared_observed(
     before_batch: &mut dyn FnMut(&[&Review], &[Item]) -> bool,
 ) -> (Vec<Item>, Option<TokenUsage>) {
     let mut groups = std::collections::BTreeMap::<
-        (Option<String>, crate::parameters::Environment, bool),
+        (
+            Option<String>,
+            crate::parameters::Environment,
+            bool,
+            crate::config::ReviewInput,
+        ),
         Vec<&Review>,
     >::new();
     let mut items = Vec::new();
@@ -177,7 +209,12 @@ pub(crate) fn execute_prepared_observed(
             });
         match resolved {
             Ok(environment) => groups
-                .entry((review.provider.clone(), environment, review.include_diff))
+                .entry((
+                    review.provider.clone(),
+                    environment,
+                    review.include_diff,
+                    review.input,
+                ))
                 .or_default()
                 .push(review),
             Err(error) => {
@@ -202,7 +239,7 @@ pub(crate) fn execute_prepared_observed(
         )
     });
     let mut usages = Vec::new();
-    for ((_, parameters, _), reviews) in groups {
+    for ((_, parameters, _, source), reviews) in groups {
         if !before_batch(&reviews, &items) {
             items.extend(reviews.iter().map(|review| {
                 let mut item = Item::simple(
@@ -218,23 +255,25 @@ pub(crate) fn execute_prepared_observed(
         }
         // A snapshot check is required before every provider invocation, including
         // later parameter batches. Never reuse prepared evidence after edits.
-        let stable = crate::git_snapshot::capture(&project.root).is_ok_and(|current| {
-            crate::git_snapshot::compare(snapshot, &current, 0).state == "CURRENT"
-        });
+        let stable = input.ensure_stable().is_ok()
+            && crate::git_snapshot::capture(&project.root).is_ok_and(|current| {
+                crate::git_snapshot::compare(snapshot, &current, 0).state == "CURRENT"
+            });
+        let batch_input = input.for_source(source);
         let start = Instant::now();
         let response = if stable {
             provider.review_with_usage(&Request {
                 project,
                 reviews: &reviews,
                 snapshot,
-                input,
+                input: &batch_input,
                 parameters: &parameters,
                 execution_point,
             })
         } else {
             crate::provider::Response {
                 verdict: Err(anyhow::anyhow!(
-                    "Working files changed or snapshot is incomplete; no provider call made"
+                    "Working files or commit header changed, or input is incomplete; no provider call made"
                 )),
                 usage: None,
             }
@@ -243,7 +282,8 @@ pub(crate) fn execute_prepared_observed(
         let result = response
             .verdict
             .and_then(|json| {
-                parse(project, &reviews, snapshot, &json).map_err(|_| anyhow::anyhow!("Invalid adapter review response; structured verdict and evidence requirements were not met"))
+                input.ensure_stable()?;
+                parse_with_header(project, &reviews, snapshot, &json, batch_input.commit_header.as_deref()).map_err(|_| anyhow::anyhow!("Invalid adapter review response; structured verdict and evidence requirements were not met"))
             });
         let mut results = match result {
             Ok(items) => items,

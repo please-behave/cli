@@ -131,11 +131,34 @@ each has independent merged adapter settings.
 Statuses are exactly PASS, FAIL and ERROR. Reasons are nonempty single lines of
 at most 120 characters. Findings contain message (1–2000 UTF-8 bytes), path and
 line, with at most 20 findings per review. Path and line must be present, although
-both can be null. A line requires a path. PASS/FAIL need at least one path in the
-verified manifest and a positive line within that file. ERROR may have no findings.
+both can be null. For worktree evidence, a line requires a path. Worktree
+PASS/FAIL need at least one path in the verified manifest and a positive line within that file. ERROR may have no findings.
 Wrong types, extra fields, missing/duplicate/extra review IDs and invalid evidence
 invalidate the whole batch. Provider-specific envelopes and Markdown fences are
 not accepted; adapters must translate them.
+
+Commit-header reviews use the same versioned envelope, with a source-specific
+response schema. Each review has `input: "commit-header"`; `input.commit_header`
+is the captured first line as a JSON string. The remaining input fields contain
+empty excerpts, manifest, focused paths and diff, with `diff_truncated: false`;
+`head` is null. The prompt contains the configured criteria and header, without
+repository orientation. Adapters must not add repository or commit-body context.
+Worktree and header reviews never share a batch. Worktree review metadata uses
+`input: "worktree"` and retains its existing evidence contract.
+
+For header PASS/FAIL, provide at least one finding like:
+
+```json
+{"source":"commit-header","message":"The summary names a concrete action in the imperative.","path":null,"line":1}
+```
+
+`source` is an optional addition to the response wire type, required only for
+header evidence; file findings continue to omit it. Header reviews reject file
+findings, absent header evidence and any line except 1. Worktree reviews reject
+header findings. ERROR may have no findings. The CLI captures and revalidates the
+message independently; the adapter receives no raw Git hook arguments or path.
+Older adapters may continue serving worktree reviews unchanged, but must support
+the supplied header schema before they can serve this new input kind.
 
 Usage is optional or null. It contains nonnegative integer input_tokens,
 cached_input_tokens and output_tokens plus optional nullable reasoning_output_tokens
