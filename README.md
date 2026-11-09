@@ -98,7 +98,7 @@ build it from source; Python and Node are used by Please Behave's development to
 
 ### Install a release
 
-Download the matching v0.1.0 archive and `SHA256SUMS` from
+Download the matching v0.3.1 archive and `SHA256SUMS` from
 [GitHub Releases](https://github.com/please-behave/cli/releases):
 
 | Platform | Target in the archive name |
