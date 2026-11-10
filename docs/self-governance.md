@@ -76,7 +76,7 @@ use independent synthetic configurations.
 
 The 15 local [checks](../.please/checks) use string commands. Python scripts run
 as `python3 scripts/<name>.py`, relative to the consuming repository root.
-The published v0.5.0 governor supports these commands and explicit path
+The published v0.5.1 governor supports these commands and explicit path
 references for imported Checks. There are no local index.sh launchers.
 Local Rule directories and IDs use descriptive names without numeric prefixes.
 Imported Rules retain their git-prefixed binding namespace. The native-smoke Check
@@ -213,7 +213,7 @@ future work.
 ## CI, pinning and Renovate
 
 [.please-version](../.please-version) pins the separately installed governor to
-v0.5.0. Local `mise deploy` uses the checksum-verifying
+v0.5.1. Local `mise deploy` uses the checksum-verifying
 [scripts/deploy.py](../scripts/deploy.py) installer. Ubuntu workflows use
 [Please Behave Action v1.1.1](https://github.com/please-behave/action/releases/tag/v1.1.1),
 pinned to `3f726664f6a18193ac1bfa0f542e34ba76f24523`, with the version read

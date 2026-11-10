@@ -831,7 +831,7 @@ commit/push feedback instead of manually running checks,
 tests, linters or builds. They may read saved reports without rerunning Rules.
 The manual mise check task delegates to published Please Behave at pre-push.
 All four external Rule Set imports and the independent Gemini Flash-Lite provider
-import pin the same reviewed full Git commit. The published governor is v0.5.0.
+import pin the same reviewed full Git commit. The published governor is v0.5.1.
 The three existing imports preserve their execution-point and parameter semantics.
 Release jobs and execution points are `release-readiness` and `release-candidate`.
 Both jobs depend only on Semantic Release planning and run in parallel. Publish
