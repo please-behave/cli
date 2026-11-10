@@ -762,13 +762,15 @@ An executable plan exits 0; a blocked/invalid plan exits 2.
 The public GitHub Action is maintained independently in
 [please-behave/action](https://github.com/please-behave/action). Its repository
 owns the Action implementation, inputs, supported runners and acceptance tests.
-The Action revision and selected CLI release are independent. Ubuntu CI uses
-Action v1.1.1 pinned to `3f726664f6a18193ac1bfa0f542e34ba76f24523`, with
+The Action revision and selected CLI release are independent. CI and native release jobs use
+Action v1.2.0 pinned to `722d5967c094e5ac4bfe25e9f82b020ff34e9487`, with
 the CLI version read from `.please-version`. Installation-only mode precedes
 explicit synchronization; the published Action then executes `check`, including
 applicable reviews, with Job Summaries enabled. CI retains the CLI report and
 Action Summary; local wrapper runs also retain the companion execution record.
-The Action supports Ubuntu runners; native release builds retain their independent gates.
+Release readiness and native candidate jobs execute through the same Action with
+`checks-only` and Job Summaries enabled, preserving their independent gates.
+The Action supports Ubuntu and macOS runners.
 
 Supported hosted CI/release targets are macOS Apple Silicon, macOS Intel and
 Linux x64 and ARM64 (GNU/glibc); Windows builds/releases are excluded. Linux ARM64
@@ -847,7 +849,7 @@ that proof, rather than rerun during release readiness.
 Candidate selects format, clippy, rust-tests, native-build, native-smoke,
 release-package and release-package-verify on all four native hosts. Existing
 native test coverage is retained. The published governor is installed outside the
-checkout through scripts/deploy.py; its pin is recorded in .please-version. Version stamping occurs
+checkout through the published Action; its pin is recorded in .please-version. Version stamping occurs
 before Please Behave snapshots inputs. Packaging depends on successful formatting,
 lint, tests and smoke; smoke depends on build. The binary hash before/after smoke
 must agree with the packaged bytes. Each archive is verified before upload.

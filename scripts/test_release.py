@@ -279,13 +279,17 @@ class ReleaseTests(unittest.TestCase):
         for name in ("release-readiness", "release-candidate"):
             self.assertIn("needs: plan", jobs[name])
             self.assertIn("needs.plan.outputs.release == 'true'", jobs[name])
-            self.assertIn(f"please run --at {name} --checks-only", jobs[name])
+            self.assertIn(f"execution-point: {name}", jobs[name])
+            self.assertIn("checks-only: 'true'", jobs[name])
+            self.assertIn("summary: 'true'", jobs[name])
+            self.assertNotIn("please run", jobs[name])
             self.assertNotIn("continue-on-error", jobs[name])
         self.assertIn("actions: read", jobs["release-readiness"])
         for name in ("plan", "release-candidate", "publish"):
             self.assertNotIn("actions: write", jobs[name])
-        self.assertIn("scripts/deploy.py", jobs["release-candidate"])
-        self.assertIn("runner.temp", jobs["release-candidate"])
+        reference = re.search(r"please-behave/action@[a-f0-9]{40}", jobs["release-readiness"])[0]
+        self.assertIn(reference, jobs["release-candidate"])
+        self.assertIn("version: ${{ steps.governor.outputs.version }}", jobs["release-candidate"])
         self.assertNotIn("setup-node", jobs["release-candidate"])
         for name in ("plan", "publish"):
             self.assertNotIn("please run", jobs[name])

@@ -165,10 +165,11 @@ without building or publishing again. Partial publication still needs inspection
 
 Published releases provide four native archives and `SHA256SUMS`. Build jobs
 transfer archives, metadata and smoke receipts using run/attempt-specific artifact
-names. Ubuntu CI and Readiness use the SHA-pinned [Action v1.1.1](https://github.com/please-behave/action/releases/tag/v1.1.1)
-with the governor version from `.please-version`. Candidate uses the existing
-cross-platform `scripts/deploy.py` installer under `$RUNNER_TEMP`, preserving
-checksum and executable-version verification without changing the Action repository.
+names. CI, Readiness and all four native Candidate jobs use the SHA-pinned
+[Action v1.2.0](https://github.com/please-behave/action/releases/tag/v1.2.0)
+with the governor version from `.please-version`. Installation precedes explicit
+synchronization, then the Action executes each gate with a Job Summary.
+Readiness and Candidate set `checks-only: 'true'`; CI retains applicable reviews.
 The governor is always a published binary, separate from the candidate under test.
 
 | Platform | Rust target | Archive |

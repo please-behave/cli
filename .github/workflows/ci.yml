@@ -39,7 +39,7 @@ jobs:
         id: governor
         run: echo "version=$(cat .please-version)" >> "$GITHUB_OUTPUT"
       - name: Install pinned published Please Behave
-        uses: please-behave/action@3f726664f6a18193ac1bfa0f542e34ba76f24523 # v1.1.1
+        uses: please-behave/action@722d5967c094e5ac4bfe25e9f82b020ff34e9487 # v1.2.0
         with:
           version: ${{ steps.governor.outputs.version }}
           run: 'false'
@@ -48,7 +48,7 @@ jobs:
       - name: Establish review comparison baseline
         run: python3 scripts/review-change-base.py
       - name: Run Please Behave checks and applicable reviews
-        uses: please-behave/action@3f726664f6a18193ac1bfa0f542e34ba76f24523 # v1.1.1
+        uses: please-behave/action@722d5967c094e5ac4bfe25e9f82b020ff34e9487 # v1.2.0
         with:
           version: ${{ steps.governor.outputs.version }}
           execution-point: check

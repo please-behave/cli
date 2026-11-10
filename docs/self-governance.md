@@ -214,12 +214,13 @@ future work.
 
 [.please-version](../.please-version) pins the separately installed governor to
 v0.5.1. Local `mise deploy` uses the checksum-verifying
-[scripts/deploy.py](../scripts/deploy.py) installer. Ubuntu workflows use
-[Please Behave Action v1.1.1](https://github.com/please-behave/action/releases/tag/v1.1.1),
-pinned to `3f726664f6a18193ac1bfa0f542e34ba76f24523`, with the version read
+[scripts/deploy.py](../scripts/deploy.py) installer. CI and native release workflows use
+[Please Behave Action v1.2.0](https://github.com/please-behave/action/releases/tag/v1.2.0),
+pinned to `722d5967c094e5ac4bfe25e9f82b020ff34e9487`, with the version read
 from `.please-version` and `run: 'false'`. The Action adds the installed release
 to PATH. Renovate proposes CLI version-pin and Action SHA updates without
-automerging governor version changes.
+automerging governor version changes. Release readiness and native candidate gates
+execute through the same Action with `checks-only: 'true'` and `summary: 'true'`.
 
 Renovate applies a minimum release age of seven days, or fourteen days for major
 updates. This is best effort: updates without a release timestamp may proceed.
