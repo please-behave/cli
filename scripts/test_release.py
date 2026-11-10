@@ -314,7 +314,7 @@ class ReleaseTests(unittest.TestCase):
         self.assertEqual({r["id"] for r in definitions if "release-candidate" in r["run_at"]},
                          {"format", "clippy", "rust-tests", "native-build", "native-smoke", "release-package", "release-package-verify"})
         self.assertEqual({r["id"] for r in definitions if "release-readiness" in r["run_at"]},
-                         {"rust-audit", "npm-audit", "commit-range"})
+                         {"rust-audit", "npm-audit"})
         self.assertEqual(by_id["native-smoke"]["depends_on"], ["native-build"])
         self.assertEqual(set(by_id["release-package"]["depends_on"]), {"format", "clippy", "rust-tests", "native-smoke"})
         self.assertEqual(by_id["release-package-verify"]["depends_on"], ["release-package"])

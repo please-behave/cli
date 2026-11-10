@@ -55,9 +55,6 @@ jobs:
           summary: 'true'
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          COMMIT_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
-          COMMIT_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
-          PR_TITLE: ${{ github.event.pull_request.title }}
       - name: Summarize AGENTS.md review
         if: always()
         run: python3 scripts/agents-review-summary.py

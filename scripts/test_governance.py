@@ -36,7 +36,7 @@ class GovernanceTests(unittest.TestCase):
         self.assertLess(ci.index("scripts/review-change-base.py"), ci.index(execution))
         self.assertIn("GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}", execution)
         for variable in ("COMMIT_BASE:", "COMMIT_HEAD:", "PR_TITLE:"):
-            self.assertIn(variable, execution)
+            self.assertNotIn(variable, execution)
         self.assertIn("run: python3 scripts/agents-review-summary.py", ci)
         self.assertIn("path: .please/reports/last.json", ci)
         self.assertNotIn("scripts/run-execution-point.py", ci)

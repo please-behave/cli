@@ -23,7 +23,7 @@ in `.please-version`, using `.please/`. `mise deploy` installs that exact releas
 Build the candidate separately as described in the README; it never becomes the
 governor. See [repository quality gates](docs/self-governance.md) for execution
 points, prerequisites, CI pinning and Renovate updates. Prepare dependencies
-explicitly before running the offline local hooks.
+explicitly before running pre-commit and pre-push, which remain offline.
 
 Commit and push to receive validation feedback from the installed Please Behave hooks.
 Agents must not manually run comprehensive final validation, including
@@ -38,13 +38,16 @@ Commit Cargo.lock; exclude reports, credentials and local MCP configuration.
 
 ## Commits
 
-Use Conventional Commit types: `build`, `chore`, `ci`, `docs`, `feat`, `fix`,
+Use Conventional Commit types: `build`, `chore`, `ci`, `config`, `docs`, `feat`, `fix`,
 `perf`, `refactor`, `revert`, `style`, `test`. Other types are rejected.
 Use `type(scope): summary`; the scope is optional, but when present
 must come from the following list. A breaking-change `!` before the
-colon is supported. The summary must be nonempty without leading/trailing
-whitespace. Write a short imperative summary; bodies and footers are optional.
-The shared [commit policy](.githooks/commit-policy) defines the accepted types and scopes.
+colon is supported. Write a specific English imperative summary; bodies and
+footers are optional. The external conventional-commits Rule Set defines accepted
+types; [.please/commit-scopes.txt](.please/commit-scopes.txt) defines local scopes.
+Its advisory Gemini Flash-Lite Review evaluates only the header wording, without
+the diff. Export GEMINI_API_KEY for the hook; unavailable credentials or provider
+errors remain visible without blocking the commit.
 
 | Type | Purpose | Release |
 | --- | --- | --- |
@@ -56,6 +59,7 @@ The shared [commit policy](.githooks/commit-policy) defines the accepted types a
 | `refactor` | Code restructuring without intended behavior changes | Patch |
 | `revert` | Undo an earlier change | Patch for effective reversions |
 | `ci` | CI/CD workflows | None |
+| `config` | Configuration changes | None |
 | `docs` | Documentation | None |
 | `style` | Formatting and whitespace only | None |
 | `test` | Tests and test infrastructure | None |
@@ -87,7 +91,7 @@ sh scripts/setup-git-hooks.sh
 The Please Behave governor manages the three hooks through `please sync` and
 corresponding execution points. Pre-commit checks formatting and documentation; commit-msg checks the final message before Git
 creates or amends a commit; pre-push runs the complete local suite. The shared
-message checker reads `.githooks/commit-policy` and never calls a hook. The setup
+message checker and advisory wording Review are imported, with no local duplicate. The setup
 shim delegates to `please sync` without changing `core.hooksPath`. Please Behave
 preserves compatible unmanaged hook content. Each clone needs setup;
 Git's `--no-verify` can bypass a local hook; agents must never bypass validation.
@@ -112,6 +116,6 @@ Do not substitute a candidate built from this checkout.
 
 For release tooling changes, use the Node version in `mise.toml`, prepare npm
 dependencies with `npm ci --ignore-scripts`; pre-push runs the release tooling
-tests. CI also validates all proposed
-commit messages and the PR's squash title. Releases are manually started on main;
+tests. Commit syntax and wording are evaluated at commit-msg only.
+Releases are manually started on main;
 Semantic Release handles versions, tags, release notes and four native archives.

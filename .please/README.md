@@ -3,16 +3,18 @@
 This repository uses unversioned deterministic Rules with four pinned external
 Rule Sets: conventional commits, security, repository conventions and release
 readiness. A conditional AGENTS.md Review runs only at check through a named
-Gemini REST adapter. Git hooks and both release points select checks only.
+Gemini REST adapter. Commit-msg also runs an imported advisory header-only
+wording Review through the independently imported Gemini Flash-Lite provider.
+Pre-commit, pre-push and both release points select checks only.
 
-`checks/*/rule.toml` defines 17 local Rules using string commands for installed
+`checks/*/rule.toml` defines 15 local Rules using string commands for installed
 tools and consumer-root scripts. Cargo, Python helper and JavaScript tests each
 have one Rule and run at pre-push and again in CI. Cargo build, test, Clippy and
 MSRV commands and npm tests explicitly select offline mode. Local Rules declare
 their own run_at; no local Rule Sets are used.
 
 `release-readiness` requires exact-commit push CI proof, current dependency audits,
-committed-source security/license checks and release-tip commit validation.
+committed-source security/license checks.
 `release-ci.json` names the trusted repository, workflow, event, branch and required
 jobs. Successful partial CI reruns count retained successful jobs from the same
 run; individual steps are not checked.
@@ -25,13 +27,14 @@ workflow run/attempt. Publish verifies the complete set directly and never invok
 the governor. Cargo operations share a resource lock.
 
 `config.toml` declares both custom points and pins all four imports to the same
-reviewed immutable revision. Imported checks use `@rule/` or `@source/` resources.
+reviewed immutable revision, also shared by the independent provider import. Imported checks use `@rule/` or `@source/` resources.
 Existing check/pre-push snapshot semantics are unchanged; the new readiness binding
 explicitly selects `head` for security/license checks.
 `commit-scopes.txt` supplies the commit-message import's required
-scopes_file parameter and matches the scopes in `.githooks/commit-policy`. The
-local message check additionally enforces the narrower repository type allowlist and
-summary whitespace requirements. Git events use their fixed, identically named built-in points.
+scopes_file parameter. The imported Check validates syntax, types and scopes;
+there is no local duplicate, commit-range or PR-title check. The advisory wording
+Review uses only the header and requires GEMINI_API_KEY in the hook environment.
+Review FAIL and ERROR remain visible without blocking commits. Git events use their fixed, identically named built-in points.
 
 ```sh
 please sync --yes

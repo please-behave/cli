@@ -78,7 +78,6 @@ jobs:
       - name: Verify release readiness
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          COMMIT_HEAD: ${{ github.sha }}
         run: please run --at release-readiness --checks-only
       - name: Upload readiness report
         if: always()

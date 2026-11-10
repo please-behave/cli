@@ -100,7 +100,7 @@ Do not migrate early or close an issue while required stages remain.
 
 - Work on `main`. Commit and push each coherent change automatically, including
   documentation changes, within the agreed stages.
-- Follow `CONTRIBUTING.md`, `.githooks/commit-policy` and `docs/releasing.md`.
+- Follow `CONTRIBUTING.md` and `docs/releasing.md`.
   Stage only task-related files and preserve unrelated user edits.
   Never force-push or rewrite another person's work; amend only your own
   unpublished commits when appropriate.

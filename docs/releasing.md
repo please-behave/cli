@@ -36,17 +36,15 @@ release tag, then generates release notes for the GitHub Release:
 | `feat` | Minor |
 | `fix`, `perf`, `chore`, `build`, `refactor`, effective `revert` | Patch |
 | Any allowed type with `!` or a `BREAKING CHANGE:` footer | Minor during `0.x`; Major after explicit stable graduation |
-| `ci`, `docs`, `style`, `test` without a breaking change | None |
+| `ci`, `config`, `docs`, `style`, `test` without a breaking change | None |
 | Historical `build(release)` version commit without a breaking change | None |
 
-The [commit policy](../.githooks/commit-policy) allows eleven types, including
-`chore`, and optional scopes from the list in [CONTRIBUTING.md](../CONTRIBUTING.md#commits).
-The Conventional Commits parser recognizes the documented breaking `!` syntax.
-The local hook and CI reject unsupported types or scopes. CI validates PR commit messages and the PR title used for a
-squash merge. Use squash/rebase merging with conventional messages; default merge
-commit messages do not satisfy this project's policy.
-Push/PR checks validate the proposed commit range; manual releases without a
-base validate the selected tip, not legacy commit messages from before this policy.
+The external conventional-commits Rule Set allows twelve types and optional
+scopes from [.please/commit-scopes.txt](../.please/commit-scopes.txt). The
+Conventional Commits parser recognizes the documented breaking `!` syntax.
+The commit-msg hook validates syntax and runs an advisory header-only wording
+Review. CI and release readiness do not validate commit ranges or PR titles.
+Semantic Release still analyzes history to determine versions and release notes.
 
 The highest required increment across all effective commits wins. During 0.x,
 features and breaking changes both require minor; patch changes never override them. Patch maintenance (`chore`, `build`, `refactor`, `revert`)
@@ -94,7 +92,7 @@ Please Behave. Dependencies are locked in `package-lock.json`.
    The pinned external `release/readiness` set verifies successful push CI for the
    exact source commit, expected repository/workflow, main branch and required jobs,
    plus committed-source sensitive filenames, secrets and license. Local Rules run
-   current Rust/npm audits and validate the release-tip commit. General documentation,
+   current Rust/npm audits. General documentation,
    Python/JavaScript test suites, workflow checks and MSRV are reused through CI proof.
 3. The four-platform Candidate matrix installs the same pinned published governor
    outside the checkout using `scripts/deploy.py`, synchronizes imports and stamps
@@ -196,7 +194,7 @@ Native downloads still need Git and, for enabled reviews, Codex CLI/login.
   rustfmt, Clippy with warnings denied, unit/acceptance tests, optimized native build and real CLI smoke test. Tests use fake providers,
   never real Codex, credentials or paid APIs.
 - Linux: compile-check all Rust targets in the package with the declared minimum
-  Rust 1.85, test the Git commit hook, validate commit messages and squash title.
+  Rust 1.85 and test Git hook integration offline.
 - Workflow syntax/expressions: pinned actionlint. Release rules, breaking-change
   notes, version stamping and archive-integrity checks: credential-free tests.
 - Dependency audits: cargo-audit checks Cargo.lock against RustSec; npm audit

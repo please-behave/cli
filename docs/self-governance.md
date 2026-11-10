@@ -3,9 +3,10 @@
 Please Behave is developed under a separately installed, published Please Behave CLI.
 This document describes its `.please/` development configuration.
 Builds under target/ are candidates under test and never become the governor.
-The repository uses local Check definitions and a pinned external commit-message
-Rule Set and Security Rule Set. A conditional AGENTS.md quality Review uses Gemini
-only at check; Git hooks and native release builds remain checks-only.
+The repository uses local Checks and four pinned external Rule Sets. A conditional
+AGENTS.md quality Review uses Gemini at check. Commit-msg imports an advisory
+header-only wording Review and an independent Gemini Flash-Lite provider package.
+Pre-commit, pre-push and native release builds remain checks-only.
 
 The exact published governor pin is recorded in [.please-version](../.please-version).
 It must support named CLI providers, runtime requirements and file-change triggers,
@@ -42,8 +43,7 @@ please sync --yes
 
 Setup installs no tools or dependencies. Conflicts still fail. Generated wrappers
 live at Git's effective hook path and carry local ownership; never check them in
-or copy them between repositories. Only the commit policy remains versioned under
-[.githooks](../.githooks).
+or copy them between repositories.
 
 Python 3.11+, Git, Gitleaks v8 with `gitleaks dir` (tested with 8.30.1), stable
 Rust with rustfmt/Clippy and the Node version in mise.toml are required locally.
@@ -55,12 +55,12 @@ check and actionlint for workflow validation. Cargo build, Clippy, test and MSRV
 commands explicitly use --offline; npm tests use --offline too. The execution
 wrapper also sets Cargo/npm offline mode and disables Rustup auto-install when
 invoking a Git-backed point. Direct Rule commands need no launcher. Dependency
-audits run at check in CI with advisory access; they remain outside offline hooks.
+audits run at check in CI with advisory access; they remain outside pre-commit and pre-push.
 Checks neither install the governor nor repair project files.
 
 ## Execution points and required coverage
 
-Every selected rule is mandatory. Each point preserves the exact check membership
+Checks are mandatory; Reviews explicitly declare whether they block. Each point preserves the exact check membership
 of its configured execution point. Checks run once per binding; reports retain ID order.
 The concrete rule definitions and assignments live in `.please/`; product tests
 use independent synthetic configurations.
@@ -68,19 +68,18 @@ use independent synthetic configurations.
 | Execution point | Required checks |
 | --- | --- |
 | pre-commit | format, docs, agents-size |
-| commit-msg | commit-message plus imported commit-message |
+| commit-msg | Imported commit-message Check and advisory commit-message-quality Review |
 | pre-push (default) | format, docs, python-tests, agents-size, release-rules, clippy, rust-tests, native-build, native-smoke, workflows, msrv plus imported license, secret-scan and sensitive-files |
-| check | All pre-push checks plus commit-range, rust-audit and npm-audit: 17 checks total; conditional agents-quality Review |
-| release-readiness | commit-range, rust-audit, npm-audit plus imported github-ci-success, sensitive-files, secret-scan and license |
+| check | All pre-push checks plus rust-audit and npm-audit; conditional agents-quality Review |
+| release-readiness | rust-audit, npm-audit plus imported github-ci-success, sensitive-files, secret-scan and license |
 | release-candidate | format, clippy, rust-tests, native-build, native-smoke, release-package, release-package-verify |
 
-The 17 local [checks](../.please/checks) use string commands. Python scripts run
+The 15 local [checks](../.please/checks) use string commands. Python scripts run
 as `python3 scripts/<name>.py`, relative to the consuming repository root.
-The published v0.3.1 governor supports these commands and explicit path
+The published v0.5.0 governor supports these commands and explicit path
 references for imported Checks. There are no local index.sh launchers.
 Local Rule directories and IDs use descriptive names without numeric prefixes.
-The local commit-message Rule and the imported Rule have distinct identities:
-imports retain their git-prefixed binding namespace. The native-smoke Check
+Imported Rules retain their git-prefixed binding namespace. The native-smoke Check
 declares `depends_on = ["native-build"]` at every point where it runs, so it tests
 the candidate executable only after a successful build. Build, smoke, Clippy and
 Rust tests share the `cargo` resource lock. Packaging
@@ -89,7 +88,7 @@ depends on packaging. Failed prerequisites block their dependents.
 Each local Rule declares its execution points directly; this repository defines
 no local Rule Sets. External Rule Sets supply commit-message, security, license
 and CI-proof checks
-at the same reviewed full Git commit pin.
+at the same reviewed full Git commit pin as the independent provider import.
 
 The imported commit-message, secret-scan and sensitive-files Checks use
 `command = "sh @rule/index.sh"`. The license Check uses
@@ -170,15 +169,20 @@ synchronization read-only; drift tells the developer to rerun sync manually.
 The `commit-msg` point imports `commit-msg/conventional-commits` from
 [Christian Pflugradt’s personal Ruleset repository](https://github.com/christianpflugradt/please-behave-rulesets),
 pinned to the full commit in `.please/config.toml`. It receives
-`.please/commit-scopes.txt` through the `scopes_file` parameter. Keep this file
-consistent with the scopes in `.githooks/commit-policy`.
-Both message checks consume PLEASE_GIT_HOOK_ARG_1 and require exactly one
-commit-msg argument. The imported Rule validates the header, type and scope.
-The local `commit-message` check also enforces the repository's narrower type allowlist
-and summary whitespace requirements using the same policy checker as CI.
-`sync` retrieves and validates the import during setup; subsequent checks and
-hooks use its immutable cache offline. A fresh clone needs access to the source
-repository during setup.
+`.please/commit-scopes.txt` through the `scopes_file` parameter. The imported
+Check validates header syntax, type and scope using the managed commit-msg argument.
+The advisory `commit-message-quality` Review evaluates only the first header line
+for specific English imperative wording, without the diff, body or repository files.
+The `gemini-flash-lite` provider is independently imported from
+`providers/gemini-flash-lite` in the same repository; no adapter is copied locally.
+Export GEMINI_API_KEY in the shell running Git. Missing credentials, provider
+errors and wording failures remain visible without blocking the commit.
+The adapter uses at most three requests, 1/3-second retry waits, a 20-second
+request timeout and a 70-second provider deadline. No local commit policy,
+commit-range or PR-title checks remain.
+`sync` retrieves and validates imports during setup; checks use the immutable
+cache. A fresh clone needs source repository access during setup; the selected
+commit wording Review also needs Gemini network access when committing.
 The same external repository supplies `multi-point/security`, pinned separately
 in `.please/config.toml`. Its blocking `sensitive-files` and `secret-scan` checks
 run at `check` and `pre-push`. `check` scans tracked and nonignored untracked
@@ -199,7 +203,7 @@ PolyForm-Noncommercial-1.0.0 or Unlicense byte-for-byte; this repository uses th
 SPDX PolyForm-Noncommercial-1.0.0 reference. `check` reads the working-tree file;
 `pre-push` reads HEAD. Missing or nonmatching files produce FAIL; technical errors produce ERROR.
 
-Pre-commit runs before the final message is available. Hooks block on failure and
+Pre-commit runs before the final message is available. Blocking Checks prevent commits on failure and
 never modify the Git index. Local checks verify working files, including
 unstaged edits, which can differ from staged or pushed commits. The imported
 security and license checks explicitly read `HEAD` at pre-push. Hooks are
@@ -209,7 +213,7 @@ future work.
 ## CI, pinning and Renovate
 
 [.please-version](../.please-version) pins the separately installed governor to
-v0.3.1. Local `mise deploy` uses the checksum-verifying
+v0.5.0. Local `mise deploy` uses the checksum-verifying
 [scripts/deploy.py](../scripts/deploy.py) installer. Ubuntu workflows use
 [Please Behave Action v1.1.1](https://github.com/please-behave/action/releases/tag/v1.1.1),
 pinned to `3f726664f6a18193ac1bfa0f542e34ba76f24523`, with the version read
@@ -224,7 +228,7 @@ not guarantee the age of every transitive lockfile dependency.
 
 The [CI workflow](../.github/workflows/ci.yml) prepares dependencies, installs the
 released governor, runs `please sync --yes`, establishes PLEASE_CHANGE_BASE and
-invokes the same published Action to run all 17 deterministic checks followed by
+invokes the same published Action to run all configured deterministic checks followed by
 applicable reviews at `check`, with Job Summaries enabled. The execution invocation
 installs the same pinned CLI release again. CI uploads `.please/reports/last.json`;
 the AGENTS.md review summary also reads that report. Provider failures remain
