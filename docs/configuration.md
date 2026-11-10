@@ -583,7 +583,7 @@ assume-unchanged/skip-worktree flags (including sparse checkouts) block comparis
 clear them before using triggers.
 
 Missing/invalid baselines, unavailable trees, incomplete snapshots, unsupported
-filename encoding, timeouts and Git output above 64 KiB block execution with ERROR,
+filename encoding, timeouts and Git path-list output above 128 MiB block execution with ERROR,
 never a successful skip. Disabled reviews and reviews at other points need no
 baseline. Reviews without triggers keep their existing behavior.
 

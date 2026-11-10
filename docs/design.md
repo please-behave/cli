@@ -77,7 +77,7 @@ and reverted entirely between snapshots cannot be detected. Snapshots are not
 filesystem transactions. Please Behave captures before and after execution, and before an active provider call, and blocks
 PASS if they differ; concurrent edits could evade this check if reverted.
 
-Limits: 8 MiB per file, 128 MiB total contents, 100,000 paths, 64 KiB Git file-list
+Limits: 8 MiB per file, 128 MiB total contents, 100,000 paths, 128 MiB per Git path-list stdout
 capture, and 16 levels of configuration nesting. Unsupported symlinks, submodules,
 special files, non-UTF-8 paths, unreadable files or exceeded limits make coverage
 incomplete. UNKNOWN and unavailable totals take precedence over known differences.
@@ -105,7 +105,8 @@ inherits the originating outcome. Advisory review errors remain visible.
 
 Commands run through a bounded scheduler without an implicit shell. Both pipes are drained
 concurrently to EOF, retaining only the first 64 KiB each and their complete byte
-totals. Truncation is recorded. Timeouts, signal termination, spawn failures and
+totals. Git path-list stdout instead uses the snapshot byte budget described above;
+stderr remains at 64 KiB. Truncation is recorded. Timeouts, signal termination, spawn failures and
 capture failures are ERROR. POSIX processes run in separate groups
 and descendants are killed on exit/timeout. Windows uses `taskkill /T /F` for timeout
 cleanup; detached descendants may escape termination. Pipes remaining open beyond

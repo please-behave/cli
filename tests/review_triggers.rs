@@ -325,7 +325,7 @@ fn matched_reviews_preserve_provider_grouping_and_global_check_gate() {
 }
 
 #[test]
-fn truncated_comparisons_and_incomplete_snapshots_never_skip() {
+fn path_lists_above_log_limit_support_snapshots_status_and_triggers() {
     let root = fixture();
     review(
         root.path(),
@@ -335,9 +335,43 @@ fn truncated_comparisons_and_incomplete_snapshots_never_skip() {
     for i in 0..350 {
         write(root.path(), &format!("{i:04}{}", "x".repeat(200)), "new\n");
     }
+    let snapshot = git_snapshot::capture(root.path()).unwrap();
+    assert!(snapshot.complete, "{:?}", snapshot.limitations);
+    let last = format!("0349{}", "x".repeat(200));
+    assert!(snapshot.files.contains_key(&last));
+    assert!(git_snapshot::working_summary(root.path()).is_ok());
+    let (_, changed) = git_snapshot::changed_paths(root.path(), "HEAD").unwrap();
+    assert!(changed.contains(&last));
+    let p = plan(root.path(), Some("HEAD"));
+    assert!(p.executable());
+    assert_eq!(p.omitted.len(), 1);
+
+    // The index flag list also exceeds 64 KiB after these files are committed.
+    commit(root.path());
+    write(root.path(), &last, "changed\n");
+    let (_, changed) = git_snapshot::changed_paths(root.path(), "HEAD").unwrap();
+    assert_eq!(changed, [last].into_iter().collect());
+}
+
+#[test]
+fn incomplete_snapshots_block_execution_even_for_nonmatching_reviews() {
+    let root = fixture();
+    review(
+        root.path(),
+        "[review.trigger]\nchanged_files = ['absent']\n",
+        "",
+    );
+    fs::File::create(root.path().join("oversized"))
+        .unwrap()
+        .set_len(please::limits::MAX_SNAPSHOT_FILE_BYTES + 1)
+        .unwrap();
+    assert!(!git_snapshot::capture(root.path()).unwrap().complete);
     let p = plan(root.path(), Some("HEAD"));
     assert!(!p.executable());
-    assert!(p.omitted.is_empty());
+    assert_eq!(
+        invoke(root.path(), Some("HEAD"), false).status.code(),
+        Some(2)
+    );
 }
 
 #[test]

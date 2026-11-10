@@ -630,8 +630,9 @@ work only when the named baseline commit and tree are locally available. No fetc
 Index conflicts and assume-unchanged/skip-worktree flags block comparison.
 Missing/invalid refs, unavailable trees, invalid filename encoding, incomplete
 snapshots, timeouts or truncated Git output block planning/execution, never skip.
-Git uses direct argument arrays, NUL filename output and existing 64 KiB capture
-and 30-second deadlines. Snapshot/context limits remain unchanged.
+Git uses direct argument arrays, NUL filename output, the 128 MiB snapshot byte
+budget for path-list stdout and 30-second deadlines. Ordinary diagnostic capture
+remains 64 KiB. File-count, file-content and review-context limits remain unchanged.
 
 Apply triggers before context preparation, parameter resolution and model-call
 estimation. Nonmatches have omission reason `trigger_not_matched` in preview and
@@ -687,7 +688,7 @@ even when an ignore pattern matches. Always exclude `.git` and `.please/reports`
 No temporary commits, index mutations, content backups, external diff helpers or
 optional Git locks.
 
-Bound snapshots to 8 MiB/file, 128 MiB total, 100,000 paths, 64 KiB of Git file-list
+Bound snapshots to 8 MiB/file, 128 MiB total, 100,000 paths, 128 MiB per Git path-list stdout
 capture and 16 levels of configuration nesting. Unsupported symlinks, submodules,
 special/non-UTF-8 paths, unreadable files or exceeded limits make coverage
 incomplete. Incomplete input blocks execution and PASS. Compare input before an

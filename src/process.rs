@@ -69,7 +69,7 @@ fn group_running(_: &std::process::Child) -> bool {
     true
 }
 type Observer = Box<dyn FnMut(&[u8]) + Send>;
-fn drain(mut stream: impl Read, mut observer: Option<Observer>) -> Result<Capture> {
+fn drain(mut stream: impl Read, mut observer: Option<Observer>, limit: usize) -> Result<Capture> {
     let mut bytes = Vec::new();
     let mut total = 0;
     let mut buffer = [0; 8192];
@@ -82,12 +82,12 @@ fn drain(mut stream: impl Read, mut observer: Option<Observer>) -> Result<Captur
             break;
         }
         total += n as u64;
-        bytes.extend_from_slice(&buffer[..n.min(OUTPUT_LIMIT - bytes.len())]);
+        bytes.extend_from_slice(&buffer[..n.min(limit - bytes.len())]);
     }
     Ok(Capture {
         text: String::from_utf8_lossy(&bytes).into_owned(),
         total_bytes: total,
-        truncated: total > OUTPUT_LIMIT as u64,
+        truncated: total > limit as u64,
     })
 }
 #[cfg(unix)]
@@ -113,7 +113,16 @@ fn terminate_tree(child: &mut std::process::Child) {
 }
 
 pub fn run(command: &mut Command, timeout: Duration) -> Result<Output> {
-    run_observed(command, timeout, None, None, None, None)
+    run_with_stdout_limit(command, timeout, OUTPUT_LIMIT)
+}
+
+/// Capture bounded command data without changing diagnostic or provider limits.
+pub(crate) fn run_with_stdout_limit(
+    command: &mut Command,
+    timeout: Duration,
+    stdout_limit: usize,
+) -> Result<Output> {
+    run_observed(command, timeout, None, None, None, None, stdout_limit)
 }
 
 pub(crate) fn run_cancellable(
@@ -121,7 +130,15 @@ pub(crate) fn run_cancellable(
     timeout: Duration,
     cancellation: Option<&Cancellation>,
 ) -> Result<Output> {
-    run_observed(command, timeout, None, None, None, cancellation)
+    run_observed(
+        command,
+        timeout,
+        None,
+        None,
+        None,
+        cancellation,
+        OUTPUT_LIMIT,
+    )
 }
 
 /// Observe stdout while draining it, including bytes beyond the retained capture.
@@ -131,7 +148,15 @@ pub fn run_with_stdout_observer(
     timeout: Duration,
     observer: impl FnMut(&[u8]) + Send + 'static,
 ) -> Result<Output> {
-    run_observed(command, timeout, Some(Box::new(observer)), None, None, None)
+    run_observed(
+        command,
+        timeout,
+        Some(Box::new(observer)),
+        None,
+        None,
+        None,
+        OUTPUT_LIMIT,
+    )
 }
 
 /// Deliver stdin concurrently with output capture under the same process deadline.
@@ -149,6 +174,7 @@ pub fn run_with_input(
         Some(input),
         None,
         None,
+        OUTPUT_LIMIT,
     )
 }
 
@@ -168,6 +194,7 @@ pub fn run_with_input_diagnostics(
         Some(input),
         Some(Box::new(diagnostics)),
         None,
+        OUTPUT_LIMIT,
     )
 }
 
@@ -178,6 +205,7 @@ fn run_observed(
     input: Option<Vec<u8>>,
     mut diagnostics: Option<Observer>,
     cancellation: Option<&Cancellation>,
+    stdout_limit: usize,
 ) -> Result<Output> {
     command.stdout(Stdio::piped()).stderr(Stdio::piped());
     #[cfg(unix)]
@@ -213,7 +241,8 @@ fn run_observed(
             diagnostics.take()
         };
         thread::spawn(move || {
-            let _ = sender.send((is_out, drain(stream, observer)));
+            let limit = if is_out { stdout_limit } else { OUTPUT_LIMIT };
+            let _ = sender.send((is_out, drain(stream, observer, limit)));
         });
     }
     drop(sender);
@@ -294,4 +323,29 @@ fn run_observed(
         cancelled: cancelling_since.is_some(),
         duration_ms: start.elapsed().as_millis() as u64,
     })
+}
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn larger_stdout_capture_keeps_stderr_bounded_and_reports_truncation() {
+        for limit in [200_000, 199_999] {
+            let output = run_with_stdout_limit(
+                Command::new("sh")
+                    .args(["-c", "yes x | head -c 200000; yes y | head -c 200000 >&2"]),
+                Duration::from_secs(10),
+                limit,
+            )
+            .unwrap();
+            assert!(output.status.success());
+            assert_eq!(output.stdout.text.len(), limit);
+            assert_eq!(output.stdout.total_bytes, 200_000);
+            assert_eq!(output.stdout.truncated, limit < 200_000);
+            assert_eq!(output.stderr.text.len(), OUTPUT_LIMIT);
+            assert_eq!(output.stderr.total_bytes, 200_000);
+            assert!(output.stderr.truncated);
+        }
+    }
 }

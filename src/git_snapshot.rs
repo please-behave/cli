@@ -47,6 +47,11 @@ fn git(root: &Path) -> Command {
         .stdin(Stdio::null());
     c
 }
+// These outputs are repository data, not logs. Use the snapshot byte budget;
+// stderr and every ordinary process/provider capture retain their smaller bound.
+fn path_output(command: &mut Command, timeout: Duration) -> Result<crate::process::Output> {
+    crate::process::run_with_stdout_limit(command, timeout, MAX_TOTAL as usize)
+}
 pub fn require_root(root: &Path) -> Result<()> {
     let canonical_root = root.canonicalize()?;
     let root = canonical_root.as_path();
@@ -121,7 +126,7 @@ pub fn capture(root: &Path) -> Result<Snapshot> {
         None
     };
     // NUL-separated paths: whitespace and newlines in file names remain unambiguous.
-    let list = crate::process::run(
+    let list = path_output(
         git(root).args([
             "-c",
             "core.quotepath=false",
@@ -139,7 +144,7 @@ pub fn capture(root: &Path) -> Result<Snapshot> {
     );
     // The process capture is deliberately bounded. Never claim complete coverage after truncation.
     if list.stdout.truncated {
-        limitations.push("Git file list exceeded 64 KiB".into());
+        limitations.push("Git file list exceeded the 128 MiB snapshot budget".into());
     }
     let mut paths = BTreeSet::new();
     for raw in list.stdout.text.split_terminator('\0') {
@@ -149,6 +154,10 @@ pub fn capture(root: &Path) -> Result<Snapshot> {
         }
         if !excluded(Path::new(raw)) {
             paths.insert(raw.to_owned());
+            if paths.len() > MAX_FILES {
+                limitations.push(format!("file count exceeds {MAX_FILES}"));
+                break;
+            }
         }
     }
     add_config(root, &mut paths, &mut limitations)?;
@@ -287,7 +296,7 @@ pub fn bounded_diff_for_paths(
 
 /// Git status is orientation only; never used for since-verification comparisons.
 pub fn working_summary(root: &Path) -> Result<String> {
-    let output = crate::process::run(
+    let output = path_output(
         git(root).args(["status", "--porcelain=v1", "-z", "--untracked-files=all"]),
         Duration::from_secs(20),
     )?;
@@ -351,7 +360,7 @@ pub fn changed_paths(root: &Path, base: &str) -> Result<(String, BTreeSet<String
         matches!(commit.len(), 40 | 64) && commit.bytes().all(|b| b.is_ascii_hexdigit()),
         "invalid baseline commit ID"
     );
-    let index = crate::process::run(
+    let index = path_output(
         git(root).args(["ls-files", "-v", "-z"]),
         Duration::from_secs(30),
     )?;
@@ -388,10 +397,10 @@ pub fn changed_paths(root: &Path, base: &str) -> Result<(String, BTreeSet<String
         ],
         vec!["ls-files", "--others", "--exclude-standard", "-z"],
     ] {
-        let output = crate::process::run(git(root).args(arguments), Duration::from_secs(30))?;
+        let output = path_output(git(root).args(arguments), Duration::from_secs(30))?;
         ensure!(
             output.status.success() && !output.timed_out && !output.stdout.truncated,
-            "change comparison unavailable, timed out or exceeded 64 KiB; ensure baseline tree is available"
+            "change comparison unavailable, timed out or exceeded the 128 MiB snapshot budget; ensure baseline tree is available"
         );
         let text = output.stdout.text;
         ensure!(

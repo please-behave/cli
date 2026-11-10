@@ -1024,7 +1024,7 @@ assume-unchanged/skip-worktree flags (including sparse checkouts) block comparis
 clear them before using triggers.
 
 Missing/invalid baselines, unavailable trees, incomplete snapshots, unsupported
-filename encoding, timeouts and Git output above 64 KiB block execution with ERROR,
+filename encoding, timeouts and Git path-list output above 128 MiB block execution with ERROR,
 never a successful skip. Disabled reviews and reviews at other points need no
 baseline. Reviews without triggers keep their existing behavior.
 
@@ -1280,7 +1280,7 @@ These limits are built in, not additional configuration fields:
 | External Git sources | 64 KiB resolution state; cached repositories: 8 MiB/file, 128 MiB total, 100,000 entries, 128 directory levels. Fetch timeout 60 seconds, local Git operations and lock waits 30 seconds. |
 | Review criteria | 32 KiB per prompt file; 256 KiB combined, including disabled reviews. |
 | Initial AI hints | Up to 200 file-list entries and 32 KiB of diff, with truncation indicated. Necessary evidence still needs inspection. |
-| Snapshot | 8 MiB per file, 128 MiB total, 100,000 paths; Git file enumeration capped at 64 KiB; `.please` nesting limited to 16 levels. |
+| Snapshot | 8 MiB per file, 128 MiB total, 100,000 paths; Git path-list output capped at 128 MiB; `.please` nesting limited to 16 levels. |
 | Snapshot coverage | Tracked and nonignored untracked files, plus declared governance inputs even if ignored. Unreferenced ignored artifacts, `.git` and `.please/reports` are excluded. Unsupported symlinks, submodules, paths or exceeded limits prevent PASS. |
 | Input stability | Working files and HEAD must match before/after execution and before every AI call. Staging and pushed commits are not separately verified. |
 | AI response | 64 KiB adapter stdout; summaries and findings have the limits described under reviews. |
