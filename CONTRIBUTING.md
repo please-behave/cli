@@ -11,8 +11,7 @@ See the [README](README.md#build-locally) for tooling. With mise:
 ```sh
 mise trust
 mise install
-npm ci --ignore-scripts
-cargo +stable fetch --locked
+mise run setup
 mise deploy
 export PATH="$HOME/.local/bin:$PATH"
 mise hooks:install

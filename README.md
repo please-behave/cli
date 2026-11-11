@@ -1316,11 +1316,17 @@ It receives the complete document and rubric; provider errors remain visible in 
 Git hooks need no Gemini credentials.
 
 This repository's deterministic quality checks run through an installed published
-Please Behave release. Install development tools with `mise install`, dependencies with
-`npm ci --ignore-scripts` and `cargo +stable fetch --locked`, then the governor
-with `mise deploy`. Install Gitleaks v8 with the `dir` command (tested with
-8.30.1) explicitly for the imported Security Rule Set. Prepare Rust 1.85 and actionlint as described in the setup guide. Ensure Please Behave,
-Gitleaks and actionlint are on PATH.
+Please Behave release. Run `mise install` for the configured rule tools (including
+Gitleaks, actionlint and both Rust toolchains), then `mise run setup` to fetch
+locked dependencies and `mise deploy` to install the governor. Git and a native
+compiler/linker remain host prerequisites. Rust stable remains a moving channel;
+the other mise tool versions are pinned. See the [setup guide](docs/self-governance.md#local-setup).
+
+Use `mise exec -- please run --at pre-commit` or `mise exec -- please run --at pre-push`
+for manual execution without shell activation. Use `mise exec -- git commit` and
+`mise exec -- git push` to give hooks the same tools. Plain commands require mise
+shell activation or equivalent PATH setup; `mise install` alone does not activate
+tools. The separately installed governor must still be on PATH.
 
 Install the pre-commit, commit-msg and pre-push hooks explicitly with
 `mise hooks:install`. Commit and push then invoke Please Behave automatically: pre-commit

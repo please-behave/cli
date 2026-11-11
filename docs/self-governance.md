@@ -19,11 +19,7 @@ Prepare tools and dependencies explicitly:
 ```sh
 mise trust
 mise install
-npm ci --ignore-scripts
-cargo +stable fetch --locked
-rustup toolchain install 1.85.0 --profile minimal
-cargo +1.85.0 fetch --locked
-go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+mise run setup
 mise deploy
 export PATH="$HOME/.local/bin:$PATH"
 mise hooks:install
@@ -41,17 +37,25 @@ plan and requests confirmation. For unattended setup use:
 please sync --yes
 ```
 
-Setup installs no tools or dependencies. Conflicts still fail. Generated wrappers
+Hook setup installs no tools or dependencies. Conflicts still fail. Generated wrappers
 live at Git's effective hook path and carry local ownership; never check them in
 or copy them between repositories.
 
-Python 3.11+, Git, Gitleaks v8 with `gitleaks dir` (tested with 8.30.1), stable
-Rust with rustfmt/Clippy and the Node version in mise.toml are required locally.
-Install Gitleaks explicitly and put it on PATH before running the security checks
-or pre-push gate; `gitleaks version` verifies availability. Hooks inherit PATH
-and call the installed please binary.
-Prepare dependencies online first, including Rust 1.85 for the minimum-version
-check and actionlint for workflow validation. Cargo build, Clippy, test and MSRV
+`mise install` prepares Python, Node, Gitleaks 8.30.1, actionlint 1.7.12,
+cargo-audit 0.22.2 and both Rust toolchains (stable with rustfmt/Clippy and 1.85.0).
+Git and a native compiler/linker remain host prerequisites. Rust stable remains a
+moving channel; the other tool versions are exact pins. `mise run setup` fetches
+locked npm and Cargo dependencies online; it does not run validation.
+
+Use `mise exec -- please run --at pre-commit` or `mise exec -- please run --at pre-push`
+for manual checks without shell activation. Run Git as `mise exec -- git commit`
+and `mise exec -- git push` so managed hooks inherit the same tool PATH.
+Plain `please` and Git commands require mise shell activation or equivalent PATH
+setup; installing tools alone does not activate them. The published governor must
+still be installed separately and available on PATH. Credentials are external.
+
+Prepare dependencies online first, using `mise install` followed by `mise run setup`.
+Cargo build, Clippy, test and MSRV
 commands explicitly use --offline; npm tests use --offline too. The execution
 wrapper also sets Cargo/npm offline mode and disables Rustup auto-install when
 invoking a Git-backed point. Direct Rule commands need no launcher. Dependency
