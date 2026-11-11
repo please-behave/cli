@@ -279,16 +279,26 @@ class ReleaseTests(unittest.TestCase):
         for name in ("release-readiness", "release-candidate"):
             self.assertIn("needs: plan", jobs[name])
             self.assertIn("needs.plan.outputs.release == 'true'", jobs[name])
-            self.assertIn(f"execution-point: {name}", jobs[name])
-            self.assertIn("checks-only: 'true'", jobs[name])
-            self.assertIn("summary: 'true'", jobs[name])
-            self.assertNotIn("please run", jobs[name])
             self.assertNotIn("continue-on-error", jobs[name])
+        self.assertIn("execution-point: release", jobs["release-candidate"])
+        self.assertIn("checks-only: 'true'", jobs["release-candidate"])
+        self.assertIn("summary: 'true'", jobs["release-candidate"])
+        for name in ("release-readiness", "publish"):
+            self.assertNotIn("please-behave/action@", jobs[name])
+            self.assertNotIn("please sync", jobs[name])
+        self.assertIn("python3 scripts/check-release-ci.py", jobs["release-readiness"])
+        candidate = jobs["release-candidate"]
+        ordered = ["cargo +stable build", "scripts/smoke-receipt.py before",
+                   "execution-point: release", "scripts/smoke-receipt.py after",
+                   "scripts/package-release.py", "scripts/check-release-artifacts.py --candidate",
+                   "scripts/release-evidence.py record"]
+        self.assertEqual([candidate.index(step) for step in ordered],
+                         sorted(candidate.index(step) for step in ordered))
+        self.assertLess(jobs["publish"].index("scripts/release-evidence.py verify"),
+                        jobs["publish"].index("npm run release"))
         self.assertIn("actions: read", jobs["release-readiness"])
         for name in ("plan", "release-candidate", "publish"):
             self.assertNotIn("actions: write", jobs[name])
-        reference = re.search(r"please-behave/action@[a-f0-9]{40}", jobs["release-readiness"])[0]
-        self.assertIn(reference, jobs["release-candidate"])
         self.assertIn("version: ${{ steps.governor.outputs.version }}", jobs["release-candidate"])
         self.assertNotIn("setup-node", jobs["release-candidate"])
         for name in ("plan",):
@@ -305,22 +315,20 @@ class ReleaseTests(unittest.TestCase):
         self.assertIn("cancel-in-progress: false", workflow)
         self.assertIn("workflow_dispatch:", workflow)
         config = tomllib.loads((SCRIPTS.parent / ".please/config.toml").read_text())
-        self.assertEqual(config["execution_points"]["custom"], ["release-readiness", "release-candidate", "release-record", "release-verify"])
-        release_import, = [item for item in config["imports"] if item["path"] == "rulesets/multi-point/releasable-open-source-software"]
-        self.assertRegex(release_import["ref"], r"^[0-9a-f]{40}$")
-        self.assertEqual(release_import["rule_parameters"]["release-contract"], dict(ci_policy=".please/release-ci.json", artifacts_policy=".please/release-artifacts.json"))
-        policy = json.loads((SCRIPTS.parent / ".please/release-ci.json").read_text())
+        self.assertEqual(config["execution_points"]["custom"], ["release"])
+        self.assertFalse(any(item["path"].endswith("/releasable-open-source-software")
+                             for item in config["imports"]))
+        policy = json.loads((SCRIPTS.parent / ".github/release-ci.json").read_text())
         self.assertEqual(policy["required_jobs"], ["Check"])
         self.assertNotIn("required_steps", policy)
         definitions = [tomllib.loads(p.read_text()) for p in (SCRIPTS.parent / ".please/checks").glob("*/rule.toml")]
         by_id = {rule["id"]: rule for rule in definitions}
-        self.assertEqual({r["id"] for r in definitions if "release-candidate" in r["run_at"]},
-                         {"native-build", "native-smoke", "release-package", "release-package-verify"})
-        self.assertEqual({r["id"] for r in definitions if "release-readiness" in r["run_at"]},
-                         set())
+        release_rules = [rule for rule in definitions if "release" in rule["run_at"]]
+        self.assertEqual([rule["id"] for rule in release_rules], ["release-smoke"])
+        self.assertNotIn("depends_on", release_rules[0])
+        self.assertNotIn("release-package", by_id)
+        self.assertNotIn("release-package-verify", by_id)
         self.assertEqual(by_id["native-smoke"]["depends_on"], ["native-build"])
-        self.assertEqual(set(by_id["release-package"]["depends_on"]), {"native-smoke"})
-        self.assertEqual(by_id["release-package-verify"]["depends_on"], ["release-package"])
         for name in ("format", "clippy", "rust-tests", "native-build", "native-smoke"):
             self.assertIn("check", by_id[name]["run_at"])
             self.assertIn("pre-push", by_id[name]["run_at"])
@@ -366,10 +374,23 @@ class ReleaseTests(unittest.TestCase):
             root = Path(temporary)
             target = verification.TARGETS[0]
             env = dict(os.environ, RELEASE_TAG=f"v{version}", GITHUB_SHA="a" * 40, BUILD_TARGET=target)
-            result = subprocess.run([sys.executable, str(SCRIPTS / "smoke.py"), governor], cwd=root, env=env, capture_output=True, text=True)
+            binary = root / f"target/{target}/release/please"
+            binary.parent.mkdir(parents=True)
+            shutil.copy2(governor, binary)
+            def receipt_step(operation):
+                return subprocess.run([sys.executable, str(SCRIPTS / "smoke-receipt.py"), operation],
+                                      cwd=root, env=env, capture_output=True)
+            self.assertEqual(receipt_step("before").returncode, 0)
+            result = subprocess.run([sys.executable, str(SCRIPTS / "smoke.py"), str(binary)], cwd=root, env=env, capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             receipt = root / "dist/smoke" / f"{target}.json"
-            self.assertEqual(json.loads(receipt.read_text())["binary_sha256"], verification.digest(Path(governor).read_bytes()))
+            self.assertFalse(receipt.exists(), "quality checks do not record release evidence")
+            self.assertEqual(receipt_step("after").returncode, 0)
+            self.assertEqual(json.loads(receipt.read_text())["binary_sha256"], verification.digest(binary.read_bytes()))
+            self.assertEqual(receipt_step("before").returncode, 0)
+            binary.write_bytes(binary.read_bytes() + b"changed")
+            self.assertNotEqual(receipt_step("after").returncode, 0)
+            self.assertFalse(receipt.exists())
             fake = root / "fake"
             fake.write_text(f"#!/bin/sh\nprintf 'please {version}\\n'\n")
             fake.chmod(0o755)

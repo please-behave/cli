@@ -1,9 +1,7 @@
 """Exercise the real CLI in an isolated, uncommitted Git repository. No AI calls."""
-import hashlib
 import json
 import os
 from pathlib import Path
-import runpy
 import subprocess
 import sys
 import tempfile
@@ -12,14 +10,6 @@ target = os.environ.get("BUILD_TARGET")
 default_binary = Path("target") / target / "release/please" if target else Path("target/release/please")
 binary = (Path(sys.argv[1]) if len(sys.argv) > 1 else default_binary).resolve()
 release_tag = os.environ.get("RELEASE_TAG")
-receipt = None
-if release_tag:
-    contract = runpy.run_path(str(Path(__file__).with_name("verify-release.py")))
-    context = contract["release_context"](release_tag.removeprefix("v"), os.environ["GITHUB_SHA"], target)
-    receipt = Path("dist/smoke") / f"{target}.json"
-    receipt.parent.mkdir(parents=True, exist_ok=True)
-    receipt.unlink(missing_ok=True)
-    before_hash = hashlib.sha256(binary.read_bytes()).hexdigest()
 with tempfile.TemporaryDirectory(prefix="please-smoke-") as temporary:
     root = Path(temporary) / "repository"
     root.mkdir()
@@ -38,7 +28,7 @@ with tempfile.TemporaryDirectory(prefix="please-smoke-") as temporary:
 
     run("--help")
     actual_version = run("--version").strip()
-    if release_tag and actual_version != f"please {context['version']}":
+    if release_tag and actual_version != f"please {release_tag.removeprefix('v')}":
         raise ValueError("Smoke-tested binary does not match the planned release version")
     run("help")
     assert run("init") == "Initialized .please/ (9 files created).\n"
@@ -83,8 +73,3 @@ with tempfile.TemporaryDirectory(prefix="please-smoke-") as temporary:
     assert commits.returncode != 0
     print("Smoke test passed: all commands, PASS/FAIL reports, skipped reviews, CURRENT/STALE, exact totals and five-path limit. No commits or AI calls.")
 
-if receipt:
-    after_hash = hashlib.sha256(binary.read_bytes()).hexdigest()
-    if before_hash != after_hash:
-        raise ValueError("Candidate executable changed during smoke testing")
-    receipt.write_text(json.dumps(dict(**context, binary_sha256=after_hash)) + "\n")

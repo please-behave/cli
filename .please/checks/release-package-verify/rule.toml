@@ -1,8 +1,0 @@
-id = "release-package-verify"
-description = "Verify the native release archive before upload"
-run_at = ["release-candidate"]
-depends_on = ["release-package"]
-
-[check]
-command = "python3 scripts/check-release-artifacts.py --candidate"
-timeout_seconds = 120

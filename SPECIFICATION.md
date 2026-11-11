@@ -840,42 +840,29 @@ directly, without local Rule Sets. Pre-commit runs formatting and documentation
 validation; pre-push runs the complete local suite, keeping all Rust tests in
 one Rule. Python helper tests use one unittest discovery Rule and JavaScript
 release tests use one npm Rule. All three test suites, workflow validation and
-minimum-Rust checks run at pre-push and again in CI. The repository has 15 local
-Checks and one conditional document Review; dependency audits run at check and
-release-readiness with advisory access. Agents use Git
+minimum-Rust checks run at pre-push and again in CI. The repository has 14 local
+Checks and one conditional document Review; dependency audits run at check with advisory access. Agents use Git
 commit/push feedback instead of manually running checks,
 tests, linters or builds. They may read saved reports without rerunning Rules.
 The manual mise check task delegates to published Please Behave at pre-push.
-All four external Rule Set imports and the independent Gemini Flash-Lite provider
+All three external Rule Set imports and the independent Gemini Flash-Lite provider
 import pin the same reviewed full Git commit. The published governor is v0.5.1.
 The three existing imports preserve their execution-point and parameter semantics.
-Release jobs and execution points are `release-readiness` and `release-candidate`.
-Both jobs depend only on Semantic Release planning and run in parallel. Publish
-requires successful completion of both. Plan and Publish never invoke Please Behave.
-Readiness uses the pinned external
-`rulesets/multi-point/releasable-open-source-software` set for exact-commit GitHub
-push-CI proof, reusing source-security, license and audit results from trusted CI.
-The CI policy names
-required jobs, not individual steps. The latest matching run must succeed; partial
-reruns may retain successful jobs from earlier attempts of that same run. Missing,
-pending, failed, untrusted or incomplete evidence never establishes PASS.
-General CI test suites, documentation, workflow and MSRV checks are reused through
-that proof, rather than rerun during release readiness.
-Candidate selects format, clippy, rust-tests, native-build, native-smoke,
-release-package and release-package-verify on all four native hosts. Existing
-native test coverage is retained. The published governor is installed outside the
-checkout through the published Action; its pin is recorded in mise.toml. Version stamping occurs
-before Please Behave snapshots inputs. Packaging depends on successful formatting,
-lint, tests and smoke; smoke depends on build. The binary hash before/after smoke
-must agree with the packaged bytes. Each archive is verified before upload.
-Artifact names/metadata bind the source, version, target, workflow run and attempt.
-Publish downloads only the current run/attempt artifacts and directly invokes
-scripts/check-release-artifacts.py after checksum generation. It verifies exactly
-four archives, metadata, smoke identity, hashes, archive contents/permissions and
-README/LICENSE bytes. No rebuild occurs. Incomplete Release reruns require a full
-rerun when artifacts from the current attempt are missing. CI partial reruns remain
-supported independently. Semantic Release's planned-version and remote-main guards
-remain mandatory before tagging. No artifact execution point is configured.
+Release workflow jobs own planning, exact-source CI prerequisites, candidate
+builds, artifact transport, provenance, integrity and publication. The only custom
+execution point is `release`: an independent local release-smoke Rule tests CLI
+behavior against an already-built native candidate. It has no Rule dependencies.
+GitHub Actions builds first, captures the binary hash, invokes that quality gate,
+then checks the unchanged hash and records a smoke receipt. Packaging, archive
+verification, complete-set evidence and the final source/version publication
+guard run directly as workflow scripts, outside Please Behave.
+All four supported native targets and existing archive/receipt guarantees remain.
+Source checks, unit tests and audits are reused from exact-source CI, including
+successful partial CI reruns; incomplete or untrusted evidence blocks publication.
+Release artifacts must belong to the current workflow run and attempt.
+The published governor remains pinned in mise.toml and separate from candidates.
+Acceptance: `scripts/test_release.py::test_release_job_contract_permissions_and_selection`.
+
 The commit-msg point imports the rulesets/commit-msg/repository-conventions set at a full Git commit
 pin. Its scopes_file parameter uses .please/commit-scopes.txt. The external Check
 validates syntax, types and scopes; an advisory Gemini Flash-Lite Review evaluates

@@ -471,10 +471,8 @@ Consumers decide where to invoke it, including multiple workflows; Please Behave
 not generate workflows, discover them or validate CI integration. Declare custom
 points in the consumer, including unmapped custom points used by imports.
 Custom execution points have no special CLI behavior. This repository uses
-`release-readiness` for exact-commit CI proof,
-and `release-candidate` for versioned builds, smoke testing, packaging and individual
-archive verification. They run in parallel after Semantic Release planning.
-Publish verifies the complete archive set directly before Semantic Release publishes;
+`release` to smoke-test already-built native candidates. GitHub Actions owns
+build ordering, prerequisites, packaging, artifact integrity and publication;
 see the [release sequence](docs/releasing.md#release-sequence).
 The default execution point is `pre-push`.
 

@@ -3,7 +3,7 @@
 Please Behave is developed under a separately installed, published Please Behave CLI.
 This document describes its `.please/` development configuration.
 Builds under target/ are candidates under test and never become the governor.
-The repository uses local Checks and four pinned external Rule Sets. A conditional
+The repository uses local Checks and three pinned external Rule Sets. A conditional
 AGENTS.md quality Review uses Gemini at check. Commit-msg imports an advisory
 header-only wording Review and an independent Gemini Flash-Lite provider package.
 Pre-commit, pre-push and native release builds remain checks-only.
@@ -73,11 +73,9 @@ use independent synthetic configurations.
 | commit-msg | Imported commit-message Check and advisory commit-message-quality Review |
 | pre-push (default) | format, docs, python-tests, agents-size, release-rules, clippy, rust-tests, native-build, native-smoke, workflows, msrv plus imported license, secret-scan and sensitive-files |
 | check | All pre-push checks plus rust-audit and npm-audit; conditional agents-quality Review |
-| release-readiness | Imported release-contract: exact-source CI proof |
-| release-candidate | native-build, native-smoke, release-package, release-package-verify |
-| release-record, release-verify | Imported release-contract: record or verify candidate evidence |
+| release | release-smoke: CLI behavior of an already-built native candidate |
 
-The 15 local [checks](../.please/checks) use string commands. Python scripts run
+The 14 local [checks](../.please/checks) use string commands. Python scripts run
 as `python3 scripts/<name>.py`, relative to the consuming repository root.
 The published v0.5.1 governor supports these commands and explicit path
 references for imported Checks. There are no local index.sh launchers.
@@ -85,20 +83,17 @@ Local Rule directories and IDs use descriptive names without numeric prefixes.
 Imported Rules retain their git-prefixed binding namespace. The native-smoke Check
 declares `depends_on = ["native-build"]` at every point where it runs, so it tests
 the candidate executable only after a successful build. Build, smoke, Clippy and
-Rust tests share the `cargo` resource lock. Packaging
-depends on smoke; individual artifact verification
-depends on packaging. Failed prerequisites block their dependents.
-Each local Rule declares its execution points directly; this repository defines
-no local Rule Sets. External Rule Sets supply commit-message, security, license
-and CI-proof checks
-using the same reviewed immutable revision for all four sets and the provider.
+Rust tests share the `cargo` resource lock. The independent release-smoke Rule
+has no dependency on other Rules; GitHub Actions supplies the built candidate.
+Each local Rule declares its own execution points. Three external sets supply
+commit-message, security and license checks at a shared immutable revision.
 
 The imported commit-message, secret-scan and sensitive-files Checks use
 `command = "sh @rule/index.sh"`. The license Check uses
 `command = "python3 @source/scripts/file-reference.py"` for its shared script.
 These references resolve from the cached Rule directory and imported repository
 root respectively, while execution stays in the consuming repository root.
-The separate rulesets/multi-point/releasable-open-source-software binding supplies CI and artifact policies as file parameters. It reuses source-security results from trusted CI.
+Release CI and artifact policies are workflow-owned files under `.github/`.
 
 All Rust unit, integration, acceptance and documentation tests run in one Cargo
 Rule. Python helper tests use one unittest discovery Rule; test modules use
@@ -242,12 +237,10 @@ the AGENTS.md review summary also reads that report. Provider failures remain
 errors. CI uses the CLI report and Action Summary instead of `execution.json`.
 Local wrapper runs still record governor version/digest, execution point, checked
 commit and exit code in that companion file.
-The [release workflow](../.github/workflows/release.yml) separates Semantic Release
-planning/publication from Please Behave validation. Parallel `release-readiness`
-and four-platform `release-candidate` jobs use matching execution points and both
-must succeed before Publish. Readiness uses installation-only Action mode once,
-the external releasable-project set. Candidate installs the same published governor outside the checkout on all four native hosts. Neither
-uses a candidate binary for governance. Both upload diagnostic reports.
-The CI proof accepts successful partial reruns within the newest matching push run,
-using each required job's newest execution across its attempts. It checks jobs,
-not steps. CI suites and source security/license results are reused without repeating checks. Publish runs local artifact checks, the shared release-verify governor gate and Semantic Release. See [release sequence](releasing.md#release-sequence).
+The [release workflow](../.github/workflows/release.yml) owns prerequisites,
+build ordering, packaging, transport, integrity and publication. Its parallel
+readiness and four-platform candidate jobs must both succeed. Readiness checks
+exact-source CI directly; candidates install the published governor and invoke
+the independent `release` smoke-quality gate after building. Receipt recording,
+archive checks and publication guards are direct workflow scripts.
+See the [release sequence](releasing.md#release-sequence).

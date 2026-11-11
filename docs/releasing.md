@@ -88,18 +88,17 @@ Please Behave. Dependencies are locked in `package-lock.json`.
    not run; no tag, commit or release is created.
 2. `release-readiness` (Release Readiness) and `release-candidate` (Release Candidate)
    depend only on Plan and execute independently in parallel when a release is needed.
-   Readiness invokes the published governor at `release-readiness --checks-only`.
-   The pinned external `rulesets/multi-point/releasable-open-source-software` set verifies successful push CI
+   Readiness runs `python3 scripts/check-release-ci.py` directly to verify successful push CI
    for the exact source, repository, workflow, main branch and required jobs.
    Source checks, dependency audits and unit tests are reused from CI without an age limit.
 3. The four-platform Candidate matrix installs the published governor, synchronizes
-   imports and stamps Cargo.toml/Cargo.lock with the planned version. It builds and
-   smoke-tests the actual release binary on each native host, then packages and
+   imports and stamps Cargo.toml/Cargo.lock with the planned version. Actions builds first, then invokes the independent local release-smoke Rule
+   at `release` against the actual binary on each native host, then packages and
    verifies it. Formatting, Clippy and unit tests are not repeated.
-4. Smoke records a receipt binding the binary hash before/after testing to the
+4. Actions records a receipt binding the binary hash before/after quality testing to the
    planned version, source, target, workflow run and attempt. Packaging checks the
    executable version and copies exactly those tested bytes, with README and LICENSE.
-   `release-package-verify` validates each individual archive before upload. Artifacts
+   `scripts/check-release-artifacts.py --candidate` validates each individual archive before upload. Artifacts
    are named `please-RUN_ID-RUN_ATTEMPT-TARGET`; metadata and smoke receipts travel
    with the archives but are not public release assets.
 5. `publish` (Publish) requires Plan, Readiness and the entire Candidate matrix to
@@ -108,7 +107,7 @@ Please Behave. Dependencies are locked in `package-lock.json`.
    `python3 scripts/check-release-artifacts.py` verifies exactly four archives and
    their evidence, source/version/run identity, archive/binary/smoke hashes, executable
    permissions, allowed members and README/LICENSE bytes. It never rebuilds binaries.
-   Publish uses the published governor to verify common release evidence; it installs no build toolchain.
+   Publish verifies common release evidence directly with `scripts/release-evidence.py verify`; it installs no governor or build toolchain.
 6. Semantic Release recalculates the version, requires it to match the plan, and
    checks local HEAD, the dispatched SHA and remote main before creating a tag.
    It generates notes, tags the tested source, pushes the tag/Git notes and publishes
@@ -117,7 +116,7 @@ Please Behave. Dependencies are locked in `package-lock.json`.
 
 ### CI proof and reruns
 
-`.please/release-ci.json` explicitly requires the `Check` job in
+`.github/release-ci.json` explicitly requires the `Check` job in
 `.github/workflows/ci.yml`, in `please-behave/cli`, for a push to main at the exact
 release SHA. Current CI has one Linux x64 job; four-platform coverage is supplied
 by Release Candidate. Consumers with a CI matrix must list every required entry
@@ -132,8 +131,8 @@ or incomplete run. API failures, ambiguous identities and incomplete evidence
 produce ERROR. Readiness needs `actions: read` and `contents: read`; it never
 starts CI, waits indefinitely or uses its own release run as proof. CI must remain
 independent of release validation. Evidence is observed at verification time and
-is not a lock against subsequent reruns. See the pinned external Ruleset README
-for API bounds and trust limitations.
+is not a lock against subsequent reruns. API evidence is bounded to 100 attempts and fewer than 1000 listing entries;
+verification fails closed when evidence is unavailable or incomplete.
 
 Release artifact transfer is stricter: all four packages must exist in the current
 Release run attempt. Rerunning only Publish or a subset of Candidate jobs cannot
@@ -161,7 +160,7 @@ without building or publishing again. Partial publication still needs inspection
 
 Published releases provide four native archives and `SHA256SUMS`. Build jobs
 transfer archives, metadata and smoke receipts using run/attempt-specific artifact
-names. CI, Readiness and all four native Candidate jobs use the SHA-pinned
+names. CI and all four native Candidate jobs use the SHA-pinned
 [Action v1.2.0](https://github.com/please-behave/action/releases/tag/v1.2.0)
 with the governor version from `mise.toml`. Installation precedes explicit
 synchronization, then the Action executes each gate with a Job Summary.
@@ -228,9 +227,10 @@ References: [Semantic Release configuration](https://semantic-release.gitbook.io
 
 ## Shared evidence
 
-The external releasable-project Check records `release-evidence/TARGET.json` after
-successful candidate verification and verifies the complete collected set before
-publication. `.please/release-artifacts.json` names each target's archive, metadata
-and smoke receipt. The common manifest binds all their hashes to the planned
-version, source, repository, workflow and current run/attempt. Public assets and
-artifact-specific archive validation remain unchanged.
+GitHub Actions runs `scripts/release-evidence.py record` after successful
+candidate verification and `scripts/release-evidence.py verify` on the collected
+set before publication. `.github/release-artifacts.json` names each target's
+archive, metadata and smoke receipt. The manifest binds hashes to version,
+source, repository, workflow and current run/attempt. This preserves the previous
+pinned implementation as workflow tooling, outside Please Behave.
+The local `scripts/release-guard.mjs` verifies source and version before tagging.
