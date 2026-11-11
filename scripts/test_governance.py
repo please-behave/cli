@@ -45,7 +45,7 @@ class GovernanceTests(unittest.TestCase):
 
     def test_renovate_uses_the_shared_governor_update_policy(self):
         config = json.loads((ROOT / "renovate.json").read_text())
-        self.assertIn("github>christianpflugradt/please-behave-rulesets:renovate-governor", config["extends"])
+        self.assertIn("github>christianpflugradt/please-behave-governance:renovate-governor", config["extends"])
         self.assertFalse(any(manager.get("depNameTemplate") == "please-behave/cli"
                              for manager in config.get("customManagers", [])))
         self.assertFalse(any(rule.get("matchPackageNames") == ["please-behave/cli"]

@@ -1307,7 +1307,7 @@ Please Behave governs its own development using a separately installed release.
 `.please-version` pins the governor, and `.please/` defines its rules.
 `mise deploy` installs that exact release; builds under `target/` are candidates.
 See [repository self-integration](docs/self-governance.md) for setup and coverage.
-The `repository-conventions` Rule Set is pinned to a full Git commit and checks
+The `rulesets/multi-point/open-source-software` Rule Set is pinned to a full Git commit and checks
 LICENSE against its permitted reference texts at `pre-push` and `check`.
 
 The [AGENTS.md quality-review example](docs/agents-quality-review.md) combines a
@@ -1340,7 +1340,7 @@ pinned published governor at the `pre-push` execution point:
 formatting, documentation validation, Clippy, Rust tests, Python helper tests,
 JavaScript release tests, workflow validation, minimum Rust, an optimized
 candidate build, smoke test and the imported
-Security and repository-conventions Rule Sets against `HEAD`. No reviews or real provider calls run. The governor never comes from the candidate build.
+Security and open-source-software Rule Sets against `HEAD`. No reviews or real provider calls run. The governor never comes from the candidate build.
 
 `mise docs:check` checks links, specification references, configuration fields and
 executable documentation examples. Individual tasks remain available: `format`,

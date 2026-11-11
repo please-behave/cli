@@ -93,14 +93,14 @@ depends on packaging. Failed prerequisites block their dependents.
 Each local Rule declares its execution points directly; this repository defines
 no local Rule Sets. External Rule Sets supply commit-message, security, license
 and CI-proof checks
-using immutable revisions; the release binding is pinned independently.
+using the same reviewed immutable revision for all four sets and the provider.
 
 The imported commit-message, secret-scan and sensitive-files Checks use
 `command = "sh @rule/index.sh"`. The license Check uses
 `command = "python3 @source/scripts/file-reference.py"` for its shared script.
 These references resolve from the cached Rule directory and imported repository
 root respectively, while execution stays in the consuming repository root.
-The separate release/releasable-project binding supplies CI and artifact policies as file parameters. It reuses source-security results from trusted CI.
+The separate rulesets/multi-point/releasable-open-source-software binding supplies CI and artifact policies as file parameters. It reuses source-security results from trusted CI.
 
 All Rust unit, integration, acceptance and documentation tests run in one Cargo
 Rule. Python helper tests use one unittest discovery Rule; test modules use
@@ -169,8 +169,8 @@ through sync, including configured hook paths, compatible unmanaged content,
 ownership checks, argument forwarding and recursion protection. Wrappers inspect
 synchronization read-only; drift tells the developer to rerun sync manually.
 
-The `commit-msg` point imports `commit-msg/conventional-commits` from
-[Christian Pflugradt’s personal Ruleset repository](https://github.com/christianpflugradt/please-behave-rulesets),
+The `commit-msg` point imports `rulesets/commit-msg/repository-conventions` from
+[Christian Pflugradt’s personal Ruleset repository](https://github.com/christianpflugradt/please-behave-governance),
 pinned to the full commit in `.please/config.toml`. It receives
 `.please/commit-scopes.txt` through the `scopes_file` parameter. The imported
 Check validates header syntax, type and scope using the managed commit-msg argument.
@@ -186,7 +186,7 @@ commit-range or PR-title checks remain.
 `sync` retrieves and validates imports during setup; checks use the immutable
 cache. A fresh clone needs source repository access during setup; the selected
 commit wording Review also needs Gemini network access when committing.
-The same external repository supplies `multi-point/security`, pinned separately
+The same external repository supplies `rulesets/multi-point/security`, sharing the same reviewed revision
 in `.please/config.toml`. Its blocking `sensitive-files` and `secret-scan` checks
 run at `check` and `pre-push`. `check` scans tracked and nonignored untracked
 working-tree files, including unstaged changes; deleted files are excluded.
@@ -197,7 +197,7 @@ contents, including allowed templates; symlink contents are excluded and
 submodules cause ERROR. Scanner configuration comes from the selected snapshot.
 The external Rule Set documents its complete policy and limitations.
 
-The `repository-conventions` import pins the same migrated full Git commit as
+The `rulesets/multi-point/open-source-software` import pins the same migrated full Git commit as
 the other imports in `.please/config.toml`. It includes only the blocking `license`
 Rule at `check` and `pre-push`, with `target = "LICENSE"`. The Rule uses the shared
 `scripts/file-reference.py` entrypoint and resolves bundled references relative

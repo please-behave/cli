@@ -42,7 +42,7 @@ Use Conventional Commit types: `build`, `chore`, `ci`, `config`, `docs`, `feat`,
 Use `type(scope): summary`; the scope is optional, but when present
 must come from the following list. A breaking-change `!` before the
 colon is supported. Write a specific English imperative summary; bodies and
-footers are optional. The external conventional-commits Rule Set defines accepted
+footers are optional. The external repository-conventions Rule Set defines accepted
 types; [.please/commit-scopes.txt](.please/commit-scopes.txt) defines local scopes.
 Its advisory Gemini Flash-Lite Review evaluates only the header wording, without
 the diff. Export GEMINI_API_KEY for the hook; unavailable credentials or provider

@@ -39,7 +39,7 @@ release tag, then generates release notes for the GitHub Release:
 | `ci`, `config`, `docs`, `style`, `test` without a breaking change | None |
 | Historical `build(release)` version commit without a breaking change | None |
 
-The external conventional-commits Rule Set allows twelve types and optional
+The external repository-conventions Rule Set allows twelve types and optional
 scopes from [.please/commit-scopes.txt](../.please/commit-scopes.txt). The
 Conventional Commits parser recognizes the documented breaking `!` syntax.
 The commit-msg hook validates syntax and runs an advisory header-only wording
@@ -89,7 +89,7 @@ Please Behave. Dependencies are locked in `package-lock.json`.
 2. `release-readiness` (Release Readiness) and `release-candidate` (Release Candidate)
    depend only on Plan and execute independently in parallel when a release is needed.
    Readiness invokes the published governor at `release-readiness --checks-only`.
-   The pinned external `release/releasable-project` set verifies successful push CI
+   The pinned external `rulesets/multi-point/releasable-open-source-software` set verifies successful push CI
    for the exact source, repository, workflow, main branch and required jobs.
    Source checks, dependency audits and unit tests are reused from CI without an age limit.
 3. The four-platform Candidate matrix installs the published governor, synchronizes

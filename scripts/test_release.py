@@ -306,7 +306,7 @@ class ReleaseTests(unittest.TestCase):
         self.assertIn("workflow_dispatch:", workflow)
         config = tomllib.loads((SCRIPTS.parent / ".please/config.toml").read_text())
         self.assertEqual(config["execution_points"]["custom"], ["release-readiness", "release-candidate", "release-record", "release-verify"])
-        release_import, = [item for item in config["imports"] if item["path"] == "release/releasable-project"]
+        release_import, = [item for item in config["imports"] if item["path"] == "rulesets/multi-point/releasable-open-source-software"]
         self.assertRegex(release_import["ref"], r"^[0-9a-f]{40}$")
         self.assertEqual(release_import["rule_parameters"]["release-contract"], dict(ci_policy=".please/release-ci.json", artifacts_policy=".please/release-artifacts.json"))
         policy = json.loads((SCRIPTS.parent / ".please/release-ci.json").read_text())

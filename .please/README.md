@@ -1,7 +1,7 @@
 # Please Behave repository rules
 
 This repository uses unversioned deterministic Rules with four pinned external
-Rule Sets: conventional commits, security, repository conventions and release
+Rule Sets: repository conventions, security, open-source software and
 release eligibility. A conditional AGENTS.md Review runs only at check through a named
 Gemini REST adapter. Commit-msg also runs an imported advisory header-only
 wording Review through the independently imported Gemini Flash-Lite provider.
@@ -22,7 +22,7 @@ run; individual steps are not checked.
 Smoke receipts and metadata bind tested binary bytes, version, source, target and
 workflow run/attempt. Publish verifies the complete set with local artifact checks and the shared governor gate. Cargo operations share a resource lock.
 
-`config.toml` declares release custom points. The baseline imports and independent provider retain their existing immutable revision; the release import has its own reviewed pin. Imported checks use `@rule/` or `@source/` resources.
+`config.toml` declares release custom points. All four Rule Sets and the independent provider share the reviewed immutable revision in config.toml. Imported checks use `@rule/` or `@source/` resources.
 Check/pre-push source-security snapshot semantics are unchanged.
 `commit-scopes.txt` supplies the commit-message import's required
 scopes_file parameter. The imported Check validates syntax, types and scopes;
@@ -58,8 +58,8 @@ full-document context, the rubric, Gemini setup, triggers and CI summaries.
 
 ## Shared release evidence
 
-The separate external `release/releasable-project` Rule Set is pinned independently
-from the repository baseline. Its `release-contract` Check uses
+The separate external `rulesets/multi-point/releasable-open-source-software` Rule Set shares the reviewed
+immutable revision with the other imports. Its `release-contract` Check uses
 `release-ci.json` and `release-artifacts.json`. Readiness trusts exact-source CI
 without an age limit or repeated source/security checks. Candidate builds and
 artifact-specific tests remain local. After they pass, `release-record` writes

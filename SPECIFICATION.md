@@ -838,9 +838,10 @@ The three existing imports preserve their execution-point and parameter semantic
 Release jobs and execution points are `release-readiness` and `release-candidate`.
 Both jobs depend only on Semantic Release planning and run in parallel. Publish
 requires successful completion of both. Plan and Publish never invoke Please Behave.
-Readiness uses the pinned external `release/readiness` set for exact-commit GitHub
-push-CI proof and committed-source security/license checks; local rules retain
-current Rust/npm audits. The CI policy names
+Readiness uses the pinned external
+`rulesets/multi-point/releasable-open-source-software` set for exact-commit GitHub
+push-CI proof, reusing source-security, license and audit results from trusted CI.
+The CI policy names
 required jobs, not individual steps. The latest matching run must succeed; partial
 reruns may retain successful jobs from earlier attempts of that same run. Missing,
 pending, failed, untrusted or incomplete evidence never establishes PASS.
@@ -861,19 +862,19 @@ README/LICENSE bytes. No rebuild occurs. Incomplete Release reruns require a ful
 rerun when artifacts from the current attempt are missing. CI partial reruns remain
 supported independently. Semantic Release's planned-version and remote-main guards
 remain mandatory before tagging. No artifact execution point is configured.
-The commit-msg point imports the conventional-commits set at a full Git commit
+The commit-msg point imports the rulesets/commit-msg/repository-conventions set at a full Git commit
 pin. Its scopes_file parameter uses .please/commit-scopes.txt. The external Check
 validates syntax, types and scopes; an advisory Gemini Flash-Lite Review evaluates
 only the header for specific English imperative wording, without the diff. Its
 provider is imported independently from providers/gemini-flash-lite. The hook
 inherits GEMINI_API_KEY; missing credentials and provider errors remain visible
 as advisory ERROR. No local commit policy, commit-range or PR-title check remains.
-The check and pre-push points also import multi-point/security at a full commit
+The check and pre-push points also import rulesets/multi-point/security at a full commit
 pin. Its sensitive-files and secret-scan checks inspect the working tree at check
 and HEAD contents at pre-push, without history. The CI quality job explicitly
 runs check with Python 3 and a checksum-verified Gitleaks binary available. Rules
 and Please Behave never install these dependencies automatically. The same points import
-repository-conventions at a full Git commit pin. It currently
+rulesets/multi-point/open-source-software at a full Git commit pin. It currently
 contains only the blocking license Rule, with target = "LICENSE". The license
 must match an SPDX reference byte-for-byte: Apache-2.0,
 PolyForm-Noncommercial-1.0.0 or Unlicense. This repository uses the exact
