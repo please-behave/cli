@@ -71,8 +71,9 @@ use independent synthetic configurations.
 | commit-msg | Imported commit-message Check and advisory commit-message-quality Review |
 | pre-push (default) | format, docs, python-tests, agents-size, release-rules, clippy, rust-tests, native-build, native-smoke, workflows, msrv plus imported license, secret-scan and sensitive-files |
 | check | All pre-push checks plus rust-audit and npm-audit; conditional agents-quality Review |
-| release-readiness | rust-audit, npm-audit plus imported github-ci-success, sensitive-files, secret-scan and license |
-| release-candidate | format, clippy, rust-tests, native-build, native-smoke, release-package, release-package-verify |
+| release-readiness | Imported release-contract: exact-source CI proof |
+| release-candidate | native-build, native-smoke, release-package, release-package-verify |
+| release-record, release-verify | Imported release-contract: record or verify candidate evidence |
 
 The 15 local [checks](../.please/checks) use string commands. Python scripts run
 as `python3 scripts/<name>.py`, relative to the consuming repository root.
@@ -83,21 +84,19 @@ Imported Rules retain their git-prefixed binding namespace. The native-smoke Che
 declares `depends_on = ["native-build"]` at every point where it runs, so it tests
 the candidate executable only after a successful build. Build, smoke, Clippy and
 Rust tests share the `cargo` resource lock. Packaging
-depends on format, Clippy, Rust tests and smoke; individual artifact verification
+depends on smoke; individual artifact verification
 depends on packaging. Failed prerequisites block their dependents.
 Each local Rule declares its execution points directly; this repository defines
 no local Rule Sets. External Rule Sets supply commit-message, security, license
 and CI-proof checks
-at the same reviewed full Git commit pin as the independent provider import.
+using immutable revisions; the release binding is pinned independently.
 
 The imported commit-message, secret-scan and sensitive-files Checks use
 `command = "sh @rule/index.sh"`. The license Check uses
 `command = "python3 @source/scripts/file-reference.py"` for its shared script.
 These references resolve from the cached Rule directory and imported repository
 root respectively, while execution stays in the consuming repository root.
-Existing import parameters and execution-point semantics are unchanged. The new
-release/readiness binding explicitly selects committed `head` snapshots for the
-three security/license Rules and supplies the CI policy as a file parameter.
+The separate release/releasable-project binding supplies CI and artifact policies as file parameters. It reuses source-security results from trusted CI.
 
 All Rust unit, integration, acceptance and documentation tests run in one Cargo
 Rule. Python helper tests use one unittest discovery Rule; test modules use
@@ -240,11 +239,8 @@ The [release workflow](../.github/workflows/release.yml) separates Semantic Rele
 planning/publication from Please Behave validation. Parallel `release-readiness`
 and four-platform `release-candidate` jobs use matching execution points and both
 must succeed before Publish. Readiness uses installation-only Action mode once,
-current audits and the external readiness set. Candidate installs the same governor
-through `scripts/deploy.py` outside the checkout on all four native hosts. Neither
+the external releasable-project set. Candidate installs the same published governor outside the checkout on all four native hosts. Neither
 uses a candidate binary for governance. Both upload diagnostic reports.
 The CI proof accepts successful partial reruns within the newest matching push run,
 using each required job's newest execution across its attempts. It checks jobs,
-not steps. Source security/license rules explicitly read HEAD. General CI suites
-are not rerun in Readiness. Publish runs only direct artifact integrity checks and
-Semantic Release, with no governor invocation. See [release sequence](releasing.md#release-sequence).
+not steps. CI suites and source security/license results are reused without repeating checks. Publish runs local artifact checks, the shared release-verify governor gate and Semantic Release. See [release sequence](releasing.md#release-sequence).

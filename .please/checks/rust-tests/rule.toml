@@ -1,7 +1,7 @@
 id = "rust-tests"
 description = "Run unit acceptance documentation and compatibility tests"
 enabled = true
-run_at = ["pre-push", "check", "release-candidate"]
+run_at = ["pre-push", "check"]
 
 [check]
 resource = "cargo"

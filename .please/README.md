@@ -2,10 +2,10 @@
 
 This repository uses unversioned deterministic Rules with four pinned external
 Rule Sets: conventional commits, security, repository conventions and release
-readiness. A conditional AGENTS.md Review runs only at check through a named
+release eligibility. A conditional AGENTS.md Review runs only at check through a named
 Gemini REST adapter. Commit-msg also runs an imported advisory header-only
 wording Review through the independently imported Gemini Flash-Lite provider.
-Pre-commit, pre-push and both release points select checks only.
+Pre-commit, pre-push and release points select checks only.
 
 `checks/*/rule.toml` defines 15 local Rules using string commands for installed
 tools and consumer-root scripts. Cargo, Python helper and JavaScript tests each
@@ -13,23 +13,17 @@ have one Rule and run at pre-push and again in CI. Cargo build, test, Clippy and
 MSRV commands and npm tests explicitly select offline mode. Local Rules declare
 their own run_at; no local Rule Sets are used.
 
-`release-readiness` requires exact-commit push CI proof, current dependency audits,
-committed-source security/license checks.
+`release-readiness` requires exact-commit push CI proof. Source security and dependency audits are reused from CI.
 `release-ci.json` names the trusted repository, workflow, event, branch and required
 jobs. Successful partial CI reruns count retained successful jobs from the same
 run; individual steps are not checked.
 
-`release-candidate` retains native formatting, Clippy, tests, build and smoke on
-all four release hosts. Smoke depends on build. Packaging depends on format,
-Clippy, tests and smoke, and individual artifact verification depends on packaging.
+`release-candidate` builds and smoke-tests versioned binaries on all four release hosts. Smoke depends on build; packaging depends on smoke; artifact verification depends on packaging.
 Smoke receipts and metadata bind tested binary bytes, version, source, target and
-workflow run/attempt. Publish verifies the complete set directly and never invokes
-the governor. Cargo operations share a resource lock.
+workflow run/attempt. Publish verifies the complete set with local artifact checks and the shared governor gate. Cargo operations share a resource lock.
 
-`config.toml` declares both custom points and pins all four imports to the same
-reviewed immutable revision, also shared by the independent provider import. Imported checks use `@rule/` or `@source/` resources.
-Existing check/pre-push snapshot semantics are unchanged; the new readiness binding
-explicitly selects `head` for security/license checks.
+`config.toml` declares release custom points. The baseline imports and independent provider retain their existing immutable revision; the release import has its own reviewed pin. Imported checks use `@rule/` or `@source/` resources.
+Check/pre-push source-security snapshot semantics are unchanged.
 `commit-scopes.txt` supplies the commit-message import's required
 scopes_file parameter. The imported Check validates syntax, types and scopes;
 there is no local duplicate, commit-range or PR-title check. The advisory wording
@@ -61,3 +55,22 @@ describes the schema. Reports remain ignored.
 The blocking agents-size Check limits AGENTS.md to 1200 words. The
 [quality-review example](../docs/agents-quality-review.md) explains counting,
 full-document context, the rubric, Gemini setup, triggers and CI summaries.
+
+## Shared release evidence
+
+The separate external `release/releasable-project` Rule Set is pinned independently
+from the repository baseline. Its `release-contract` Check uses
+`release-ci.json` and `release-artifacts.json`. Readiness trusts exact-source CI
+without an age limit or repeated source/security checks. Candidate builds and
+artifact-specific tests remain local. After they pass, `release-record` writes
+internal `release-evidence/TARGET.json` manifests. Publish collects every expected
+target and invokes `release-verify` before publication. The shared Check verifies
+repository, workflow, source, version, current run/attempt and artifact hashes.
+Missing or altered evidence blocks publication; partial release reruns require
+rerunning all jobs. Evidence is transferred separately and is not a public asset.
+
+Before tagging, thin local Semantic Release adapters load the cached external
+publication guard exported by `release-verify`. The shared implementation checks
+the recalculated version, checkout, dispatched SHA, repository, main branch and
+current remote main. Custom prerelease/image publication reuses that source guard.
+Offline lifecycle fixtures exercise the actual pinned external module from cache.

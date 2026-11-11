@@ -1,3 +1,4 @@
+import { releaseGuardEnvironment } from "./release-guard-fixture.mjs";
 // Exercise semantic release planning and publication offline.
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
@@ -13,7 +14,7 @@ import { verifyRelease } from "./semantic-release-plugin.mjs";
 const require = createRequire(import.meta.url);
 const source = resolve(import.meta.dirname, "..");
 assert.throws(() => verifyRelease({}, {
-  env: { EXPECTED_RELEASE_VERSION: "0.1.1" }, nextRelease: { version: "0.2.0" },
+  env: { ...releaseGuardEnvironment, EXPECTED_RELEASE_VERSION: "0.1.1" }, nextRelease: { version: "0.2.0" },
 }), /version changed/);
 
 async function testLifecycle() {
@@ -21,10 +22,11 @@ async function testLifecycle() {
   const cwd = join(temporary, "repository");
   const remote = join(temporary, "remote.git");
   mkdirSync(cwd);
-  const env = { ...process.env, EXPECTED_RELEASE_VERSION: "0.1.0" };
+  const env = { ...process.env, ...releaseGuardEnvironment, EXPECTED_RELEASE_VERSION: "0.1.0" };
   for (const key of Object.keys(env)) {
     if (key.startsWith("GITHUB_") || ["CI", "GH_TOKEN", "GITLAB_CI"].includes(key)) delete env[key];
   }
+  Object.assign(env, releaseGuardEnvironment);
   const git = (...args) => execFileSync("git", args, { cwd, env, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
   const quiet = new Writable({ write(_chunk, _encoding, done) { done(); } });
   try {

@@ -2,7 +2,7 @@
 
 Releases are started manually from **Actions → Release → Run workflow → main**.
 No hand-written version tag is needed. CI runs automatically on pushes to main
-and pull requests. Releases verify exact-commit CI evidence, current security prerequisites and four native candidates before publishing.
+and pull requests. Releases verify exact-commit CI evidence, four native candidates and shared release evidence before publishing.
 
 CI runs have no project-defined concurrency limit or automatic cancellation of
 older runs. Releases execute one at a time to avoid competing version/tag writes.
@@ -89,17 +89,13 @@ Please Behave. Dependencies are locked in `package-lock.json`.
 2. `release-readiness` (Release Readiness) and `release-candidate` (Release Candidate)
    depend only on Plan and execute independently in parallel when a release is needed.
    Readiness invokes the published governor at `release-readiness --checks-only`.
-   The pinned external `release/readiness` set verifies successful push CI for the
-   exact source commit, expected repository/workflow, main branch and required jobs,
-   plus committed-source sensitive filenames, secrets and license. Local Rules run
-   current Rust/npm audits. General documentation,
-   Python/JavaScript test suites, workflow checks and MSRV are reused through CI proof.
-3. The four-platform Candidate matrix installs the same pinned published governor
-   outside the checkout using `scripts/deploy.py`, synchronizes imports and stamps
-   Cargo.toml/Cargo.lock before taking the verification snapshot. The
-   `release-candidate` point retains formatting, Clippy, Rust tests, optimized build
-   and every real CLI smoke scenario on each native host. Packaging depends on
-   successful formatting, lint, tests and smoke; smoke depends on build.
+   The pinned external `release/releasable-project` set verifies successful push CI
+   for the exact source, repository, workflow, main branch and required jobs.
+   Source checks, dependency audits and unit tests are reused from CI without an age limit.
+3. The four-platform Candidate matrix installs the published governor, synchronizes
+   imports and stamps Cargo.toml/Cargo.lock with the planned version. It builds and
+   smoke-tests the actual release binary on each native host, then packages and
+   verifies it. Formatting, Clippy and unit tests are not repeated.
 4. Smoke records a receipt binding the binary hash before/after testing to the
    planned version, source, target, workflow run and attempt. Packaging checks the
    executable version and copies exactly those tested bytes, with README and LICENSE.
@@ -112,7 +108,7 @@ Please Behave. Dependencies are locked in `package-lock.json`.
    `python3 scripts/check-release-artifacts.py` verifies exactly four archives and
    their evidence, source/version/run identity, archive/binary/smoke hashes, executable
    permissions, allowed members and README/LICENSE bytes. It never rebuilds binaries.
-   Publish installs no Please Behave, managed hooks, Rust, Go, actionlint or Gitleaks.
+   Publish uses the published governor to verify common release evidence; it installs no build toolchain.
 6. Semantic Release recalculates the version, requires it to match the plan, and
    checks local HEAD, the dispatched SHA and remote main before creating a tag.
    It generates notes, tags the tested source, pushes the tag/Git notes and publishes
@@ -145,7 +141,7 @@ reuse artifacts from an earlier attempt; rerun the entire Release workflow if ne
 This does not restrict partial reruns of the independent CI workflow.
 
 Cargo.toml and Cargo.lock retain their committed development version. Version
-stamping happens only in the native build checkouts, before compilation and tests;
+stamping happens only in the native build checkouts, before compilation and smoke testing;
 Cargo embeds that version in the binaries. Packaging checks the executable version
 against the stamped manifest and planned tag, and records the source SHA and
 binary/archive hashes. The direct artifact verification step checks those records
@@ -169,7 +165,7 @@ names. CI, Readiness and all four native Candidate jobs use the SHA-pinned
 [Action v1.2.0](https://github.com/please-behave/action/releases/tag/v1.2.0)
 with the governor version from `.please-version`. Installation precedes explicit
 synchronization, then the Action executes each gate with a Job Summary.
-Readiness and Candidate set `checks-only: 'true'`; CI retains applicable reviews.
+All release gates set `checks-only: 'true'`; CI retains applicable reviews.
 The governor is always a published binary, separate from the candidate under test.
 
 | Platform | Rust target | Archive |
@@ -191,8 +187,7 @@ Native downloads still need Git and, for enabled reviews, Codex CLI/login.
 
 ## Quality gates
 
-- Push/PR: Linux x64 native gates. Release: all four native hosts. Each runs
-  rustfmt, Clippy with warnings denied, unit/acceptance tests, optimized native build and real CLI smoke test. Tests use fake providers,
+- Push/PR: Linux x64 formatting, Clippy, unit/acceptance tests, optimized build and smoke. Release: versioned builds and real CLI smoke on all four native hosts. Tests use fake providers,
   never real Codex, credentials or paid APIs.
 - Linux: compile-check all Rust targets in the package with the declared minimum
   Rust 1.85 and test Git hook integration offline.
@@ -230,3 +225,12 @@ using a release.
 References: [Semantic Release configuration](https://semantic-release.gitbook.io/semantic-release/usage/configuration),
 [commit analysis](https://github.com/semantic-release/commit-analyzer),
 [GitHub runner images](https://github.com/actions/runner-images).
+
+## Shared evidence
+
+The external releasable-project Check records `release-evidence/TARGET.json` after
+successful candidate verification and verifies the complete collected set before
+publication. `.please/release-artifacts.json` names each target's archive, metadata
+and smoke receipt. The common manifest binds all their hashes to the planned
+version, source, repository, workflow and current run/attempt. Public assets and
+artifact-specific archive validation remain unchanged.

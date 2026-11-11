@@ -21,7 +21,7 @@ spec.loader.exec_module(execution)
 class GovernanceTests(unittest.TestCase):
     def test_ci_uses_published_action_for_check_report_and_summary(self):
         ci = (ROOT / ".github/workflows/ci.yml").read_text()
-        installation = ci.split("      - name: Install pinned published Please Behave\n", 1)[1].split("      - name:", 1)[0]
+        installation = ci.split("      - name: Install published governor\n", 1)[1].split("      - name:", 1)[0]
         execution = ci.split("      - name: Run Please Behave checks and applicable reviews\n", 1)[1].split("      - name:", 1)[0]
         reference = re.search(r"uses: (please-behave/action@[a-f0-9]{40})", installation)[1]
         self.assertIn(f"uses: {reference}", execution)

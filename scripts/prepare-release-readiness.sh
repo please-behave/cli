@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Explicit shared preparation for CI and release readiness; never called by a Rule.
+# Explicit preparation for CI dependency audits and security checks; never called by a Rule.
 set -euo pipefail
 
 rustup toolchain install stable --profile minimal

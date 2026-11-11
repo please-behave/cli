@@ -472,8 +472,8 @@ Consumers decide where to invoke it, including multiple workflows; Please Behave
 not generate workflows, discover them or validate CI integration. Declare custom
 points in the consumer, including unmapped custom points used by imports.
 Custom execution points have no special CLI behavior. This repository uses
-`release-readiness` for exact-commit CI proof, current audits and source prerequisites,
-and `release-candidate` for native validation, smoke testing, packaging and individual
+`release-readiness` for exact-commit CI proof,
+and `release-candidate` for versioned builds, smoke testing, packaging and individual
 archive verification. They run in parallel after Semantic Release planning.
 Publish verifies the complete archive set directly before Semantic Release publishes;
 see the [release sequence](docs/releasing.md#release-sequence).

@@ -57,23 +57,15 @@ jobs:
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: '3.15'
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
-        with:
-          node-version: '26'
-          package-manager-cache: false
-      - name: Prepare current security audits
-        run: |
-          npm ci --ignore-scripts
-          bash scripts/prepare-release-readiness.sh
       - name: Read pinned governor version
         id: governor
         run: echo "version=$(cat .please-version)" >> "$GITHUB_OUTPUT"
-      - name: Install pinned published Please Behave
+      - name: Install published governor
         uses: please-behave/action@722d5967c094e5ac4bfe25e9f82b020ff34e9487 # v1.2.0
         with:
           version: ${{ steps.governor.outputs.version }}
           run: 'false'
-      - name: Resolve pinned Rule Sets
+      - name: Synchronize governance
         run: please sync --yes
       - name: Verify release readiness
         env:
@@ -124,12 +116,12 @@ jobs:
       - name: Read pinned governor version
         id: governor
         run: echo "version=$(cat .please-version)" >> "$GITHUB_OUTPUT"
-      - name: Install pinned published Please Behave
+      - name: Install published governor
         uses: please-behave/action@722d5967c094e5ac4bfe25e9f82b020ff34e9487 # v1.2.0
         with:
           version: ${{ steps.governor.outputs.version }}
           run: 'false'
-      - name: Resolve pinned Rule Sets
+      - name: Synchronize governance
         run: please sync --yes
       - name: Stamp planned release version before verification
         run: python3 scripts/set-release-version.py "$EXPECTED_RELEASE_VERSION"
@@ -159,6 +151,23 @@ jobs:
           path: .please/reports/last.json
           include-hidden-files: true
           if-no-files-found: warn
+          retention-days: 7
+      - name: Record release candidate evidence
+        uses: please-behave/action@722d5967c094e5ac4bfe25e9f82b020ff34e9487 # v1.2.0
+        with:
+          version: ${{ steps.governor.outputs.version }}
+          execution-point: release-record
+          checks-only: 'true'
+          summary: 'true'
+        env:
+          EXPECTED_RELEASE_VERSION: ${{ needs.plan.outputs.version }}
+          RELEASE_TARGET: ${{ matrix.target }}
+      - name: Upload release candidate evidence
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: release-evidence-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.target }}
+          path: release-evidence/
+          if-no-files-found: error
           retention-days: 7
 
   publish:
@@ -198,6 +207,31 @@ jobs:
         env:
           EXPECTED_RELEASE_VERSION: ${{ needs.plan.outputs.version }}
         run: python3 scripts/check-release-artifacts.py
+      - name: Read pinned governor version
+        id: governor
+        run: echo "version=$(cat .please-version)" >> "$GITHUB_OUTPUT"
+      - name: Install published governor
+        uses: please-behave/action@722d5967c094e5ac4bfe25e9f82b020ff34e9487 # v1.2.0
+        with:
+          version: ${{ steps.governor.outputs.version }}
+          run: 'false'
+      - name: Synchronize governance
+        run: please sync --yes
+      - name: Download release candidate evidence
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          pattern: release-evidence-${{ github.run_id }}-${{ github.run_attempt }}-*
+          path: release-evidence
+          merge-multiple: true
+      - name: Verify complete release candidate evidence
+        uses: please-behave/action@722d5967c094e5ac4bfe25e9f82b020ff34e9487 # v1.2.0
+        with:
+          version: ${{ steps.governor.outputs.version }}
+          execution-point: release-verify
+          checks-only: 'true'
+          summary: 'true'
+        env:
+          EXPECTED_RELEASE_VERSION: ${{ needs.plan.outputs.version }}
       - name: Publish versioned CLI archives and release notes
         env:
           GITHUB_TOKEN: ${{ github.token }}

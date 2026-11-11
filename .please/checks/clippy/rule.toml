@@ -1,7 +1,7 @@
 id = "clippy"
 description = "Lint Rust with warnings denied"
 enabled = true
-run_at = ["pre-push", "check", "release-candidate"]
+run_at = ["pre-push", "check"]
 
 [check]
 resource = "cargo"

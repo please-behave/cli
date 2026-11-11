@@ -1,7 +1,7 @@
 id = "rust-audit"
 description = "Audit Rust dependencies"
 enabled = true
-run_at = ["check", "release-readiness"]
+run_at = ["check"]
 
 [check]
 command = "cargo +stable audit"

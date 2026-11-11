@@ -291,7 +291,7 @@ class ReleaseTests(unittest.TestCase):
         self.assertIn(reference, jobs["release-candidate"])
         self.assertIn("version: ${{ steps.governor.outputs.version }}", jobs["release-candidate"])
         self.assertNotIn("setup-node", jobs["release-candidate"])
-        for name in ("plan", "publish"):
+        for name in ("plan",):
             self.assertNotIn("please run", jobs[name])
             self.assertNotIn("please sync", jobs[name])
             self.assertNotIn("please-behave/action@", jobs[name])
@@ -305,22 +305,21 @@ class ReleaseTests(unittest.TestCase):
         self.assertIn("cancel-in-progress: false", workflow)
         self.assertIn("workflow_dispatch:", workflow)
         config = tomllib.loads((SCRIPTS.parent / ".please/config.toml").read_text())
-        self.assertEqual(config["execution_points"]["custom"], ["release-readiness", "release-candidate"])
-        self.assertEqual(len({item["ref"] for item in config["imports"]}), 1)
-        release_import, = [item for item in config["imports"] if item["path"] == "release/readiness"]
+        self.assertEqual(config["execution_points"]["custom"], ["release-readiness", "release-candidate", "release-record", "release-verify"])
+        release_import, = [item for item in config["imports"] if item["path"] == "release/releasable-project"]
         self.assertRegex(release_import["ref"], r"^[0-9a-f]{40}$")
-        self.assertEqual(release_import["rule_parameters"]["license"], dict(snapshot="head", target="LICENSE"))
+        self.assertEqual(release_import["rule_parameters"]["release-contract"], dict(ci_policy=".please/release-ci.json", artifacts_policy=".please/release-artifacts.json"))
         policy = json.loads((SCRIPTS.parent / ".please/release-ci.json").read_text())
         self.assertEqual(policy["required_jobs"], ["Check"])
         self.assertNotIn("required_steps", policy)
         definitions = [tomllib.loads(p.read_text()) for p in (SCRIPTS.parent / ".please/checks").glob("*/rule.toml")]
         by_id = {rule["id"]: rule for rule in definitions}
         self.assertEqual({r["id"] for r in definitions if "release-candidate" in r["run_at"]},
-                         {"format", "clippy", "rust-tests", "native-build", "native-smoke", "release-package", "release-package-verify"})
+                         {"native-build", "native-smoke", "release-package", "release-package-verify"})
         self.assertEqual({r["id"] for r in definitions if "release-readiness" in r["run_at"]},
-                         {"rust-audit", "npm-audit"})
+                         set())
         self.assertEqual(by_id["native-smoke"]["depends_on"], ["native-build"])
-        self.assertEqual(set(by_id["release-package"]["depends_on"]), {"format", "clippy", "rust-tests", "native-smoke"})
+        self.assertEqual(set(by_id["release-package"]["depends_on"]), {"native-smoke"})
         self.assertEqual(by_id["release-package-verify"]["depends_on"], ["release-package"])
         for name in ("format", "clippy", "rust-tests", "native-build", "native-smoke"):
             self.assertIn("check", by_id[name]["run_at"])

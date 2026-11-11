@@ -1,7 +1,7 @@
 id = "release-package"
 description = "Package exactly the smoke-tested release candidate"
 run_at = ["release-candidate"]
-depends_on = ["format", "clippy", "rust-tests", "native-smoke"]
+depends_on = ["native-smoke"]
 
 [check]
 command = "python3 scripts/package-release.py"
