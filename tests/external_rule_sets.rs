@@ -2263,3 +2263,97 @@ fn exclusive_resources_coordinate_local_and_imported_bindings() {
     assert_eq!(report.overall, Status::Pass);
     assert_eq!(report.results.len(), 3);
 }
+
+#[test]
+fn reference_overrides_preserve_paths_mapping_identity_and_offline_reports() {
+    let f = Fixture::new();
+    write(
+        &f.remote,
+        "repository/config.toml",
+        r#"
+id = "quality"
+description = "Reference overrides"
+run_at = ["lint"]
+rules = [
+    { id = "repository/checks/required-files", run_at = ["test", "check"] },
+    { id = "repository/checks/required-files", run_at = ["test"] },
+    { id = "repository/reviews/documentation", run_at = ["test"] },
+]
+"#,
+    );
+    write(
+        &f.remote,
+        "repository/reviews/documentation/rule.toml",
+        "id = 'documentation'\ndescription = 'Documentation'\n[review]\nprompt = 'prompt.md'\nfiles = ['README.md']\n",
+    );
+    write(
+        &f.remote,
+        "repository/reviews/documentation/prompt.md",
+        "Judge consumer documentation.\n",
+    );
+    write(&f.root, "README.md", "# Consumer\n");
+    commit(&f.remote);
+    mapped_imports(
+        &f,
+        &[("repository", "[imports.execution_points]\ntest = 'verify'")],
+        &["verify", "lint"],
+    );
+    let project = f.load(true).unwrap();
+    let plan = planner::build(&project, Some("verify"), false)
+        .unwrap()
+        .plan;
+    assert_eq!(plan.scheduled.len(), 2);
+    assert!(
+        planner::build(&project, Some("lint"), false)
+            .unwrap()
+            .plan
+            .scheduled
+            .is_empty()
+    );
+    let check_id = project
+        .checks
+        .iter()
+        .find(|c| c.id.ends_with(":required-files"))
+        .unwrap()
+        .id
+        .clone();
+    assert_eq!(
+        project.effective.rules[&check_id].execution_points,
+        ["check".into(), "verify".into()].into()
+    );
+    let ids = plan.required_ids.clone();
+    fs::rename(&f.remote, f.remote.with_extension("offline")).unwrap();
+    let project = f.load(false).unwrap();
+    assert_eq!(
+        planner::build(&project, Some("verify"), false)
+            .unwrap()
+            .plan
+            .required_ids,
+        ids
+    );
+    let report = please::verify_project_at(
+        project,
+        &ReviewMock,
+        please::VerificationMode::AllRules,
+        Some("verify"),
+        &mut |_| {},
+    )
+    .unwrap();
+    assert_eq!(report.overall, Status::Pass);
+    assert_eq!(report.results.len(), 2);
+    let saved = please::report::read(&f.root).unwrap();
+    assert_eq!(saved.plan.required_ids, ids);
+    assert_eq!(
+        saved
+            .plan
+            .scheduled
+            .iter()
+            .find(|r| r.id == check_id)
+            .unwrap()
+            .origin
+            .as_ref()
+            .unwrap()
+            .execution_points,
+        ["check".into(), "verify".into()].into()
+    );
+}

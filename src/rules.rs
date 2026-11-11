@@ -102,13 +102,25 @@ pub fn resolve(
             !at.is_empty(),
             "{entity}: run_at: rule set needs at least one execution point"
         );
-        for id in &set.rules {
+        for reference in &set.rules {
+            let id = reference.id();
+            let reference_at = reference
+                .run_at()
+                .map(|values| references(values, &points, &format!("{entity}: rule {id:?}")))
+                .transpose()?;
+            if let Some(at) = &reference_at {
+                ensure!(
+                    !at.is_empty(),
+                    "{entity}: rule {id:?}: run_at: rule reference needs at least one execution point"
+                );
+            }
+            let at = reference_at.as_ref().unwrap_or(&at);
             ensure!(
                 ids.contains_key(id),
                 "{entity}: rules: unknown rule {id:?}; rule sets may reference rules only, never other rule sets"
             );
             {
-                let (effective, sets) = memberships.entry(id.clone()).or_default();
+                let (effective, sets) = memberships.entry(id.to_owned()).or_default();
                 effective.extend(at.iter().cloned());
                 sets.insert(set.id.clone());
             }

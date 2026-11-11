@@ -1,7 +1,9 @@
 # Execution points and plans
 
 Rules are checks or reviews. Rule sets reference rule IDs and assign execution
-points. Each enabled rule uses the union of its Rule Sets' points; without
+points. String references inherit the set's points; a reference table with
+`id` and optional `run_at` can replace that list for one reference. Each enabled
+rule uses the union of its effective reference assignments; without
 membership it uses its own run_at. An overridden own list generates a hint.
 Disabled Rules never run. Present Rule Sets always apply. Every reference is
 validated even when disabled. See the [configuration reference](configuration.md).

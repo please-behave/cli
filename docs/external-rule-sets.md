@@ -83,6 +83,22 @@ ref = "v1.2.0"
 ```
 
 Each selected directory defines exactly one Rule Set in `config.toml`.
+External references also support per-reference overrides:
+
+```toml
+rules = [
+  "rules/checks/readme",
+  { id = "rules/checks/changelog", run_at = ["check"] },
+]
+```
+
+The table's `id` is the same repository-relative directory path as a string.
+Omitting `run_at` inherits the set list; specifying it replaces that list with a
+nonempty list of known points. This applies equally to checks and reviews.
+Effective reference assignments resolve before consumer import mappings, so
+overrides use source-scope point names. Repeated paths still load once and their
+effective assignments union without changing rule identity.
+
 External `rules` entries are directory paths relative to the repository root,
 not IDs or paths relative to the selected set. A Rule directory must be directly
 under `checks/` or `reviews/` and contain `rule.toml` plus its resources. In this

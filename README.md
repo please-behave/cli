@@ -1050,7 +1050,10 @@ Create `.please/rule-sets/repository.toml`:
 id = "repository"
 description = "General repository governance"
 run_at = ["pre-push", "check"]
-rules = ["repository-readme", "architecture-review"]
+rules = [
+  "repository-readme",
+  { id = "architecture-review", run_at = ["check"] },
+]
 ```
 
 | Field | Required / default | Meaning |
@@ -1058,11 +1061,26 @@ rules = ["repository-readme", "architecture-review"]
 | `id` | Required | Unique set ID: 1–80 lowercase ASCII letters, digits, `-`, `_`, starting with a letter/digit. Independent of rule IDs. |
 | `description` | Required | Nonblank explanation. |
 | `run_at` | Required | Nonempty list of known execution points. |
-| `rules` | Required | Local: Rule IDs in the same scope. External: repository-relative Rule directories (see imports below). Repeated references execute once per binding. Empty is allowed; set references are unsupported. |
+| `rules` | Required | Strings or reference tables (below). Local: Rule IDs in the same scope. External: repository-relative Rule directories. Empty is allowed; set references are unsupported. |
+
+Each reference may be a string or table, for Checks and Reviews alike.
+Here the Check inherits both points while the Review runs only at `check`.
+
+| Reference field | Required / default | Meaning |
+| --- | --- | --- |
+| `id` | Required | Same local Rule ID or external Rule directory path as a string reference. |
+| `run_at` | Optional; inherits the set's `run_at` | Nonempty list of known execution points, replacing the set list for this reference. |
+
+String references and tables without `run_at` keep the existing inheritance.
+Overrides never merge with the set list. Unknown or duplicate points and empty
+overrides fail, including on disabled rules. The set's own list remains required
+and validated. Repeated references contribute the union of their effective lists;
+each rule still executes once per point within a binding.
 
 Present sets always apply; they have no enabled, blocking or source attributes.
 Remove a set or its rule references to stop using it. Set membership overrides a
-rule's own assignments; multiple memberships contribute their union. Each rule
+rule's own assignments; multiple memberships contribute the union of their
+effective reference assignments. Each rule
 runs at most once at a point within each import binding. Standalone enabled rules
 use their own `run_at`.
 Disabled rules never execute. All references, even overridden ones, are validated.

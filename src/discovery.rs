@@ -144,6 +144,7 @@ pub(crate) fn load_external(root: &Path, selected: &Path, consumer: Config) -> R
     let mut set: RuleSet = document(root, &central)?;
     let mut directories = std::collections::BTreeMap::new();
     for reference in &set.rules {
+        let reference = reference.id();
         let directory = source_path(root, Path::new(reference))
             .with_context(|| format!("missing or unsafe rule reference {reference:?}"))?;
         ensure!(
@@ -174,12 +175,21 @@ pub(crate) fn load_external(root: &Path, selected: &Path, consumer: Config) -> R
             .collect(),
     )?;
     // External paths select definitions; the shared resolver still operates on IDs.
-    set.rules = loaded
+    let ids: std::collections::BTreeMap<_, _> = loaded
         .checks
         .iter()
-        .map(|(_, rule)| rule.id.clone())
-        .chain(loaded.reviews.iter().map(|(_, rule)| rule.id.clone()))
+        .map(|(source, rule)| (source.parent().unwrap().to_path_buf(), rule.id.clone()))
+        .chain(
+            loaded
+                .reviews
+                .iter()
+                .map(|(source, rule)| (source.parent().unwrap().to_path_buf(), rule.id.clone())),
+        )
         .collect();
+    for reference in &mut set.rules {
+        let directory = source_path(root, Path::new(reference.id()))?;
+        *reference.id_mut() = ids[directory.strip_prefix(root)?].clone();
+    }
     loaded.providers = providers(root, &selected.join("providers"))?;
     loaded.rule_sets.push((central, set));
     Ok(loaded)

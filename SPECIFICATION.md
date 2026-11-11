@@ -58,6 +58,13 @@ so progress, results and saved status agree; technical IDs and full provenance
 remain available in JSON and details. Reports without optional names remain readable.
 
 A present set overrides its rules' own run_at; memberships contribute their union.
+Rule references accept the existing string or a table with required id and optional
+run_at. The id is the same local ID or external directory path as the string.
+An omitted reference run_at inherits the set list; a specified nonempty list
+replaces it for that reference. Both Checks and Reviews use this contract.
+All point lists are validated, including disabled, overridden and repeated
+references. Repeated references union their effective lists without changing
+identity or executing a rule more than once per point.
 Standalone enabled rules use their own assignments. Repeated references within
 a Rule Set contribute one membership. Enabled rules need an effective
 point. Disabled rules remain validated but never run. All references must resolve
@@ -68,6 +75,13 @@ are pre-commit, commit-msg, pre-push and check. The first three use managed Git
 hooks; check is invoked explicitly and never automatically. Custom names come only
 from the consumer; release has no special behavior.
 The default is pre-push. Empty points succeed without claiming rule PASS.
+
+Acceptance: `tests/execution_points.rs::reference_overrides_replace_set_points_and_union_without_changing_identity`
+covers inheritance, replacement and repeated references;
+`tests/configuration.rs::reference_overrides_drive_check_review_plans_and_saved_reports`
+covers Check/Review selection and reports;
+`tests/external_rule_sets.rs::reference_overrides_preserve_paths_mapping_identity_and_offline_reports`
+covers external paths and mapped offline execution.
 
 ## EXT-001: External Git Rule Sets
 

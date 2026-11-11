@@ -1338,3 +1338,79 @@ fn local_path_references_execute_with_consumer_working_directory() {
         );
     }
 }
+
+#[test]
+fn reference_overrides_drive_check_review_plans_and_saved_reports() {
+    let d = project();
+    check(
+        d.path(),
+        "readme",
+        "run_at = ['pre-commit']",
+        "command = 'git --version'",
+        "",
+    );
+    check(d.path(), "inherited", "", "command = 'git --version'", "");
+    review(d.path(), "run_at = ['pre-commit']");
+    write(
+        d.path(),
+        ".please/rule-sets/quality.toml",
+        r#"
+id = "quality"
+description = "Reference assignments"
+run_at = ["pre-push"]
+rules = [
+    { id = "readme", run_at = ["check", "release"] },
+    { id = "design", run_at = ["check", "release"] },
+    "inherited",
+]
+"#,
+    );
+    let project = config::load(d.path()).unwrap();
+    let plan = planner::build(&project, Some("check"), false).unwrap().plan;
+    assert!(plan.executable());
+    assert_eq!(plan.required_ids, ["readme", "design"]);
+    assert_eq!(
+        planner::build(&project, Some("pre-commit"), false)
+            .unwrap()
+            .plan
+            .scheduled
+            .len(),
+        0
+    );
+    assert_eq!(
+        planner::build(&project, Some("pre-push"), false)
+            .unwrap()
+            .plan
+            .required_ids,
+        ["inherited"]
+    );
+    assert!(
+        !planner::build(&project, Some("check"), true)
+            .unwrap()
+            .plan
+            .executable()
+    );
+    for at in ["check", "release"] {
+        let project = config::load(d.path()).unwrap();
+        let report = please::verify_project_at(
+            project,
+            &Mock("PASS"),
+            please::VerificationMode::AllRules,
+            Some(at),
+            &mut |_| {},
+        )
+        .unwrap();
+        assert_eq!(report.overall, Status::Pass);
+        assert_eq!(report.results.len(), 2);
+        let saved = report::read(d.path()).unwrap();
+        assert_eq!(saved.plan.required_ids, plan.required_ids);
+        for rule in &saved.plan.scheduled {
+            let origin = rule.origin.as_ref().unwrap();
+            assert_eq!(
+                origin.execution_points,
+                ["check".into(), "release".into()].into()
+            );
+            assert_eq!(origin.rule_sets, ["quality".into()].into());
+        }
+    }
+}

@@ -459,7 +459,14 @@ pub(crate) fn load_with_changes(
         let used: std::collections::BTreeSet<String> = definitions
             .rule_sets
             .iter()
-            .flat_map(|(_, set)| &set.run_at)
+            .flat_map(|(_, set)| {
+                set.run_at.iter().chain(
+                    set.rules
+                        .iter()
+                        .filter_map(|reference| reference.run_at())
+                        .flatten(),
+                )
+            })
             .chain(definitions.checks.iter().flat_map(|(_, rule)| &rule.run_at))
             .chain(
                 definitions
@@ -587,7 +594,8 @@ pub(crate) fn load_with_changes(
         }
         for set in &mut external.rule_sets {
             set.id = format!("{prefix}{}", set.id);
-            for id in &mut set.rules {
+            for reference in &mut set.rules {
+                let id = reference.id_mut();
                 *id = format!("{prefix}{id}");
             }
         }

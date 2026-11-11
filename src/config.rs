@@ -247,8 +247,42 @@ pub struct ExecutionPoints {
 pub struct RuleSet {
     pub id: String,
     pub description: String,
-    pub rules: Vec<String>,
+    pub rules: Vec<RuleReference>,
     pub run_at: Vec<String>,
+}
+
+/// A scope-local rule ID (or an external Rule directory) with optional assignments.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(untagged, deny_unknown_fields)]
+pub enum RuleReference {
+    Id(String),
+    Configured {
+        id: String,
+        run_at: Option<Vec<String>>,
+    },
+}
+impl RuleReference {
+    pub fn id(&self) -> &str {
+        match self {
+            Self::Id(id) | Self::Configured { id, .. } => id,
+        }
+    }
+    pub(crate) fn id_mut(&mut self) -> &mut String {
+        match self {
+            Self::Id(id) | Self::Configured { id, .. } => id,
+        }
+    }
+    pub(crate) fn run_at(&self) -> Option<&[String]> {
+        match self {
+            Self::Id(_) => None,
+            Self::Configured { run_at, .. } => run_at.as_deref(),
+        }
+    }
+}
+impl From<String> for RuleReference {
+    fn from(id: String) -> Self {
+        Self::Id(id)
+    }
 }
 
 pub fn relative(path: &Path) -> Result<()> {
