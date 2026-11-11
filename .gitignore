@@ -1,7 +1,6 @@
 /target/
 /dist/
 /node_modules/
-.DS_Store
 .please/reports/*
 !.please/reports/.gitignore
 
