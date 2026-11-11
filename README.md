@@ -327,12 +327,12 @@ The public Please Behave Action is maintained separately in
 usage, inputs and supported platforms. It installs an explicitly selected CLI
 release, verifies its archive checksum and optionally runs `please run --at` in
 the consumer checkout. The Action revision and CLI release version are independent.
-The CLI repository uses Action v1.2.0 pinned to
-`722d5967c094e5ac4bfe25e9f82b020ff34e9487` in CI and native release workflows. It reads the CLI
-version from `mise.toml`. Mise installs tools and the governor before explicit
-synchronization; the published Action executes `check` with Job Summaries enabled.
-Native candidate jobs use the same Action with `checks-only: 'true'` and summaries.
-The Action also reinstalls the same governor when executing either gate.
+The CLI repository uses Action v1.3.0 pinned to
+`196e1d61f898e0cb77c58ab3dd6667f021321d5e` in CI and native release workflows.
+Mise installs the governor pinned in `mise.toml`; one Action step with
+`install: 'false'` and `sync: 'true'` synchronizes governance and executes the gate.
+The Action owns GitHub review baselines and generic review summaries. Native
+candidate gates use `checks-only: 'true'`.
 CI uploads the CLI report; local wrapper invocations also retain separate execution metadata.
 See [repository self-integration](docs/self-governance.md#ci-pinning-and-renovate).
 

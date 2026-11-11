@@ -161,10 +161,10 @@ without building or publishing again. Partial publication still needs inspection
 Published releases provide four native archives and `SHA256SUMS`. Build jobs
 transfer archives, metadata and smoke receipts using run/attempt-specific artifact
 names. CI and all four native Candidate jobs use the SHA-pinned
-[Action v1.2.0](https://github.com/please-behave/action/releases/tag/v1.2.0)
-with the governor version from `mise.toml`. Mise installs the required tools and
-governor before explicit synchronization. The Action reinstalls the same governor
-and executes each gate with a Job Summary. Candidate builds and packaging use
+[Action v1.3.0](https://github.com/please-behave/action/releases/tag/v1.3.0).
+Mise installs the governor pinned in `mise.toml`. Each gate uses `install: 'false'`
+and `sync: 'true'` to synchronize and execute in one Action step with a Job Summary.
+Candidate builds and packaging use
 `mise run build --offline` and `mise run release:package`; integrity checks remain
 explicit workflow steps.
 All release gates set `checks-only: 'true'`; CI retains applicable reviews.

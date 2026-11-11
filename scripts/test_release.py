@@ -299,7 +299,9 @@ class ReleaseTests(unittest.TestCase):
         self.assertIn("actions: read", jobs["release-readiness"])
         for name in ("plan", "release-candidate", "publish"):
             self.assertNotIn("actions: write", jobs[name])
-        self.assertIn("version: ${{ steps.governor.outputs.version }}", jobs["release-candidate"])
+        self.assertIn("install: 'false'", candidate)
+        self.assertIn("sync: 'true'", candidate)
+        self.assertNotIn("steps.governor", workflow)
         self.assertIn("install_args: python rust@stable github:please-behave/cli", candidate)
         self.assertIn("MISE_AUTO_INSTALL: 'false'", workflow)
         self.assertNotIn("rustup toolchain install", workflow)

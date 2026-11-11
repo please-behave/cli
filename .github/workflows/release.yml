@@ -95,11 +95,6 @@ jobs:
         with:
           install_args: python rust@stable github:please-behave/cli
           cache: false # Resolve Rust stable independently on each native host.
-      - name: Read pinned governor version
-        id: governor
-        run: echo "version=$(python3 -c 'import pathlib, tomllib; print("v" + tomllib.loads(pathlib.Path("mise.toml").read_text())["tools"]["github:please-behave/cli"])')" >> "$GITHUB_OUTPUT"
-      - name: Synchronize governance
-        run: please sync --yes
       - name: Stamp planned release version before verification
         run: python3 scripts/set-release-version.py "$EXPECTED_RELEASE_VERSION"
       - name: Fetch locked candidate dependencies
@@ -109,9 +104,10 @@ jobs:
       - name: Capture candidate identity before quality checks
         run: python3 scripts/smoke-receipt.py before
       - name: Validate native candidate behavior
-        uses: please-behave/action@722d5967c094e5ac4bfe25e9f82b020ff34e9487 # v1.2.0
+        uses: please-behave/action@196e1d61f898e0cb77c58ab3dd6667f021321d5e # v1.3.0
         with:
-          version: ${{ steps.governor.outputs.version }}
+          install: 'false'
+          sync: 'true'
           execution-point: release
           checks-only: 'true'
           summary: 'true'

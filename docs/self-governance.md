@@ -214,11 +214,11 @@ with checksum and available artifact-attestation verification. The optional
 `mise deploy` task retains the checksum-verifying
 [scripts/deploy.py](../scripts/deploy.py) installer for a separate installation.
 CI and native release workflows use
-[Please Behave Action v1.2.0](https://github.com/please-behave/action/releases/tag/v1.2.0),
-pinned to `722d5967c094e5ac4bfe25e9f82b020ff34e9487`, with the version read
-from `mise.toml`. The mise Action installs tools and the governor before explicit
-synchronization. The Please Behave Action reinstalls that same release when
-executing a gate; v1.2.0 has no execution-only mode. The shared external
+[Please Behave Action v1.3.0](https://github.com/please-behave/action/releases/tag/v1.3.0),
+pinned to `196e1d61f898e0cb77c58ab3dd6667f021321d5e`. Mise installs the governor
+from `mise.toml`; the Action uses it with `install: 'false'` and synchronizes with
+`sync: 'true'` before execution. No version extraction or second installation is needed.
+The shared external
 `renovate-governor` preset tracks stable CLI releases
 and auto-merges governor updates after checks pass, including major versions.
 Native candidate gates
@@ -231,11 +231,10 @@ GitHub tag timestamps may not reflect republished content, and this policy does
 not guarantee the age of every transitive lockfile dependency.
 
 The [CI workflow](../.github/workflows/ci.yml) prepares dependencies, installs the
-released governor through mise, runs `please sync --yes`, establishes PLEASE_CHANGE_BASE and
-invokes the same published Action to run all configured deterministic checks followed by
-applicable reviews at `check`, with Job Summaries enabled. The execution invocation
-installs the same pinned CLI release again. CI uploads `.please/reports/last.json`;
-the AGENTS.md review summary also reads that report. Provider failures remain
+released governor through mise, and invokes one published Action step to synchronize
+and run deterministic checks followed by applicable reviews at `check`.
+The Action establishes the GitHub event comparison base and produces generic
+review summaries. CI uploads `.please/reports/last.json`; provider failures remain
 errors. CI uses the CLI report and Action Summary instead of `execution.json`.
 Local wrapper runs still record governor version/digest, execution point, checked
 commit and exit code in that companion file.

@@ -86,8 +86,7 @@ capture bound; usage statistics are not imported.
 
 ## CI results and baseline
 
-The existing Check job fetches full history. Its
-[baseline helper](../scripts/review-change-base.py) uses the PR head/base merge-base
+The Check job fetches full history. The published Please Behave Action uses the PR head/base merge-base
 for pull requests, the event's before commit for pushes, and HEAD for manual release
 verification. Missing event commits are fetched explicitly; invalid, zero, unavailable
 or unsupported baselines fail visibly. A first push without a previous commit
@@ -105,25 +104,20 @@ Do not supply secrets to untrusted fork code to avoid that error.
 
 All applicable checks run in the same Please Behave invocation before any review. A failed
 check prevents every LLM review from running. No continue-on-error hides failures.
-The always-run [summary helper](../scripts/agents-review-summary.py) reads only
-bounded verdict fields from the fresh report, escapes model-authored markup and
-publishes evidence where available:
-
-| Summary | Meaning | Job behavior |
-| --- | --- | --- |
-| PASS | No substantive issues found | Success if all other rules succeeded |
-| FAIL | Substantive issues found | Non-blocking because blocking = false |
-| ERROR | Review could not complete reliably | Non-blocking; other blocking failures still fail the job |
-| SKIP | Trigger did not match, or checks prevented execution | Check failures still fail the job |
+The Action renders bounded, escaped review reasons and findings from its fresh
+report. Trigger omissions are labeled as not selected. Scheduled reviews retain
+the CLI statuses PASS, FAIL, ERROR, NOT_RUN or CANCELLED; failed checks prevent
+reviews from running without being reported as successful. AGENTS.md review
+findings remain advisory because `blocking = false`.
 
 Missing credentials, malformed responses, timeouts and provider failures remain
-technical ERROR. Missing/startup reports render ERROR, never PASS. The report
+technical ERROR. Missing/startup reports produce a summary diagnostic, never a successful review result. The report
 artifact retains validated findings and execution metadata; prompts and raw
 provider output are not included in the summary. Semantic judgments remain
 probabilistic and grounded references do not establish their correctness.
 
-Offline Python tests cover the size boundary, envelope handling, baselines and
-summaries. A Rust acceptance fixture uses the real Rule, provider and adapter with
+Offline Python tests cover the size boundary and envelope handling. The Action
+repository tests GitHub baselines and generic summaries. A Rust acceptance fixture uses the real Rule, provider and adapter with
 the active configuration and mocked HTTP responses to verify full context,
 AGENTS.md-only triggering, omission, global gating, credentials, PASS, non-blocking
 FAIL and malformed output.

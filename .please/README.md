@@ -79,5 +79,5 @@ pin; candidate binaries never become the governor.
 The exact published governor version is the `github:please-behave/cli` tool entry
 in `mise.toml`. `mise install` installs the released executable through the GitHub
 backend with checksum and available artifact-attestation verification. Run
-`mise exec -- please --version` to inspect it. CI reads this same entry for the
-published Action. Candidate binaries never become the governor.
+`mise exec -- please --version` to inspect it. The published Action uses that installed executable
+with `install: 'false'`; `sync: 'true'` synchronizes before execution. Candidate binaries never become the governor.

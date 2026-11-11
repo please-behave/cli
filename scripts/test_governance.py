@@ -25,20 +25,22 @@ class GovernanceTests(unittest.TestCase):
         execution = ci.split("      - name: Run Please Behave checks and applicable reviews\n", 1)[1].split("      - name:", 1)[0]
         self.assertRegex(installation, r"uses: jdx/mise-action@[a-f0-9]{40}")
         self.assertNotIn("install_args", installation) # Install every configured quality tool.
-        self.assertLess(ci.index(installation), ci.index("please sync --yes"))
-        self.assertLess(ci.index("mise run ci:prepare"), ci.index("please sync --yes"))
+        self.assertLess(ci.index(installation), ci.index(execution))
+        self.assertLess(ci.index("mise run ci:prepare"), ci.index(execution))
         reference = re.search(r"uses: (please-behave/action@[a-f0-9]{40})", execution)[1]
-        self.assertIn("version: ${{ steps.governor.outputs.version }}", execution)
+        self.assertIn("install: 'false'", execution)
+        self.assertIn("sync: 'true'", execution)
+        self.assertEqual(ci.count("please-behave/action@"), 1)
+        self.assertNotIn("steps.governor", ci)
+        self.assertNotIn("please sync", ci)
         self.assertIn("execution-point: check", execution)
         self.assertIn("summary: 'true'", execution)
         for bypass in ("run:", "continue-on-error", "checks-only"):
             self.assertNotIn(bypass, execution)
-        self.assertLess(ci.index("please sync --yes"), ci.index(execution))
-        self.assertLess(ci.index("scripts/review-change-base.py"), ci.index(execution))
         self.assertIn("GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}", execution)
         for variable in ("COMMIT_BASE:", "COMMIT_HEAD:", "PR_TITLE:"):
             self.assertNotIn(variable, execution)
-        self.assertIn("run: python3 scripts/agents-review-summary.py", ci)
+        self.assertNotIn("scripts/agents-review-summary.py", ci)
         self.assertIn("path: .please/reports/last.json", ci)
         self.assertNotIn("scripts/run-execution-point.py", ci)
         release = (ROOT / ".github/workflows/release.yml").read_text()
