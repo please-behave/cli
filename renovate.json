@@ -4,25 +4,12 @@
   "semanticCommitType": "chore",
   "semanticCommitScope": "deps",
   "extends": [
-    "config:best-practices"
+    "config:best-practices",
+    "github>christianpflugradt/please-behave-rulesets:renovate-governor"
   ],
   "platformAutomerge": false,
   "minimumReleaseAge": "7 days",
   "minimumReleaseAgeBehaviour": "timestamp-optional",
-  "customManagers": [
-    {
-      "customType": "regex",
-      "managerFilePatterns": [
-        "/^\\.please-version$/"
-      ],
-      "matchStrings": [
-        "(?<currentValue>v\\d+\\.\\d+\\.\\d+)"
-      ],
-      "depNameTemplate": "please-behave/cli",
-      "datasourceTemplate": "github-releases",
-      "versioningTemplate": "semver"
-    }
-  ],
   "packageRules": [
     {
       "description": "Update the semantic-release changelog stack together so its preset and writer remain compatible.",
@@ -39,7 +26,10 @@
       "matchUpdateTypes": [
         "major"
       ],
-      "minimumReleaseAge": "14 days"
+      "minimumReleaseAge": "14 days",
+      "matchPackageNames": [
+        "!please-behave/cli"
+      ]
     },
     {
       "matchUpdateTypes": [
@@ -49,15 +39,6 @@
         "digest"
       ],
       "automerge": true
-    },
-    {
-      "matchPackageNames": [
-        "please-behave/cli"
-      ],
-      "matchDatasources": [
-        "github-releases"
-      ],
-      "automerge": false
     }
   ]
 }

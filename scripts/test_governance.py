@@ -43,19 +43,13 @@ class GovernanceTests(unittest.TestCase):
         release = (ROOT / ".github/workflows/release.yml").read_text()
         self.assertIn(f"uses: {reference}", release)
 
-    def test_renovate_extracts_one_published_version_without_automerge(self):
+    def test_renovate_uses_the_shared_governor_update_policy(self):
         config = json.loads((ROOT / "renovate.json").read_text())
-        manager, = config["customManagers"]
-        self.assertEqual(manager["managerFilePatterns"], [r"/^\.please-version$/"])
-        pattern = manager["matchStrings"][0].replace("(?<currentValue>", "(?P<currentValue>")
-        match, = list(re.finditer(pattern, (ROOT / ".please-version").read_text()))
-        self.assertRegex(match["currentValue"], r"^v\d+\.\d+\.\d+$")
-        self.assertEqual(manager["datasourceTemplate"], "github-releases")
-        self.assertEqual(manager["depNameTemplate"], "please-behave/cli")
-        self.assertEqual(manager["versioningTemplate"], "semver")
-        rule, = [r for r in config["packageRules"] if "please-behave/cli" in r.get("matchPackageNames", [])]
-        self.assertFalse(rule["automerge"])
-        self.assertEqual(rule["matchDatasources"], ["github-releases"])
+        self.assertIn("github>christianpflugradt/please-behave-rulesets:renovate-governor", config["extends"])
+        self.assertFalse(any(manager.get("depNameTemplate") == "please-behave/cli"
+                             for manager in config.get("customManagers", [])))
+        self.assertFalse(any(rule.get("matchPackageNames") == ["please-behave/cli"]
+                             for rule in config["packageRules"]))
         self.assertIn("config:best-practices", config["extends"])
 
     def test_setup_shim_delegates_sync_and_preserves_custom_paths(self):

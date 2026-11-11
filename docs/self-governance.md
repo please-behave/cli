@@ -217,12 +217,14 @@ v0.5.1. Local `mise deploy` uses the checksum-verifying
 [Please Behave Action v1.2.0](https://github.com/please-behave/action/releases/tag/v1.2.0),
 pinned to `722d5967c094e5ac4bfe25e9f82b020ff34e9487`, with the version read
 from `.please-version` and `run: 'false'`. The Action adds the installed release
-to PATH. Renovate proposes CLI version-pin and Action SHA updates without
-automerging governor version changes. Release readiness and native candidate gates
+to PATH. The shared external `renovate-governor` preset tracks stable CLI releases
+and auto-merges governor updates after checks pass, including major versions.
+Release readiness and native candidate gates
 execute through the same Action with `checks-only: 'true'` and `summary: 'true'`.
 
-Renovate applies a minimum release age of seven days, or fourteen days for major
-updates. This is best effort: updates without a release timestamp may proceed.
+Ordinary dependencies have a minimum release age of seven days, or fourteen days
+for major updates. Governor updates have no cooldown. Dependency age checks are
+best effort: updates without a release timestamp may proceed.
 GitHub tag timestamps may not reflect republished content, and this policy does
 not guarantee the age of every transitive lockfile dependency.
 
