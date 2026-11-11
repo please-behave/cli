@@ -11,7 +11,7 @@ See the [README](README.md#build-locally) for tooling. With mise:
 ```sh
 mise trust
 mise install
-mise run setup
+mise run ci:prepare
 mise hooks:install
 ```
 

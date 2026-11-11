@@ -19,7 +19,7 @@ Prepare tools and dependencies explicitly:
 ```sh
 mise trust
 mise install
-mise run setup
+mise run ci:prepare
 mise hooks:install
 ```
 
@@ -42,8 +42,8 @@ or copy them between repositories.
 `mise install` prepares the published governor, Python, Node, Gitleaks 8.30.1, actionlint 1.7.12,
 cargo-audit 0.22.2 and both Rust toolchains (stable with rustfmt/Clippy and 1.85.0).
 Git and a native compiler/linker remain host prerequisites. Rust stable remains a
-moving channel; the other tool versions are exact pins. `mise run setup` fetches
-locked npm and Cargo dependencies online; it does not run validation.
+moving channel; the other tool versions are exact pins. `mise run ci:prepare`
+(alias `setup`) fetches locked npm and Cargo dependencies online without validation.
 
 Use `mise exec -- please run --at pre-commit` or `mise exec -- please run --at pre-push`
 for manual checks without shell activation. Run Git as `mise exec -- git commit`
@@ -52,7 +52,7 @@ Plain `please` and Git commands require mise shell activation or equivalent PATH
 setup; installing tools alone does not activate them. The published governor must
 still be installed separately and available on PATH. Credentials are external.
 
-Prepare dependencies online first, using `mise install` followed by `mise run setup`.
+Prepare dependencies online first, using `mise install` followed by `mise run ci:prepare`.
 Cargo build, Clippy, test and MSRV
 commands explicitly use --offline; npm tests use --offline too. The execution
 wrapper also sets Cargo/npm offline mode and disables Rustup auto-install when
@@ -216,10 +216,12 @@ with checksum and available artifact-attestation verification. The optional
 CI and native release workflows use
 [Please Behave Action v1.2.0](https://github.com/please-behave/action/releases/tag/v1.2.0),
 pinned to `722d5967c094e5ac4bfe25e9f82b020ff34e9487`, with the version read
-from `mise.toml` and `run: 'false'`. The Action adds the installed release
-to PATH. The shared external `renovate-governor` preset tracks stable CLI releases
+from `mise.toml`. The mise Action installs tools and the governor before explicit
+synchronization. The Please Behave Action reinstalls that same release when
+executing a gate; v1.2.0 has no execution-only mode. The shared external
+`renovate-governor` preset tracks stable CLI releases
 and auto-merges governor updates after checks pass, including major versions.
-Release readiness and native candidate gates
+Native candidate gates
 execute through the same Action with `checks-only: 'true'` and `summary: 'true'`.
 
 Ordinary dependencies have a minimum release age of seven days, or fourteen days
@@ -229,7 +231,7 @@ GitHub tag timestamps may not reflect republished content, and this policy does
 not guarantee the age of every transitive lockfile dependency.
 
 The [CI workflow](../.github/workflows/ci.yml) prepares dependencies, installs the
-released governor, runs `please sync --yes`, establishes PLEASE_CHANGE_BASE and
+released governor through mise, runs `please sync --yes`, establishes PLEASE_CHANGE_BASE and
 invokes the same published Action to run all configured deterministic checks followed by
 applicable reviews at `check`, with Job Summaries enabled. The execution invocation
 installs the same pinned CLI release again. CI uploads `.please/reports/last.json`;
@@ -243,4 +245,16 @@ readiness and four-platform candidate jobs must both succeed. Readiness checks
 exact-source CI directly; candidates install the published governor and invoke
 the independent `release` smoke-quality gate after building. Receipt recording,
 archive checks and publication guards are direct workflow scripts.
+
+The mise Action runs `mise install` using the versions in `mise.toml`; CI then
+runs `mise run ci:prepare` solely to fetch locked npm and Cargo dependencies.
+Release jobs select only Node for planning, Python for readiness, Python/stable
+Rust/the governor for native candidates, and Python/Node for publishing.
+Mise automatic installation is disabled in workflows so tasks do not install
+unrelated tools. Native hosts already include their Rust target; no cross target
+installation is needed. `mise run build --offline` and `mise run release:package`
+expose focused candidate build and packaging operations. Rust jobs disable mise
+caching so each run resolves the moving stable channel; this preserves compiler
+updates at the cost of repeated tool downloads. Exact tool pins elsewhere retain
+the existing compatibility and reproducibility choices.
 See the [release sequence](releasing.md#release-sequence).

@@ -9,6 +9,8 @@ on:
         required: false
 permissions:
   contents: read
+env:
+  MISE_AUTO_INSTALL: 'false' # Install tools explicitly before running tasks.
 jobs:
   check:
     name: Check
@@ -22,27 +24,15 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+      - name: Install project tools
+        uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
         with:
-          python-version: '3.15'
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
-        with:
-          node-version: '26'
-          package-manager-cache: false
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version: stable
-          cache: false
-      - name: Prepare tools and dependencies
-        run: bash scripts/prepare-ci.sh
+          cache: false # Resolve the moving Rust stable channel on each run.
+      - name: Fetch locked dependencies
+        run: mise run ci:prepare
       - name: Read pinned governor version
         id: governor
         run: echo "version=$(python3 -c 'import pathlib, tomllib; print("v" + tomllib.loads(pathlib.Path("mise.toml").read_text())["tools"]["github:please-behave/cli"])')" >> "$GITHUB_OUTPUT"
-      - name: Install published governor
-        uses: please-behave/action@722d5967c094e5ac4bfe25e9f82b020ff34e9487 # v1.2.0
-        with:
-          version: ${{ steps.governor.outputs.version }}
-          run: 'false'
       - name: Synchronize governance
         run: please sync --yes
       - name: Establish review comparison baseline

@@ -288,9 +288,9 @@ class ReleaseTests(unittest.TestCase):
             self.assertNotIn("please sync", jobs[name])
         self.assertIn("python3 scripts/check-release-ci.py", jobs["release-readiness"])
         candidate = jobs["release-candidate"]
-        ordered = ["cargo +stable build", "scripts/smoke-receipt.py before",
+        ordered = ["mise run build --offline", "scripts/smoke-receipt.py before",
                    "execution-point: release", "scripts/smoke-receipt.py after",
-                   "scripts/package-release.py", "scripts/check-release-artifacts.py --candidate",
+                   "mise run release:package", "scripts/check-release-artifacts.py --candidate",
                    "scripts/release-evidence.py record"]
         self.assertEqual([candidate.index(step) for step in ordered],
                          sorted(candidate.index(step) for step in ordered))
@@ -300,6 +300,13 @@ class ReleaseTests(unittest.TestCase):
         for name in ("plan", "release-candidate", "publish"):
             self.assertNotIn("actions: write", jobs[name])
         self.assertIn("version: ${{ steps.governor.outputs.version }}", jobs["release-candidate"])
+        self.assertIn("install_args: python rust@stable github:please-behave/cli", candidate)
+        self.assertIn("MISE_AUTO_INSTALL: 'false'", workflow)
+        self.assertNotIn("rustup toolchain install", workflow)
+        self.assertNotIn("rustup target add", workflow) # All release runners build natively.
+        tasks = tomllib.loads((SCRIPTS.parent / "mise.toml").read_text())["tasks"]
+        self.assertEqual(tasks["build"]["run"], "cargo +stable build --release --locked")
+        self.assertEqual(tasks["release:package"]["run"], "python3 scripts/package-release.py")
         self.assertNotIn("setup-node", jobs["release-candidate"])
         for name in ("plan",):
             self.assertNotIn("please run", jobs[name])

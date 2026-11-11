@@ -329,9 +329,10 @@ release, verifies its archive checksum and optionally runs `please run --at` in
 the consumer checkout. The Action revision and CLI release version are independent.
 The CLI repository uses Action v1.2.0 pinned to
 `722d5967c094e5ac4bfe25e9f82b020ff34e9487` in CI and native release workflows. It reads the CLI
-version from `mise.toml`, installs it before explicit synchronization, then
-invokes the published Action at `check` with Job Summaries enabled. Release readiness
-and native candidate jobs use the same Action with `checks-only: 'true'` and summaries.
+version from `mise.toml`. Mise installs tools and the governor before explicit
+synchronization; the published Action executes `check` with Job Summaries enabled.
+Native candidate jobs use the same Action with `checks-only: 'true'` and summaries.
+The Action also reinstalls the same governor when executing either gate.
 CI uploads the CLI report; local wrapper invocations also retain separate execution metadata.
 See [repository self-integration](docs/self-governance.md#ci-pinning-and-renovate).
 
@@ -1333,9 +1334,12 @@ Git hooks need no Gemini credentials.
 This repository's deterministic quality checks run through an installed published
 Please Behave release. Run `mise install` for the configured rule tools (including
 Gitleaks, actionlint, the published governor and both Rust toolchains), then
-`mise run setup` to fetch locked dependencies. Git and a native
-compiler/linker remain host prerequisites. Rust stable remains a moving channel;
-the other mise tool versions are pinned. See the [setup guide](docs/self-governance.md#local-setup).
+`mise run ci:prepare` (alias `setup`) to fetch locked dependencies. Git and a
+native compiler/linker remain host prerequisites. Rust stable remains a moving channel;
+the other mise tool versions are pinned. Stable receives compiler fixes without
+routine pin updates, while Rust 1.85.0 independently verifies minimum compatibility.
+Later builds can use a different compiler, so byte-for-byte rebuilds are not guaranteed.
+See the [setup guide](docs/self-governance.md#local-setup).
 
 Use `mise exec -- please run --at pre-commit` or `mise exec -- please run --at pre-push`
 for manual execution without shell activation. Use `mise exec -- git commit` and
@@ -1367,6 +1371,12 @@ the Renovate-managed CI version pin, reports and hook limitations. Accepted comm
 types, scopes and release effects are in [Contributing](CONTRIBUTING.md#commits).
 `mise run TASK` works for every task; `mise format` formats Rust, whereas the
 built-in `mise fmt` formats `mise.toml`.
+
+CI uses `mise install` through the mise Action and `mise run ci:prepare`; preparation
+only fetches locked dependencies. Release jobs install only their required tools.
+`mise run build --offline` builds a prepared native candidate; `mise run release:package`
+packages it after smoke validation. Actions owns stamping, receipts, archive checks
+and publication. Rust jobs disable tool caching to resolve stable on each run.
 
 `mise release` uses an authenticated `gh` CLI to start the release workflow for
 **remote main**, then returns. It does not commit/push local work or wait for

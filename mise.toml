@@ -12,7 +12,7 @@ gitleaks = "8.30.1"
 
 [tasks.build]
 description = "Build the native release executable"
-run = "cargo build --release --locked"
+run = "cargo +stable build --release --locked"
 
 [tasks.deploy]
 description = "Download and install the pinned Please Behave release for this platform"
@@ -62,6 +62,11 @@ run = ["python3 scripts/check-docs.py", "cargo test --locked --test documentatio
 description = "Manually run the Please Behave pre-push gate (agents use Git hooks)"
 run = "python3 scripts/run-execution-point.py pre-push"
 
-[tasks.setup]
-description = "Prepare locked dependencies online before offline Git hooks"
+[tasks."ci:prepare"]
+alias = "setup"
+description = "Fetch locked npm and Cargo dependencies for CI and offline Git hooks"
 run = ["npm ci --ignore-scripts", "cargo +stable fetch --locked", "cargo +1.85.0 fetch --locked"]
+
+[tasks."release:package"]
+description = "Package the already-built and smoke-tested native candidate"
+run = "python3 scripts/package-release.py"

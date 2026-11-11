@@ -21,12 +21,13 @@ spec.loader.exec_module(execution)
 class GovernanceTests(unittest.TestCase):
     def test_ci_uses_published_action_for_check_report_and_summary(self):
         ci = (ROOT / ".github/workflows/ci.yml").read_text()
-        installation = ci.split("      - name: Install published governor\n", 1)[1].split("      - name:", 1)[0]
+        installation = ci.split("      - name: Install project tools\n", 1)[1].split("      - name:", 1)[0]
         execution = ci.split("      - name: Run Please Behave checks and applicable reviews\n", 1)[1].split("      - name:", 1)[0]
-        reference = re.search(r"uses: (please-behave/action@[a-f0-9]{40})", installation)[1]
-        self.assertIn(f"uses: {reference}", execution)
-        self.assertIn("run: 'false'", installation)
-        self.assertIn("version: ${{ steps.governor.outputs.version }}", installation)
+        self.assertRegex(installation, r"uses: jdx/mise-action@[a-f0-9]{40}")
+        self.assertNotIn("install_args", installation) # Install every configured quality tool.
+        self.assertLess(ci.index(installation), ci.index("please sync --yes"))
+        self.assertLess(ci.index("mise run ci:prepare"), ci.index("please sync --yes"))
+        reference = re.search(r"uses: (please-behave/action@[a-f0-9]{40})", execution)[1]
         self.assertIn("version: ${{ steps.governor.outputs.version }}", execution)
         self.assertIn("execution-point: check", execution)
         self.assertIn("summary: 'true'", execution)
