@@ -8,7 +8,7 @@ AGENTS.md quality Review uses Gemini at check. Commit-msg imports an advisory
 header-only wording Review and an independent Gemini Flash-Lite provider package.
 Pre-commit, pre-push and native release builds remain checks-only.
 
-The exact published governor pin is recorded in [.please-version](../.please-version).
+The exact published governor pin is recorded in [mise.toml](../mise.toml).
 It must support named CLI providers, runtime requirements and file-change triggers,
 as well as direct commands and unattended hook reconciliation.
 
@@ -20,8 +20,6 @@ Prepare tools and dependencies explicitly:
 mise trust
 mise install
 mise run setup
-mise deploy
-export PATH="$HOME/.local/bin:$PATH"
 mise hooks:install
 ```
 
@@ -41,7 +39,7 @@ Hook setup installs no tools or dependencies. Conflicts still fail. Generated wr
 live at Git's effective hook path and carry local ownership; never check them in
 or copy them between repositories.
 
-`mise install` prepares Python, Node, Gitleaks 8.30.1, actionlint 1.7.12,
+`mise install` prepares the published governor, Python, Node, Gitleaks 8.30.1, actionlint 1.7.12,
 cargo-audit 0.22.2 and both Rust toolchains (stable with rustfmt/Clippy and 1.85.0).
 Git and a native compiler/linker remain host prerequisites. Rust stable remains a
 moving channel; the other tool versions are exact pins. `mise run setup` fetches
@@ -215,12 +213,15 @@ future work.
 
 ## CI, pinning and Renovate
 
-[.please-version](../.please-version) pins the separately installed governor to
-v0.5.1. Local `mise deploy` uses the checksum-verifying
-[scripts/deploy.py](../scripts/deploy.py) installer. CI and native release workflows use
+[mise.toml](../mise.toml) pins the separately installed governor to
+v0.5.1 through `github:please-behave/cli`. Mise installs the published executable
+with checksum and available artifact-attestation verification. The optional
+`mise deploy` task retains the checksum-verifying
+[scripts/deploy.py](../scripts/deploy.py) installer for a separate installation.
+CI and native release workflows use
 [Please Behave Action v1.2.0](https://github.com/please-behave/action/releases/tag/v1.2.0),
 pinned to `722d5967c094e5ac4bfe25e9f82b020ff34e9487`, with the version read
-from `.please-version` and `run: 'false'`. The Action adds the installed release
+from `mise.toml` and `run: 'false'`. The Action adds the installed release
 to PATH. The shared external `renovate-governor` preset tracks stable CLI releases
 and auto-merges governor updates after checks pass, including major versions.
 Release readiness and native candidate gates

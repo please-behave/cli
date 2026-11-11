@@ -157,7 +157,7 @@ tampering and absence of implicit downloads/provider calls.
 New projects use `.please/` exclusively; `.hannes/` is not discovered or migrated.
 Acceptance: initialization and configuration fixtures use `.please/`; the product
 binary is `please`. The repository itself uses the separately installed Please Behave release
-pinned in `.please-version` with `.please/` development configuration.
+pinned in `mise.toml` with `.please/` development configuration.
 
 One unversioned configuration model uses lowercase .please/config.toml, optional
 provider.toml, providers/*.toml, checks/*/rule.toml, reviews/*/rule.toml and rule-sets/*.toml.
@@ -764,7 +764,7 @@ The public GitHub Action is maintained independently in
 owns the Action implementation, inputs, supported runners and acceptance tests.
 The Action revision and selected CLI release are independent. CI and native release jobs use
 Action v1.2.0 pinned to `722d5967c094e5ac4bfe25e9f82b020ff34e9487`, with
-the CLI version read from `.please-version`. Installation-only mode precedes
+the CLI version read from `mise.toml`. Installation-only mode precedes
 explicit synchronization; the published Action then executes `check`, including
 applicable reviews, with Job Summaries enabled. CI retains the CLI report and
 Action Summary; local wrapper runs also retain the companion execution record.
@@ -780,7 +780,7 @@ Rust/Cargo (declared minimum 1.85) into a native executable. Git and configured
 external tools remain runtime dependencies; no Python/Node runtime is bundled.
 
 `mise deploy` installs the Please Behave development governor pinned in
-`.please-version`. It downloads that exact published GitHub release for
+`mise.toml`. It downloads that exact published GitHub release for
 the detected OS and CPU (the four targets above), verifies SHA-256 and executable
 compatibility,
 and installs to `${CARGO_INSTALL_ROOT:-$HOME/.local}/bin/please`. It never builds
@@ -806,7 +806,7 @@ and metadata. The four native CLI assets are published for v0.1.0.
 
 Repository self-integration uses an installed, previously published Please Behave
 binary outside the checkout; local candidate builds never govern the source being
-checked. `.please-version` is the sole exact governor pin for local deployment and
+checked. `mise.toml` is the sole exact governor pin for local deployment and
 Ubuntu CI. Native release builds verify candidates independently on all four
 platforms. Renovate proposes updates without automerge.
 Pinned installation downloads the exact release's native archive and SHA256SUMS
@@ -816,7 +816,7 @@ requests carry no token. Missing releases/assets, network/API failures and missi
 malformed or mismatched checksums fail installation and preserve the installed copy.
 Acceptance: `scripts/test_deploy.py` covers direct pinned URLs, optional API
 authentication, safe diagnostics and installation failures with mocked downloads.
-The governor uses the exact published release in .please-version. Repository rules use the unversioned,
+The governor uses the exact published release in mise.toml. Repository rules use the unversioned,
 self-contained Rule model and fixed Git-hook execution points.
 
 The three Git-backed built-in points serve Git hooks. Normal CI uses one check
@@ -850,7 +850,7 @@ that proof, rather than rerun during release readiness.
 Candidate selects format, clippy, rust-tests, native-build, native-smoke,
 release-package and release-package-verify on all four native hosts. Existing
 native test coverage is retained. The published governor is installed outside the
-checkout through the published Action; its pin is recorded in .please-version. Version stamping occurs
+checkout through the published Action; its pin is recorded in mise.toml. Version stamping occurs
 before Please Behave snapshots inputs. Packaging depends on successful formatting,
 lint, tests and smoke; smoke depends on build. The binary hash before/after smoke
 must agree with the packaged bytes. Each archive is verified before upload.

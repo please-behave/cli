@@ -72,7 +72,7 @@ class GovernanceTests(unittest.TestCase):
 
     def test_execution_rejects_missing_or_candidate_governors(self):
         with patch.dict(os.environ, PLEASE_EXECUTABLE="/nonexistent/please"):
-            with self.assertRaisesRegex(ValueError, "mise deploy"):
+            with self.assertRaisesRegex(ValueError, "mise install"):
                 execution.run("pre-commit")
         with patch.dict(os.environ, PLEASE_EXECUTABLE=str(ROOT / "Cargo.toml")):
             with self.assertRaisesRegex(ValueError, "outside this checkout"):
@@ -84,7 +84,7 @@ class GovernanceTests(unittest.TestCase):
             root = Path(temporary)
             reports = root / ".please/reports"
             reports.mkdir(parents=True)
-            (root / ".please-version").write_text("v999.0.0\n")
+            (root / "mise.toml").write_text('[tools]\n"github:please-behave/cli" = "999.0.0"\n')
             (reports / "last.json").write_text('{"overall":"PASS"}')
             (reports / "execution.json").write_text('{"exit_code":0}')
             result = subprocess.run([sys.executable, str(ROOT / "scripts/run-execution-point.py"), "pre-commit"], cwd=root,
@@ -103,7 +103,7 @@ class GovernanceTests(unittest.TestCase):
             (config / "checks").mkdir(parents=True)
             (config / "reviews").mkdir()
             (root / ".gitignore").write_text(".please/reports/\n")
-            (root / ".please-version").write_text((ROOT / ".please-version").read_text())
+            (root / "mise.toml").write_text((ROOT / "mise.toml").read_text())
             (config / "config.toml").write_text('project = "Failure fixture"\nmax_display_files = 5\n')
             rule = config / "checks/fail"
             rule.mkdir()
@@ -124,7 +124,7 @@ class GovernanceTests(unittest.TestCase):
             env["PLEASE_EXECUTABLE"] = "/nonexistent/please"
             missing = subprocess.run([sys.executable, str(ROOT / "scripts/run-execution-point.py"), "pre-commit"], cwd=root, env=env, capture_output=True, text=True)
             self.assertNotEqual(missing.returncode, 0)
-            self.assertIn("mise deploy", missing.stderr)
+            self.assertIn("mise install", missing.stderr)
 
 
 if __name__ == "__main__":

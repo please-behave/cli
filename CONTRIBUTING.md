@@ -12,13 +12,11 @@ See the [README](README.md#build-locally) for tooling. With mise:
 mise trust
 mise install
 mise run setup
-mise deploy
-export PATH="$HOME/.local/bin:$PATH"
 mise hooks:install
 ```
 
 Development is governed by the separately installed Please Behave release pinned
-in `.please-version`, using `.please/`. `mise deploy` installs that exact release.
+in `mise.toml`, using `.please/`. `mise install` installs that exact release.
 Build the candidate separately as described in the README; it never becomes the
 governor. See [repository quality gates](docs/self-governance.md) for execution
 points, prerequisites, CI pinning and Renovate updates. Prepare dependencies
@@ -110,7 +108,7 @@ Contributions use the project's [PolyForm Noncommercial License 1.0.0](LICENSE).
 Native reconciliation tests use temporary repositories and real Git commits/pushes;
 they run with the Rust suite at pre-push. Keep tests offline and never
 change developer/global Git configuration. The repository integration uses the
-published Please Behave release pinned in `.please-version` with `--yes`.
+published Please Behave release pinned in `mise.toml` with `--yes`.
 Do not substitute a candidate built from this checkout.
 
 For release tooling changes, use the Node version in `mise.toml`, prepare npm

@@ -109,7 +109,7 @@ Download the matching v0.3.1 archive and `SHA256SUMS` from
 | Linux ARM64 | `aarch64-unknown-linux-gnu` |
 
 From this source checkout, `mise deploy` installs the published Please Behave
-release pinned in `.please-version`, with checksum and executable verification.
+release pinned in `mise.toml`, with checksum and executable verification.
 See [native downloads](docs/releasing.md#native-downloads).
 
 For manual installation, verify the checksum, then extract and install it. Replace
@@ -148,14 +148,13 @@ With [mise](https://mise.jdx.dev/), product builds and governor installation are
 
 ```sh
 mise trust
-mise install                  # Install development tools.
+mise install                  # Install development tools and the published governor.
 mise build                    # Build target/release/please.
-mise deploy                   # Install the published Please Behave development governor.
 ```
 
-`mise install` installs development tools; `mise deploy` installs the Please Behave governor.
+`mise install` installs development tools and the Please Behave governor.
 Use the source installation above only when you need a candidate build.
-Repository governance uses the published release installed by `mise deploy`.
+Repository governance uses the published release selected by `mise exec` or shell activation.
 See [Development](#development) for checks and release tasks.
 
 ### Initialize your project
@@ -330,7 +329,7 @@ release, verifies its archive checksum and optionally runs `please run --at` in
 the consumer checkout. The Action revision and CLI release version are independent.
 The CLI repository uses Action v1.2.0 pinned to
 `722d5967c094e5ac4bfe25e9f82b020ff34e9487` in CI and native release workflows. It reads the CLI
-version from `.please-version`, installs it before explicit synchronization, then
+version from `mise.toml`, installs it before explicit synchronization, then
 invokes the published Action at `check` with Job Summaries enabled. Release readiness
 and native candidate jobs use the same Action with `checks-only: 'true'` and summaries.
 CI uploads the CLI report; local wrapper invocations also retain separate execution metadata.
@@ -1304,8 +1303,8 @@ is listed in the [TODOs](docs/todo/README.md).
 ## Development
 
 Please Behave governs its own development using a separately installed release.
-`.please-version` pins the governor, and `.please/` defines its rules.
-`mise deploy` installs that exact release; builds under `target/` are candidates.
+`mise.toml` pins the governor, and `.please/` defines its rules.
+`mise install` installs that exact release; builds under `target/` are candidates.
 See [repository self-integration](docs/self-governance.md) for setup and coverage.
 The `rulesets/multi-point/open-source-software` Rule Set is pinned to a full Git commit and checks
 LICENSE against its permitted reference texts at `pre-push` and `check`.
@@ -1317,8 +1316,8 @@ Git hooks need no Gemini credentials.
 
 This repository's deterministic quality checks run through an installed published
 Please Behave release. Run `mise install` for the configured rule tools (including
-Gitleaks, actionlint and both Rust toolchains), then `mise run setup` to fetch
-locked dependencies and `mise deploy` to install the governor. Git and a native
+Gitleaks, actionlint, the published governor and both Rust toolchains), then
+`mise run setup` to fetch locked dependencies. Git and a native
 compiler/linker remain host prerequisites. Rust stable remains a moving channel;
 the other mise tool versions are pinned. See the [setup guide](docs/self-governance.md#local-setup).
 

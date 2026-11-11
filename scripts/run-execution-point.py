@@ -6,6 +6,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import tomllib
 
 
 def run(point, reviews=False):
@@ -20,16 +21,16 @@ def run(point, reviews=False):
         previous_report = None
     executable = os.environ.get("PLEASE_EXECUTABLE") or shutil.which("please")
     if not executable or not Path(executable).is_file():
-        raise ValueError("Published Please Behave is missing. Run mise deploy explicitly, then put its bin directory on PATH.")
+        raise ValueError("Published Please Behave is missing. Run mise install explicitly, then use mise exec or shell activation.")
     executable = Path(executable).resolve()
     if executable.is_relative_to(root):
-        raise ValueError("The governing Please Behave must be an installed published release outside this checkout. Run mise deploy; do not use target/ binaries.")
+        raise ValueError("The governing Please Behave must be an installed published release outside this checkout. Run mise install; do not use target/ binaries.")
     version = subprocess.check_output([str(executable), "--version"], text=True).strip()
     if not version.startswith("please "):
-        raise ValueError("Installed Please Behave returned an invalid version. Reinstall with mise deploy.")
-    expected = (root / ".please-version").read_text().strip()
+        raise ValueError("Installed Please Behave returned an invalid version. Reinstall the pinned tool with mise install.")
+    expected = "v" + tomllib.loads((root / "mise.toml").read_text())["tools"]["github:please-behave/cli"]
     if os.environ.get("CI") == "true" and version != f"please {expected.removeprefix('v')}":
-        raise ValueError(f"CI requires published Please Behave {expected}; got {version}. Use the installer with the exact .please-version pin.")
+        raise ValueError(f"CI requires published Please Behave {expected}; got {version}. Use the installer with the exact mise.toml pin.")
     env = dict(os.environ, PLEASE_EXECUTABLE=str(executable))
     if point in ("pre-commit", "commit-msg", "pre-push"):
         env.update(CARGO_NET_OFFLINE="true", npm_config_offline="true", RUSTUP_AUTO_INSTALL="0")

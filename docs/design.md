@@ -205,7 +205,7 @@ the loader enforces containment. Checks receive PLEASE_RULE_DIRECTORY for resour
 switch occurs. Providers, snapshots, selection and reports remain shared.
 
 The repository uses the same unversioned Rule model with the published Please
-Behave release pinned in `.please-version` as its governor. Candidate binaries are exercised only in isolated fixture repositories. No hook installation, remote services or releases
+Behave release pinned in `mise.toml` as its governor. Candidate binaries are exercised only in isolated fixture repositories. No hook installation, remote services or releases
 are triggered by loading configuration.
 
 Named provider configurations reuse `ProviderConfig` and the ordinary bounded,

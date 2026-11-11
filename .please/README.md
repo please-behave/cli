@@ -36,7 +36,7 @@ please run --at pre-commit --plan
 please status --details
 ```
 
-The exact published governor pin is recorded in .please-version, shared by local
+The exact published governor pin is recorded in mise.toml, shared by local
 hooks and GitHub Actions. The AGENTS.md review excludes the Git diff and its
 Gemini REST provider delegates deadlines to the adapter.
 Do not use a candidate built from this checkout as the governor.
@@ -77,10 +77,18 @@ Offline lifecycle fixtures exercise the actual pinned external module from cache
 
 ## Published governor updates
 
-`.please-version` records the exact latest stable published governor. The shared
+`mise.toml` records the exact latest stable published governor. The shared
 `renovate-governor` preset in the external ruleset repository tracks GitHub
 Releases and auto-merges newer stable versions, including major updates, after
 checks pass. Governor updates have no dependency cooldown; ordinary dependency
 policies remain unchanged. CI installs the proposed pin before running checks.
 Renovate runs determine update timing. Local governor preparation uses the same
 pin; candidate binaries never become the governor.
+
+## Governor version source
+
+The exact published governor version is the `github:please-behave/cli` tool entry
+in `mise.toml`. `mise install` installs the released executable through the GitHub
+backend with checksum and available artifact-attestation verification. Run
+`mise exec -- please --version` to inspect it. CI reads this same entry for the
+published Action. Candidate binaries never become the governor.

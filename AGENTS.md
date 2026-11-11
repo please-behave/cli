@@ -61,7 +61,7 @@ tools. Graph results support findings; they do not prove completeness.
 
 The CLI under development and the CLI governing this repository are separate.
 The governor is the independently installed, published release pinned in
-`.please-version`. Keep `.please/`, wrappers, Git hooks and governance workflows
+`mise.toml`. Keep `.please/`, wrappers, Git hooks and governance workflows
 compatible with that release. Never use candidate binaries as the governor.
 
 Using newly developed syntax or behavior in this repository's governance
