@@ -139,10 +139,6 @@ pub fn verify_project_with_fail_fast(
         snapshot,
         review_input,
     } = planner::build_with_context(&project, at, checks_only, hook)?;
-    anyhow::ensure!(
-        plan.selection_complete,
-        "Execution point requires reviews; --checks-only cannot omit required rules"
-    );
     let names = plan.display_names();
     planner::apply(&mut project, &plan);
     if plan.executable() {
@@ -158,7 +154,7 @@ pub fn verify_project_with_fail_fast(
     progress(Progress::Plan { total });
     if checks_only {
         progress(Progress::Phase(
-            "Checks only: reviews omitted; no provider call.",
+            "Checks only: reviews not run; no provider call.",
         ));
         if check_count == 0 {
             progress(Progress::Phase("No active checks configured."));
@@ -260,6 +256,17 @@ pub fn verify_project_with_fail_fast(
             Status::Error,
             "Snapshot incomplete; verification cannot establish coverage".into(),
         ));
+    }
+    if checks_only {
+        // Every selected review is reported as requested-not-run and never reaches a provider.
+        for review in plan.scheduled.iter().filter(|r| r.kind == "review") {
+            items.push(Item::simple(
+                &review.id,
+                "review",
+                Status::NotRun,
+                "Checks only requested; no provider call made".into(),
+            ));
+        }
     }
     if !active.is_empty() {
         if report::overall(&items) == Status::Pass {
@@ -391,7 +398,7 @@ pub fn verify_project_with_fail_fast(
         repository: project.root.to_string_lossy().into_owned(),
         project: project.config.project,
         provider: "adapter".into(),
-        overall: report::overall(&items),
+        overall: report::overall_of(&items, checks_only),
         git_summary: format!(
             "{} working files fingerprinted; HEAD {}; {}",
             snapshot.files.len(),

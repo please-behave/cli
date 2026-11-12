@@ -639,14 +639,6 @@ pub fn render_plan(plan: &crate::planner::Plan, color: bool) -> String {
     if plan.checks_only {
         text.push_str("Mode: Checks only · no provider calls\n");
     }
-    text.push_str(&format!(
-        "Selection: {}\n",
-        if plan.selection_complete {
-            "complete"
-        } else {
-            "reviews omitted"
-        }
-    ));
     let names = plan.display_names();
     for (index, rule) in plan.scheduled.iter().enumerate() {
         text.push_str(&format!(
@@ -765,15 +757,10 @@ pub fn render(report: &Report, color: bool) -> String {
     {
         let plan = &report.plan;
         text.push_str(&format!(
-            "Execution Point: {} · Input: {} · {}{}\n",
+            "Execution Point: {} · Input: {} · {}\n",
             clean(&plan.at),
             clean(&plan.input.kind),
-            "Execution point",
-            if plan.selection_complete {
-                ""
-            } else {
-                " · incomplete: checks only"
-            }
+            "Execution point"
         ));
         if plan.scheduled.is_empty() {
             text.push_str("No active rules selected; no rule PASS established.\n");
@@ -788,7 +775,7 @@ pub fn render(report: &Report, color: bool) -> String {
     }
     if report.checks_only {
         text.push_str(&paint(
-            "Mode: Checks only · Reviews omitted · no provider calls\n",
+            "Mode: Checks only · Reviews not run · no provider calls\n",
             Tone::Accent,
             color,
         ));
@@ -860,15 +847,7 @@ pub fn render_details(report: &Report, color: bool) -> String {
     let mut text = render(report, color);
     {
         let plan = &report.plan;
-        text.push_str(&format!(
-            "Plan-ID: {} · Selection: {}\n",
-            clean(&plan.plan_id),
-            if plan.selection_complete {
-                "complete"
-            } else {
-                "restricted"
-            }
-        ));
+        text.push_str(&format!("Plan-ID: {}\n", clean(&plan.plan_id)));
         if !plan.required_ids.is_empty() {
             text.push_str(&format!(
                 "Required rules: {}\n",

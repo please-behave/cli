@@ -30,7 +30,7 @@ retain ID order; resource waits and concurrent completion do not change selectio
 `run --fail-fast` may leave selected rules `NOT_RUN` after a blocking failure or
 fatal execution error. Completed work retains its results; running checks finish
 by default or become `CANCELLED` when configured termination interrupts them.
-This invocation-only option does not change plan identity or selected IDs. Checks-only execution rejects required reviews before any command starts.
+This invocation-only option does not change plan identity or selected IDs. Checks-only execution reports every selected review as `NOT_RUN`; it needs no change base and makes no provider call.
 
 Plans include the selected point, rule sources, effective points, contributing
 sets, required IDs, input identity, bounded context and declared provider settings.

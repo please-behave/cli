@@ -283,12 +283,14 @@ when blocked by an incomplete snapshot.
 A plan is neither a cache nor proof
 that a later input is identical. Provider availability is not checked offline.
 
-`--checks-only` runs checks only, without adapter processes or model calls. Reviews are excluded from progress/results and the limited scope is
-recorded in plans and reports; terminal output warns only about actual omissions.
+`--checks-only` runs the checks only, without adapter processes or model calls. Every selected review
+is reported `NOT_RUN` with the reason that checks-only was requested; it is excluded from progress,
+triggers are not evaluated (no change base is needed) and no review input is prepared. The limited
+scope is recorded in plans and reports. The overall result is determined by the checks alone:
+`NOT_RUN` reviews do not prevent success, so a checks-only PASS says nothing about review criteria.
 Full configuration validation still runs.
-Every selected rule must execute unless dependencies or `--fail-fast` prevent scheduling; non-blocking FAIL and non-blocking provider/review ERROR are nonfatal.
-Invalid review parameters and missing prompts remain fatal. A point requiring reviews rejects checks-only
-execution before any check starts. Empty execution points succeed without proving
+Every selected check must execute unless dependencies or `--fail-fast` prevent scheduling; non-blocking FAIL and non-blocking provider/review ERROR are nonfatal.
+Invalid review parameters and missing prompts remain fatal. Empty execution points succeed without proving
 any rule PASS.
 
 Rule processes receive no `PLEASE_*` environment variables. Every inherited `PLEASE_*`
@@ -817,7 +819,7 @@ Public documentation explains supported behavior; proposals remain in the roadma
 | CLI-001 | `tests/acceptance.rs::all_command_paths_and_standard_help` |
 | PARAM-001 | `tests/parameters.rs::local_parameters_deliver_strings_and_consumer_files_without_changing_rule_resources` |
 | CFG-001 | `tests/configuration.rs::strict_configuration_and_implementation_validation` |
-| SEL-001 | `tests/configuration.rs::checks_only_requires_complete_selection` |
+| SEL-001 | `tests/configuration.rs::checks_only_reports_selected_reviews_as_not_run` |
 | CHK-001 | `tests/configuration.rs::command_representations_execute_equivalently` |
 | REV-001 | `tests/cli_providers.rs::stdin_results_and_provider_isolation` |
 | PREP-001 | `tests/configuration.rs::prepared_input_is_shared_without_rereading_resources` |

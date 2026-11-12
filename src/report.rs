@@ -135,6 +135,15 @@ pub(crate) fn prevents_success(item: &Item) -> bool {
 }
 
 pub fn overall(items: &[Item]) -> Status {
+    overall_of(items, false)
+}
+
+/// Overall status; a checks-only run is decided by its checks, as its reviews are `NOT_RUN` by request.
+pub fn overall_of(items: &[Item], checks_only: bool) -> Status {
+    let items: Vec<&Item> = items
+        .iter()
+        .filter(|x| !(checks_only && x.kind == "review" && x.status == Status::NotRun))
+        .collect();
     if items
         .iter()
         .any(|x| x.status == Status::Error && prevents_success(x))
@@ -328,8 +337,7 @@ pub fn read(root: &Path) -> Result<Report> {
                 .change_base
                 .as_ref()
                 .is_none_or(|base| matches!(base.len(), 40 | 64)
-                    && base.bytes().all(|b| b.is_ascii_hexdigit()))
-            && plan.selection_complete,
+                    && base.bytes().all(|b| b.is_ascii_hexdigit())),
         "inconsistent required rules"
     );
     ensure!(
@@ -341,14 +349,17 @@ pub fn read(root: &Path) -> Result<Report> {
         "report belongs to a different repository; rerun please run"
     );
     ensure!(
-        report.overall == overall(&report.results),
+        report.overall == overall_of(&report.results, report.checks_only),
         "inconsistent report overall status"
     );
     ensure!(
         !report.checks_only
             || (report.provider_usage.is_none()
                 && report.token_usage.is_none()
-                && !report.results.iter().any(|item| item.kind == "review")),
+                && report
+                    .results
+                    .iter()
+                    .all(|item| item.kind != "review" || item.status == Status::NotRun)),
         "inconsistent checks-only report scope"
     );
     Ok(report)

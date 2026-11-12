@@ -595,7 +595,7 @@ please run --at release --plan --json
 ```
 
 Checks finish before reviews; reports retain ID order within each kind. Empty points succeed. Every scheduled rule
-must execute unless dependencies or fail-fast prevent it; `--checks-only` cannot omit required reviews. An offline plan
+must execute unless dependencies or fail-fast prevent it; `--checks-only` reports selected reviews as `NOT_RUN` without calling a provider. An offline plan
 prepares the same selection without rules, provider calls or reconciliation.
 
 ### Import rule sets from Git

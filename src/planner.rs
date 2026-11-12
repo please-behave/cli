@@ -92,7 +92,6 @@ pub struct Plan {
     pub at: String,
     pub input: Input,
     pub checks_only: bool,
-    pub selection_complete: bool,
     pub scheduled: Vec<Rule>,
     pub omitted: Vec<Omission>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -194,10 +193,11 @@ pub fn build_with_context(
         complete: false,
         limitations: vec![format!("{error:#}")],
     });
-    let needs_changes = project
-        .reviews
-        .iter()
-        .any(|r| r.enabled && selects(&r.id) && r.trigger.is_some());
+    let needs_changes = !checks_only
+        && project
+            .reviews
+            .iter()
+            .any(|r| r.enabled && selects(&r.id) && r.trigger.is_some());
     let changes = needs_changes.then(|| -> Result<_> {
         let base = std::env::var("PLEASE_CHANGE_BASE").map_err(|_| {
             anyhow::anyhow!(
@@ -290,20 +290,9 @@ pub fn build_with_context(
             }
         }
         required_ids.push(id.clone());
-        if checks_only && kind == "review" {
-            omitted.push(Omission {
-                rule,
-                reason: "checks_only".into(),
-            });
-        } else {
-            scheduled.push(rule);
-        }
+        scheduled.push(rule);
     }
     validate_dependencies(project, &scheduled)?;
-    let selection_complete = !omitted.iter().any(|r| r.reason == "checks_only");
-    if !selection_complete {
-        blocking_reasons.push("Execution point requires every selected rule; checks-only cannot omit required reviews".into());
-    }
     if needs_changes && changes.as_ref().is_some_and(|r| r.is_ok()) {
         match git_snapshot::capture(&project.root) {
             Ok(after) if git_snapshot::compare(&snapshot, &after, 0).state == "CURRENT" => {}
@@ -315,10 +304,11 @@ pub fn build_with_context(
     if !snapshot.complete {
         blocking_reasons.push("Input snapshot is incomplete; no verification can start".into());
     }
+    // Checks-only runs report reviews as NOT_RUN: no input is prepared and no adapter is needed.
     let active: Vec<_> = project
         .reviews
         .iter()
-        .filter(|r| scheduled.iter().any(|p| p.id == r.id))
+        .filter(|r| !checks_only && scheduled.iter().any(|p| p.id == r.id))
         .collect();
     let mut context = ContextPlan {
         entry_files: active
@@ -406,7 +396,6 @@ pub fn build_with_context(
             limitations: snapshot.limitations.clone(),
         },
         checks_only,
-        selection_complete,
         scheduled,
         omitted,
         disabled_rules,

@@ -6,7 +6,7 @@ Builds under target/ are candidates under test and never become the governor.
 The repository uses local Checks and three pinned external Rule Sets. A conditional
 AGENTS.md quality Review uses Gemini at check. Commit-msg imports an advisory
 header-only wording Review and an independent Gemini Flash-Lite provider package.
-Pre-commit, pre-push and native release builds remain checks-only.
+Pre-commit, pre-push and native release builds select checks only.
 
 The exact published governor pin is recorded in [mise.toml](../mise.toml).
 It must support named CLI providers, runtime requirements and file-change triggers,
@@ -214,7 +214,7 @@ The shared external
 `renovate-governor` preset tracks stable CLI releases
 and auto-merges governor updates after checks pass, including major versions.
 Native candidate gates
-execute through the same Action with `checks-only: 'true'` and `summary: 'true'`.
+execute through the same Action with `summary: 'true'`.
 
 Ordinary dependencies have a minimum release age of seven days, or fourteen days
 for major updates. Governor updates have no cooldown. Dependency age checks are

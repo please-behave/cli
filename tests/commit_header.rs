@@ -239,11 +239,17 @@ fn missing_context_invalid_headers_and_failed_checks_never_call_adapter() {
     for args in [
         vec!["run", "--at", "commit-msg"],
         vec!["run", "--at", "commit-msg", "--plan", "--json"],
-        vec!["run", "--at", "commit-msg", "--checks-only"],
     ] {
         assert!(!cli(&f.root, &args).status.success());
         assert!(f.calls().is_empty());
     }
+    // Checks-only needs no hook context: the header review is NOT_RUN and no adapter is called.
+    assert!(
+        cli(&f.root, &["run", "--at", "commit-msg", "--checks-only"])
+            .status
+            .success()
+    );
+    assert!(f.calls().is_empty());
     for bytes in [
         vec![],
         vec![b'x'; 4097],

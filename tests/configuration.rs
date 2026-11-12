@@ -710,22 +710,44 @@ fn initialization_is_one_time() {
 }
 
 #[test]
-fn checks_only_requires_complete_selection() {
-    let d = project();
-    review(d.path(), "run_at = ['pre-push']\nblocking = false");
-    let p = config::load(d.path()).unwrap();
-    let plan = planner::build(&p, None, true).unwrap().plan;
-    assert!(!plan.selection_complete);
-    assert!(!plan.executable());
-    assert!(
-        please::verify_project_with_mode(
+fn checks_only_reports_selected_reviews_as_not_run() {
+    // A blocking review, with and without a trigger: checks-only needs no change base and
+    // makes no provider call; the review is NOT_RUN and the checks decide the result.
+    for trigger in [false, true] {
+        let d = project();
+        review(d.path(), "run_at = ['pre-push']\nblocking = true");
+        if trigger {
+            let path = d.path().join(".please/reviews/design/rule.toml");
+            let text = fs::read_to_string(&path).unwrap();
+            fs::write(
+                &path,
+                format!("{text}\n[review.trigger]\nchanged_files = ['README.md']\n"),
+            )
+            .unwrap();
+        }
+        let p = config::load(d.path()).unwrap();
+        let plan = planner::build(&p, None, true).unwrap().plan;
+        assert!(plan.executable());
+        assert_eq!(plan.scheduled.len(), 1);
+        let report = please::verify_project_with_mode(
             p,
             &Never,
             please::VerificationMode::ChecksOnly,
-            &mut |_| {}
+            &mut |_| {},
         )
-        .is_err()
-    );
+        .unwrap();
+        assert!(report.checks_only);
+        assert_eq!(report.overall, Status::Pass);
+        let [item] = &report.results[..] else {
+            panic!("one review result expected")
+        };
+        assert_eq!(
+            (item.kind.as_str(), item.status),
+            ("review", Status::NotRun)
+        );
+        assert!(item.reason.contains("Checks only"));
+        report::read(d.path()).unwrap();
+    }
 }
 
 #[test]

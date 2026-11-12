@@ -29,8 +29,9 @@ prevent review token spending; those reviews are `NOT_RUN`. Disabled rules never
 enter results.
 
 `please run --checks-only` runs the checks of an execution point without calling any
-provider. Points that require reviews reject it. Reports and `status` identify the
-limited scope: PASS then means the selected checks passed, not that reviews did.
+provider. Selected reviews are reported `NOT_RUN`. Reports and `status` identify the
+limited scope: PASS then means the selected checks passed, not that reviews did. Use it
+for local development, never in workflows.
 
 ## Select and preview rules
 

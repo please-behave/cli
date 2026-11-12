@@ -282,7 +282,7 @@ class ReleaseTests(unittest.TestCase):
             self.assertIn("needs.plan.outputs.release == 'true'", jobs[name])
             self.assertNotIn("continue-on-error", jobs[name])
         self.assertIn("execution-point: release", jobs["release-candidate"])
-        self.assertIn("checks-only: 'true'", jobs["release-candidate"])
+        self.assertNotIn("checks-only", jobs["release-candidate"])
         self.assertIn("summary: 'true'", jobs["release-candidate"])
         for name in ("release-readiness", "publish"):
             self.assertNotIn("please-behave/action@", jobs[name])

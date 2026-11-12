@@ -137,7 +137,6 @@ fn json_plan_errors_use_current_schema_and_blocking_reasons() {
             let text = String::from_utf8(human.stdout).unwrap();
             assert_eq!(text, terminal::render_plan(&plan, false));
             assert!(text.starts_with("Please Behave execution plan · "));
-            assert!(text.contains("Selection: complete\n"));
             assert!(text.ends_with(
                 "Preview: no rules executed, no tokens consumed, no report overwritten.\n"
             ));
@@ -188,7 +187,6 @@ fn human_plan_uses_english_and_preserves_layout_and_values() {
         "input": {"kind": "worktree", "head": "abc123", "fingerprint": "snapshot-456",
             "complete": true, "limitations": []},
         "checks_only": false,
-        "selection_complete": true,
         "scheduled": [{"id": "architecture", "name": "Architektur", "kind": "review",
             "description": "Prüft das Design", "blocking": true, "selected_by": ["at:check"],
             "provider": "reviewer", "provider_config": {
@@ -217,7 +215,7 @@ fn human_plan_uses_english_and_preserves_layout_and_values() {
             "Please Behave execution plan · PLANNED\n",
             "Execution Point: check (execution point) · Execution point · Input: worktree\n",
             "Plan-ID: plan-123\nHEAD: abc123\nSnapshot: snapshot-456 · complete\n",
-            "Change base: base-789\nSelection: complete\n",
+            "Change base: base-789\n",
             "[1] review Architektur · Prüft das Design\n    Selection: at:check\n",
             "Omitted: review unchanged · trigger_not_matched\nRequired rules: architecture\n",
             "Default adapter: fake-adapter · Timeout: 180 s\n",
@@ -249,19 +247,18 @@ fn human_plan_uses_english_and_preserves_layout_and_values() {
     plan.input.limitations = vec!["File exceeds snapshot limit".into()];
     plan.blocking_reasons = vec!["Input snapshot is incomplete; no verification can start".into()];
     plan.checks_only = true;
-    plan.selection_complete = false;
     plan.omitted.push(please::planner::Omission {
         rule: plan.scheduled.remove(0),
-        reason: "checks_only".into(),
+        reason: "trigger_not_matched".into(),
     });
     plan.context.orientation_diff_truncated = false;
     let text = terminal::render_plan(&plan, false);
     for expected in [
         "Please Behave execution plan · BLOCKED\n",
         "HEAD: unborn\nSnapshot: snapshot-456 · UNKNOWN\n",
-        "Mode: Checks only · no provider calls\nSelection: reviews omitted\n",
+        "Mode: Checks only · no provider calls\n",
         "No active rules selected; no rule PASS established.\n",
-        "Omitted: review architecture · checks_only\n",
+        "Omitted: review architecture · trigger_not_matched\n",
         "Context: 120 / 1000 bytes · Diff: 40 bytes\n",
         "Blocked: Input snapshot is incomplete; no verification can start\nBlocked: File exceeds snapshot limit\n",
     ] {
@@ -1524,12 +1521,6 @@ fn checks_only_never_calls_provider_and_counts_only_checks_even_on_failure() {
     for case in ["pass", "fail", "error", "no-checks"] {
         let d = project();
         enable(d.path());
-        replace(
-            d.path(),
-            "reviews/product-consistency/rule.toml",
-            "pre-push",
-            "commit-msg",
-        );
         if case == "fail" {
             replace(
                 d.path(),
@@ -1573,7 +1564,13 @@ fn checks_only_never_calls_provider_and_counts_only_checks_even_on_failure() {
         .unwrap();
         assert!(!review_event);
         assert!(report.checks_only);
-        assert!(report.results.iter().all(|item| item.kind != "review"));
+        let reviews: Vec<_> = report
+            .results
+            .iter()
+            .filter(|item| item.kind == "review")
+            .collect();
+        assert_eq!(reviews.len(), 1);
+        assert!(reviews.iter().all(|item| item.status == Status::NotRun));
         assert_eq!(
             report.overall,
             match case {
@@ -1627,12 +1624,6 @@ fn run_and_checks_only_are_scoped_to_verification() {
 fn checks_only_cli_skips_enabled_adapter_reviews_and_status_keeps_the_scope() {
     let d = project();
     enable(d.path());
-    replace(
-        d.path(),
-        "reviews/product-consistency/rule.toml",
-        "pre-push",
-        "commit-msg",
-    );
     let fake = tempdir().unwrap();
     let executable = fake.path().join("fake-adapter");
     let marker = fake.path().join("called");
@@ -1678,7 +1669,7 @@ fn checks_only_cli_skips_enabled_adapter_reviews_and_status_keeps_the_scope() {
         assert!(!marker.exists());
     }
     // The flag is per invocation; the next ordinary run still invokes enabled reviews.
-    let full = run(&["run", "--at", "commit-msg"]);
+    let full = run(&["run"]);
     assert_eq!(full.status.code(), Some(2));
     assert!(marker.exists());
     assert!(!report::read(d.path()).unwrap().checks_only);

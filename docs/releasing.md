@@ -173,7 +173,7 @@ and `sync: 'true'` to synchronize and execute in one Action step with a Job Summ
 Candidate builds and packaging use
 `mise run build --offline` and `mise run release:package`; integrity checks remain
 explicit workflow steps.
-All release gates set `checks-only: 'true'`; CI retains applicable reviews.
+Release gates run the `release` point, which selects no reviews; no workflow uses `checks-only`, which is for local development.
 The governor is always a published binary, separate from the candidate under test.
 
 | Platform | Rust target | Archive |

@@ -238,12 +238,11 @@ use `please status --details` for saved output and full diagnostics.
 please run --checks-only
 ```
 
-The selected execution point must contain checks only. A required review makes
-this invocation fail before any rule runs.
-
-This runs selected enabled checks only: no adapter processes or
-review-token usage. The report is explicitly marked as checks-only and omits
-reviews. A checks-only PASS says nothing about your review criteria.
+This runs the selected enabled checks only: no adapter processes or
+review-token usage. The report is explicitly marked as checks-only and lists every
+selected review as `NOT_RUN`; they do not affect the overall result. A checks-only PASS
+says nothing about your review criteria. It is meant for local development, not for
+workflows.
 The whole configuration is still validated, including disabled and omitted rules.
 
 ### Read results
@@ -321,8 +320,8 @@ the consumer checkout. The Action revision and CLI release version are independe
 The CLI repository pins the Action to a full commit in CI and native release workflows.
 Mise installs the governor pinned in `mise.toml`; one Action step with
 `install: 'false'` and `sync: 'true'` synchronizes governance and executes the gate.
-The Action owns GitHub review baselines and generic review summaries. Native
-candidate gates use `checks-only: 'true'`.
+The Action owns GitHub review baselines and generic review summaries. Workflows run
+the full execution point; `--checks-only` and the Action's `checks-only` input are for local development.
 CI uploads the CLI report; local wrapper invocations also retain separate execution metadata.
 See [repository self-integration](docs/self-governance.md#ci-pinning-and-renovate).
 
