@@ -157,20 +157,28 @@ fn patch(git: &Git, directory: &Path, name: &str, arguments: &[&str]) -> Result<
     Ok(json!({"file": name, "bytes": output.stdout.total_bytes, "truncated": false}))
 }
 
-fn workspace(git: &Git, directory: &Path, limit: usize) -> Result<(Value, Vec<String>)> {
-    let output = git.out(&["status", "--porcelain=v2", "-z", "--untracked-files=all"])?;
-    ensure!(output.status.success(), "git status failed");
-    let cut_output = output.stdout.truncated;
-    let mut text = output.stdout.text;
-    if cut_output {
-        // Keep only complete NUL-terminated records of an oversized listing.
-        text.truncate(text.rfind('\0').map_or(0, |end| end + 1));
-    }
+/// Entries of `git status --porcelain=v2 -z`, split by category under the section limits.
+struct Status {
+    staged: Listing,
+    unstaged: Listing,
+    untracked: Listing,
+    conflicted: Listing,
+    untracked_paths: Vec<String>,
+    total: usize,
+    unrepresentable: usize,
+}
+
+fn parse_status(text: &str, limit: usize) -> Result<Status> {
     let mut tokens = text.split_terminator('\0');
-    let (mut staged, mut unstaged) = (Listing::new(limit), Listing::new(limit));
-    let (mut untracked, mut conflicted) = (Listing::new(limit), Listing::new(limit));
-    let mut untracked_paths = Vec::new();
-    let (mut total, mut unrepresentable) = (0usize, 0usize);
+    let mut status = Status {
+        staged: Listing::new(limit),
+        unstaged: Listing::new(limit),
+        untracked: Listing::new(limit),
+        conflicted: Listing::new(limit),
+        untracked_paths: Vec::new(),
+        total: 0,
+        unrepresentable: 0,
+    };
     while let Some(record) = tokens.next() {
         let kind = record.chars().next().unwrap_or(' ');
         let fields: Vec<&str> = match kind {
@@ -184,33 +192,58 @@ fn workspace(git: &Git, directory: &Path, limit: usize) -> Result<(Value, Vec<St
         let Some(path) = fields.last().copied().filter(|path| !path.is_empty()) else {
             bail!("unexpected git status output");
         };
+        status.total += 1;
+        // Invalid UTF-8 shows up as U+FFFD; count such paths instead of listing a lossy name.
         if path.contains('\u{fffd}') || original.is_some_and(|old| old.contains('\u{fffd}')) {
-            unrepresentable += 1;
-            total += 1;
+            status.unrepresentable += 1;
             continue;
         }
-        total += 1;
         let weight = path.len() + original.map_or(0, str::len) + 48;
         match kind {
             '?' => {
-                untracked_paths.push(path.to_owned());
-                untracked.push(json!(path), weight);
+                status.untracked_paths.push(path.to_owned());
+                status.untracked.push(json!(path), weight);
             }
-            'u' => conflicted.push(json!(path), weight),
+            'u' => status.conflicted.push(json!(path), weight),
             _ => {
                 let mut states = fields[1].chars();
                 let (index, tree) = (states.next().unwrap_or('.'), states.next().unwrap_or('.'));
                 if index != '.' {
                     let old = original.filter(|_| matches!(index, 'R' | 'C'));
-                    staged.push(entry(path, status_name(index), old), weight);
+                    status
+                        .staged
+                        .push(entry(path, status_name(index), old), weight);
                 }
                 if tree != '.' {
                     let old = original.filter(|_| matches!(tree, 'R' | 'C'));
-                    unstaged.push(entry(path, status_name(tree), old), weight);
+                    status
+                        .unstaged
+                        .push(entry(path, status_name(tree), old), weight);
                 }
             }
         }
     }
+    Ok(status)
+}
+
+fn workspace(git: &Git, directory: &Path, limit: usize) -> Result<(Value, Vec<String>)> {
+    let output = git.out(&["status", "--porcelain=v2", "-z", "--untracked-files=all"])?;
+    ensure!(output.status.success(), "git status failed");
+    let cut_output = output.stdout.truncated;
+    let mut text = output.stdout.text;
+    if cut_output {
+        // Keep only complete NUL-terminated records of an oversized listing.
+        text.truncate(text.rfind('\0').map_or(0, |end| end + 1));
+    }
+    let Status {
+        staged,
+        unstaged,
+        untracked,
+        conflicted,
+        untracked_paths,
+        total,
+        unrepresentable,
+    } = parse_status(&text, limit)?;
     let omitted = staged.omitted + unstaged.omitted + untracked.omitted + conflicted.omitted;
     let value = json!({
         "clean": total == 0 && !cut_output,
@@ -542,4 +575,48 @@ pub fn prepare(project: &Project, point: &str, hook: Option<&HookContext>) -> Re
     let path = directory.join("context.json");
     write_private(&path, serde_json::to_string_pretty(&document)?.as_bytes())?;
     Ok(path)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn status_records_are_split_by_category_with_renames_and_conflicts() {
+        let text = [
+            "1 M. N... 100644 100644 100644 a b a.txt",
+            "1 .M N... 100644 100644 100644 a b a.txt",
+            "2 R. N... 100644 100644 100644 a b R100 new name.txt",
+            "old name.txt",
+            "u UU N... 100644 100644 100644 100644 a b c conflict.txt",
+            "? untracked file.txt",
+        ]
+        .join("\0")
+            + "\0";
+        let status = parse_status(&text, 10_000).unwrap();
+        assert_eq!(status.total, 5);
+        assert_eq!(status.staged.entries.len(), 2);
+        assert_eq!(status.staged.entries[1]["old_path"], "old name.txt");
+        assert_eq!(status.staged.entries[1]["status"], "renamed");
+        assert_eq!(status.unstaged.entries.len(), 1);
+        assert_eq!(status.conflicted.entries[0], "conflict.txt");
+        assert_eq!(status.untracked_paths, ["untracked file.txt"]);
+        assert_eq!(status.unrepresentable, 0);
+    }
+
+    #[test]
+    fn invalid_utf8_paths_are_counted_instead_of_listed() {
+        let text = "? bad\u{fffd}.txt\0? good.txt\0";
+        let status = parse_status(text, 10_000).unwrap();
+        assert_eq!((status.total, status.unrepresentable), (2, 1));
+        assert_eq!(status.untracked_paths, ["good.txt"]);
+    }
+
+    #[test]
+    fn entries_over_the_limit_are_counted_as_omitted() {
+        let text = "? one.txt\0? two.txt\0? three.txt\0";
+        let status = parse_status(text, 100).unwrap();
+        assert_eq!(status.untracked.entries.len(), 1);
+        assert_eq!(status.untracked.omitted, 2);
+    }
 }

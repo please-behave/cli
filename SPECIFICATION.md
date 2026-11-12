@@ -626,7 +626,7 @@ A working-tree PASS does not certify staged/pushed commits or deployed artifacts
 
 Each run that executes rules writes one JSON context document, specified by
 `docs/schemas/context.schema.json` (`schema_version` 1), and supplies its absolute path to
-checks and review adapters in `PLEASE_CONTEXT`. Offline plans write none. The document holds
+checks and review adapters in `PLEASE_CONTEXT`. Offline plans and blocked plans (for example an incomplete snapshot) write none. The document holds
 Git facts only, never file contents: `repository`, `head` (commit, branch, message) and
 `workspace` (clean flag, staged, unstaged, untracked and conflicted paths with statuses, and
 staged and unstaged patches) are always present. `commit_message` exists at commit-msg, `push`

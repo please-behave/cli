@@ -5,7 +5,6 @@ use please::config;
 use serde_json::Value;
 use std::{
     fs,
-    os::unix::ffi::OsStrExt,
     path::{Path, PathBuf},
     process::{Command, Output},
     sync::OnceLock,
@@ -287,24 +286,13 @@ fn merge_conflicts_are_listed_separately() {
 }
 
 #[test]
-fn unusual_paths_are_listed_or_counted_as_unrepresentable() {
+fn unusual_paths_are_listed_verbatim() {
     let root = project("");
     let path = root.path();
     write(path, "with space/ünïcode file.txt", "x\n");
     let (_, context) = run_check(path);
     assert!(strings(&context["workspace"]["untracked"]).contains(&"with space/ünïcode file.txt"));
     assert_eq!(context["workspace"]["unrepresentable_paths"], 0);
-    // APFS rejects non-UTF-8 names, so only Linux filesystems exercise the counter.
-    if cfg!(target_os = "linux") {
-        fs::write(
-            path.join(std::ffi::OsStr::from_bytes(b"bad\xff.txt")),
-            "y\n",
-        )
-        .unwrap();
-        let (_, context) = run_check(path);
-        assert_eq!(context["workspace"]["unrepresentable_paths"], 1);
-        assert_eq!(context["workspace"]["clean"], false);
-    }
 }
 
 #[test]
