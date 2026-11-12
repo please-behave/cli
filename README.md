@@ -461,10 +461,9 @@ This repository's deterministic quality checks run through an installed publishe
 Please Behave release. Run `mise install` for the configured rule tools (including
 Gitleaks, actionlint, the published governor and both Rust toolchains), then
 `mise run ci:prepare` (alias `setup`) to fetch locked dependencies. Git and a
-native compiler/linker remain host prerequisites. Rust stable remains a moving channel;
-the other mise tool versions are pinned. Stable receives compiler fixes without
-routine pin updates, while Rust 1.85.0 independently verifies minimum compatibility.
-Later builds can use a different compiler, so byte-for-byte rebuilds are not guaranteed.
+native compiler/linker remain host prerequisites. All mise tool versions, including
+the Rust toolchain, are pinned and updated by Renovate; Rust 1.85.0 independently
+verifies minimum compatibility.
 See the [setup guide](docs/self-governance.md#local-setup).
 
 Use `mise exec -- please run --at pre-commit` or `mise exec -- please run --at pre-push`
@@ -502,7 +501,7 @@ CI uses `mise install` through the mise Action and `mise run ci:prepare`; prepar
 only fetches locked dependencies. Release jobs install only their required tools.
 `mise run build --offline` builds a prepared native candidate; `mise run release:package`
 packages it after smoke validation. Actions owns stamping, receipts, archive checks
-and publication. Rust jobs disable tool caching to resolve stable on each run.
+and publication.
 
 `mise release` uses an authenticated `gh` CLI to start the release workflow for
 **remote main**, then returns. It does not commit/push local work or wait for

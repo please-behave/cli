@@ -40,8 +40,8 @@ live at Git's effective hook path and carry local ownership; never check them in
 or copy them between repositories.
 
 `mise install` prepares the governor, tools and Rust toolchains pinned in `mise.toml`.
-Git and a native compiler/linker remain host prerequisites. Rust stable remains a
-moving channel; the other tool versions are exact pins. `mise run ci:prepare`
+Git and a native compiler/linker remain host prerequisites. All tool versions,
+including the Rust toolchain, are exact pins that Renovate updates. `mise run ci:prepare`
 (alias `setup`) fetches locked npm and Cargo dependencies online without validation.
 
 Use `mise exec -- please run --at pre-commit` or `mise exec -- please run --at pre-push`
@@ -239,13 +239,12 @@ archive checks and publication guards are direct workflow scripts.
 
 The mise Action runs `mise install` using the versions in `mise.toml`; CI then
 runs `mise run ci:prepare` solely to fetch locked npm and Cargo dependencies.
-Release jobs select only Node for planning, Python for readiness, Python/stable
-Rust/the governor for native candidates, and Python/Node for publishing.
+Release jobs select only Node for planning, Python for readiness, Python/Rust/the governor for native candidates, and Python/Node for publishing.
 Mise automatic installation is disabled in workflows so tasks do not install
 unrelated tools. Native hosts already include their Rust target; no cross target
 installation is needed. `mise run build --offline` and `mise run release:package`
-expose focused candidate build and packaging operations. Rust jobs disable mise
-caching so each run resolves the moving stable channel; this preserves compiler
-updates at the cost of repeated tool downloads. Exact tool pins elsewhere retain
-the existing compatibility and reproducibility choices.
+expose focused candidate build and packaging operations. The Rust toolchain is
+pinned like every other tool, so compiler and lint changes arrive through a
+Renovate pull request that must pass the checks, not through an unrelated push.
+Renovate leaves the minimum-version toolchain (1.85.0) unchanged.
 See the [release sequence](releasing.md#release-sequence).

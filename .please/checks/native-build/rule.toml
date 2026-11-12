@@ -5,5 +5,5 @@ run_at = ["pre-push", "check"]
 
 [check]
 resource = "cargo"
-command = "cargo +stable build --release --locked --offline"
+command = "cargo build --release --locked --offline"
 timeout_seconds = 600

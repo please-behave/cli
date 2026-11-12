@@ -4,5 +4,5 @@ enabled = true
 run_at = ["pre-commit", "pre-push", "check"]
 
 [check]
-command = "cargo +stable fmt --all -- --check"
+command = "cargo fmt --all -- --check"
 timeout_seconds = 120

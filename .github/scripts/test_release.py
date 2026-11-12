@@ -303,12 +303,12 @@ class ReleaseTests(unittest.TestCase):
         self.assertIn("install: 'false'", candidate)
         self.assertIn("sync: 'true'", candidate)
         self.assertNotIn("steps.governor", workflow)
-        self.assertIn("install_args: python rust@stable github:please-behave/cli", candidate)
+        self.assertIn("install_args: python rust github:please-behave/cli", candidate)
         self.assertIn("MISE_AUTO_INSTALL: 'false'", workflow)
         self.assertNotIn("rustup toolchain install", workflow)
         self.assertNotIn("rustup target add", workflow) # All release runners build natively.
         tasks = tomllib.loads((ROOT / "mise.toml").read_text())["tasks"]
-        self.assertEqual(tasks["build"]["run"], "cargo +stable build --release --locked")
+        self.assertEqual(tasks["build"]["run"], "cargo build --release --locked")
         self.assertEqual(tasks["release:package"]["run"], "python3 .github/scripts/package-release.py")
         self.assertNotIn("setup-node", jobs["release-candidate"])
         for name in ("plan",):

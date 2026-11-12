@@ -4,5 +4,5 @@ enabled = true
 run_at = ["check"]
 
 [check]
-command = "cargo +stable audit"
+command = "cargo audit"
 timeout_seconds = 300

@@ -93,12 +93,11 @@ jobs:
       - name: Install project tools
         uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
         with:
-          install_args: python rust@stable github:please-behave/cli
-          cache: false # Resolve Rust stable independently on each native host.
+          install_args: python rust github:please-behave/cli
       - name: Stamp planned release version before verification
         run: python3 .github/scripts/set-release-version.py "$EXPECTED_RELEASE_VERSION"
       - name: Fetch locked candidate dependencies
-        run: cargo +stable fetch --locked
+        run: cargo fetch --locked
       - name: Build native candidate
         run: mise run build --offline
       - name: Capture candidate identity before quality checks

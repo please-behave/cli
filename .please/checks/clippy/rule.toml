@@ -5,5 +5,5 @@ run_at = ["pre-push", "check"]
 
 [check]
 resource = "cargo"
-command = "cargo +stable --offline clippy --all-targets --locked -- -D warnings"
+command = "cargo --offline clippy --all-targets --locked -- -D warnings"
 timeout_seconds = 600
