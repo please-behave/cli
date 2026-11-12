@@ -20,8 +20,9 @@ run = "python3 scripts/deploy.py"
 run_windows = "python scripts/deploy.py"
 
 [tasks.release]
-description = "Start the GitHub Release workflow for remote main"
-run = "gh workflow run release.yml --ref main"
+description = "Start the GitHub Release workflow for remote main; --install waits, then adopts the release as governor"
+usage = 'flag "--install" help="Wait for success, pin the new version in mise.toml and run mise install"'
+run = 'python3 scripts/release.py ${usage_install:+--install}'
 
 [tasks."hooks:install"]
 description = "Install the explicit pre-commit, commit-msg and pre-push hooks"

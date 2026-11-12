@@ -508,7 +508,7 @@ and publication. Rust jobs disable tool caching to resolve stable on each run.
 
 `mise release` uses an authenticated `gh` CLI to start the release workflow for
 **remote main**, then returns. It does not commit/push local work or wait for
-publication. Please Behave starts at 0.1.0; features and breaking changes increment minor
+publication unless `--install` is given (see [Releasing](docs/releasing.md)). Please Behave starts at 0.1.0; features and breaking changes increment minor
 during 0.x, fixes and maintenance increment patch. Semantic Release handles
 subsequent versions, tags, release notes and native archives;
 see [Releasing](docs/releasing.md).

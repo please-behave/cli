@@ -20,7 +20,12 @@ This dispatches `gh workflow run release.yml --ref main`, assuming `gh` is alrea
 authenticated with the required permissions. It starts the workflow for **remote
 main** and returns after dispatch; it neither commits/pushes local changes nor
 waits for publication. Follow progress in GitHub Actions or with `gh run list
---workflow release.yml`. `mise run release` is equivalent. `mise deploy` instead
+--workflow release.yml`. `mise run release` is equivalent. `mise release --install` additionally
+waits for the dispatched run and, if it published a release for that source commit, sets
+the governor pin in `mise.toml` to the new version and runs `mise install`. It stops if
+`mise.toml` has uncommitted changes, never commits or pushes, and leaves the pin untouched
+when the run published nothing. Review and commit the pin separately; governance
+configuration may need migrating first. `mise deploy` instead
 downloads and installs the pinned published Please Behave development governor for the
 current OS/CPU, verifying its checksum and executable compatibility before
 replacement. Candidate builds remain separate; see the
