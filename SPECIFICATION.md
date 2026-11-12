@@ -100,8 +100,7 @@ Rule IDs fail within a binding. References are resolved to IDs before ordinary
 assignment validation. Each import remains a separate execution/parameter binding.
 No nested imports or references to other sets are supported. Absolute paths,
 parent traversal, symlinks and references outside the repository fail. Local sets
-continue to reference IDs. This replaces external sets' former directory-local
-ID references; migrate each entry to its repository-relative Rule directory.
+continue to reference IDs.
 Rules are namespaced only after scope-local validation; provenance retains source
 identity, selected path/ref and resolved commit.
 
@@ -148,18 +147,14 @@ reviews after deterministic checks.
 
 Imported provider provenance identifies repository hash, selected path/ref and
 resolved commit in plans/reports, and participates in plan identity. Cache
-integrity is rechecked before launching an imported adapter. Existing adapter
-protocol, review evidence, blocking, timeout and output contracts remain intact.
+integrity is rechecked before launching an imported adapter. 
 Cache resource failures remain fatal for advisory reviews.
 The product includes no provider or model by default. Imports execute trusted
 code with the user's permissions; Git credentials and dependencies remain external.
 
 ## CFG-001: Configuration and initialization
 
-New projects use `.please/` exclusively; `.hannes/` is not discovered or migrated.
-Acceptance: initialization and configuration fixtures use `.please/`; the product
-binary is `please`. The repository itself uses the separately installed Please Behave release
-pinned in `mise.toml` with `.please/` development configuration.
+Projects use `.please/` exclusively.
 
 One unversioned configuration model uses lowercase .please/config.toml, optional
 provider.toml, providers/*.toml, checks/*/rule.toml, reviews/*/rule.toml and rule-sets/*.toml.
@@ -233,7 +228,7 @@ otherwise 1..=3600), with optional literal args, requirements.env,
 requirements.executables and parameters tables. No shell expansion occurs. The
 consumer root is the working directory. Availability requirements are evaluated
 only after checks and immediately before invocation. Provider-specific fields
-from the previous configuration model are rejected; migrate them into parameters.
+outside parameters are rejected.
 
 ## PROV-002: Adapter protocol
 
@@ -322,7 +317,6 @@ The deprecated nonempty array syntax remains supported unchanged: executable
 first, then literal arguments, without string-command parsing. The executable
 must be nonblank and no element may contain NUL. Empty arguments are allowed.
 The deprecated entrypoint and interpreter syntax remains supported unchanged.
-No removal or runtime deprecation warning is introduced in this migration step.
 Both command forms are mutually exclusive with entrypoint and interpreter.
 Programs resolve through PATH or an explicit executable path, with the consumer
 root as working directory. Please Behave performs no runtime installation.
@@ -410,42 +404,20 @@ runnable checks; saved results retain canonical order regardless of completion.
 No resource list or build-tool-specific behavior is supported.
 
 Interactive progress shows pending, resource-waiting, running and final rule
-states, running elapsed times and completed/total and running counts. Visible
-rule numbers are assigned in actual start-event order and retained on completion;
-they are not plan positions or completion counts. Pending, waiting and never-started
-NOT_RUN rules have no start number. Started rows precede unstarted rows and retain
-start order, including members of shared review calls. Plain output uses the same
-start numbers and reports completed/total and running counts after final events.
-Canonical plan positions and saved result order remain unchanged. Refreshes are bounded;
-short terminals show a bounded selection of rows and hidden-state counts. Plain
-logs attribute waiting, starts and results without raw subprocess output. CI,
-GitHub Actions and nonterminal streams never use cursor controls, including with
-`--progress=tty`. Detailed captured output remains available through saved status.
-Report schema 4 and plan schema 3 are unchanged.
+states with elapsed times and completed/total and running counts. Visible rule
+numbers follow actual start order and are not plan positions; saved result order
+stays canonical. Refreshes are bounded and short terminals show a selection of
+rows. CI, GitHub Actions and nonterminal streams never use cursor controls, including
+with `--progress=tty`. Detailed captured output remains available through saved status.
 
 ### History-based scheduling
 
-Runnable checks prefer the largest estimated remaining dependency path: their own
-estimated duration plus the maximum path through their selected dependents. Equal
-priorities use canonical ID order. Eligibility, resource locks and concurrency
-remain authoritative; waiting work reserves no slots. Review batches remain serial
-after checks and prefer the largest member estimate, retaining existing batching
-and stable batch order for ties. Plans and reports retain canonical rule order;
-history does not participate in semantic plan identity or offline previews.
-
-Store one duration estimate per rule kind and exact stable ID (including import
-binding namespaces) in Git's worktree-local `please-scheduling.json`. First PASS
-sets the estimate; later PASS results average the previous estimate and duration
-with equal weight, rounded down and bounded below by 1 ms. Other outcomes never
-update history. Unknown rules use 1000 ms. Batched reviews use their measured
-shared invocation duration per member. Updates occur after execution, independently
-of aggregate verification success. Missing, invalid or unavailable cache data uses
-fallbacks (cache size is bounded to 1 MiB); cache write failures never change verification outcomes. Writes replace
-the cache atomically; concurrent invocations may lose updates. History is local,
-non-versioned, never synchronized or persisted by CI integration, and can be reset
-by deleting the file. No priorities, weights or durations are user-configurable.
-The heuristic does not predict resource contention or guarantee an optimal plan;
-rule edits retain estimates while their identity remains unchanged.
+Runnable checks start in order of the largest estimated remaining dependency path,
+using per-rule duration estimates kept in a local, non-versioned cache in Git's
+worktree-local directory. Estimates are advisory: eligibility, resource locks and
+concurrency stay authoritative, plans and reports keep canonical order, history never
+affects plan identity or offline previews, and cache failures never change
+verification outcomes. No priorities or durations are configurable.
 
 ### Explicit check dependencies
 
@@ -509,7 +481,7 @@ selection because early termination depends on execution outcomes.
 Unstarted selected rules retain their position and blocking metadata, with
 `NOT_RUN`, no captured output, and an explicit fail-fast reason. Progress never
 announces these rules as started. NOT_RUN does not replace a triggering FAIL
-(exit 1) or ERROR (exit 2). Existing report and plan schemas are unchanged.
+(exit 1) or ERROR (exit 2).
 
 ## PARAM-001: Rule parameters
 
@@ -702,143 +674,35 @@ An executable plan exits 0; a blocked/invalid plan exits 2.
 
 ## REL-001: Distribution and integrations
 
+Please Behave is distributed as native executables for macOS Apple Silicon, macOS
+Intel and Linux x64 and ARM64 (GNU/glibc); Windows is excluded. It builds with stable
+Rust at the declared minimum version. Git and configured external tools remain
+runtime dependencies; no Python or Node runtime is bundled.
+
+Archives are named `please-vVERSION-TARGET.tar.gz` and contain a matching directory
+with `please`, README and LICENSE. Each release also publishes `SHA256SUMS`.
+Artifacts must match the tested version and source.
+
+`mise deploy` installs the exact release pinned in `mise.toml`: it downloads the
+archive and `SHA256SUMS` for the detected OS and CPU, verifies the checksum and the
+executable, and installs to `${CARGO_INSTALL_ROOT:-$HOME/.local}/bin/please`. It never
+builds local source, and any failure preserves the installed binary. Pinned installation
+does not use the GitHub Releases API; only discovery of the latest release does.
+
 The public GitHub Action is maintained independently in
-[please-behave/action](https://github.com/please-behave/action). Its repository
-owns the Action implementation, inputs, supported runners and acceptance tests.
-The Action revision and selected CLI release are independent. CI and native release jobs use
-Action v1.2.0 pinned to `722d5967c094e5ac4bfe25e9f82b020ff34e9487`, with
-the CLI version read from `mise.toml`. Installation-only mode precedes
-explicit synchronization; the published Action then executes `check`, including
-applicable reviews, with Job Summaries enabled. CI retains the CLI report and
-Action Summary; local wrapper runs also retain the companion execution record.
-Release readiness and native candidate jobs execute through the same Action with
-`checks-only` and Job Summaries enabled, preserving their independent gates.
-The Action supports Ubuntu and macOS runners.
+[please-behave/action](https://github.com/please-behave/action), which owns its inputs,
+supported runners and tests. The Action revision and the CLI release are independent.
 
-Supported hosted CI/release targets are macOS Apple Silicon, macOS Intel and
-Linux x64 and ARM64 (GNU/glibc); Windows builds/releases are excluded. Linux ARM64
-uses the native `ubuntu-24.04-arm` runner and `aarch64-unknown-linux-gnu` target,
-with the same formatting, lint, tests, build and executable smoke gates. Build with stable
-Rust/Cargo (declared minimum 1.85) into a native executable. Git and configured
-external tools remain runtime dependencies; no Python/Node runtime is bundled.
+Releases are manually dispatched on main and Semantic Release publishes only after
+artifact and source verification. During 0.x, breaking changes and features increment
+the minor version and fixes the patch version; 1.0.0 requires explicit policy
+graduation. Normal CI is read-only and actions are pinned. See the
+[release policy](docs/releasing.md).
 
-`mise deploy` installs the Please Behave development governor pinned in
-`mise.toml`. It downloads that exact published GitHub release for
-the detected OS and CPU (the four targets above), verifies SHA-256 and executable
-compatibility,
-and installs to `${CARGO_INSTALL_ROOT:-$HOME/.local}/bin/please`. It never builds
-local source. Unsupported platforms, missing downloads, invalid checksums and
-incompatible binaries fail with an actionable error and preserve the installed binary.
-
-Push/PR CI runs the Linux x64 native gates; release runs all four native hosts.
-CI runs formatting, Clippy, offline unit/acceptance tests, native smoke tests,
-minimum-Rust checks, dependency audits and release-tooling/workflow checks.
-Releases are manually dispatched on main and retain independent quality gates.
-Semantic Release plans versions from the existing release tags and publishes only
-after artifact/source verification. During 0.x, breaking
-changes/features increment minor and fixes/maintenance increment patch. Stable
-1.0.0 requires explicit policy graduation. Publish native archives with README,
-LICENSE and checksums. Artifacts must match the tested
-version/source. Normal CI is read-only; only release planning/publishing may
-request write permission. Actions are pinned. See [release policy](docs/releasing.md).
-
-Please Behave packaging uses `please-vVERSION-TARGET.tar.gz`, containing a
-matching directory with `please`, README and LICENSE, plus release SHA256SUMS.
-Workflows use matching `please-*` artifact labels to transfer candidate archives
-and metadata. The four native CLI assets are published for v0.1.0.
-
-Repository self-integration uses an installed, previously published Please Behave
-binary outside the checkout; local candidate builds never govern the source being
-checked. `mise.toml` is the sole exact governor pin for local deployment and
-Ubuntu CI. Native release builds verify candidates independently on all four
-platforms. Renovate proposes updates without automerge.
-Pinned installation downloads the exact release's native archive and SHA256SUMS
-directly, without a GitHub Releases API lookup or fallback to latest. Only latest
-discovery uses the API, with optional GITHUB_TOKEN Bearer authentication; asset
-requests carry no token. Missing releases/assets, network/API failures and missing,
-malformed or mismatched checksums fail installation and preserve the installed copy.
-The three Git-backed built-in points serve Git hooks. Normal CI uses one check
-point for formatting, documentation, tooling, native validation, minimum Rust,
-dependency audits and security. Local Rules declare their execution points
-directly, without local Rule Sets. Pre-commit runs formatting and documentation
-validation; pre-push runs the complete local suite, keeping all Rust tests in
-one Rule. Python helper tests use one unittest discovery Rule and JavaScript
-release tests use one npm Rule. All three test suites, workflow validation and
-minimum-Rust checks run at pre-push and again in CI. The repository has 14 local
-Checks and one conditional document Review; dependency audits run at check with advisory access. Agents use Git
-commit/push feedback instead of manually running checks,
-tests, linters or builds. They may read saved reports without rerunning Rules.
-The manual mise check task delegates to published Please Behave at pre-push.
-All three external Rule Set imports and the independent Gemini Flash-Lite provider
-import pin the same reviewed full Git commit.
-The three existing imports preserve their execution-point and parameter semantics.
-Release workflow jobs own planning, exact-source CI prerequisites, candidate
-builds, artifact transport, provenance, integrity and publication. The only custom
-execution point is `release`: an independent local release-smoke Rule tests CLI
-behavior against an already-built native candidate. It has no Rule dependencies.
-GitHub Actions builds first, captures the binary hash, invokes that quality gate,
-then checks the unchanged hash and records a smoke receipt. Packaging, archive
-verification, complete-set evidence and the final source/version publication
-guard run directly as workflow scripts, outside Please Behave.
-All four supported native targets and existing archive/receipt guarantees remain.
-Source checks, unit tests and audits are reused from exact-source CI, including
-successful partial CI reruns; incomplete or untrusted evidence blocks publication.
-Release artifacts must belong to the current workflow run and attempt.
-The published governor remains pinned in mise.toml and separate from candidates.
-The repository-conventions set (rulesets/multi-point/repository-conventions) is imported at a full Git commit
-pin for pre-commit, check and, through reference overrides, commit-msg. Its agents-size Check limits AGENTS.md
-to 1500 approximate tokens at pre-commit and check; its scopes_file parameter uses .please/commit-scopes.txt. The external Check
-validates syntax, types and scopes; an advisory Gemini Flash-Lite Review evaluates
-only the header for specific English imperative wording, without the diff. Its
-provider is imported independently from providers/gemini-flash-lite. The hook
-inherits GEMINI_API_KEY; missing credentials and provider errors remain visible
-as advisory ERROR. No local commit policy, commit-range or PR-title check remains.
-The check and pre-push points also import rulesets/multi-point/security at a full commit
-pin. Its sensitive-files and secret-scan checks inspect the working tree at check
-and HEAD contents at pre-push, without history. The CI quality job explicitly
-runs check with Python 3 and a checksum-verified Gitleaks binary available. Rules
-and Please Behave never install these dependencies automatically. The same points import
-rulesets/multi-point/open-source-software at a full Git commit pin. It currently
-contains only the blocking license Rule, with target = "LICENSE". The license
-must match an SPDX reference byte-for-byte: Apache-2.0,
-PolyForm-Noncommercial-1.0.0 or Unlicense. This repository uses the exact
-PolyForm-Noncommercial-1.0.0 reference text.
-The Rule reads the working tree at check and HEAD at pre-push. Missing or
-nonmatching licenses produce FAIL; technical errors produce ERROR.
-Checks remain mandatory. The agents-quality Review runs at check only when its
-file trigger matches. Deterministic errors block success; this advisory Review
-keeps FAIL and ERROR visible without blocking. Setup, dependency installation and release publication remain
-outside rule execution.
-
-Hooks are managed by please sync at Git's effective hook path, including forwarding
-commit-message arguments and preserving compatible unmanaged content. A setup
-shim delegates to please sync without changing core.hooksPath; custom hook paths
-are preserved.
-Check subprocesses retain the inherited environment and recursion guard. Local
-Rules use string commands for installed tools and consumer-root Python script
-paths, without per-rule shell or Python launchers. Cargo build/test/Clippy/MSRV
-commands and npm tests explicitly select offline mode. The execution-point wrapper additionally sets Cargo/npm
-offline mode and disables Rustup auto-install for Git-backed invocations.
-CI invokes please sync --yes once before execution. Execution never repairs
-hooks noninteractively. Publish installs no governor or managed hooks and runs no
-governance checks. It requires successful readiness and native candidate jobs, then verifies the
-complete artifact set and checksums through the direct workflow step. The
-publication guard additionally checks the planned version and tested source SHA
-before tagging. Native builds stamp Cargo.toml/Cargo.lock only in their disposable
-checkouts before testing and packaging; committed versions remain unchanged.
-Semantic Release creates tags, Git notes, GitHub Releases and release notes,
-without generating a changelog or release commit. Release tags target the tested
-source revision. Publication refuses an advanced main branch or invalid artifacts.
-Reports use schema 4. Local wrapper invocations also write a companion execution
-record with governor version/digest, execution point, checked commit and exit code.
-CI uses the published Action Summary and CLI report instead of that record.
-See [repository self-integration](docs/self-governance.md) for coverage and setup.
-
-Git hooks required by enabled effective assignments are derived automatically
-and reconciled only after explicit confirmation (or sync --yes). A bypassable
-local hook verifies working files, not necessarily the pushed commit. Hosted
-provider authentication is not provisioned and personal tokens are not copied to CI.
-No hosted service, database, autonomous development, universal policy engine,
+The repository is governed by an installed, previously published release, never by
+candidate builds of its own checkout; see [repository self-integration](docs/self-governance.md).
+Hosted provider authentication is not provisioned and personal tokens are not copied
+to CI. No hosted service, database, autonomous development, universal policy engine,
 result cache or additional input/provider implementation is in current scope.
 
 ## REC-001: Declarative reconciliation and Git hooks
@@ -919,14 +783,14 @@ not the exact staged index or pushed commit.
 
 Defaults, resource bounds and the configuration directory have one source in
 Rust. Initialization serializes the actual configuration types rather than
-maintaining independent TOML templates. README defaults, limits and scaffold
-examples are checked against those values. Validation, planning and execution
+maintaining independent TOML templates. The configuration reference's defaults,
+limits and examples are checked against those values. Validation, planning and execution
 reuse the same bounds; this does not add configurable fields or change defaults.
 
 ## DOC-001: Documentation contract
 
 Every editable configuration field, required/optional marker and default must
-match the README reference. README configuration examples must validate and plan
+match the configuration reference. Its examples must validate and plan
 offline. Local links/anchors and specification acceptance references must resolve.
 Repository Git hooks run link/specification checks at pre-commit and pre-push;
 pre-push also runs the Rust documentation acceptance tests.
@@ -939,7 +803,7 @@ complement editorial review; they do not prove prose understandable.
 Each essential requirement has a stable ID and representative acceptance tests.
 The table is a navigation aid, not a claim that one test proves every clause.
 Add or update the contract and acceptance cases before implementing behavior;
-update the README/examples and relevant design decisions in the same coherent
+update the documentation and relevant design decisions in the same coherent
 change. Keep one coherent configuration model and run applicable checks. Follow the user's Git instructions.
 Public documentation explains supported behavior; proposals remain in the roadmap.
 
