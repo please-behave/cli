@@ -21,7 +21,8 @@ authenticated with the required permissions. It starts the workflow for **remote
 main** and returns after dispatch; it neither commits/pushes local changes nor
 waits for publication. Follow progress in GitHub Actions or with `gh run list
 --workflow release.yml`. `mise run release` is equivalent. `mise release --install` additionally
-waits for the dispatched run and, if it published a release for that source commit, sets
+waits first until no CI run on main is queued or in progress, then, after dispatch, waits for the
+dispatched run and, if it published a release for that source commit, sets
 the governor pin in `mise.toml` to the new version and runs `mise install`. It stops if
 `mise.toml` has uncommitted changes, never commits or pushes, and leaves the pin untouched
 when the run published nothing. Review and commit the pin separately; governance

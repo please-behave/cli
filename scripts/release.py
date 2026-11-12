@@ -8,6 +8,8 @@ import time
 
 REPOSITORY = "please-behave/cli"
 WORKFLOW = "release.yml"
+CI_WORKFLOW = "ci.yml"
+CI_POLL_SECONDS = 15
 PIN = re.compile(r'^("github:please-behave/cli" = ")([^"]+)(")$', re.M)
 TAG = re.compile(r"v((?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*))")
 
@@ -24,6 +26,23 @@ def run_ids():
     runs = json.loads(run("gh", "run", "list", "--workflow", WORKFLOW, "--branch", "main",
                           "--event", "workflow_dispatch", "--limit", "20", "--json", "databaseId,headSha"))
     return {item["databaseId"]: item["headSha"] for item in runs}
+
+
+def running_ci():
+    """Return the IDs of unfinished CI runs on main."""
+    runs = json.loads(run("gh", "run", "list", "--workflow", CI_WORKFLOW, "--branch", "main",
+                          "--limit", "20", "--json", "databaseId,status"))
+    return [item["databaseId"] for item in runs if item["status"] != "completed"]
+
+
+def wait_for_ci():
+    """Block until no CI run on main is queued or in progress."""
+    announced = None
+    while pending := running_ci():
+        if pending != announced:
+            print(f"Waiting for CI run(s) {', '.join(map(str, pending))} to finish", flush=True)
+            announced = pending
+        time.sleep(CI_POLL_SECONDS)
 
 
 def dispatch():
@@ -59,6 +78,7 @@ def release_and_install():
     previous = PIN.search(Path("mise.toml").read_text())
     if not previous:
         raise ValueError("mise.toml has no Please Behave governor pin.")
+    wait_for_ci()
     run_id, source = dispatch()
     print(f"Watching release run {run_id}", flush=True)
     run("gh", "run", "watch", str(run_id), "--exit-status", capture=False)
