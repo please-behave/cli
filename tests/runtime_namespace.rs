@@ -81,7 +81,7 @@ fn library_phases_and_saved_integrity_results_use_product_namespace() {
         phases,
         [
             "Preparing execution plan and working files …",
-            "Checks only: reviews omitted; no provider call.",
+            "Checks only: reviews not run; no provider call.",
             "No active checks configured.",
             "Capturing working files …",
             "Checking final working file state …",
