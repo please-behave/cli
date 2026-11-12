@@ -6,14 +6,11 @@ checks whether root AGENTS.md provides usable guidance for coding agents.
 
 ## Size and evaluation
 
-The [size Rule](../.please/checks/agents-size/rule.toml) runs at pre-commit,
-pre-push and check. Its command passes the explicit limit **1200** to
-[scripts/check-word-count.py](../scripts/check-word-count.py). A word is a maximal
-run separated by ASCII whitespace: space, tab, LF, CR, vertical tab or form feed.
-Markdown punctuation, headings and code count literally; non-ASCII spaces do not
-split words. The 1200-word limit applies to the complete current document.
-Exactly 1200 passes; exceeding it fails with the actual count and limit.
-AGENTS.md is not rewritten or shortened by this integration.
+The imported `agents-size` Check from the repository-conventions Rule Set limits the
+complete current AGENTS.md to **1500** approximate tokens (words and punctuation marks) at
+pre-commit and check; `.please/config.toml` supplies `max_tokens`. Its counting and
+snapshot semantics are documented with the Rule Set. AGENTS.md is not rewritten or
+shortened by this integration.
 
 The [rubric](agents-review-rubric.md) focuses on material governance defects,
 including contradictions, ambiguous precedence, impossible instructions and unsafe
@@ -38,7 +35,7 @@ please run --at check
 please status --details
 ```
 
-The repository pins published Please Behave v0.1.0 for local hooks and GitHub Actions.
+The repository pins the published governor in `mise.toml` for local hooks and GitHub Actions.
 The active Review disables diff inclusion, and its provider sets
 `timeout_seconds = 0` so the adapter controls request deadlines and retries.
 For a local branch comparison, use the merge-base with the target branch as

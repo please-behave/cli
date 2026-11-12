@@ -1,8 +1,0 @@
-id = "agents-size"
-description = "Limit AGENTS.md to 1200 ASCII-whitespace-separated words"
-enabled = true
-run_at = ["pre-commit", "pre-push", "check"]
-
-[check]
-command = "python3 scripts/check-word-count.py AGENTS.md 1200"
-timeout_seconds = 30

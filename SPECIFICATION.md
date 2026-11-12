@@ -846,7 +846,7 @@ commit/push feedback instead of manually running checks,
 tests, linters or builds. They may read saved reports without rerunning Rules.
 The manual mise check task delegates to published Please Behave at pre-push.
 All three external Rule Set imports and the independent Gemini Flash-Lite provider
-import pin the same reviewed full Git commit. The published governor is v0.5.1.
+import pin the same reviewed full Git commit.
 The three existing imports preserve their execution-point and parameter semantics.
 Release workflow jobs own planning, exact-source CI prerequisites, candidate
 builds, artifact transport, provenance, integrity and publication. The only custom
@@ -863,8 +863,9 @@ Release artifacts must belong to the current workflow run and attempt.
 The published governor remains pinned in mise.toml and separate from candidates.
 Acceptance: `scripts/test_release.py::test_release_job_contract_permissions_and_selection`.
 
-The commit-msg point imports the rulesets/commit-msg/repository-conventions set at a full Git commit
-pin. Its scopes_file parameter uses .please/commit-scopes.txt. The external Check
+The repository-conventions set (rulesets/multi-point/repository-conventions) is imported at a full Git commit
+pin for pre-commit, check and, through reference overrides, commit-msg. Its agents-size Check limits AGENTS.md
+to 1500 approximate tokens at pre-commit and check; its scopes_file parameter uses .please/commit-scopes.txt. The external Check
 validates syntax, types and scopes; an advisory Gemini Flash-Lite Review evaluates
 only the header for specific English imperative wording, without the diff. Its
 provider is imported independently from providers/gemini-flash-lite. The hook

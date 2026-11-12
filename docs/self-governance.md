@@ -69,15 +69,15 @@ use independent synthetic configurations.
 
 | Execution point | Required checks |
 | --- | --- |
-| pre-commit | format, docs, agents-size |
+| pre-commit | format, docs plus imported agents-size |
 | commit-msg | Imported commit-message Check and advisory commit-message-quality Review |
-| pre-push (default) | format, docs, python-tests, agents-size, release-rules, clippy, rust-tests, native-build, native-smoke, workflows, msrv plus imported license, secret-scan and sensitive-files |
-| check | All pre-push checks plus rust-audit and npm-audit; conditional agents-quality Review |
+| pre-push (default) | format, docs, python-tests, release-rules, clippy, rust-tests, native-build, native-smoke, workflows, msrv plus imported license, secret-scan and sensitive-files |
+| check | All pre-push checks plus imported agents-size, rust-audit and npm-audit; conditional agents-quality Review |
 | release | release-smoke: CLI behavior of an already-built native candidate |
 
-The 14 local [checks](../.please/checks) use string commands. Python scripts run
+The local [checks](../.please/checks) use string commands. Python scripts run
 as `python3 scripts/<name>.py`, relative to the consuming repository root.
-The published v0.5.1 governor supports these commands and explicit path
+The pinned published governor supports these commands and explicit path
 references for imported Checks. There are no local index.sh launchers.
 Local Rule directories and IDs use descriptive names without numeric prefixes.
 Imported Rules retain their git-prefixed binding namespace. The native-smoke Check
@@ -162,7 +162,7 @@ through sync, including configured hook paths, compatible unmanaged content,
 ownership checks, argument forwarding and recursion protection. Wrappers inspect
 synchronization read-only; drift tells the developer to rerun sync manually.
 
-The `commit-msg` point imports `rulesets/commit-msg/repository-conventions` from
+The `pre-commit`, `check` and `commit-msg` points import `rulesets/multi-point/repository-conventions` from
 [Christian Pflugradt’s personal Ruleset repository](https://github.com/christianpflugradt/please-behave-governance),
 pinned to the full commit in `.please/config.toml`. It receives
 `.please/commit-scopes.txt` through the `scopes_file` parameter. The imported
@@ -208,14 +208,12 @@ future work.
 
 ## CI, pinning and Renovate
 
-[mise.toml](../mise.toml) pins the separately installed governor to
-v0.5.1 through `github:please-behave/cli`. Mise installs the published executable
+[mise.toml](../mise.toml) pins the separately installed governor through `github:please-behave/cli`. Mise installs the published executable
 with checksum and available artifact-attestation verification. The optional
 `mise deploy` task retains the checksum-verifying
 [scripts/deploy.py](../scripts/deploy.py) installer for a separate installation.
 CI and native release workflows use
-[Please Behave Action v1.3.0](https://github.com/please-behave/action/releases/tag/v1.3.0),
-pinned to `196e1d61f898e0cb77c58ab3dd6667f021321d5e`. Mise installs the governor
+the Please Behave Action, pinned to a full commit in the workflow files. Mise installs the governor
 from `mise.toml`; the Action uses it with `install: 'false'` and synchronizes with
 `sync: 'true'` before execution. No version extraction or second installation is needed.
 The shared external

@@ -98,7 +98,7 @@ build it from source; Python and Node are used by Please Behave's development to
 
 ### Install a release
 
-Download the matching v0.3.1 archive and `SHA256SUMS` from
+Download the archive matching the release version and `SHA256SUMS` from
 [GitHub Releases](https://github.com/please-behave/cli/releases):
 
 | Platform | Target in the archive name |
@@ -327,8 +327,7 @@ The public Please Behave Action is maintained separately in
 usage, inputs and supported platforms. It installs an explicitly selected CLI
 release, verifies its archive checksum and optionally runs `please run --at` in
 the consumer checkout. The Action revision and CLI release version are independent.
-The CLI repository uses Action v1.3.0 pinned to
-`196e1d61f898e0cb77c58ab3dd6667f021321d5e` in CI and native release workflows.
+The CLI repository pins the Action to a full commit in CI and native release workflows.
 Mise installs the governor pinned in `mise.toml`; one Action step with
 `install: 'false'` and `sync: 'true'` synchronizes governance and executes the gate.
 The Action owns GitHub review baselines and generic review summaries. Native
@@ -1327,7 +1326,7 @@ The `rulesets/multi-point/open-source-software` Rule Set is pinned to a full Git
 LICENSE against its permitted reference texts at `pre-push` and `check`.
 
 The [AGENTS.md quality-review example](docs/agents-quality-review.md) combines a
-blocking 1200-word limit with a conditional, non-blocking Gemini review at `check`.
+blocking size limit with a conditional, non-blocking Gemini review at `check`.
 It receives the complete document and rubric; provider errors remain visible in reports.
 Git hooks need no Gemini credentials.
 

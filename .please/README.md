@@ -6,7 +6,7 @@ Gemini REST adapter. Commit-msg also runs an imported advisory header-only
 wording Review through the independently imported Gemini Flash-Lite provider.
 Pre-commit, pre-push and release points select checks only.
 
-`checks/*/rule.toml` defines 14 local Rules using string commands for installed
+`checks/*/rule.toml` defines local Rules using string commands for installed
 tools and consumer-root scripts. Cargo, Python helper and JavaScript tests each
 have one Rule and run at pre-push and again in CI. Cargo build, test, Clippy and
 MSRV commands and npm tests explicitly select offline mode. Local Rules declare
@@ -50,8 +50,8 @@ See [repository self-integration](../docs/self-governance.md) for setup, require
 coverage, reports and CI. The general [configuration reference](../docs/configuration.md)
 describes the schema. Reports remain ignored.
 
-The blocking agents-size Check limits AGENTS.md to 1200 words. The
-[quality-review example](../docs/agents-quality-review.md) explains counting,
+The imported blocking agents-size Check limits AGENTS.md to 1500 approximate tokens.
+The [quality-review example](../docs/agents-quality-review.md) explains counting,
 full-document context, the rubric, Gemini setup, triggers and CI summaries.
 
 ## Release workflow ownership
