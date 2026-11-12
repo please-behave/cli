@@ -631,7 +631,8 @@ Git facts only, never file contents: `repository`, `head` (commit, branch, messa
 `workspace` (clean flag, staged, unstaged, untracked and conflicted paths with statuses, and
 staged and unstaged patches) are always present. `commit_message` exists at commit-msg, `push`
 (per-reference kind, new commits, changed files, patch and whether the tip is HEAD) at pre-push,
-and `changes` (net changes since the resolved `PLEASE_CHANGE_BASE`) when that variable is set.
+and `changes` (net changes since the resolved `PLEASE_CHANGE_BASE`) when that variable names an
+available commit; an unusable value omits the section and never fails the run.
 Absent sections mean not applicable, never empty.
 
 Facts are computed once per run with read-only Git commands and described without sampling:

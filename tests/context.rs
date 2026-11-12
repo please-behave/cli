@@ -48,6 +48,7 @@ fn git(root: &Path, args: &[&str]) -> Output {
         .args(args)
         .current_dir(root)
         .env("PATH", path_with_binary())
+        .env_remove("PLEASE_CHANGE_BASE")
         .env("GIT_CONFIG_GLOBAL", "/dev/null")
         .env("GIT_CONFIG_NOSYSTEM", "1")
         .env("GIT_AUTHOR_NAME", "Test")
@@ -77,6 +78,7 @@ fn please(root: &Path, args: &[&str], environment: &[(&str, &str)]) -> Output {
         .args(args)
         .current_dir(root)
         .env("NO_COLOR", "1")
+        .env_remove("PLEASE_CHANGE_BASE")
         .env("GIT_CONFIG_GLOBAL", "/dev/null")
         .env("GIT_CONFIG_NOSYSTEM", "1")
         .envs(environment.iter().copied())
@@ -592,4 +594,23 @@ fn context_settings_are_validated() {
         assert_eq!(output.status.code(), Some(2));
         assert!(String::from_utf8_lossy(&output.stderr).contains(expected));
     }
+}
+
+#[test]
+fn an_unusable_change_base_omits_the_section_instead_of_failing_the_run() {
+    let root = project("");
+    for base in [
+        "0123456789abcdef0123456789abcdef01234567",
+        "no-such-ref",
+        "",
+    ] {
+        let output = please(
+            root.path(),
+            &["run", "--at", "check"],
+            &[("PLEASE_CHANGE_BASE", base)],
+        );
+        assert_eq!(output.status.code(), Some(0), "{base:?}");
+    }
+    let (_, context) = latest(root.path(), "check");
+    assert!(context.get("changes").is_none());
 }

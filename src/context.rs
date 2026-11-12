@@ -412,22 +412,24 @@ fn changes(
     let Ok(base) = std::env::var("PLEASE_CHANGE_BASE") else {
         return Ok(None);
     };
-    ensure!(
-        !base.is_empty() && base.len() <= 1024 && !base.contains('\0'),
-        "invalid PLEASE_CHANGE_BASE"
-    );
-    let resolved = git.out(&[
-        "rev-parse",
-        "--verify",
-        "--end-of-options",
-        &format!("{base}^{{commit}}"),
-    ])?;
-    ensure!(
-        resolved.status.success(),
-        "cannot resolve PLEASE_CHANGE_BASE; fetch the baseline commit in shallow clones"
-    );
-    let commit = resolved.stdout.text.trim().to_owned();
-    ensure!(is_object_id(&commit), "invalid baseline commit ID");
+    // The variable is set by CI for review triggers. An unusable value must not fail runs
+    // that never use it, so the section is silently omitted.
+    let resolved = (!base.is_empty() && base.len() <= 1024 && !base.contains('\0'))
+        .then(|| {
+            git.out(&[
+                "rev-parse",
+                "--verify",
+                "--end-of-options",
+                &format!("{base}^{{commit}}"),
+            ])
+        })
+        .transpose()?
+        .filter(|output| output.status.success())
+        .map(|output| output.stdout.text.trim().to_owned())
+        .filter(|commit| is_object_id(commit));
+    let Some(commit) = resolved else {
+        return Ok(None);
+    };
     let mut section = diff_section(git, directory, "changes.patch", limit, &[commit.as_str()])?;
     let mut listing = Listing::new(limit);
     for path in untracked {

@@ -865,7 +865,7 @@ included: a rule reads files from disk and uses the context to confirm that they
 | `workspace` | Always | `clean`, and `staged`, `unstaged`, `untracked` and `conflicted` paths with their status and, for renames, `old_path`. `staged_patch` (index against HEAD) and `unstaged_patch` (working tree against index) point to patch files. |
 | `commit_message` | `commit-msg` | Message file and text. The message does not exist at `pre-commit`. |
 | `push` | `pre-push` | The remote name and one update per pushed reference: `kind` (`create`, `update` or `delete`), `is_head` (the pushed tip is the checked-out HEAD), the new `commits`, `changed_files` and a `patch` file. |
-| `changes` | `PLEASE_CHANGE_BASE` set | The resolved base commit and the net changed files and patch from that commit to the working tree, including untracked files. |
+| `changes` | `PLEASE_CHANGE_BASE` names an available commit | The resolved base commit and the net changed files and patch from that commit to the working tree, including untracked files. |
 
 `workspace.clean` is true only when nothing is staged, modified, untracked or conflicted;
 ignored files do not count. A path listed both as staged and unstaged is partially staged, so
