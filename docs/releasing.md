@@ -94,7 +94,7 @@ Please Behave. Dependencies are locked in `package-lock.json`.
    not run; no tag, commit or release is created.
 2. `release-readiness` (Release Readiness) and `release-candidate` (Release Candidate)
    depend only on Plan and execute independently in parallel when a release is needed.
-   Readiness runs `python3 scripts/check-release-ci.py` directly to verify successful push CI
+   Readiness runs `python3 .github/scripts/check-release-ci.py` directly to verify successful push CI
    for the exact source, repository, workflow, main branch and required jobs.
    Source checks, dependency audits and unit tests are reused from CI without an age limit.
 3. The four-platform Candidate matrix installs the published governor, synchronizes
@@ -104,16 +104,16 @@ Please Behave. Dependencies are locked in `package-lock.json`.
 4. Actions records a receipt binding the binary hash before/after quality testing to the
    planned version, source, target, workflow run and attempt. Packaging checks the
    executable version and copies exactly those tested bytes, with README and LICENSE.
-   `scripts/check-release-artifacts.py --candidate` validates each individual archive before upload. Artifacts
+   `.github/scripts/check-release-artifacts.py --candidate` validates each individual archive before upload. Artifacts
    are named `please-RUN_ID-RUN_ATTEMPT-TARGET`; metadata and smoke receipts travel
    with the archives but are not public release assets.
 5. `publish` (Publish) requires Plan, Readiness and the entire Candidate matrix to
    succeed. It downloads only current-run/current-attempt artifacts and generates
    complete `SHA256SUMS`. A mandatory direct call to
-   `python3 scripts/check-release-artifacts.py` verifies exactly four archives and
+   `python3 .github/scripts/check-release-artifacts.py` verifies exactly four archives and
    their evidence, source/version/run identity, archive/binary/smoke hashes, executable
    permissions, allowed members and README/LICENSE bytes. It never rebuilds binaries.
-   Publish verifies common release evidence directly with `scripts/release-evidence.py verify`; it installs no governor or build toolchain.
+   Publish verifies common release evidence directly with `.github/scripts/release-evidence.py verify`; it installs no governor or build toolchain.
 6. Semantic Release recalculates the version, requires it to match the plan, and
    checks local HEAD, the dispatched SHA and remote main before creating a tag.
    It generates notes, tags the tested source, pushes the tag/Git notes and publishes
@@ -151,7 +151,7 @@ Cargo embeds that version in the binaries. Packaging checks the executable versi
 against the stamped manifest and planned tag, and records the source SHA and
 binary/archive hashes. The direct artifact verification step checks those records
 against the planned version and dispatched source revision. Rebuilding a release version from its tag
-requires the same `scripts/set-release-version.py VERSION` build-time stamping.
+requires the same `.github/scripts/set-release-version.py VERSION` build-time stamping.
 Semantic Release has no version preparation step and never commits generated files.
 
 If main advanced while building, publication is refused; rerun on its latest
@@ -236,10 +236,10 @@ References: [Semantic Release configuration](https://semantic-release.gitbook.io
 
 ## Shared evidence
 
-GitHub Actions runs `scripts/release-evidence.py record` after successful
-candidate verification and `scripts/release-evidence.py verify` on the collected
+GitHub Actions runs `.github/scripts/release-evidence.py record` after successful
+candidate verification and `.github/scripts/release-evidence.py verify` on the collected
 set before publication. `.github/release-artifacts.json` names each target's
 archive, metadata and smoke receipt. The manifest binds hashes to version,
 source, repository, workflow and current run/attempt. This preserves the previous
 pinned implementation as workflow tooling, outside Please Behave.
-The local `scripts/release-guard.mjs` verifies source and version before tagging.
+The local `.github/scripts/release-guard.mjs` verifies source and version before tagging.

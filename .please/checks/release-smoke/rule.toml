@@ -3,5 +3,5 @@ description = "Verify native release candidate CLI behavior"
 run_at = ["release"]
 
 [check]
-command = "python3 scripts/smoke.py"
+command = "python3 @repo/.please/checks/native-smoke/smoke.py"
 timeout_seconds = 120

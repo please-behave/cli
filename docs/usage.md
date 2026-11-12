@@ -70,7 +70,7 @@ secrets), selection, required rule IDs, external sources and token usage.
 ## Configure checks and reviews
 
 A Check lives in `.please/checks/<name>/rule.toml`. Prefer a command string such as
-`[check] command = "python3 scripts/check-docs.py"`; quoting follows the configuration
+`[check] command = "python3 @rule/check.py"`; quoting follows the configuration
 reference and no shell is involved. The consumer root is the working directory and
 `@rule/` references locate bundled files. Exit 0 is PASS, 1 is FAIL and 2 is
 ERROR; signals, missing scripts and launch failures are ERROR. A completed non-blocking

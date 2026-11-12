@@ -16,6 +16,7 @@ import unittest
 from unittest.mock import patch
 
 SCRIPTS = Path(__file__).resolve().parent
+ROOT = SCRIPTS.parents[1]
 
 
 def load(name):
@@ -42,7 +43,7 @@ class ReleaseTests(unittest.TestCase):
             **verification.release_context(version, sha, target), binary_sha256=binary_hash)))
 
     def test_package_metadata_matches_lockfile(self):
-        root = SCRIPTS.parent
+        root = ROOT
         package = tomllib.loads((root / "Cargo.toml").read_text())["package"]
         self.assertEqual(package["name"], "please")
         locked = [entry for entry in tomllib.loads((root / "Cargo.lock").read_text())["package"]
@@ -55,7 +56,7 @@ class ReleaseTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             for filename in ("Cargo.toml", "README.md", "LICENSE"):
-                shutil.copy2(SCRIPTS.parent / filename, root / filename)
+                shutil.copy2(ROOT / filename, root / filename)
             env = dict(os.environ, RELEASE_TAG="v0.1.0", GITHUB_SHA="a" * 40)
             for target in verification.TARGETS:
                 binary = root / f"target/{target}/release/please"
@@ -76,18 +77,18 @@ class ReleaseTests(unittest.TestCase):
                            env=dict(env, EXPECTED_RELEASE_VERSION="0.1.0"), check=True)
 
     def test_publish_requires_verified_artifacts_before_publication(self):
-        release = (SCRIPTS.parent / ".github/workflows/release.yml").read_text()
+        release = (ROOT / ".github/workflows/release.yml").read_text()
         publisher = release.split("  publish:\n", 1)[1]
         self.assertIn("needs: [plan, release-readiness, release-candidate]", publisher)
         self.assertIn("contents: write", publisher)
         self.assertIn("persist-credentials: false", publisher)
         for required in ("actions/download-artifact@", "pattern: please-${{ github.run_id }}-${{ github.run_attempt }}-*",
-                         "python3 scripts/checksums.py", "python3 scripts/check-release-artifacts.py", "npm run release",
+                         "python3 .github/scripts/checksums.py", "python3 .github/scripts/check-release-artifacts.py", "npm run release",
                          "EXPECTED_RELEASE_VERSION: ${{ needs.plan.outputs.version }}"):
             self.assertIn(required, publisher)
-        self.assertLess(publisher.index("actions/download-artifact@"), publisher.index("scripts/checksums.py"))
-        self.assertLess(publisher.index("scripts/checksums.py"), publisher.index("scripts/check-release-artifacts.py"))
-        self.assertLess(publisher.index("scripts/check-release-artifacts.py"), publisher.index("npm run release"))
+        self.assertLess(publisher.index("actions/download-artifact@"), publisher.index(".github/scripts/checksums.py"))
+        self.assertLess(publisher.index(".github/scripts/checksums.py"), publisher.index(".github/scripts/check-release-artifacts.py"))
+        self.assertLess(publisher.index(".github/scripts/check-release-artifacts.py"), publisher.index("npm run release"))
         verification = publisher.split("      - name: Verify collected release artifacts\n", 1)[1].split("      - name:", 1)[0]
         self.assertIn("EXPECTED_RELEASE_VERSION: ${{ needs.plan.outputs.version }}", verification)
         for bypass in ("continue-on-error", "if:", "||"):
@@ -179,13 +180,13 @@ class ReleaseTests(unittest.TestCase):
                 verification.verify("1.2.3", "a" * 40, dist)
 
     def test_native_matrix_and_archive_contract_cover_the_same_platforms(self):
-        workflow = (SCRIPTS.parent / ".github/workflows/release.yml").read_text()
+        workflow = (ROOT / ".github/workflows/release.yml").read_text()
         release = [dict(os=os_name, target=target) for os_name, target in
                    re.findall(r"- \{os: ([^,]+), target: ([^}]+)\}", workflow)]
         self.assertEqual({entry["target"] for entry in release}, set(verification.TARGETS))
         self.assertEqual(len(release), len(verification.TARGETS))
         self.assertIn(dict(os="ubuntu-24.04-arm", target="aarch64-unknown-linux-gnu"), release)
-        ci = (SCRIPTS.parent / ".github/workflows/ci.yml").read_text()
+        ci = (ROOT / ".github/workflows/ci.yml").read_text()
         self.assertNotIn("matrix:", ci)
         self.assertIn("BUILD_TARGET: x86_64-unknown-linux-gnu", ci)
 
@@ -194,13 +195,13 @@ class ReleaseTests(unittest.TestCase):
                         "run", "attempt", "missing-smoke", "smoke", "permissions", "readme", "license", "link", "extra"):
             with self.subTest(failure=failure), tempfile.TemporaryDirectory() as temporary:
                 root = Path(temporary)
-                (root / "scripts").mkdir()
+                (root / ".github/scripts").mkdir(parents=True)
                 for name in ("verify-release.py", "check-release-artifacts.py"):
-                    shutil.copy2(SCRIPTS / name, root / "scripts" / name)
+                    shutil.copy2(SCRIPTS / name, root / ".github/scripts" / name)
                 dist = root / "dist"
                 (dist / "metadata").mkdir(parents=True)
                 for file in ("README.md", "LICENSE"):
-                    shutil.copy2(SCRIPTS.parent / file, root / file)
+                    shutil.copy2(ROOT / file, root / file)
                 for target in verification.TARGETS:
                     name = f"please-v1.2.3-{target}"
                     data = b"fixture binary already verified on its native runner"
@@ -263,7 +264,7 @@ class ReleaseTests(unittest.TestCase):
                     env.pop("EXPECTED_RELEASE_VERSION")
                 elif failure == "missing-source":
                     env.pop("GITHUB_SHA")
-                result = subprocess.run([sys.executable, "scripts/check-release-artifacts.py"], cwd=root,
+                result = subprocess.run([sys.executable, ".github/scripts/check-release-artifacts.py"], cwd=root,
                                         env=env, capture_output=True, text=True)
                 if failure is None:
                     self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
@@ -272,7 +273,7 @@ class ReleaseTests(unittest.TestCase):
                     self.assertNotEqual(result.returncode, 0, result.stderr or result.stdout)
 
     def test_release_job_contract_permissions_and_selection(self):
-        workflow = (SCRIPTS.parent / ".github/workflows/release.yml").read_text()
+        workflow = (ROOT / ".github/workflows/release.yml").read_text()
         jobs = re.split(r"^  ([a-z-]+):\n", workflow.split("jobs:\n", 1)[1], flags=re.M)
         jobs = dict(zip(jobs[1::2], jobs[2::2]))
         self.assertEqual(set(jobs), {"plan", "release-readiness", "release-candidate", "publish"})
@@ -286,15 +287,15 @@ class ReleaseTests(unittest.TestCase):
         for name in ("release-readiness", "publish"):
             self.assertNotIn("please-behave/action@", jobs[name])
             self.assertNotIn("please sync", jobs[name])
-        self.assertIn("python3 scripts/check-release-ci.py", jobs["release-readiness"])
+        self.assertIn("python3 .github/scripts/check-release-ci.py", jobs["release-readiness"])
         candidate = jobs["release-candidate"]
-        ordered = ["mise run build --offline", "scripts/smoke-receipt.py before",
-                   "execution-point: release", "scripts/smoke-receipt.py after",
-                   "mise run release:package", "scripts/check-release-artifacts.py --candidate",
-                   "scripts/release-evidence.py record"]
+        ordered = ["mise run build --offline", ".github/scripts/smoke-receipt.py before",
+                   "execution-point: release", ".github/scripts/smoke-receipt.py after",
+                   "mise run release:package", ".github/scripts/check-release-artifacts.py --candidate",
+                   ".github/scripts/release-evidence.py record"]
         self.assertEqual([candidate.index(step) for step in ordered],
                          sorted(candidate.index(step) for step in ordered))
-        self.assertLess(jobs["publish"].index("scripts/release-evidence.py verify"),
+        self.assertLess(jobs["publish"].index(".github/scripts/release-evidence.py verify"),
                         jobs["publish"].index("npm run release"))
         self.assertIn("actions: read", jobs["release-readiness"])
         for name in ("plan", "release-candidate", "publish"):
@@ -306,9 +307,9 @@ class ReleaseTests(unittest.TestCase):
         self.assertIn("MISE_AUTO_INSTALL: 'false'", workflow)
         self.assertNotIn("rustup toolchain install", workflow)
         self.assertNotIn("rustup target add", workflow) # All release runners build natively.
-        tasks = tomllib.loads((SCRIPTS.parent / "mise.toml").read_text())["tasks"]
+        tasks = tomllib.loads((ROOT / "mise.toml").read_text())["tasks"]
         self.assertEqual(tasks["build"]["run"], "cargo +stable build --release --locked")
-        self.assertEqual(tasks["release:package"]["run"], "python3 scripts/package-release.py")
+        self.assertEqual(tasks["release:package"]["run"], "python3 .github/scripts/package-release.py")
         self.assertNotIn("setup-node", jobs["release-candidate"])
         for name in ("plan",):
             self.assertNotIn("please run", jobs[name])
@@ -323,14 +324,14 @@ class ReleaseTests(unittest.TestCase):
         self.assertIn("group: release-main", workflow)
         self.assertIn("cancel-in-progress: false", workflow)
         self.assertIn("workflow_dispatch:", workflow)
-        config = tomllib.loads((SCRIPTS.parent / ".please/config.toml").read_text())
+        config = tomllib.loads((ROOT / ".please/config.toml").read_text())
         self.assertEqual(config["execution_points"]["custom"], ["release"])
         self.assertFalse(any(item["path"].endswith("/releasable-open-source-software")
                              for item in config["imports"]))
-        policy = json.loads((SCRIPTS.parent / ".github/release-ci.json").read_text())
+        policy = json.loads((ROOT / ".github/release-ci.json").read_text())
         self.assertEqual(policy["required_jobs"], ["Check"])
         self.assertNotIn("required_steps", policy)
-        definitions = [tomllib.loads(p.read_text()) for p in (SCRIPTS.parent / ".please/checks").glob("*/rule.toml")]
+        definitions = [tomllib.loads(p.read_text()) for p in (ROOT / ".please/checks").glob("*/rule.toml")]
         by_id = {rule["id"]: rule for rule in definitions}
         release_rules = [rule for rule in definitions if "release" in rule["run_at"]]
         self.assertEqual([rule["id"] for rule in release_rules], ["release-smoke"])
@@ -346,7 +347,7 @@ class ReleaseTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             for filename in ("Cargo.toml", "README.md", "LICENSE"):
-                shutil.copy2(SCRIPTS.parent / filename, root / filename)
+                shutil.copy2(ROOT / filename, root / filename)
             target = verification.TARGETS[0]
             binary = root / f"target/{target}/release/please"
             binary.parent.mkdir(parents=True)
@@ -390,7 +391,7 @@ class ReleaseTests(unittest.TestCase):
                 return subprocess.run([sys.executable, str(SCRIPTS / "smoke-receipt.py"), operation],
                                       cwd=root, env=env, capture_output=True)
             self.assertEqual(receipt_step("before").returncode, 0)
-            result = subprocess.run([sys.executable, str(SCRIPTS / "smoke.py"), str(binary)], cwd=root, env=env, capture_output=True, text=True)
+            result = subprocess.run([sys.executable, str(ROOT / ".please/checks/native-smoke/smoke.py"), str(binary)], cwd=root, env=env, capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             receipt = root / "dist/smoke" / f"{target}.json"
             self.assertFalse(receipt.exists(), "quality checks do not record release evidence")
@@ -403,7 +404,7 @@ class ReleaseTests(unittest.TestCase):
             fake = root / "fake"
             fake.write_text(f"#!/bin/sh\nprintf 'please {version}\\n'\n")
             fake.chmod(0o755)
-            result = subprocess.run([sys.executable, str(SCRIPTS / "smoke.py"), str(fake)], cwd=root, env=env, capture_output=True)
+            result = subprocess.run([sys.executable, str(ROOT / ".please/checks/native-smoke/smoke.py"), str(fake)], cwd=root, env=env, capture_output=True)
             self.assertNotEqual(result.returncode, 0)
             self.assertFalse(receipt.exists(), "failed smoke must remove any previous receipt")
 

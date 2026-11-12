@@ -6,9 +6,9 @@
   "description": "Development-only tooling for Please Behave GitHub releases",
   "engines": { "node": ">=24.15.0 <27" },
   "scripts": {
-    "test": "node --test scripts/test-release-config.mjs && node scripts/test-release-lifecycle.mjs",
-    "release:plan": "node scripts/release-plan.mjs",
-    "release": "node scripts/publish-release.mjs"
+    "test": "node --test .github/scripts/test-release-config.mjs && node .github/scripts/test-release-lifecycle.mjs",
+    "release:plan": "node .github/scripts/release-plan.mjs",
+    "release": "node .github/scripts/publish-release.mjs"
   },
   "devDependencies": {
     "@semantic-release/commit-analyzer": "13.0.1",

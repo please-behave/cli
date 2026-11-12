@@ -28,8 +28,9 @@ Agents must not manually run comprehensive final validation, including
 are allowed as described in AGENTS.md. Developers
 can use `please run --at pre-push` for an explicit manual run.
 
-Product behavior is tested only through `tests/*.rs`; tests of repository tooling live
-next to the scripts (`scripts/test_*.py`, `scripts/test-*.mjs`) and never test the product.
+Product behavior is tested only through `tests/*.rs`. Tests of repository tooling live next to
+the scripts they test (rule scripts in `.please/checks/<rule>/`, release and workflow scripts in
+`.github/scripts/`, developer tools in `tools/`) and never test the product.
 Rust tests start processes only through `support::command`, which removes `PLEASE_*`,
 `GIT_*`, `CI` and `GITHUB_ACTIONS` so the governor, hooks and CI cannot leak into them.
 Tests must remain offline and credential-free; mock Codex instead of calling it.

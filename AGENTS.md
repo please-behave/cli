@@ -118,6 +118,10 @@ Do not migrate early or close an issue while required stages remain.
 
 ## Repository hygiene
 
+Keep the repository root for the product. Rule scripts live in `.please/checks/<rule>/`,
+release and workflow scripts in `.github/scripts/` and developer tools in `tools/`, each with
+its tests.
+
 Keep license metadata consistent with `LICENSE`. Never commit credentials,
 machine-specific paths, local reports or developer-specific configuration.
 Use generic placeholders in public examples.

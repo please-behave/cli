@@ -6,5 +6,5 @@ depends_on = ["native-build"]
 
 [check]
 resource = "cargo"
-command = "python3 scripts/smoke.py"
+command = "python3 @rule/smoke.py"
 timeout_seconds = 120

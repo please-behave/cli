@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { analyzeCommits } from "./release-analyzer.mjs";
 import { generateNotes } from "@semantic-release/release-notes-generator";
-import config from "../release.config.mjs";
+import config from "../../release.config.mjs";
 
 const logger = { log() {}, error() {} };
 const options = config.plugins[0][1];
@@ -99,8 +99,8 @@ test("notes preserve features, fixes and breaking changes", async () => {
 test("release is main-only with private tooling and no npm publication", () => {
   assert.deepEqual(config.branches, ["main"]);
   assert.deepEqual(config.plugins.map(plugin => Array.isArray(plugin) ? plugin[0] : plugin), [
-    "./scripts/release-analyzer.mjs", "@semantic-release/release-notes-generator",
-    "./scripts/semantic-release-plugin.mjs", "@semantic-release/github",
+    "./.github/scripts/release-analyzer.mjs", "@semantic-release/release-notes-generator",
+    "./.github/scripts/semantic-release-plugin.mjs", "@semantic-release/github",
   ]);
   assert.ok(!config.plugins.some(plugin => JSON.stringify(plugin).includes("@semantic-release/npm")));
   const github = config.plugins.at(-1)[1];

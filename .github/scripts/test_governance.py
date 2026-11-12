@@ -4,7 +4,7 @@ from pathlib import Path
 import re
 import unittest
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 class GovernanceTests(unittest.TestCase):
     def test_ci_uses_published_action_for_check_report_and_summary(self):

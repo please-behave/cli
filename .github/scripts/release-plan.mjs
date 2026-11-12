@@ -2,7 +2,7 @@
 import { execFileSync } from "node:child_process";
 import { appendFileSync } from "node:fs";
 import semanticRelease from "semantic-release";
-import config from "../release.config.mjs";
+import config from "../../release.config.mjs";
 
 if (!process.env.GITHUB_OUTPUT || process.env.GITHUB_REF !== "refs/heads/main") {
   throw new Error("Release planning is restricted to the main-branch workflow.");

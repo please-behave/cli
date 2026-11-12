@@ -8,11 +8,11 @@ import { join, resolve } from "node:path";
 import { createRequire } from "node:module";
 import { Writable } from "node:stream";
 import semanticRelease from "semantic-release";
-import config from "../release.config.mjs";
+import config from "../../release.config.mjs";
 import { verifyRelease } from "./semantic-release-plugin.mjs";
 
 const require = createRequire(import.meta.url);
-const source = resolve(import.meta.dirname, "..");
+const source = resolve(import.meta.dirname, "../..");
 assert.throws(() => verifyRelease({}, {
   env: { ...releaseGuardEnvironment, EXPECTED_RELEASE_VERSION: "0.1.1" }, nextRelease: { version: "0.2.0" },
 }), /version changed/);
@@ -38,8 +38,8 @@ async function testLifecycle() {
     git("config", "tag.gpgsign", "false");
     git("remote", "add", "origin", remote);
     for (const file of ["README.md", "LICENSE", "Cargo.toml", "Cargo.lock"]) copyFileSync(join(source, file), join(cwd, file));
-    mkdirSync(join(cwd, "scripts"));
-    for (const file of ["verify-release.py", "check-release-artifacts.py", "set-release-version.py"]) copyFileSync(join(source, "scripts", file), join(cwd, "scripts", file));
+    mkdirSync(join(cwd, ".github/scripts"), { recursive: true });
+    for (const file of ["verify-release.py", "check-release-artifacts.py", "set-release-version.py"]) copyFileSync(join(source, ".github/scripts", file), join(cwd, ".github/scripts", file));
     writeFileSync(join(cwd, ".gitignore"), "dist/\n");
     git("add", "."); git("commit", "-m", "feat: initialize fixture"); git("push", "--set-upstream", "origin", "main");
     env.GITHUB_SHA = git("rev-parse", "HEAD");
@@ -69,7 +69,7 @@ for target in targets:
     }
     git("tag", "v0.1.0");
     git("push", "origin", "v0.1.0");
-    const verifyArtifacts = () => execFileSync("python3", ["scripts/check-release-artifacts.py"], { cwd, env });
+    const verifyArtifacts = () => execFileSync("python3", [".github/scripts/check-release-artifacts.py"], { cwd, env });
     git("commit", "--allow-empty", "-m", "fix: improve fixture"); git("push", "origin", "main");
     env.GITHUB_SHA = git("rev-parse", "HEAD"); archives("0.1.1");
     const notesPlugin = join(temporary, "notes.mjs");

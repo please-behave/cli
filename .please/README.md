@@ -54,11 +54,11 @@ AGENTS.md at check.
 
 ## Release workflow ownership
 
-GitHub Actions invokes `scripts/check-release-ci.py` for exact-source CI proof
-and `scripts/release-evidence.py` to record and verify candidate manifests.
+GitHub Actions invokes `.github/scripts/check-release-ci.py` for exact-source CI proof
+and `.github/scripts/release-evidence.py` to record and verify candidate manifests.
 Policies live in `.github/release-ci.json` and `.github/release-artifacts.json`.
 These scripts preserve the previous pinned implementations without an external
-release Rule Set. Semantic Release loads the local `scripts/release-guard.mjs`
+release Rule Set. Semantic Release loads the local `.github/scripts/release-guard.mjs`
 to check the planned version, checkout, repository, main branch and remote main.
 Offline release tests require no external release cache or provider calls.
 

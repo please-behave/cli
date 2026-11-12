@@ -6,7 +6,7 @@ import subprocess
 import sys
 from urllib.parse import unquote
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[3]
 
 
 def prose(text):

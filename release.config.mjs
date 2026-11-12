@@ -8,7 +8,7 @@ export default {
   branches: ["main"],
   tagFormat: "v${version}",
   plugins: [
-    ["./scripts/release-analyzer.mjs", {
+    ["./.github/scripts/release-analyzer.mjs", {
       developmentSeries: true,
       preset: "conventionalcommits",
       parserOpts,
@@ -42,7 +42,7 @@ export default {
         ],
       },
     }],
-    "./scripts/semantic-release-plugin.mjs",
+    "./.github/scripts/semantic-release-plugin.mjs",
     ["@semantic-release/github", {
       assets: ["dist/*.tar.gz", "dist/SHA256SUMS", "README.md", "LICENSE"],
       successComment: false,

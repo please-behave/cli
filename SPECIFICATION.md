@@ -825,7 +825,7 @@ Public documentation explains supported behavior; proposals remain in the roadma
 | INP-001 | `tests/acceptance.rs::changing_files_during_checks_blocks_pass` |
 | RPT-001 | `tests/configuration.rs::saved_reports_reject_inconsistent_metadata` |
 | CTX-001 | `tests/context.rs::push_updates_describe_create_update_delete_and_unpushed_heads` |
-| REL-001 | `scripts/test_release.py::test_only_root_version_changes_and_invalid_versions_leave_files_untouched` |
+| REL-001 | `.github/scripts/test_release.py::test_only_root_version_changes_and_invalid_versions_leave_files_untouched` |
 
 ## Runtime namespace isolation
 

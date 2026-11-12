@@ -205,7 +205,7 @@ future work.
 [mise.toml](../mise.toml) pins the separately installed governor through `github:please-behave/cli`. Mise installs the published executable
 with checksum and available artifact-attestation verification. The optional
 `mise deploy` task retains the checksum-verifying
-[scripts/deploy.py](../scripts/deploy.py) installer for a separate installation.
+[tools/deploy.py](../tools/deploy.py) installer for a separate installation.
 CI and native release workflows use
 the Please Behave Action, pinned to a full commit in the workflow files. Mise installs the governor
 from `mise.toml`; the Action uses it with `install: 'false'` and synchronizes with
