@@ -39,7 +39,7 @@ pub struct Changes {
     pub head_changed: bool,
     pub line_counts: Option<String>,
 }
-fn git(root: &Path) -> Command {
+pub(crate) fn git(root: &Path) -> Command {
     let mut c = Command::new("git");
     c.current_dir(root)
         .env("GIT_OPTIONAL_LOCKS", "0")

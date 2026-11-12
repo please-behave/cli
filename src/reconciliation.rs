@@ -28,8 +28,19 @@ pub struct HookInvocation {
 pub struct HookContext {
     invocation: HookInvocation,
     owner: String,
+    push_input: String,
 }
 impl HookContext {
+    pub(crate) fn event(&self) -> &str {
+        &self.invocation.event
+    }
+    pub(crate) fn arguments(&self) -> &[OsString] {
+        &self.invocation.arguments
+    }
+    /// Reference updates Git sends to pre-push on stdin; empty for other events.
+    pub(crate) fn push_input(&self) -> &str {
+        &self.push_input
+    }
     pub(crate) fn commit_message_path(&self, root: &Path) -> Result<PathBuf> {
         ensure!(
             self.invocation.event == "commit-msg" && self.invocation.arguments.len() == 1,
@@ -551,7 +562,25 @@ pub fn prepare(
             plan.synchronized(),
             "Git hooks require synchronization; run please sync manually outside the hook; no checks executed"
         );
-        Ok((Some(HookContext { invocation, owner }), false))
+        let push_input = if invocation.event == "pre-push" && !std::io::stdin().is_terminal() {
+            let mut input = String::new();
+            std::io::Read::read_to_string(
+                &mut std::io::Read::take(std::io::stdin(), 16 * 1024 * 1024),
+                &mut input,
+            )
+            .context("cannot read the pre-push reference list")?;
+            input
+        } else {
+            String::new()
+        };
+        Ok((
+            Some(HookContext {
+                invocation,
+                owner,
+                push_input,
+            }),
+            false,
+        ))
     } else {
         let changed = reconcile(project, &mut |plan| approve_plan(plan, auto_approve))?;
         Ok((None, changed))

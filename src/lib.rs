@@ -2,6 +2,7 @@ mod check_command;
 pub mod checks;
 pub mod cli;
 pub mod config;
+pub mod context;
 pub mod discovery;
 pub mod external;
 pub mod git_snapshot;
@@ -143,6 +144,9 @@ pub fn verify_project_with_fail_fast(
     );
     let names = plan.display_names();
     planner::apply(&mut project, &plan);
+    if plan.executable() {
+        project.context = Some(context::prepare(&project, &plan.at, hook)?);
+    }
     let check_count = project.checks.iter().filter(|c| c.enabled).count();
     let active: Vec<_> = project
         .reviews

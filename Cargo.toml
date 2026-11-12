@@ -18,3 +18,6 @@ chrono = { version = "0.4", default-features = false, features = ["clock", "serd
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
+
+[dev-dependencies]
+jsonschema = { version = "0.61.2", default-features = false }

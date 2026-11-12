@@ -187,6 +187,9 @@ fn execute(request: &Request<'_>) -> Result<Response> {
         .current_dir(&request.project.root);
     crate::parameters::configure(&mut command, request.parameters);
     command.env("PLEASE_EXECUTION_POINT", request.execution_point);
+    if let Some(context) = &request.project.context {
+        command.env("PLEASE_CONTEXT", context);
+    }
     requirements(&command, &request.project.root, runtime)?;
     let ids = request
         .reviews

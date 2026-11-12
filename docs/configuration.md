@@ -74,6 +74,9 @@ custom = ["release"]
 | `execution.max_parallel` | Optional; `4` | Positive integer: maximum running checks; `1` runs serially. |
 | `execution.fail_fast_terminate_running_instances` | Optional; `false` | Terminate running checks when invocation-level fail-fast triggers; requires Unix process groups. |
 | `execution.fail_fast_termination_grace_seconds` | Optional; `5` | Integer `1..3600`: grace period between SIGTERM and forced termination, validated even when termination is disabled. |
+| `context` | Optional table | Run context settings; see [Run context](#run-context). |
+| `context.retain_runs` | Optional; `100` | Integer `1..10000`: stored run contexts kept; older ones are removed at the start of a run. |
+| `context.max_section_bytes` | Optional; `10485760` | Integer `1024..1073741824`: byte limit for each patch file, each list and each message; larger sections are marked truncated. |
 | `execution_points` | Optional table | Additional execution contexts. |
 | `execution_points.custom` | Optional; `[]` | Unique names of 1–80 lowercase ASCII letters, digits, `-`, `_`, starting with a letter/digit. Built-in names are reserved. |
 | `imports` | Optional; `[]` | External Rule Set references, declared only here as `[[imports]]`. |
@@ -843,6 +846,40 @@ reviews, after deterministic checks. Plans/reports retain `provider_origin`
 (repository hash, selected path/ref and resolved commit), which participates in
 plan identity. Provider resources stay in the cache; removing the import stops
 using them without deleting the shared cache.
+
+### Run context
+
+Each run writes one JSON document that describes the Git state the rules judge, so rules need
+not call Git themselves. Checks and review adapters receive its absolute path in
+`PLEASE_CONTEXT`; never hardcode the location. The format is specified by the
+[JSON Schema](schemas/context.schema.json) (`schema_version` 1); additive changes extend that
+schema and removals need a new schema version. The files live in the worktree-local Git
+directory (`please/context/<run-id>/`), are readable by the owner only, and are not part of the
+working tree or the snapshot. Rules must treat the context as read-only. File contents are never
+included: a rule reads files from disk and uses the context to confirm that they are clean.
+
+| Section | Present | Content |
+| --- | --- | --- |
+| `repository` | Always | Git directory, common directory, `linked_worktree` and `shallow`. |
+| `head` | Always | `commit` (null in an unborn repository), `branch` (null when detached) and the HEAD `message`. |
+| `workspace` | Always | `clean`, and `staged`, `unstaged`, `untracked` and `conflicted` paths with their status and, for renames, `old_path`. `staged_patch` (index against HEAD) and `unstaged_patch` (working tree against index) point to patch files. |
+| `commit_message` | `commit-msg` | Message file and text. The message does not exist at `pre-commit`. |
+| `push` | `pre-push` | The remote name and one update per pushed reference: `kind` (`create`, `update` or `delete`), `is_head` (the pushed tip is the checked-out HEAD), the new `commits`, `changed_files` and a `patch` file. |
+| `changes` | `PLEASE_CHANGE_BASE` set | The resolved base commit and the net changed files and patch from that commit to the working tree, including untracked files. |
+
+`workspace.clean` is true only when nothing is staged, modified, untracked or conflicted;
+ignored files do not count. A path listed both as staged and unstaged is partially staged, so
+the file on disk differs from what a commit records. For a push, `clean` together with `is_head`
+tells a rule that the working tree equals what is being pushed. For a new reference, the commits
+are those not yet reachable from the remote's tracking references. When the remote tip is
+unknown locally, `range_available` is false and the rule must use Git itself.
+
+Patch objects have `file` (a name relative to the context directory, or null when there is no
+change), `bytes` and `truncated`. Paths that are not valid UTF-8 are counted in
+`unrepresentable_paths` instead of being listed. A section above `context.max_section_bytes`
+is cut, flagged `truncated` and, for lists, counted in `omitted_*`; a rule then fails or reads the
+data from Git. Pre-push reads the reference list from standard input, so commands placed after
+the managed section of a composed hook do not receive it.
 
 ### Reports and other files
 

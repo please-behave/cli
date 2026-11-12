@@ -27,6 +27,8 @@ pub struct Config {
     pub project: String,
     #[serde(default)]
     pub execution: Execution,
+    #[serde(default)]
+    pub context: ContextSettings,
     #[serde(default = "default_display")]
     pub max_display_files: usize,
     #[serde(default)]
@@ -49,6 +51,20 @@ impl Default for Execution {
             max_parallel: std::num::NonZeroUsize::new(DEFAULT_MAX_PARALLEL).unwrap(),
             fail_fast_terminate_running_instances: false,
             fail_fast_termination_grace_seconds: DEFAULT_FAIL_FAST_TERMINATION_GRACE_SECONDS,
+        }
+    }
+}
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct ContextSettings {
+    pub retain_runs: usize,
+    pub max_section_bytes: u64,
+}
+impl Default for ContextSettings {
+    fn default() -> Self {
+        Self {
+            retain_runs: crate::limits::DEFAULT_CONTEXT_RETAIN_RUNS,
+            max_section_bytes: crate::limits::DEFAULT_CONTEXT_SECTION_BYTES,
         }
     }
 }
@@ -233,6 +249,8 @@ pub struct Project {
     pub reviews: Vec<Review>,
     pub rule_sets: Vec<RuleSet>,
     pub effective: crate::rules::EffectiveConfig,
+    /// Absolute path of the current run's context file, set once per execution.
+    pub context: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
@@ -428,6 +446,18 @@ pub(crate) fn validate(root: PathBuf, loaded: crate::discovery::Loaded) -> Resul
         cfg!(unix) || !config.execution.fail_fast_terminate_running_instances,
         ".please/config.toml: execution.fail_fast_terminate_running_instances requires Unix process groups"
     );
+    ensure!(
+        (1..=crate::limits::MAX_CONTEXT_RETAIN_RUNS).contains(&config.context.retain_runs),
+        ".please/config.toml: context.retain_runs must be 1..={}",
+        crate::limits::MAX_CONTEXT_RETAIN_RUNS
+    );
+    ensure!(
+        (crate::limits::MIN_CONTEXT_SECTION_BYTES..=crate::limits::MAX_CONTEXT_SECTION_BYTES)
+            .contains(&config.context.max_section_bytes),
+        ".please/config.toml: context.max_section_bytes must be {}..={}",
+        crate::limits::MIN_CONTEXT_SECTION_BYTES,
+        crate::limits::MAX_CONTEXT_SECTION_BYTES
+    );
     nonempty(&config.project, "project").context(".please/config.toml")?;
     ensure!(
         (1..=MAX_DISPLAY_FILES).contains(&config.max_display_files),
@@ -562,6 +592,7 @@ pub(crate) fn validate(root: PathBuf, loaded: crate::discovery::Loaded) -> Resul
         reviews,
         rule_sets,
         effective,
+        context: None,
     })
 }
 

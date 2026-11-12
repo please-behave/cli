@@ -622,6 +622,27 @@ for incomplete/unavailable comparison. Staging alone does not change content;
 HEAD changes do. Show bounded changed paths and exact totals only when coverage
 allows. Do not invent line deltas: the baseline stores hashes, not prior content.
 A working-tree PASS does not certify staged/pushed commits or deployed artifacts.
+## CTX-001: Structured run context
+
+Each run that executes rules writes one JSON context document, specified by
+`docs/schemas/context.schema.json` (`schema_version` 1), and supplies its absolute path to
+checks and review adapters in `PLEASE_CONTEXT`. Offline plans write none. The document holds
+Git facts only, never file contents: `repository`, `head` (commit, branch, message) and
+`workspace` (clean flag, staged, unstaged, untracked and conflicted paths with statuses, and
+staged and unstaged patches) are always present. `commit_message` exists at commit-msg, `push`
+(per-reference kind, new commits, changed files, patch and whether the tip is HEAD) at pre-push,
+and `changes` (net changes since the resolved `PLEASE_CHANGE_BASE`) when that variable is set.
+Absent sections mean not applicable, never empty.
+
+Facts are computed once per run with read-only Git commands and described without sampling:
+a section above `context.max_section_bytes` (default 10 MiB) is flagged truncated and counted,
+never silently cut, and paths that are not valid UTF-8 are counted instead of listed. Patches
+are separate owner-only files named in the document. The files live in the worktree-local Git
+directory, outside the snapshot, and at the start of each run only the newest
+`context.retain_runs` (default 100) completed runs are kept. Schema additions are additive;
+removals require a new `schema_version`. Pre-push reads Git's reference list from standard input;
+a failure to establish the context is a run error, never a PASS.
+
 ## RPT-001: Reporting and CLI outcomes
 
 Reports are written atomically to `.please/reports/last.json`, including FAIL/ERROR
@@ -776,7 +797,7 @@ Checks receive `PLEASE_GIT_HOOK`,
 `PLEASE_GIT_HOOK_ARG_COUNT` and one-based `PLEASE_GIT_HOOK_ARG_1`, etc.; a dedicated
 checker script reads these without shell expansion by Please Behave. `commit-msg` supplies
 the message file in argument 1, unlike pre-commit; no commit policy is hardcoded.
-Pre-push stdin is not forwarded to checks. All execution points still verify working files,
+Pre-push stdin is not forwarded to checks; its reference list is available through CTX-001. All execution points still verify working files,
 not the exact staged index or pushed commit.
 
 ## ARC-001: Shared configuration contract
@@ -829,6 +850,7 @@ Public documentation explains supported behavior; proposals remain in the roadma
 | OUT-001 | `tests/review_contract.rs::review_contract_enforces_boundaries_and_semantic_evidence_locally` |
 | INP-001 | `tests/acceptance.rs::changing_files_during_checks_blocks_pass` |
 | RPT-001 | `tests/configuration.rs::saved_reports_reject_inconsistent_metadata` |
+| CTX-001 | `tests/context.rs::push_updates_describe_create_update_delete_and_unpushed_heads` |
 | REL-001 | `scripts/test_release.py::test_only_root_version_changes_and_invalid_versions_leave_files_untouched` |
 
 ## Runtime namespace isolation

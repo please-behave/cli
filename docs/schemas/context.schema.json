@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/please-behave/cli/docs/schemas/context.schema.json",
+  "title": "Please Behave run context",
+  "description": "Git facts for one run, located through PLEASE_CONTEXT. Sections are absent when they do not apply to the execution point.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "run_id", "execution_point", "repository", "head", "workspace"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "run_id": { "type": "string", "minLength": 1 },
+    "execution_point": { "type": "string", "minLength": 1 },
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["git_dir", "common_dir", "linked_worktree", "shallow"],
+      "properties": {
+        "git_dir": { "type": "string" },
+        "common_dir": { "type": "string" },
+        "linked_worktree": { "type": "boolean" },
+        "shallow": { "type": "boolean" }
+      }
+    },
+    "head": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commit", "branch", "message", "message_truncated"],
+      "properties": {
+        "commit": { "$ref": "#/$defs/nullableObjectId" },
+        "branch": { "type": ["string", "null"] },
+        "message": { "type": ["string", "null"] },
+        "message_truncated": { "type": "boolean" }
+      }
+    },
+    "workspace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "clean", "staged", "unstaged", "untracked", "conflicted",
+        "unrepresentable_paths", "omitted_entries", "truncated", "staged_patch", "unstaged_patch"
+      ],
+      "properties": {
+        "clean": { "type": "boolean" },
+        "staged": { "type": "array", "items": { "$ref": "#/$defs/change" } },
+        "unstaged": { "type": "array", "items": { "$ref": "#/$defs/change" } },
+        "untracked": { "type": "array", "items": { "type": "string" } },
+        "conflicted": { "type": "array", "items": { "type": "string" } },
+        "unrepresentable_paths": { "type": "integer", "minimum": 0 },
+        "omitted_entries": { "type": "integer", "minimum": 0 },
+        "truncated": { "type": "boolean" },
+        "staged_patch": { "$ref": "#/$defs/patch" },
+        "unstaged_patch": { "$ref": "#/$defs/patch" }
+      }
+    },
+    "commit_message": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "text", "truncated"],
+      "properties": {
+        "file": { "type": "string" },
+        "text": { "type": "string" },
+        "truncated": { "type": "boolean" }
+      }
+    },
+    "push": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["remote", "updates"],
+      "properties": {
+        "remote": { "type": "string" },
+        "updates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "local_ref", "local_sha", "remote_ref", "remote_sha", "kind", "is_head",
+              "range_available", "commits", "omitted_commits", "changed_files",
+              "omitted_files", "files_truncated", "patch"
+            ],
+            "properties": {
+              "local_ref": { "type": "string" },
+              "local_sha": { "$ref": "#/$defs/objectId" },
+              "remote_ref": { "type": "string" },
+              "remote_sha": { "$ref": "#/$defs/nullableObjectId" },
+              "kind": { "enum": ["create", "update", "delete"] },
+              "is_head": { "type": "boolean" },
+              "range_available": { "type": "boolean" },
+              "commits": { "type": "array", "items": { "$ref": "#/$defs/objectId" } },
+              "omitted_commits": { "type": "integer", "minimum": 0 },
+              "changed_files": { "type": "array", "items": { "$ref": "#/$defs/change" } },
+              "omitted_files": { "type": "integer", "minimum": 0 },
+              "files_truncated": { "type": "boolean" },
+              "patch": { "$ref": "#/$defs/patch" }
+            }
+          }
+        }
+      }
+    },
+    "changes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["base", "files", "omitted_files", "files_truncated", "patch"],
+      "properties": {
+        "base": { "$ref": "#/$defs/objectId" },
+        "files": { "type": "array", "items": { "$ref": "#/$defs/change" } },
+        "omitted_files": { "type": "integer", "minimum": 0 },
+        "files_truncated": { "type": "boolean" },
+        "patch": { "$ref": "#/$defs/patch" }
+      }
+    }
+  },
+  "$defs": {
+    "objectId": { "type": "string", "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$" },
+    "nullableObjectId": {
+      "oneOf": [{ "$ref": "#/$defs/objectId" }, { "type": "null" }]
+    },
+    "change": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "status", "old_path"],
+      "properties": {
+        "path": { "type": "string" },
+        "status": {
+          "enum": ["added", "modified", "deleted", "renamed", "copied", "typechange", "unmerged", "untracked"]
+        },
+        "old_path": { "type": ["string", "null"] }
+      }
+    },
+    "patch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "bytes", "truncated"],
+      "properties": {
+        "file": { "type": ["string", "null"] },
+        "bytes": { "type": "integer", "minimum": 0 },
+        "truncated": { "type": "boolean" }
+      }
+    }
+  }
+}

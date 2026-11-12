@@ -88,6 +88,9 @@ pub(crate) fn execute_cancellable(
     crate::parameters::configure(&mut command, &environment);
     command.env("PLEASE_RULE_DIRECTORY", &check.rule_directory);
     command.env("PLEASE_EXECUTION_POINT", execution_point);
+    if let Some(context) = &project.context {
+        command.env("PLEASE_CONTEXT", context);
+    }
     command.current_dir(&project.root).stdin(Stdio::null());
     if let Some(hook) = hook {
         hook.configure(&mut command);

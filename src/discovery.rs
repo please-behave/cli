@@ -488,6 +488,7 @@ pub(crate) fn init(root: &Path) -> Result<usize> {
         project: project.into_owned(),
         max_display_files: MAX_DISPLAY_FILES,
         execution: Default::default(),
+        context: Default::default(),
         execution_points: Default::default(),
         imports: vec![],
         provider_imports: vec![],

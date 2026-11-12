@@ -120,7 +120,8 @@ please run --at pre-push
 
 Checks receive `PLEASE_GIT_HOOK`, `PLEASE_GIT_HOOK_ARG_COUNT` and one-based
 `PLEASE_GIT_HOOK_ARG_1`, `PLEASE_GIT_HOOK_ARG_2` and so on, without shell expansion.
-Stdin stays null, so pre-push reference data is not forwarded. For `commit-msg`,
+Stdin stays null; the staged files, commit message and pushed references are available in the
+[run context](configuration.md#run-context) named by `PLEASE_CONTEXT`. For `commit-msg`,
 create `.please/checks/commit-message/rule.toml` with
 `[check] command = "sh .please/checks/commit-message/index.sh"` and read the message
 path in `index.sh`:
