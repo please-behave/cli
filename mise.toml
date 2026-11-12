@@ -1,5 +1,5 @@
 [tools]
-"github:please-behave/cli" = "0.7.0"
+"github:please-behave/cli" = "0.8.0"
 rust = [
   { version = "stable", profile = "minimal", components = "rustfmt,clippy" },
   { version = "1.85.0", profile = "minimal" },
