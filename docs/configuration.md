@@ -111,7 +111,7 @@ limit of 1. Older CLI releases reject these new configuration fields; upgrade
 pinned consumers before adding them to shared rulesets.
 
 Fail-fast termination is optional under `[execution]` and takes effect only with
-`run --fail-fast`. See the [fail-fast behavior](../README.md#project-settings) for
+`run --fail-fast`. See the [fail-fast behavior](#project-settings) for
 process groups, cancellation, grace periods and interrupted-build limitations.
 
 ### Fields shared by checks and reviews

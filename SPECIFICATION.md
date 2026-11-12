@@ -9,7 +9,7 @@ verifiable, independently of who writes the code. This document defines supporte
 behavior. The [roadmap](docs/todo/README.md) contains planned extensions; they are
 not implemented merely because they have a proposal.
 
-The [README configuration reference](README.md#configuration) defines every public
+The [configuration reference](docs/configuration.md) defines every public
 configuration field, default and limit. The [execution-point contract](docs/execution-points-and-plans.md)
 extends this specification for plan schema 3 and report schema 4. These documents must agree; a contradiction must be resolved before work
 proceeds, not interpreted as permission to choose either behavior.
@@ -75,13 +75,6 @@ are pre-commit, commit-msg, pre-push and check. The first three use managed Git
 hooks; check is invoked explicitly and never automatically. Custom names come only
 from the consumer; release has no special behavior.
 The default is pre-push. Empty points succeed without claiming rule PASS.
-
-Acceptance: `tests/execution_points.rs::reference_overrides_replace_set_points_and_union_without_changing_identity`
-covers inheritance, replacement and repeated references;
-`tests/configuration.rs::reference_overrides_drive_check_review_plans_and_saved_reports`
-covers Check/Review selection and reports;
-`tests/external_rule_sets.rs::reference_overrides_preserve_paths_mapping_identity_and_offline_reports`
-covers external paths and mapped offline execution.
 
 ## EXT-001: External Git Rule Sets
 
@@ -161,11 +154,6 @@ Cache resource failures remain fatal for advisory reviews.
 The product includes no provider or model by default. Imports execute trusted
 code with the user's permissions; Git credentials and dependencies remain external.
 
-Acceptance: `tests/provider_imports.rs::separate_provider_and_ruleset_repositories_run_offline`
-covers independent sources, cached adapter execution and provenance. Further
-fixtures cover shared sources, collisions, resource boundaries, atomic failure,
-tampering and absence of implicit downloads/provider calls.
-
 ## CFG-001: Configuration and initialization
 
 New projects use `.please/` exclusively; `.hannes/` is not discovered or migrated.
@@ -184,7 +172,7 @@ directories as defined in EXT-001; local definitions use only the paths above.
 Supporting files inside rule directories are data, never governance documents.
 
 Project settings are project, max_display_files (default 5), execution_points,
-execution, imports and provider_imports. The README defines all fields and bounds. Review prompt filenames
+execution, imports and provider_imports. The configuration reference defines all fields and bounds. Review prompt filenames
 must be single nonempty names directly in a Rule directory: no separators,
 absolute paths, parent traversal, symlinks or special files. Review prompts are
 UTF-8 Markdown without frontmatter requirements. Check entrypoints follow CHK-001.
@@ -200,9 +188,6 @@ It scaffolds a passing enabled Check, a disabled failing Check and disabled
 product-consistency Review in self-contained directories. Reports remain local.
 Initialization supplies no provider configuration or adapter. Configure an adapter
 before enabling reviews.
-Acceptance: `tests/acceptance.rs::init_exact_paths_and_repeated_initialization_rejected`
-and `tests/acceptance.rs::init_rejects_existing_configuration_entries_without_writes`.
-
 ## HDR-001: Commit-header reviews
 
 `review.input` selects `worktree` (default) or `commit-header`. Header reviews
@@ -232,10 +217,6 @@ accepted. Changes confined to the body do not invalidate a header-only review.
 Saved status evaluates working-tree freshness; the saved header is evidence of
 that hook invocation, not a new candidate message. Existing checks-first gating,
 blocking/advisory semantics and adapter failure handling apply unchanged.
-
-Acceptance: `tests/commit_header.rs::commit_header_hook_and_adapter_contract`
-covers real Git hooks, isolation, verdict evidence, gating, input bounds and
-header stability using offline fake adapters.
 
 ## PROV-001: Named adapter configurations
 
@@ -286,11 +267,6 @@ remain visible without blocking success; checks and integrity failures retain
 their existing enforcement. Protocol changes require explicit version handling;
 unknown versions never silently fall back.
 
-Acceptance: `tests/cli_providers.rs` exercises the actual process boundary using
-only deterministic provider-neutral adapters. No test requires AI credentials,
-external services or AI token consumption. See [adapter protocol](docs/adapter-protocol.md)
-for schemas, migration and a working dummy adapter.
-
 ## SEL-001: Selection and offline plans
 
 `--at NAME` selects a known execution point, defaulting to pre-push. Selection
@@ -308,8 +284,7 @@ plan schema 3 and structured diagnostics. Every JSON preview includes
 plan_schema_version, status and blocking_reasons. Configuration or selection
 errors return status blocked with nonempty blocking_reasons and exit 2; unavailable
 plan metadata is omitted. Prepared plans retain their complete metadata, including
-when blocked by an incomplete snapshot. Acceptance:
-`tests/acceptance.rs::json_plan_errors_use_current_schema_and_blocking_reasons`.
+when blocked by an incomplete snapshot.
 A plan is neither a cache nor proof
 that a later input is identical. Provider availability is not checked offline.
 
@@ -384,21 +359,6 @@ executable lookup/permissions still apply. Plans validate syntax without
 requiring existence. Existing filesystem race and trust boundaries remain;
 references provide no sandbox.
 
-Acceptance: `tests/configuration.rs::local_path_references_execute_with_consumer_working_directory`,
-`tests/external_rule_sets.rs::imported_path_references_use_cached_provenance_offline`
-and the offline resolver unit tests cover explicit roots, token boundaries,
-spaces, executable/argument positions, literals, missing paths, symlinks and
-cached shared scripts. Invalid syntax and legacy behavior retain the tests below.
-
-Acceptance: `tests/configuration.rs::string_commands_parse_arguments_without_a_shell`,
-`tests/configuration.rs::string_commands_reject_invalid_syntax`,
-`tests/configuration.rs::command_representations_execute_equivalently`,
-`tests/configuration.rs::commands_validate_without_execution` and
-`tests/external_rule_sets.rs::imported_commands_plan_and_execute_offline`
-cover quoting, escaping, invalid syntax, conflicts, legacy compatibility, offline
-imports and equivalent execution. Existing process and entrypoint tests retain
-coverage of timeouts, resource confinement and exit-code handling.
-
 For file entrypoints, a filename such as index.sh resolves in the declaring
 Rule directory. A relative path containing `/`, such as scripts/check.py, resolves
 from the rule-source root: the consumer repository root for local Rules and the
@@ -415,12 +375,6 @@ timeout, blocking behavior, execution and result; sharing never deduplicates
 executions. PLEASE_RULE_DIRECTORY always identifies the declaring Rule directory,
 including when the entrypoint lives elsewhere in the source. Cached Git imports
 support the same resolution offline.
-
-Acceptance: `tests/configuration.rs::local_rules_share_entrypoints_with_independent_results`
-and `tests/external_rule_sets.rs::shared_entrypoints_execute_each_rule_offline`
-cover shared scripts, independent parameters/results and declaring directories;
-path confinement, execution-time replacement and missing/disabled cases are covered
-in those test files alongside filename-only compatibility.
 
 [check] accepts optional interpreter and timeout_seconds
 (default 30, 1..=3600). Direct execution uses native OS behavior with no shebang
@@ -469,9 +423,6 @@ GitHub Actions and nonterminal streams never use cursor controls, including with
 `--progress=tty`. Detailed captured output remains available through saved status.
 Report schema 4 and plan schema 3 are unchanged.
 
-Acceptance: `tests/parallel.rs` covers scheduling, configuration and report behavior;
-`tests/progress.rs` covers interactive and append-only rendering.
-
 ### History-based scheduling
 
 Runnable checks prefer the largest estimated remaining dependency path: their own
@@ -495,10 +446,6 @@ non-versioned, never synchronized or persisted by CI integration, and can be res
 by deleting the file. No priorities, weights or durations are user-configurable.
 The heuristic does not predict resource contention or guarantee an optimal plan;
 rule edits retain estimates while their identity remains unchanged.
-
-Acceptance: scheduler unit tests use supplied durations and channel-controlled
-workers; `tests/scheduling.rs` covers persistence, identity, previews and cache
-failure fallback with offline deterministic checks.
 
 ### Explicit check dependencies
 
@@ -530,9 +477,6 @@ aggregate blocking outcome is successful. Advisory check failures and their
 dependency skips permit reviews; blocking failures, execution errors, incomplete
 fail-fast execution and snapshot failures prevent them. Uninvoked reviews are
 NOT_RUN with an explicit check-phase gating reason.
-
-Acceptance: `tests/dependencies.rs` covers validation, chains, branching, resource
-conflicts, failure propagation, fail-fast, saved reports and check-gated reviews.
 
 ### Invocation-level fail-fast
 
@@ -567,12 +511,6 @@ Unstarted selected rules retain their position and blocking metadata, with
 announces these rules as started. NOT_RUN does not replace a triggering FAIL
 (exit 1) or ERROR (exit 2). Existing report and plan schemas are unchanged.
 
-Acceptance: `tests/fail_fast.rs` covers termination configuration, graceful group
-termination, escalation, partial output, saved cancellation and unchanged defaults
-using offline subprocess fixtures, plus CLI defaults, serial stopping, errors,
-advisory reviews, batch boundaries and saved reporting; scheduler unit tests use
-channels to verify parallel completion and stopping without timing assumptions.
-
 ## PARAM-001: Rule parameters
 
 Rules declare named `parameters` tables with `type` (`string` or `file`),
@@ -595,9 +533,6 @@ Checks and provider subprocesses use the same delivery mechanism. Different revi
 environments use separate calls; prepared context remains shared. Review prompts
 and filename-only Check entrypoints continue resolving within their own
 directories; shared Check paths follow CHK-001.
-
-Acceptance: `tests/parameters.rs` and parameterized imports in
-`tests/external_rule_sets.rs` exercise loading, binding and execution.
 
 ## REV-001: Reviews and provider isolation
 
@@ -653,7 +588,7 @@ estimation. Nonmatches have omission reason `trigger_not_matched` in preview and
 saved report plans, no result and no required ID; they do not require provider
 credentials/executables. Disabled and inapplicable rules need no comparison.
 Record the resolved baseline in the plan and its identity. Deterministic checks
-still gate all scheduled reviews globally. Acceptance: `tests/review_triggers.rs`.
+still gate all scheduled reviews globally.
 
 ## PREP-001: Shared review input
 
@@ -715,9 +650,6 @@ for incomplete/unavailable comparison. Staging alone does not change content;
 HEAD changes do. Show bounded changed paths and exact totals only when coverage
 allows. Do not invent line deltas: the baseline stores hashes, not prior content.
 A working-tree PASS does not certify staged/pushed commits or deployed artifacts.
-Acceptance: `tests/acceptance.rs::ignored_artifacts_do_not_change_verification_inputs`
-and `tests/acceptance.rs::ignored_governance_inputs_remain_fingerprinted`.
-
 ## RPT-001: Reporting and CLI outcomes
 
 Reports are written atomically to `.please/reports/last.json`, including FAIL/ERROR
@@ -754,15 +686,12 @@ failures remain visible even when no rule failed. Empty points explicitly say no
 rules ran and do not claim rule PASS. Saved status lists results with display
 names; details retain IDs, provenance, output and usage. No rules defined prints
 `No rules defined yet.`; disabled definitions do not
-trigger that message. Acceptance: tests/progress.rs covers names, plain/TTY
-rendering, concise execution and actionable errors.
+trigger that message.
 
 Saved status and `--details` use English labels and messages, including selection,
 checks-only scope, provenance and token usage. Use `Selection`, `Omitted`,
 `Required rules` and `Mode: Checks only` consistently with execution plans.
 This presentation does not change saved data, freshness, streams or exit codes.
-Acceptance: tests/acceptance.rs covers saved scope and token usage rendering.
-
 Respect `NO_COLOR`, `--no-color` and each stream's terminal state. Status colors
 are green PASS/CURRENT, red FAIL and amber ERROR/STALE/UNKNOWN; help uses cyan
 accents and bold headings. Sanitize untrusted terminal content.
@@ -828,11 +757,6 @@ directly, without a GitHub Releases API lookup or fallback to latest. Only lates
 discovery uses the API, with optional GITHUB_TOKEN Bearer authentication; asset
 requests carry no token. Missing releases/assets, network/API failures and missing,
 malformed or mismatched checksums fail installation and preserve the installed copy.
-Acceptance: `scripts/test_deploy.py` covers direct pinned URLs, optional API
-authentication, safe diagnostics and installation failures with mocked downloads.
-The governor uses the exact published release in mise.toml. Repository rules use the unversioned,
-self-contained Rule model and fixed Git-hook execution points.
-
 The three Git-backed built-in points serve Git hooks. Normal CI uses one check
 point for formatting, documentation, tooling, native validation, minimum Rust,
 dependency audits and security. Local Rules declare their execution points
@@ -861,8 +785,6 @@ Source checks, unit tests and audits are reused from exact-source CI, including
 successful partial CI reruns; incomplete or untrusted evidence blocks publication.
 Release artifacts must belong to the current workflow run and attempt.
 The published governor remains pinned in mise.toml and separate from candidates.
-Acceptance: `scripts/test_release.py::test_release_job_contract_permissions_and_selection`.
-
 The repository-conventions set (rulesets/multi-point/repository-conventions) is imported at a full Git commit
 pin for pre-commit, check and, through reference overrides, commit-msg. Its agents-size Check limits AGENTS.md
 to 1500 approximate tokens at pre-commit and check; its scopes_file parameter uses .please/commit-scopes.txt. The external Check
@@ -952,8 +874,6 @@ and executes no checks or reviews. Repeating it on synchronized state performs n
 writes. Without the flag, noninteractive drift still exits 2. CI can run this
 command once before Git-backed execution; explicit points such as `check` need
 no hook setup in CI. Execution itself has no auto-approval.
-Acceptance: `tests/reconciliation.rs::auto_approve_reconciles_noninteractively_without_executing_rules`.
-
 Please Behave supports exactly three Git hooks: pre-commit, commit-msg and pre-push.
 Each invokes its identically named built-in execution point. This relationship is
 fixed and cannot be configured. Enabled effective assignments determine required
@@ -965,10 +885,6 @@ check and custom execution points have no Git hook and are invoked explicitly.
 External import mappings still apply only to custom points and cannot map built-ins.
 check has no workflow discovery or CI validation; consumers choose where to invoke
 it, including multiple workflows. Please Behave generates no CI workflows.
-Acceptance: tests/reconciliation.rs covers fixed event invocation, automatic
-installation, removal, obsolete configuration rejection and explicit-point isolation;
-tests/external_rule_sets.rs covers imported hook Rules and per-import mappings.
-
 Git resolves the effective hook path, including worktrees and `core.hooksPath`.
 Default common-repository hooks are shared by its worktrees; custom paths must
 remain within this working tree. Symlink components, nonregular files, malformed
@@ -991,8 +907,7 @@ named execution point and hook state, verifies reconciliation read-only and neve
 instructs the user to run `please sync` manually. Nested execution from checks
 is rejected using a repository-scoped guard, including checks started by direct
 execution of Git-backed, check and custom points. The guard also blocks nested
-reconciliation in that repository. Acceptance:
-`tests/reconciliation.rs::direct_execution_blocks_nested_execution_and_reconciliation`.
+reconciliation in that repository.
 Checks receive `PLEASE_GIT_HOOK`,
 `PLEASE_GIT_HOOK_ARG_COUNT` and one-based `PLEASE_GIT_HOOK_ARG_1`, etc.; a dedicated
 checker script reads these without shell expansion by Please Behave. `commit-msg` supplies
@@ -1066,5 +981,4 @@ Rule and provider IDs reserve `please-`. Generated integrity results use
 `please-plan`, `please-snapshot`, `please-tree-stability` and
 `please-commit-header-stability`, with report schema 4
 and existing execution semantics unchanged. Public library phase callbacks use
-English messages. Acceptance: `tests/runtime_namespace.rs` covers namespace
-isolation, reserved IDs, phase messages and integrity report IDs.
+English messages.

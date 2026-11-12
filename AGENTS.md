@@ -20,9 +20,12 @@
   documentation and user-facing output in English.
 - Run deterministic checks before LLM reviews. Never treat provider failures,
   invalid JSON or incomplete snapshot coverage as PASS.
-- Keep README complete for supported commands, configuration, defaults and
-  limitations; put implementation details in `docs/`. Keep prose concise,
-  examples usable and future possibilities distinct from supported behavior.
+- Keep README a concise entry point for supported commands, defaults and
+  limitations; it summarizes configuration and links the single reference in
+  `docs/configuration.md`. Put implementation details in `docs/`. State each fact
+  once and avoid volatile facts such as current versions, counts or hashes. Keep
+  prose concise, examples usable and future possibilities distinct from supported
+  behavior.
 - Review the complete change for contradictions, stale references, duplication
   and unnecessary additions before finishing.
 

@@ -123,14 +123,14 @@ appear on either side. Unknown sources/targets and invalid names are errors.
 Unmapped names stay unchanged and must be consumer-known. Separate imports may
 map the same source differently; multiple sources may share one target. Mapping
 never edits source/cache files or changes import identity, and works offline.
-See the [complete three-import example](../README.md#import-rule-sets-from-git).
+See the [complete three-import example](configuration.md#import-rule-sets-from-git).
 
 Each import's `rule_parameters.<rule-id>` tables supply only that binding's
 values. External declarations omit `value`. File parameters refer to existing
 files in the consumer; bundled assets still belong to the source rule. Repeated
 imports execute separately and retain distinguishable IDs in plans and reports;
 repeated references within one binding execute once. See
-[parameter declarations and delivery](../README.md#rule-parameters).
+[parameter declarations and delivery](configuration.md#rule-parameters).
 
 ## Named provider configurations
 

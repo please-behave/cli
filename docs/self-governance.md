@@ -39,8 +39,7 @@ Hook setup installs no tools or dependencies. Conflicts still fail. Generated wr
 live at Git's effective hook path and carry local ownership; never check them in
 or copy them between repositories.
 
-`mise install` prepares the published governor, Python, Node, Gitleaks 8.30.1, actionlint 1.7.12,
-cargo-audit 0.22.2 and both Rust toolchains (stable with rustfmt/Clippy and 1.85.0).
+`mise install` prepares the governor, tools and Rust toolchains pinned in `mise.toml`.
 Git and a native compiler/linker remain host prerequisites. Rust stable remains a
 moving channel; the other tool versions are exact pins. `mise run ci:prepare`
 (alias `setup`) fetches locked npm and Cargo dependencies online without validation.
@@ -67,13 +66,10 @@ of its configured execution point. Checks run once per binding; reports retain I
 The concrete rule definitions and assignments live in `.please/`; product tests
 use independent synthetic configurations.
 
-| Execution point | Required checks |
-| --- | --- |
-| pre-commit | format, docs plus imported agents-size |
-| commit-msg | Imported commit-message Check and advisory commit-message-quality Review |
-| pre-push (default) | format, docs, python-tests, release-rules, clippy, rust-tests, native-build, native-smoke, workflows, msrv plus imported license, secret-scan and sensitive-files |
-| check | All pre-push checks plus imported agents-size, rust-audit and npm-audit; conditional agents-quality Review |
-| release | release-smoke: CLI behavior of an already-built native candidate |
+Assignments are authoritative in `.please/` and the imported Rule Sets. Preview any point with
+`mise exec -- please run --at <point> --plan`. Commit-msg runs the imported commit Check and
+advisory Review, release runs the CLI smoke test of an already-built candidate, and check
+runs every pre-push rule plus audits and the conditional AGENTS.md quality Review.
 
 The local [checks](../.please/checks) use string commands. Python scripts run
 as `python3 scripts/<name>.py`, relative to the consuming repository root.

@@ -10,7 +10,7 @@ use serde_json::Value;
 use std::{collections::BTreeMap, fs, process::Command};
 use tempfile::TempDir;
 
-const README: &str = include_str!("../README.md");
+const CONFIGURATION: &str = include_str!("../docs/configuration.md");
 fn section<'a>(text: &'a str, title: &str) -> &'a str {
     text.split_once(&format!("### {title}\n"))
         .unwrap()
@@ -124,7 +124,7 @@ fn project() -> TempDir {
 fn every_configuration_field_required_marker_and_default_is_documented() {
     let root = project();
     let p = config::load(root.path()).unwrap();
-    contract(&p.config, section(README, "Project settings"), "");
+    contract(&p.config, section(CONFIGURATION, "Project settings"), "");
     contract(
         &please::external::Import {
             git: "https://example.invalid/rules.git".into(),
@@ -133,7 +133,7 @@ fn every_configuration_field_required_marker_and_default_is_documented() {
             execution_points: Default::default(),
             rule_parameters: Default::default(),
         },
-        section(README, "Import rule sets from Git"),
+        section(CONFIGURATION, "Import rule sets from Git"),
         "",
     );
     contract(
@@ -143,7 +143,7 @@ fn every_configuration_field_required_marker_and_default_is_documented() {
             path: "providers/quality".into(),
             reference: "main".into(),
         },
-        section(README, "Import providers from Git"),
+        section(CONFIGURATION, "Import providers from Git"),
         "",
     );
     let rule = config::RuleDefinition {
@@ -180,9 +180,9 @@ fn every_configuration_field_required_marker_and_default_is_documented() {
     };
     let shared = format!(
         "{}\n{}\n{}",
-        section(README, "Fields shared by checks and reviews"),
-        section(README, "Add a check"),
-        section(README, "Add a review")
+        section(CONFIGURATION, "Fields shared by checks and reviews"),
+        section(CONFIGURATION, "Add a check"),
+        section(CONFIGURATION, "Add a review")
     );
     contract(&rule, &shared, "");
     contract(
@@ -192,18 +192,25 @@ fn every_configuration_field_required_marker_and_default_is_documented() {
             description: Some("Allowed scopes".into()),
             value: Some(toml::Value::String(".commit-scopes".into())),
         },
-        section(README, "Rule parameters"),
+        section(CONFIGURATION, "Rule parameters"),
         "parameters.<name>.",
     );
-    let adapter: config::ProviderConfig =
-        toml::from_str(block(section(README, "Configure the AI provider"), "toml")).unwrap();
-    contract(&adapter, section(README, "Configure the AI provider"), "");
+    let adapter: config::ProviderConfig = toml::from_str(block(
+        section(CONFIGURATION, "Configure the AI provider"),
+        "toml",
+    ))
+    .unwrap();
+    contract(
+        &adapter,
+        section(CONFIGURATION, "Configure the AI provider"),
+        "",
+    );
     contract(
         &config::ReviewContext {
             path: "README.md".into(),
             headings: vec![],
         },
-        section(README, "Add a review"),
+        section(CONFIGURATION, "Add a review"),
         "review.context.",
     );
     contract(
@@ -213,7 +220,7 @@ fn every_configuration_field_required_marker_and_default_is_documented() {
             rules: vec![],
             run_at: vec![],
         },
-        section(README, "Group rules into rule sets"),
+        section(CONFIGURATION, "Group rules into rule sets"),
         "",
     );
 }
@@ -221,9 +228,12 @@ fn every_configuration_field_required_marker_and_default_is_documented() {
 fn documentation_contract_detects_missing_fields_and_wrong_defaults() {
     let root = project();
     let _p = config::load(root.path()).unwrap();
-    let adapter: config::ProviderConfig =
-        toml::from_str(block(section(README, "Configure the AI provider"), "toml")).unwrap();
-    let original = section(README, "Configure the AI provider");
+    let adapter: config::ProviderConfig = toml::from_str(block(
+        section(CONFIGURATION, "Configure the AI provider"),
+        "toml",
+    ))
+    .unwrap();
+    let original = section(CONFIGURATION, "Configure the AI provider");
     for bad in [
         original
             .lines()
@@ -261,7 +271,7 @@ fn readme_examples_validate_and_plan_without_ai_or_check_execution() {
     let base = root.path().join(".please");
     fs::write(
         base.join("config.toml"),
-        block(section(README, "Project settings"), "toml"),
+        block(section(CONFIGURATION, "Project settings"), "toml"),
     )
     .unwrap();
     for (kind, name, title) in [
@@ -270,7 +280,11 @@ fn readme_examples_validate_and_plan_without_ai_or_check_execution() {
     ] {
         let dir = base.join(kind).join(name);
         fs::create_dir_all(&dir).unwrap();
-        fs::write(dir.join("rule.toml"), block(section(README, title), "toml")).unwrap();
+        fs::write(
+            dir.join("rule.toml"),
+            block(section(CONFIGURATION, title), "toml"),
+        )
+        .unwrap();
         fs::write(
             dir.join(if kind == "checks" {
                 "index.sh"
@@ -278,7 +292,7 @@ fn readme_examples_validate_and_plan_without_ai_or_check_execution() {
                 "prompt.md"
             }),
             block(
-                section(README, title),
+                section(CONFIGURATION, title),
                 if kind == "checks" { "sh" } else { "markdown" },
             ),
         )
@@ -287,13 +301,13 @@ fn readme_examples_validate_and_plan_without_ai_or_check_execution() {
     fs::create_dir_all(base.join("rule-sets")).unwrap();
     fs::write(
         base.join("rule-sets/repository.toml"),
-        block(section(README, "Group rules into rule sets"), "toml"),
+        block(section(CONFIGURATION, "Group rules into rule sets"), "toml"),
     )
     .unwrap();
     support::write(
         root.path(),
         ".please/provider.toml",
-        block(section(README, "Configure the AI provider"), "toml"),
+        block(section(CONFIGURATION, "Configure the AI provider"), "toml"),
     );
     let p = config::load(root.path()).unwrap();
     let plan = planner::build(&p, Some("check"), false).unwrap().plan;
@@ -303,8 +317,11 @@ fn readme_examples_validate_and_plan_without_ai_or_check_execution() {
 
 #[test]
 fn documented_adapter_configuration_is_valid() {
-    let example: config::ProviderConfig =
-        toml::from_str(block(section(README, "Configure the AI provider"), "toml")).unwrap();
+    let example: config::ProviderConfig = toml::from_str(block(
+        section(CONFIGURATION, "Configure the AI provider"),
+        "toml",
+    ))
+    .unwrap();
     assert_eq!(example.command, "python3");
     assert_eq!(example.timeout_seconds, 180);
 }
