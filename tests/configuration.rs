@@ -1402,12 +1402,10 @@ rules = [
             .required_ids,
         ["inherited"]
     );
-    assert!(
-        !planner::build(&project, Some("check"), true)
-            .unwrap()
-            .plan
-            .executable()
-    );
+    // Checks-only plans keep reviews scheduled; they are reported NOT_RUN at execution.
+    let checks_only = planner::build(&project, Some("check"), true).unwrap().plan;
+    assert!(checks_only.executable());
+    assert_eq!(checks_only.required_ids, ["readme", "design"]);
     for at in ["check", "release"] {
         let project = config::load(d.path()).unwrap();
         let report = please::verify_project_at(
