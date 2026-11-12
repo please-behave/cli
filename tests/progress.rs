@@ -9,7 +9,7 @@ use please::{
     report::{self, Status},
     terminal,
 };
-use std::{fs, process::Command};
+use std::fs;
 use tempfile::TempDir;
 
 struct Never;
@@ -21,7 +21,7 @@ impl Provider for Never {
 fn project() -> TempDir {
     let root = tempfile::tempdir().unwrap();
     assert!(
-        Command::new("git")
+        support::command("git")
             .args(["init", "--quiet"])
             .current_dir(root.path())
             .status()
@@ -151,7 +151,7 @@ fn concise_cli_keeps_diagnostics_and_avoids_duplicate_results() {
     let root = project();
     named(&root, "first", "First check");
     for mode in ["auto", "plain", "tty"] {
-        let output = Command::new(env!("CARGO_BIN_EXE_please"))
+        let output = support::command(env!("CARGO_BIN_EXE_please"))
             .args(["run", "--at", "check", "--progress", mode])
             .current_dir(root.path())
             .env("NO_COLOR", "1")
@@ -191,7 +191,7 @@ fn concise_cli_keeps_diagnostics_and_avoids_duplicate_results() {
         }
     }
     support::check(root.path(), "second", &["check"], "exit 2");
-    let output = Command::new(env!("CARGO_BIN_EXE_please"))
+    let output = support::command(env!("CARGO_BIN_EXE_please"))
         .args(["run", "--at", "check"])
         .current_dir(root.path())
         .env("NO_COLOR", "1")
@@ -299,7 +299,7 @@ fn terminal_run(github_actions: bool) -> (String, String) {
     );
     let mut reader = unsafe { fs::File::from_raw_fd(master) };
     let writer = unsafe { fs::File::from_raw_fd(slave) };
-    let mut command = Command::new(env!("CARGO_BIN_EXE_please"));
+    let mut command = support::command(env!("CARGO_BIN_EXE_please"));
     command.args(["run", "--at", "check"]);
     if github_actions {
         command.env("GITHUB_ACTIONS", "true").arg("--progress=tty");
@@ -613,7 +613,7 @@ fn cli_numbers_history_order_but_preserves_saved_order() {
         r#"{"estimates":{"check":{"first":1,"second":10000}}}"#,
     )
     .unwrap();
-    let output = Command::new(env!("CARGO_BIN_EXE_please"))
+    let output = support::command(env!("CARGO_BIN_EXE_please"))
         .args([
             "run",
             "--at",

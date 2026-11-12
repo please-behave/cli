@@ -5,14 +5,14 @@ use please::{
     report::{self, Status},
 };
 use sha2::{Digest, Sha256};
-use std::{fs, process::Command};
-use support::{check, write};
+use std::fs;
+use support::write;
 
 #[test]
 fn validated_execution_point_overrides_inherited_context_for_checks_and_provider_processes() {
     let root = tempfile::tempdir().unwrap();
     assert!(
-        Command::new("git")
+        support::command("git")
             .args(["init", "--quiet"])
             .current_dir(root.path())
             .status()
@@ -33,15 +33,19 @@ fn validated_execution_point_overrides_inherited_context_for_checks_and_provider
         "check",
         "custom-point",
     ];
-    check(
+    // Inputs arrive as arguments; nothing from the harness environment reaches the rule.
+    support::check_args(
         root.path(),
         "context",
         &points,
+        "@context @param/label @rule/resource",
         r#"set -eu
-test "$PLEASE_EXECUTION_POINT" = "$EXPECTED_EXECUTION_POINT"
-test "$PLEASE_PARAM_LABEL" = 'preserved'
-test "$(cat "$PLEASE_RULE_DIRECTORY/resource")" = bundled
-printf '%s' "$PLEASE_EXECUTION_POINT"
+test -z "$(env | grep '^PLEASE_' | grep -v '^PLEASE_ACTIVE_HOOK=' || true)"
+point=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["execution_point"])' "$1")
+test "$point" = "$EXPECTED_EXECUTION_POINT"
+test "$2" = 'preserved'
+test "$(cat "$3")" = bundled
+printf '%s' "$point"
 "#,
     );
     let rule = root.path().join(".please/checks/context/rule.toml");
@@ -74,7 +78,7 @@ printf '%s' "$PLEASE_EXECUTION_POINT"
             .chain(std::env::split_paths(&std::env::var_os("PATH").unwrap())),
     )
     .unwrap();
-    let output = Command::new(env!("CARGO_BIN_EXE_please"))
+    let output = support::command(env!("CARGO_BIN_EXE_please"))
         .args(["sync", "--yes"])
         .current_dir(root.path())
         .output()
@@ -101,7 +105,7 @@ printf '%s' "$PLEASE_EXECUTION_POINT"
         let expected = point.unwrap_or("pre-push");
         let calls = fake.path().join("calls");
         fs::write(&calls, "").unwrap();
-        let mut command = Command::new(env!("CARGO_BIN_EXE_please"));
+        let mut command = support::command(env!("CARGO_BIN_EXE_please"));
         command.args(["run"]);
         if let Some(point) = point {
             command.args(["--at", point]);
@@ -110,6 +114,10 @@ printf '%s' "$PLEASE_EXECUTION_POINT"
             .current_dir(root.path())
             .env("PATH", &path)
             .env("PLEASE_EXECUTION_POINT", "spoofed")
+            .env("PLEASE_CONTEXT", "spoofed")
+            .env("PLEASE_RULE_DIRECTORY", "spoofed")
+            .env("PLEASE_PARAM_LABEL", "spoofed")
+            .env("PLEASE_GIT_HOOK", "spoofed")
             .env("HANNES_EXECUTION_POINT", "governor-point")
             .env("HANNES_ACTIVE_HOOK", &governor_owner)
             .env("HANNES_RULE_DIRECTORY", "/nonexistent/governor")

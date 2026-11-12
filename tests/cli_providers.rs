@@ -5,13 +5,13 @@ use please::{
     provider::Configured,
     report::{self, Status},
 };
-use std::{fs, os::unix::fs::PermissionsExt, path::Path, process::Command};
+use std::{fs, os::unix::fs::PermissionsExt, path::Path};
 use support::write;
 
 fn fixture() -> tempfile::TempDir {
     let root = tempfile::tempdir().unwrap();
     assert!(
-        Command::new("git")
+        support::command("git")
             .args(["init", "--quiet"])
             .current_dir(root.path())
             .status()
@@ -55,11 +55,12 @@ fn tool(root: &Path) {
 import json, os, sys, time
 mode = sys.argv[1]
 assert sys.argv[2:] == ['$HOME', '$(false)', '|', '']
-assert os.environ['PLEASE_EXECUTION_POINT'] == 'check'
+assert not [name for name in os.environ if name.startswith('PLEASE_')]
 if mode == 'unread':
     time.sleep(30)
 request = json.load(sys.stdin)
 assert request['protocol_version'] == 1
+assert request['execution_point'] == 'check' and os.path.isfile(request['context_file'])
 prompt = request['prompt']
 assert 'Unique review instructions' in prompt
 assert request['response_schema']['required'] == ['reviews']
@@ -169,7 +170,7 @@ fn runtime_requirements_are_deferred_until_selected_after_checks() {
         root.path(),
         "first",
         "ok",
-        "[requirements]\nenv = ['PLEASE_TEST_MISSING_CREDENTIAL_71F52']\n",
+        "[requirements]\nenv = ['TEST_MISSING_CREDENTIAL_71F52']\n",
     );
     review(root.path(), "a", "first", "pre-push");
     // Unused and inapplicable providers do not require credentials, including plans.

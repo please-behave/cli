@@ -7,12 +7,11 @@ use please::{
 use std::{
     fs,
     path::{Path, PathBuf},
-    process::Command,
 };
 use tempfile::TempDir;
 
 fn git(root: &Path, args: &[&str]) -> String {
-    let output = Command::new("git")
+    let output = support::command("git")
         .current_dir(root)
         .args([
             "-c",
@@ -209,7 +208,7 @@ fn sync_output_tracks_import_state_and_cache_changes_without_hook_changes() {
     let f = Fixture::new();
     support::check(&f.root, "always-ok", &["check"], "exit 0");
     let sync = |expected: &[u8]| {
-        let output = Command::new(env!("CARGO_BIN_EXE_please"))
+        let output = support::command(env!("CARGO_BIN_EXE_please"))
             .args(["sync", "--yes"])
             .current_dir(&f.root)
             .env("XDG_CACHE_HOME", &f.cache)
@@ -333,11 +332,11 @@ fn local_and_identical_external_ids_are_isolated_and_order_is_deterministic() {
 fn execution_targets_consumer_and_source_resources_are_explicit() {
     let f = Fixture::new();
     write(&f.root, "README.md", "consumer");
-    // Explicit shell composition remains supported and receives the source environment.
+    // The script locates its own source resources next to itself.
     definitions(
         &f.remote,
         "repository",
-        "sh -c 'test -f README.md && test -f \"$PLEASE_RULE_DIRECTORY/resource.txt\"'",
+        "test -f README.md && test -f \"$(dirname \"$0\")/resource.txt\"",
     );
     write(
         &f.remote,
@@ -495,7 +494,7 @@ fn traversal_and_symlink_escapes_are_rejected() {
         f.imports(&[("repository", "main")]);
         let p = f.load(true).unwrap();
         let check = p.checks.iter().find(|c| c.id.starts_with("git:")).unwrap();
-        let result = please::checks::execute(&p, check, "check");
+        let result = please::checks::execute(&p, check);
         assert_eq!(result.status, Status::Error);
         assert!(result.reason.contains("symlink"));
     }
@@ -670,7 +669,7 @@ prompt = {instructions:?}
 }
 
 fn cli(f: &Fixture, args: &[&str]) -> std::process::Output {
-    Command::new(env!("CARGO_BIN_EXE_please"))
+    support::command(env!("CARGO_BIN_EXE_please"))
         .current_dir(&f.root)
         .env("XDG_CACHE_HOME", &f.cache)
         .env("NO_COLOR", "1")
@@ -735,7 +734,7 @@ fn cli_refresh_cached_plan_and_offline_hook_keep_existing_lifecycle() {
             .to_path_buf(),
     ];
     paths.extend(std::env::split_paths(&std::env::var_os("PATH").unwrap()));
-    let hook = Command::new(f.root.join(".git/hooks/pre-commit"))
+    let hook = support::command(f.root.join(".git/hooks/pre-commit"))
         .current_dir(&f.root)
         .env("XDG_CACHE_HOME", &f.cache)
         .env("PATH", std::env::join_paths(paths).unwrap())
@@ -759,8 +758,13 @@ fn all_fixed_hooks_execute_imported_rules_offline() {
     );
     write(
         &f.remote,
+        "repository/checks/required-files/rule.toml",
+        "id = 'required-files'\ndescription = 'Report the execution point'\n[check]\ncommand = 'sh @rule/index.sh @context'\n",
+    );
+    write(
+        &f.remote,
         "repository/checks/required-files/index.sh",
-        "printf '%s' \"$PLEASE_GIT_HOOK\"\n",
+        "python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))[\"execution_point\"], end=\"\")' \"$1\"\n",
     );
     commit(&f.remote);
     let setup = cli(&f, &["sync", "--yes"]);
@@ -781,7 +785,7 @@ fn all_fixed_hooks_execute_imported_rules_offline() {
     )
     .unwrap();
     for event in ["pre-commit", "commit-msg", "pre-push"] {
-        let output = Command::new(f.root.join(".git/hooks").join(event))
+        let output = support::command(f.root.join(".git/hooks").join(event))
             .current_dir(&f.root)
             .env("XDG_CACHE_HOME", &f.cache)
             .env("PATH", &paths)
@@ -905,7 +909,7 @@ fn authentication_failure_hides_helper_diagnostics() {
     )
     .unwrap();
     fs::set_permissions(&ssh, fs::Permissions::from_mode(0o755)).unwrap();
-    let output = Command::new(env!("CARGO_BIN_EXE_please"))
+    let output = support::command(env!("CARGO_BIN_EXE_please"))
         .current_dir(&f.root)
         .env("XDG_CACHE_HOME", &f.cache)
         .env("GIT_SSH_COMMAND", ssh)
@@ -970,7 +974,7 @@ fn ssh_ports_and_ipv6_authorities_reach_host_git_without_password_confusion() {
         "ssh://[::1]:2222/rules.git",
     ] {
         fs::write(&path, text.replace(f.remote.to_str().unwrap(), url)).unwrap();
-        let output = Command::new(env!("CARGO_BIN_EXE_please"))
+        let output = support::command(env!("CARGO_BIN_EXE_please"))
             .current_dir(&f.root)
             .env("XDG_CACHE_HOME", &f.cache)
             .env("GIT_SSH_COMMAND", &ssh)
@@ -1308,8 +1312,13 @@ fn built_in_hooks_execute_imported_and_local_rules_with_message_context() {
     source_points(&f, "repository", &["pre-commit", "commit-msg", "pre-push"]);
     write(
         &f.remote,
+        "repository/checks/required-files/rule.toml",
+        "id = 'required-files'\ndescription = 'Use the commit message context'\n[check]\ncommand = 'sh @rule/index.sh @context'\n",
+    );
+    write(
+        &f.remote,
         "repository/checks/required-files/index.sh",
-        "if [ \"$PLEASE_GIT_HOOK\" = commit-msg ]; then\n  test \"$PLEASE_GIT_HOOK_ARG_COUNT\" = 1 && test -s \"$PLEASE_GIT_HOOK_ARG_1\"\nelse\n  git --version\nfi\n",
+        "point=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))[\"execution_point\"])' \"$1\")\nif [ \"$point\" = commit-msg ]; then\n  file=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))[\"commit_message\"][\"file\"])' \"$1\")\n  test -s \"$file\"\nelse\n  git --version\nfi\n",
     );
     commit(&f.remote);
     f.imports(&[("repository", "main")]);
@@ -1346,7 +1355,7 @@ fn built_in_hooks_execute_imported_and_local_rules_with_message_context() {
     for event in ["pre-commit", "commit-msg", "pre-push"] {
         let path = f.root.join(".git/hooks").join(event);
         assert!(path.is_file());
-        let mut command = Command::new(path);
+        let mut command = support::command(path);
         command
             .current_dir(&f.root)
             .env("XDG_CACHE_HOME", &f.cache)
@@ -1465,7 +1474,13 @@ fn import_parameters_preserve_bindings_mappings_resources_and_reference_deduplic
     let declarations = "\n[parameters.scopes_file]\ntype = 'file'\nrequired = true\n[parameters.label]\ntype = 'string'\nrequired = true\n[parameters.optional]\ntype = 'file'\n";
     fs::write(
         &check_path,
-        format!("{}{declarations}", fs::read_to_string(&check_path).unwrap()),
+        format!(
+            "{}{declarations}",
+            fs::read_to_string(&check_path).unwrap().replace(
+                "command = 'sh @rule/index.sh'",
+                "command = 'sh @rule/index.sh @rule/resource @param/scopes_file @param/label'"
+            )
+        ),
     )
     .unwrap();
     write(
@@ -1477,10 +1492,9 @@ fn import_parameters_preserve_bindings_mappings_resources_and_reference_deduplic
         &f.remote,
         "repository/checks/required-files/index.sh",
         r#"
-test "$(cat "$PLEASE_RULE_DIRECTORY/resource")" = bundled || exit 1
-test "${PLEASE_PARAM_OPTIONAL+x}" != x || exit 1
-test "$(cat "$PLEASE_PARAM_SCOPES_FILE")" = "$PLEASE_PARAM_LABEL" || exit 1
-printf '%s:%s\n' "$PLEASE_PARAM_LABEL" "$PLEASE_PARAM_SCOPES_FILE"
+test "$(cat "$1")" = bundled || exit 1
+test "$(cat "$2")" = "$3" || exit 1
+printf '%s:%s\n' "$3" "$2"
 "#,
     );
     write(
@@ -1533,8 +1547,8 @@ printf '%s:%s\n' "$PLEASE_PARAM_LABEL" "$PLEASE_PARAM_SCOPES_FILE"
     struct ParameterReview;
     impl Provider for ParameterReview {
         fn review(&self, request: &Request<'_>) -> anyhow::Result<String> {
-            let label = &request.parameters["PLEASE_PARAM_LABEL"];
-            let path = &request.parameters["PLEASE_PARAM_SCOPES_FILE"];
+            let label = &request.parameters["label"];
+            let path = &request.parameters["scopes_file"];
             assert!(Path::new(path).starts_with(&request.project.root));
             assert_eq!(fs::read_to_string(path).unwrap().trim(), label);
             Ok(serde_json::json!({"reviews":request.reviews.iter().map(|r| serde_json::json!({"id":r.id, "status":"PASS", "reason":"Scope file inspected", "findings":[{"message":"Scopes available", "path":format!("{label}/scopes.txt"), "line":1}]})).collect::<Vec<_>>()}).to_string())
@@ -1648,7 +1662,7 @@ fn shared_rules_are_reused_across_sets_and_points_offline() {
     write(
         &f.remote,
         "rules/checks/shared/index.sh",
-        "test -s README.md && test -s \"$PLEASE_RULE_DIRECTORY/resource.txt\"\n",
+        "test -s README.md && test -s \"$(dirname \"$0\")/resource.txt\"\n",
     );
     write(
         &f.remote,
@@ -1687,7 +1701,7 @@ fn shared_rules_are_reused_across_sets_and_points_offline() {
         .collect();
     assert_eq!(checks.len(), 2);
     assert_eq!(reviews.len(), 2);
-    assert_eq!(checks[0].command.as_deref(), checks[1].command.as_deref());
+    assert_eq!(*checks[0].command, *checks[1].command);
     assert_eq!(reviews[0].text, reviews[1].text);
     for point in ["pre-push", "check"] {
         let plan = planner::build(&project, Some(point), false).unwrap().plan;
@@ -1784,10 +1798,11 @@ fn imported_and_local_checks_and_reviews_receive_the_consumer_execution_point() 
         "id = 'quality'\ndescription = 'Context rules'\nrules = ['repository/checks/required-files', 'repository/reviews/context']\nrun_at = ['source-point']\n",
     );
     let script = r#"set -eu
-test "$PLEASE_EXECUTION_POINT" = verify
-test "$PLEASE_PARAM_LABEL" = preserved
-test "$(cat "$PLEASE_RULE_DIRECTORY/resource")" = bundled
-printf '%s' "$PLEASE_EXECUTION_POINT"
+point=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["execution_point"], end="")' "$1")
+test "$point" = verify
+test "$2" = preserved
+test "$(cat "$3")" = bundled
+printf '%s' "$point"
 "#;
     write(
         &f.remote,
@@ -1804,7 +1819,10 @@ printf '%s' "$PLEASE_EXECUTION_POINT"
         &path,
         format!(
             "{}\n[parameters.label]\ntype = 'string'\nrequired = true\n",
-            fs::read_to_string(&path).unwrap()
+            fs::read_to_string(&path).unwrap().replace(
+                "command = 'sh @rule/index.sh'",
+                "command = 'sh @rule/index.sh @context @param/label @rule/resource'"
+            )
         ),
     )
     .unwrap();
@@ -1827,7 +1845,13 @@ printf '%s' "$PLEASE_EXECUTION_POINT"
         )],
         &["verify"],
     );
-    support::check(&f.root, "local-context", &["verify"], script);
+    support::check_args(
+        &f.root,
+        "local-context",
+        &["verify"],
+        "@context @param/label @rule/resource",
+        script,
+    );
     let path = f.root.join(".please/checks/local-context/rule.toml");
     fs::write(
         &path,
@@ -1868,7 +1892,7 @@ printf '%s' "$PLEASE_EXECUTION_POINT"
     )
     .unwrap();
     let calls = fake.path().join("calls");
-    let output = Command::new(env!("CARGO_BIN_EXE_please"))
+    let output = support::command(env!("CARGO_BIN_EXE_please"))
         .current_dir(&f.root)
         .args(["run", "--at", "verify"])
         .env("XDG_CACHE_HOME", &f.cache)
@@ -1952,7 +1976,7 @@ fn shared_entrypoints_execute_each_rule_offline() {
     write(
         &f.remote,
         "scripts/shared.sh",
-        "test -s README.md || exit 2\ncat \"$PLEASE_RULE_DIRECTORY/resource\"\nexit \"$PLEASE_PARAM_CODE\"\n",
+        "test -s README.md || exit 2\ncat \"$1\"\nexit \"$2\"\n",
     );
     for (id, entrypoint, enabled) in [
         ("pass", "scripts/shared.sh", true),
@@ -1965,7 +1989,7 @@ fn shared_entrypoints_execute_each_rule_offline() {
             &f.remote,
             &format!("rules/checks/{id}/rule.toml"),
             &format!(
-                "id = '{id}'\ndescription = 'Shared check'\nenabled = {enabled}\nblocking = false\n[parameters.code]\ntype = 'string'\nrequired = true\n[check]\ncommand = 'sh @source/{entrypoint}'\n"
+                "id = '{id}'\ndescription = 'Shared check'\nenabled = {enabled}\nblocking = false\n[parameters.code]\ntype = 'string'\nrequired = true\n[check]\ncommand = 'sh @source/{entrypoint} @rule/resource @param/code'\n"
             ),
         );
         write(&f.remote, &format!("rules/checks/{id}/resource"), id);
@@ -1994,18 +2018,10 @@ fn shared_entrypoints_execute_each_rule_offline() {
     let shared: Vec<_> = p
         .checks
         .iter()
-        .filter(|c| {
-            c.command
-                .as_ref()
-                .is_some_and(|c| c.iter().any(|p| p == "@source/scripts/shared.sh"))
-        })
+        .filter(|c| c.command.iter().any(|p| p == "@source/scripts/shared.sh"))
         .collect();
     assert_eq!(shared.len(), 3);
-    assert!(
-        shared
-            .iter()
-            .all(|c| c.command.as_deref() == shared[0].command.as_deref())
-    );
+    assert!(shared.iter().all(|c| *c.command == *shared[0].command));
     fs::rename(&f.remote, f.remote.with_extension("offline")).unwrap();
     let p = f.load(false).unwrap();
     assert_eq!(
@@ -2098,7 +2114,7 @@ fn imported_shared_entrypoints_reject_symlink_escapes() {
         f.imports(&[("repository", "main")]);
         let p = f.load(true).unwrap();
         let check = p.checks.iter().find(|c| c.id.starts_with("git:")).unwrap();
-        let result = please::checks::execute(&p, check, "check");
+        let result = please::checks::execute(&p, check);
         assert_eq!(result.status, Status::Error);
     }
 }
@@ -2151,7 +2167,7 @@ fn imported_path_references_use_cached_provenance_offline() {
     use std::os::unix::fs::PermissionsExt;
     for executable in ["sh @rule/index.sh", "'@source/shared scripts/probe.sh'"] {
         let f = Fixture::new();
-        let script = "#!/bin/sh\ntest -s README.md || exit 2\ntest \"$PWD\" = \"$(dirname \"$1\")\" || exit 2\ntest \"$2\" = \"$PLEASE_RULE_DIRECTORY/index.sh\" || exit 2\ncmp \"$2\" \"$3\" || exit 2\nprintf 'cached paths passed'\n";
+        let script = "#!/bin/sh\ntest -s README.md || exit 2\ntest \"$PWD\" = \"$(dirname \"$1\")\" || exit 2\ncase \"$2\" in */repository/checks/required-files/index.sh) ;; *) exit 2;; esac\ncmp \"$2\" \"$3\" || exit 2\nprintf 'cached paths passed'\n";
         write(
             &f.remote,
             "repository/checks/required-files/index.sh",
@@ -2190,7 +2206,7 @@ fn imported_path_references_use_cached_provenance_offline() {
             .unwrap();
         assert!(check.source_root.starts_with(&f.cache));
         assert!(planner::build(&p, Some("check"), false).is_ok());
-        let result = please::checks::execute(&p, check, "check");
+        let result = please::checks::execute(&p, check);
         assert_eq!(
             result.status,
             Status::Pass,

@@ -1,9 +1,10 @@
-mod check_command;
+pub mod check_command;
 pub mod checks;
 pub mod cli;
 pub mod config;
 pub mod context;
 pub mod discovery;
+mod environment;
 pub mod external;
 pub mod git_snapshot;
 pub mod limits;
@@ -192,9 +193,7 @@ pub fn verify_project_with_fail_fast(
             fail_fast,
             cancellation.as_ref(),
             &scheduling::History::load(&project.root),
-            |check| {
-                checks::execute_cancellable(&project, check, &plan.at, hook, cancellation.as_ref())
-            },
+            |check| checks::execute_cancellable(&project, check, hook, cancellation.as_ref()),
             &mut |event| {
                 let index = match event {
                     checks::Event::Queued(index, _)

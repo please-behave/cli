@@ -198,27 +198,24 @@ tree; inspect provenance to see which external revision a report evaluated.
 
 ## Source resources and trust
 
-Imported Checks accept the same preferred string commands and deprecated arrays
-and entrypoint/interpreter forms as local Checks. `@rule/` resolves from the declaring
+Imported Checks use the same string commands as local Checks. `@rule/` resolves from the declaring
 Rule directory; `@source/` resolves from the imported Git repository root, so a
 shared script can use `command = "python3 @source/scripts/check-files.py"`.
 `@repo/` addresses consuming repository files. Ordinary command paths still use
 the consuming root. These references add no shell expansion.
 
 Keep imports pinned to revisions compatible with the consuming CLI. Refreshing a
-moving branch can load incompatible rules. Legacy entrypoints and arrays remain
-supported.
+moving branch can load incompatible rules.
 
-Checks keep the consuming project's working directory. PLEASE_RULE_DIRECTORY
-locates bundled resources inside the declaring Rule directory, even for shared
-scripts. Explicit interpreters receive absolute entrypoint paths. Review prompts load from their
+Checks keep the consuming project's working directory. `@rule/` references
+locate bundled resources inside the declaring Rule directory, even for shared
+scripts, and `@param/<name>` and `@context` pass parameters and the run context. Review prompts load from their
 own Rule directories; context paths and evidence refer to the consumer.
 
-Selected set directories, Rule references, definitions, entrypoints and prompts
+Selected set directories, Rule references, definitions and prompts
 reject symlinks, parent traversal and unexpected file types. The external
-repository is the containment boundary for Rule references and shared Check
-entrypoints. A filename entrypoint such as `index.sh` resolves in its declaring
-Rule directory; a path containing `/`, such as `scripts/check-files.py`, resolves
+repository is the containment boundary for Rule references and shared scripts:
+`@rule/index.sh` resolves in the declaring Rule directory and `@source/scripts/check-files.py`
 from the imported repository root, independently of the selected set directory.
 Resolution never searches other locations and works offline from the cache.
 Each Rule executes independently with its own parameters and result, even when

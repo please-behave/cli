@@ -72,7 +72,7 @@ secrets), selection, required rule IDs, external sources and token usage.
 A Check lives in `.please/checks/<name>/rule.toml`. Prefer a command string such as
 `[check] command = "python3 scripts/check-docs.py"`; quoting follows the configuration
 reference and no shell is involved. The consumer root is the working directory and
-`PLEASE_RULE_DIRECTORY` locates bundled files. Exit 0 is PASS, 1 is FAIL and 2 is
+`@rule/` references locate bundled files. Exit 0 is PASS, 1 is FAIL and 2 is
 ERROR; signals, missing scripts and launch failures are ERROR. A completed non-blocking
 FAIL permits success. Checks are trusted code without sandboxing, and changing
 evaluated files during a run prevents PASS.
@@ -118,20 +118,17 @@ please sync --yes
 please run --at pre-push
 ```
 
-Checks receive `PLEASE_GIT_HOOK`, `PLEASE_GIT_HOOK_ARG_COUNT` and one-based
-`PLEASE_GIT_HOOK_ARG_1`, `PLEASE_GIT_HOOK_ARG_2` and so on, without shell expansion.
-Stdin stays null; the staged files, commit message and pushed references are available in the
-[run context](configuration.md#run-context) named by `PLEASE_CONTEXT`. For `commit-msg`,
-create `.please/checks/commit-message/rule.toml` with
-`[check] command = "sh .please/checks/commit-message/index.sh"` and read the message
-path in `index.sh`:
+Hook arguments are not exported. Stdin stays null; the staged files, commit message and
+pushed references are available in the [run context](configuration.md#run-context), whose
+path a check receives as `@context`. For `commit-msg`, create
+`.please/checks/commit-message/rule.toml` with
+`[check] command = "sh @rule/index.sh @context"` and read the message path in `index.sh`:
 
 ```sh
 #!/bin/sh
 set -eu
-test "$PLEASE_GIT_HOOK" = commit-msg
-test "$PLEASE_GIT_HOOK_ARG_COUNT" = 1
-exec my-message-checker "$PLEASE_GIT_HOOK_ARG_1"
+message=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["commit_message"]["file"])' "$1")
+exec my-message-checker "$message"
 ```
 
 A checker must not invoke Please Behave again; a repository-scoped guard blocks nested

@@ -5,7 +5,7 @@ use please::{
     provider::{Provider, Request},
     report::Status,
 };
-use std::{fs, process::Command};
+use std::fs;
 
 struct NoReviews;
 impl Provider for NoReviews {
@@ -16,7 +16,7 @@ impl Provider for NoReviews {
 fn project() -> tempfile::TempDir {
     let root = tempfile::tempdir().unwrap();
     assert!(
-        Command::new("git")
+        support::command("git")
             .args(["init", "--quiet"])
             .current_dir(root.path())
             .status()
@@ -202,7 +202,7 @@ fn review_history_orders_whole_batches_and_preserves_result_order() {
 fn linked_worktree_history_stays_outside_governed_files_and_is_isolated() {
     let root = project();
     assert!(
-        Command::new("git")
+        support::command("git")
             .args([
                 "-c",
                 "user.name=Test",
@@ -221,7 +221,7 @@ fn linked_worktree_history_stays_outside_governed_files_and_is_isolated() {
     );
     let linked = tempfile::tempdir().unwrap();
     assert!(
-        Command::new("git")
+        support::command("git")
             .args(["worktree", "add", "--quiet", "--detach"])
             .arg(linked.path())
             .current_dir(root.path())
@@ -236,7 +236,7 @@ fn linked_worktree_history_stays_outside_governed_files_and_is_isolated() {
     assert_eq!(starts, ["a"]);
     assert!(!root.path().join(".git/please-scheduling.json").exists());
     assert!(!linked.path().join("please-scheduling.json").exists());
-    let output = Command::new("git")
+    let output = support::command("git")
         .args([
             "rev-parse",
             "--path-format=absolute",

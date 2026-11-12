@@ -7,7 +7,7 @@ use please::{
     provider::{Provider, Request},
     report::{self, Status},
 };
-use std::{fs, process::Command};
+use std::fs;
 use tempfile::TempDir;
 struct Never;
 impl Provider for Never {
@@ -18,7 +18,7 @@ impl Provider for Never {
 fn project() -> TempDir {
     let root = tempfile::tempdir().unwrap();
     assert!(
-        Command::new("git")
+        support::command("git")
             .args(["init", "--quiet"])
             .current_dir(root.path())
             .status()
@@ -168,7 +168,7 @@ fn independent_processes_overlap_and_captures_remain_attributed() {
     for id in ["a", "b"] {
         fs::remove_file(signals.path().join(id)).unwrap();
     }
-    let output = Command::new(env!("CARGO_BIN_EXE_please"))
+    let output = support::command(env!("CARGO_BIN_EXE_please"))
         .args(["run", "--at", "check", "--max-parallel", "2"])
         .current_dir(root.path())
         .output()
@@ -234,7 +234,7 @@ fn cli_override_controls_serial_execution() {
         &["check"],
         &format!("test -f '{}/finished'", signals.path().display()),
     );
-    let output = Command::new(env!("CARGO_BIN_EXE_please"))
+    let output = support::command(env!("CARGO_BIN_EXE_please"))
         .args(["run", "--at", "check", "--max-parallel", "1"])
         .current_dir(root.path())
         .output()

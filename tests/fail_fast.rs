@@ -6,13 +6,13 @@ use please::{
     provider::{Provider, Request},
     report::{self, Status},
 };
-use std::{fs, path::Path, process::Command, sync::Mutex};
+use std::{fs, path::Path, sync::Mutex};
 use tempfile::TempDir;
 
 fn project() -> TempDir {
     let root = tempfile::tempdir().unwrap();
     assert!(
-        Command::new("git")
+        support::command("git")
             .args(["init", "--quiet"])
             .current_dir(root.path())
             .status()
@@ -91,7 +91,7 @@ fn cli_defaults_to_complete_execution_and_fail_fast_reports_unstarted_rules() {
     support::check(root.path(), "b", &["check"], "printf completed-output");
     review(root.path(), "later", "one", false);
     for fail_fast in [false, true] {
-        let mut command = Command::new(env!("CARGO_BIN_EXE_please"));
+        let mut command = support::command(env!("CARGO_BIN_EXE_please"));
         command.args(["run", "--at", "check", "--max-parallel", "1", "--no-color"]);
         if fail_fast {
             command.arg("--fail-fast");
@@ -133,7 +133,7 @@ fn cli_defaults_to_complete_execution_and_fail_fast_reports_unstarted_rules() {
             assert!(progress.contains("NOT_RUN"));
             assert!(String::from_utf8_lossy(&output.stdout).contains("not executed"));
         }
-        let status = Command::new(env!("CARGO_BIN_EXE_please"))
+        let status = support::command(env!("CARGO_BIN_EXE_please"))
             .args(["status", "--details", "--no-color"])
             .current_dir(root.path())
             .output()
@@ -263,7 +263,7 @@ fn fail_fast_has_no_persistent_configuration_or_plan_selection_effect() {
     support::check(root.path(), "a", &["check"], "exit 1");
     support::check(root.path(), "b", &["check"], "exit 0");
     let output = |extra: &[&str]| {
-        Command::new(env!("CARGO_BIN_EXE_please"))
+        support::command(env!("CARGO_BIN_EXE_please"))
             .args(["run", "--at", "check", "--plan", "--json"])
             .args(extra)
             .current_dir(root.path())
@@ -432,7 +432,7 @@ fn fail_fast_terminates_groups_gracefully_and_escalates_after_the_leader_exits()
         for failure_exit in [1, 2] {
             let root = project();
             termination_fixture(&root, stubborn, stubborn_parent, failure_exit);
-            let output = Command::new(env!("CARGO_BIN_EXE_please"))
+            let output = support::command(env!("CARGO_BIN_EXE_please"))
                 .args(["run", "--at", "check", "--fail-fast", "--no-color"])
                 .current_dir(root.path())
                 .output()
@@ -495,7 +495,7 @@ fn fail_fast_terminates_groups_gracefully_and_escalates_after_the_leader_exits()
             // It must never remain a live descendant after Please exits.
             for file in [".git/child-pid", ".git/parent-pid"] {
                 let pid = fs::read_to_string(root.path().join(file)).unwrap();
-                let state = Command::new("ps")
+                let state = support::command("ps")
                     .args(["-o", "stat=", "-p", pid.trim()])
                     .output()
                     .unwrap();
@@ -505,7 +505,7 @@ fn fail_fast_terminates_groups_gracefully_and_escalates_after_the_leader_exits()
                     "descendant still running: {state}"
                 );
             }
-            let status = Command::new(env!("CARGO_BIN_EXE_please"))
+            let status = support::command(env!("CARGO_BIN_EXE_please"))
                 .args(["status", "--details", "--no-color"])
                 .current_dir(root.path())
                 .output()

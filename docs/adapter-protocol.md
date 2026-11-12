@@ -14,8 +14,9 @@ Configure command, literal args and timeout_seconds in `.please/provider.toml`
 consumer root; absolute executable paths are supported. There is no shell or
 argument expansion. The working directory is the consumer root. Adapters may
 live under `.please/providers/adapters/`, elsewhere in the project or outside it.
-The process inherits the environment, including resolved `PLEASE_PARAM_*` Rule
-parameters and the validated `PLEASE_EXECUTION_POINT`.
+The process inherits the environment without any `PLEASE_*` variable. The execution
+point, resolved Rule parameters (`rule_parameters`) and the run context file path
+(`context_file`) arrive in the request JSON.
 
 Independent provider packages can be selected through `[[provider_imports]]`.
 Their `provider.toml` uses this same adapter contract. Explicit `@provider/`,
@@ -55,7 +56,8 @@ ordinary enforcement rules regardless of which adapter is selected.
     "excerpts": [], "focused_paths": null, "manifest": ["README.md"],
     "diff": "", "diff_truncated": false
   },
-  "parameter_environment": {},
+  "context_file": "/path/to/context.json",
+  "rule_parameters": {},
   "reviews": [{
     "id": "documentation", "criteria": "Inspect documented expectations.",
     "entry_files": ["README.md"], "context_files": [],

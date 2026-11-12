@@ -7,23 +7,21 @@ use std::{
     process::{Command, Stdio},
     time::{Duration, Instant},
 };
-pub fn execute(project: &Project, check: &Check, execution_point: &str) -> Item {
-    execute_with_context(project, check, execution_point, None)
+pub fn execute(project: &Project, check: &Check) -> Item {
+    execute_with_context(project, check, None)
 }
 
 pub fn execute_with_context(
     project: &Project,
     check: &Check,
-    execution_point: &str,
     hook: Option<&crate::reconciliation::HookContext>,
 ) -> Item {
-    execute_cancellable(project, check, execution_point, hook, None)
+    execute_cancellable(project, check, hook, None)
 }
 
 pub(crate) fn execute_cancellable(
     project: &Project,
     check: &Check,
-    execution_point: &str,
     hook: Option<&crate::reconciliation::HookContext>,
     cancellation: Option<&process::Cancellation>,
 ) -> Item {
@@ -31,53 +29,28 @@ pub(crate) fn execute_cancellable(
     let mut item = Item::simple(&check.id, "check", Status::Error, String::new());
     item.blocking = check.blocking;
     let prepared = (|| -> anyhow::Result<_> {
-        let environment = check.parameters.resolve(&project.root, &check.id)?;
+        let parameters = check.parameters.resolve(&project.root, &check.id)?;
         let directory = crate::config::source_path(
             &check.source_root,
             check.rule_directory.strip_prefix(&check.source_root)?,
         )?;
         anyhow::ensure!(directory.is_dir(), "Rule directory must be a directory");
-        let mut command = match (&check.entrypoint, &check.command) {
-            (Some(path), None) => {
-                let entrypoint = crate::config::source_path(
-                    &check.source_root,
-                    path.strip_prefix(&check.source_root)?,
-                )
-                .map_err(|error| {
-                    anyhow::anyhow!(
-                        "Rule {}: missing or unsafe check entrypoint {}: {error:#}",
-                        check.id,
-                        path.display()
-                    )
-                })?;
-                anyhow::ensure!(
-                    entrypoint.is_file(),
-                    "Rule {}: check entrypoint must be a regular file",
-                    check.id
-                );
-                if let Some(interpreter) = &check.interpreter {
-                    let mut command = Command::new(interpreter);
-                    command.arg(entrypoint);
-                    command
-                } else {
-                    Command::new(entrypoint)
-                }
-            }
-            (None, Some(arguments)) if !arguments.is_empty() => {
-                let arguments =
-                    arguments.resolve(&project.root, &check.source_root, &check.rule_directory)?;
-                let mut command = Command::new(&arguments[0]);
-                command.args(&arguments[1..]);
-                command
-            }
-            _ => anyhow::bail!("Rule {}: expected one check implementation", check.id),
-        };
+        let arguments = check.command.resolve(&crate::check_command::Locations {
+            repo: &project.root,
+            source: &check.source_root,
+            rule: &check.rule_directory,
+            context: project.context.as_deref(),
+            parameters: &parameters,
+        })?;
+        let mut command = Command::new(&arguments[0]);
+        command.args(&arguments[1..]);
+        crate::environment::scrub(&mut command);
         if hook.is_none() {
             crate::reconciliation::configure_guard(project, &mut command)?;
         }
-        Ok((environment, command))
+        Ok(command)
     })();
-    let (environment, mut command) = match prepared {
+    let mut command = match prepared {
         Ok(prepared) => prepared,
         Err(error) => {
             item.reason = format!("{error:#}");
@@ -85,12 +58,6 @@ pub(crate) fn execute_cancellable(
             return item;
         }
     };
-    crate::parameters::configure(&mut command, &environment);
-    command.env("PLEASE_RULE_DIRECTORY", &check.rule_directory);
-    command.env("PLEASE_EXECUTION_POINT", execution_point);
-    if let Some(context) = &project.context {
-        command.env("PLEASE_CONTEXT", context);
-    }
     command.current_dir(&project.root).stdin(Stdio::null());
     if let Some(hook) = hook {
         hook.configure(&mut command);
@@ -378,11 +345,9 @@ mod tests {
             enabled: true,
             blocking: true,
             resource: resource.map(str::to_owned),
-            entrypoint: None,
-            command: None,
+            command: crate::check_command::Command::new("true").unwrap(),
             source_root: PathBuf::new(),
             rule_directory: PathBuf::new(),
-            interpreter: None,
             timeout_seconds: 1,
             run_at: vec![],
             parameters: crate::parameters::Binding::local(BTreeMap::new()),

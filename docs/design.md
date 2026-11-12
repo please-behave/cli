@@ -13,9 +13,8 @@ context; `checks` uses the shared process runner; `reviews` validates provider v
 `report` persists results; `terminal` renders them. There are no alternative
 configuration loaders or execution engines.
 
-Loaded Checks hold an argument array or a validated absolute entrypoint, the source
-root, the declaring Rule directory and an optional interpreter; execution rechecks the
-paths without following symlinks. Loaded Reviews hold prompt text and consumer-relative
+Loaded Checks hold a tokenized command, the source root and the declaring Rule
+directory; execution resolves its references anew without following symlinks. Loaded Reviews hold prompt text and consumer-relative
 context. There is no parallel metadata registry: blocking belongs to each Rule and
 follows it into plans and results. Plan and report schema versions describe output
 formats, independently of configuration.
@@ -49,9 +48,8 @@ Incomplete coverage always takes precedence over known differences.
 
 ## Execution and reporting
 
-All checks tokenize a command string into an argument array at load time, or run a file
-entrypoint directly or through one explicit interpreter, using the same bounded process
-runner without an implicit shell. The runner drains both pipes concurrently, keeps only
+All checks tokenize a command string at load time and resolve its references at execution,
+using the bounded process runner without an implicit shell. The runner drains both pipes concurrently, keeps only
 the first bytes of each stream with full totals, runs POSIX processes in separate groups
 and kills descendants on timeout or fail-fast. It is not a hostile-process sandbox.
 

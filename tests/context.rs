@@ -6,10 +6,10 @@ use serde_json::Value;
 use std::{
     fs,
     path::{Path, PathBuf},
-    process::{Command, Output},
+    process::Output,
     sync::OnceLock,
 };
-use support::{check, write};
+use support::write;
 
 const POINTS: [&str; 4] = ["pre-commit", "commit-msg", "pre-push", "check"];
 const ZERO: &str = "0000000000000000000000000000000000000000";
@@ -43,7 +43,7 @@ fn path_with_binary() -> std::ffi::OsString {
     .unwrap()
 }
 fn git(root: &Path, args: &[&str]) -> Output {
-    Command::new("git")
+    support::command("git")
         .args(args)
         .current_dir(root)
         .env("PATH", path_with_binary())
@@ -73,7 +73,7 @@ fn text(output: Output) -> String {
         .to_owned()
 }
 fn please(root: &Path, args: &[&str], environment: &[(&str, &str)]) -> Output {
-    Command::new(env!("CARGO_BIN_EXE_please"))
+    support::command(env!("CARGO_BIN_EXE_please"))
         .args(args)
         .current_dir(root)
         .env("NO_COLOR", "1")
@@ -98,11 +98,12 @@ fn project(settings: &str) -> tempfile::TempDir {
         ".please/config.toml",
         &format!("project = 'My_App'\n{settings}"),
     );
-    check(
+    support::check_args(
         root.path(),
         "capture",
         &POINTS,
-        "test -s \"$PLEASE_CONTEXT\" || exit 2\n",
+        "@context",
+        "test -s \"$1\" || exit 2\n",
     );
     write(root.path(), "a.txt", "one\n");
     write(root.path(), "b.txt", "bee\n");
@@ -211,11 +212,12 @@ fn unborn_repository_has_no_head_and_a_dirty_workspace() {
         &["init", "--quiet", "--initial-branch=main"],
     ));
     config::init(root.path()).unwrap();
-    check(
+    support::check_args(
         root.path(),
         "capture",
         &POINTS,
-        "test -s \"$PLEASE_CONTEXT\"\n",
+        "@context",
+        "test -s \"$1\"\n",
     );
     let (_, context) = run_check(root.path());
     assert!(context["head"]["commit"].is_null() && context["head"]["message"].is_null());

@@ -178,7 +178,7 @@ description = "Validate Conventional Commits"
 run_at = ["commit-msg"]
 
 [check]
-command = "sh .please/checks/commit-message/index.sh"
+command = "sh @rule/index.sh @param/scopes_file"
 
 [parameters.scopes_file]
 type = "file"
@@ -194,23 +194,20 @@ value = ".commit-scopes"
 | `parameters.<name>.description` | Optional; `null` | Explanation for the consumer. |
 | `parameters.<name>.value` | Optional; `null` | Local value. Imported declarations must omit this field; the consumer supplies it per import. |
 
-Parameter names use ASCII letters, digits and underscores, starting with a letter.
-Uppercase names must be unique within a rule. Values are strings without NUL;
-there are no default values. Omitted optional parameters remain absent.
+Parameter names use ASCII letters, digits and underscores, starting with a letter and
+are case-sensitive. Values are strings without NUL; there are no default values.
+Omitted optional parameters remain absent; referencing one is an execution ERROR.
 
 A `file` value resolves from the consuming Git repository root: `.commit-scopes`
 and `conventions/commit-scopes.txt` both work. The target must be an existing
 regular file. Absolute paths, parent traversal and symlink components are rejected.
 Rule scripts, prompts and bundled assets still resolve inside the rule directory.
 
-Please Behave delivers values as environment variables: `scopes_file` becomes
-`PLEASE_PARAM_SCOPES_FILE`. File values become absolute paths; strings stay unchanged.
-A check can read `"$PLEASE_PARAM_SCOPES_FILE"` in shell or
-`os.environ["PLEASE_PARAM_SCOPES_FILE"]` in Python. Reviews receive the same variables
-in their provider subprocess, and their criteria data lists this environment.
-Inherited `PLEASE_PARAM_*` variables are cleared before applying declared values.
-Reviews sharing identical resolved environments share a call; different environments
-use separate calls with the same prepared context. Provider timeout applies per call.
+A check passes a value on explicitly with `@param/<name>`: `@param/scopes_file`
+becomes the absolute path of the file, and strings stay unchanged. Reviews receive all
+their resolved values as `rule_parameters` in the adapter request. Reviews sharing
+identical resolved values share a call; different values use separate calls with the
+same prepared context. Provider timeout applies per call.
 
 Missing required values, unsupported types, undeclared supplied names and invalid
 files produce **ERROR**, identifying the rule and parameter. Parameter errors block success even with `blocking = false`. Disabled rules do not resolve parameter values or
@@ -226,7 +223,7 @@ description = "Require a nonempty README"
 run_at = ["pre-push", "check"]
 
 [check]
-command = "sh .please/checks/readme/index.sh"
+command = "sh @rule/index.sh"
 ```
 
 Create `.please/checks/readme/index.sh`:
@@ -236,51 +233,8 @@ Create `.please/checks/readme/index.sh`:
 test -s README.md
 ```
 
-String-based `check.command` is preferred for new checks. For example:
-
-```toml
-[check]
-command = "python3 scripts/check-docs.py"
-```
-
-Array commands and file entrypoints with optional interpreters are deprecated
-but remain fully supported, without runtime warnings. The legacy file form uses
-`entrypoint = "index.sh"` instead of `command`. On Unix, direct file execution
-requires executable permission (`chmod +x .please/checks/readme/index.sh`);
-the OS handles shebangs. Please Behave does not infer languages or install runtimes.
-Unix scripts may need an explicitly installed interpreter on Windows.
-
-For example, the deprecated Python file form uses:
-
-```toml
-[check]
-entrypoint = "index.py"
-interpreter = "python3"
-timeout_seconds = 30
-```
-
-Create `index.py` in that rule directory containing:
-
-```python
-from pathlib import Path
-raise SystemExit(0 if Path("README.md").is_file() else 1)
-```
-
-This runs `python3 <absolute-entrypoint>` with no implicit shell. The interpreter
-is one executable name or path, with no argument parsing. The entrypoint needs
-neither a shebang nor executable permission in this mode. Missing interpreters
-produce a clear startup ERROR.
-
-| Field | Required / default | Meaning |
-| --- | --- | --- |
-| `check.entrypoint` | Optional; `null`; required unless `command` is set | Deprecated file syntax: filename in this Rule directory, or path containing `/` relative to the rule-source root (see below). |
-| `check.command` | Optional; `null`; required unless `entrypoint` is set | Preferred: string containing executable and arguments. Deprecated arrays remain supported. Mutually exclusive with `entrypoint` and `interpreter`. |
-| `check.interpreter` | Optional; `null` | Deprecated file syntax: executable used to run an entrypoint. Omitted means direct execution; forbidden with `command`. |
-| `depends_on` | Optional; `null` (equivalent to `[]` for checks) | Top-level exact prerequisite check IDs. Checks only; forbidden on reviews. |
-| `check.resource` | Optional; `null` | Exclusive, case-sensitive resource name; nonempty, no control characters or surrounding whitespace. |
-| `check.timeout_seconds` | Optional; `30` | Integer `1..3600`; deadline including output capture. |
-
-For an installed tool, use a direct command instead of a script wrapper:
+A command is one string: an executable and its arguments, run directly without a
+shell. For an installed tool, name it directly:
 
 ```toml
 [check]
@@ -288,63 +242,55 @@ command = "cargo +stable test --locked"
 timeout_seconds = 600
 ```
 
-Set exactly one of `command` and `entrypoint`. The first argument is an executable
-name resolved through `PATH`, or an explicit executable path. Relative command
-paths use the consuming root, including for imported commands; only explicit
-path references resolve against Rule or source directories.
+| Field | Required / default | Meaning |
+| --- | --- | --- |
+| `check.command` | Required | String containing the executable and its arguments. |
+| `depends_on` | Optional; `null` (equivalent to `[]` for checks) | Top-level exact prerequisite check IDs. Checks only; forbidden on reviews. |
+| `check.resource` | Optional; `null` | Exclusive, case-sensitive resource name; nonempty, no control characters or surrounding whitespace. |
+| `check.timeout_seconds` | Optional; `30` | Integer `1..3600`; deadline including output capture. |
 
-Explicit path references are supported in string commands after tokenization,
-in the executable position and in arguments:
+The first argument is an executable name resolved through `PATH`, or an explicit
+executable path. Relative command paths use the consuming root, including for imported
+commands. On Unix, a script run directly needs executable permission; `sh script.sh`
+does not. Please Behave does not infer languages or install runtimes.
 
-| Prefix | Root |
+#### Rule inputs
+
+A rule receives its inputs only as arguments, through references that are resolved
+after tokenization, in the executable position or in any argument:
+
+| Token | Resolves to |
 | --- | --- |
-| `@rule/` | Directory containing this Rule's `rule.toml`. |
-| `@repo/` | Consuming repository root. |
-| `@source/` | Rule source root: the consuming repository root for local Rules (not `.please/` or a Rule Set directory), or the cached imported Git repository root. |
+| `@rule/<path>` | A path inside the directory containing this Rule's `rule.toml`. |
+| `@repo/<path>` | A path inside the consuming repository. |
+| `@source/<path>` | A path inside the rule source root: the consuming repository for local Rules (not `.please/` or a Rule Set directory), or the cached imported Git repository. |
+| `@param/<name>` | The value of a declared [rule parameter](#rule-parameters); a `file` parameter becomes an absolute path. |
+| `@context` | The absolute path of the [run context](#run-context) file. |
 
 ```toml
 [check]
-command = "sh @rule/index.sh"
+command = "python3 @rule/check.py @context @param/scopes_file @repo/pyproject.toml"
 ```
 
-```toml
-[check]
-command = "python3 @source/scripts/file-reference.py"
-```
+A reference is recognized only as a whole token (`--file=@repo/data` stays literal).
+Quote a token containing spaces, such as `"@rule/my script.py"`; its resolved path
+stays one argument and is never tokenized again. `@` at the start of a token is
+reserved: write `@@` for one literal leading `@`. Quoting or escaping an `@` does not
+disable resolution.
 
-```toml
-[check]
-command = "python3 @rule/check.py @repo/pyproject.toml"
-```
+Path suffixes use nonempty relative components separated by `/`; empty suffixes, `.`,
+`..`, backslashes and colons are rejected when loading, as are unknown prefixes, a bare
+`@`, a malformed `@param/` name or an `@param/` reference to an undeclared parameter.
+Immediately before execution, referenced paths must exist, symlinks anywhere in the
+root or suffix are rejected, and the canonical path is passed on. A missing path, a
+missing `@context` or a parameter without a value is a per-rule ERROR with no fallback.
+Offline plans validate syntax without requiring paths to exist or launching commands.
 
-Only a token beginning with a supported prefix is resolved; there is no embedded
-substitution (`--file=@repo/data` stays literal). Quote a reference containing
-spaces, such as `"@rule/my script.py"`; its resolved absolute path remains one
-argument and is never tokenized again. Ordinary relative paths still use the
-consumer root. No shell is invoked and the working directory stays that root.
-
-At the start of a string-command token, `@` is reserved. Use `@@` to pass one
-literal leading `@`: `@@rule/file` becomes `@rule/file`, and `@@name` becomes
-`@name`. Quoting or backslash escaping an `@` does not disable resolution,
-because references are recognized after tokenization. Array commands retain all
-arguments literally, including `@` and `@@`.
-
-Reference suffixes must contain nonempty relative components separated by `/`
-on Linux, macOS and Windows. Empty suffixes, repeated/trailing separators, `.`,
-`..`, backslashes and colons (including drive prefixes) are rejected during
-configuration loading, as are unknown prefixes or bare `@` tokens. Use `@@` for
-literal arguments instead. Native absolute paths are produced for the host;
-this does not make an unavailable executable or interpreter portable.
-
-Immediately before execution, referenced paths must exist under the chosen root.
-Symlinks in the root or suffix, including links pointing inside the root, are
-rejected for all three prefixes. Paths are checked with the existing source
-containment checks and canonicalized before being passed to the process. Missing
-or unsafe references produce per-rule ERROR with the token and root; there is no
-fallback search. Files and directories may be referenced; the OS still enforces
-executable permissions. Offline plans validate syntax without requiring referenced
-paths to exist or launching commands. Checks are not a filesystem sandbox, and
-these checks do not eliminate concurrent filesystem replacement races.
+**Rules receive no environment from Please Behave.** Every inherited `PLEASE_*`
+variable is removed before a check or adapter starts, and none is set, so nothing leaks
+into the tools a script starts. A script that needs an input for a subprocess passes it
+on explicitly. The only exception is a reserved internal variable that stops a
+`please` started inside a rule from running recursively; never read or set it.
 
 String commands use this grammar **after TOML decoding**:
 
@@ -357,8 +303,8 @@ String commands use this grammar **after TOML decoding**:
 - Unquoted `|`, `&`, `;`, `<`, `>`, `(`, `)` and `#` are rejected. Unescaped `$`
   and backticks are rejected outside single quotes, including in double quotes.
   Quote or escape these characters when they are literal argument data.
-- Please Behave invokes no shell and implements no pipelines, redirection, variable
-  expansion, command chaining, comments or globbing. Wildcards and `~` are literal.
+- No shell is invoked: there are no pipelines, redirection, variable expansion,
+  command chaining, comments or globbing. Wildcards and `~` are literal.
 
 TOML literal strings avoid a second layer of backslash escaping:
 
@@ -368,49 +314,27 @@ command = '"tools/my checker" "path with spaces" "" path\ with\ spaces'
 ```
 
 This passes three arguments to `tools/my checker`: `path with spaces`, an empty
-string, and `path with spaces`. With TOML double-quoted strings, escape backslashes
-and embedded double quotes according to TOML first.
+string, and `path with spaces`.
 
-Legacy arrays such as `command = ["cargo", "+stable", "test", "--locked"]`
-bypass this grammar; every element remains literal, including spaces, empty
-arguments and shell punctuation. Both forms require a nonblank executable and
-forbid NUL. Missing tools produce per-rule execution ERRORs; validation and offline
-plans do not launch commands. Parameters, working directory, Rule-directory
-context, timeout, output capture and exit codes are shared with file entrypoints.
-`interpreter` is only available with `entrypoint`.
+Several Rules can run one script, for example
+`command = "python3 @source/scripts/check-files.py @rule/config.json"`, and each still
+executes separately with its own parameters, timeout, blocking behavior and result.
+Git imports support shared scripts offline from their resolved cache. Missing tools
+produce per-rule execution ERRORs; validation and offline plans do not launch commands.
 
-A filename such as `index.sh` resolves inside the declaring Rule directory.
-A path containing `/`, such as `scripts/check-files.py`, resolves from the
-rule-source root: the consumer repository root for local Rules, or the imported
-Git repository root, regardless of the selected Rule Set directory. Use `/` as
-the separator. Please Behave chooses the base from the syntax and never searches other
-locations. Entrypoints must be regular files within that source; absolute paths,
-parent traversal, backslashes, drive prefixes and symlink components are rejected.
-
-Several Rules can set `entrypoint = "scripts/check-files.py"` to share one script.
-Each Rule still executes separately with its own parameters, timeout, blocking
-behavior and PASS/FAIL/ERROR result. Git imports support shared scripts offline
-from their resolved cache. Review prompts remain filenames in their own Rule
-directories.
-
-Checks inherit the environment, receive no stdin and keep the consuming project's
-root as their working directory. `PLEASE_RULE_DIRECTORY` is the absolute directory
-of the declaring Rule, even when its entrypoint is shared, for bundled resources
-such as a scanner configuration or helper.
-For example, Python can read `Path(os.environ["PLEASE_RULE_DIRECTORY"]) / "config.json"`.
+Checks receive no stdin and keep the consuming project's root as their working
+directory.
 
 Exit **0 = PASS**, **1 = FAIL**, **2 = ERROR**. FAIL is a verdict about the checked
 subject; a script's own technical failure must exit 2. Interpreters report an uncaught
 exception with their default code (Python traceback 1, `cargo` 101), which reads as
 FAIL, so wrap the entry point in a catch-all that exits 2. Unexpected numeric codes
-produce FAIL with an explicit diagnostic. Signal termination, missing entrypoints,
-process-launch, capture and timeout failures are ERROR. Wrap external tools to
-translate their own exit-code contracts: a scanner's exit 2 may mean a violation,
-so map that to 1 and map actual execution problems to 2. Please Behave does not parse
-shell error messages to classify startup failures. A non-blocking
-FAIL remains visible and permits reviews and overall success; an ERROR remains
-fatal regardless of blocking. Output capture and process cleanup are shared
-across direct and interpreter execution.
+produce FAIL with an explicit diagnostic. Signal termination, process-launch, capture
+and timeout failures are ERROR. Wrap external tools to translate their own exit-code
+contracts: a scanner's exit 2 may mean a violation, so map that to 1 and map actual
+execution problems to 2. Please Behave does not parse shell error messages to classify
+startup failures. A non-blocking FAIL remains visible and permits reviews and overall
+success; an ERROR remains fatal regardless of blocking.
 
 Resource confinement is not process sandboxing. Checks execute with Please Behave's
 permissions and can access files, credentials and the network. Only import
@@ -451,8 +375,9 @@ timeout_seconds = 180
 | `parameters` | Optional; `{}` | Arbitrary structured adapter settings; Please does not interpret their meaning. |
 
 No shell, interpolation or argument expansion occurs. Adapters run in the consumer
-root and inherit the environment, including Rule parameters and
-`PLEASE_EXECUTION_POINT`. Configure authentication and tool permissions in the
+root and inherit the environment except `PLEASE_*` variables, which are removed. They
+get the execution point, the Rule parameters and the context file path in the request
+JSON. Configure authentication and tool permissions in the
 adapter. Trust adapters as you trust checks: they have Please Behave's permissions.
 Please installs no adapter dependencies and provides no provider sandbox.
 
@@ -472,7 +397,7 @@ Adapter settings may be supplied in `[parameters]` in a provider definition and
 `[review.parameters]` in a Rule. Review values override matching provider keys;
 nested tables and arrays replace the entire value at that key. Settings are
 JSON-compatible TOML values, with no provider-specific validation in Please.
-This is separate from typed Rule parameters and their `PLEASE_PARAM_*` environment.
+This is separate from typed Rule parameters, which adapters receive as `rule_parameters`.
 Reviews batch only when their provider reference, resolved Rule parameter
 environment, input source and `include_diff` agree. Every review carries its own merged settings.
 
@@ -850,8 +775,8 @@ using them without deleting the shared cache.
 ### Run context
 
 Each run writes one JSON document that describes the Git state the rules judge, so rules need
-not call Git themselves. Checks and review adapters receive its absolute path in
-`PLEASE_CONTEXT`; never hardcode the location. The format is specified by the
+not call Git themselves. A check receives its absolute path as the `@context` argument and
+an adapter as `context_file` in its request; never hardcode the location. The format is specified by the
 [JSON Schema](schemas/context.schema.json) (`schema_version` 1); additive changes extend that
 schema and removals need a new schema version. The files live in the worktree-local Git
 directory (`please/context/<run-id>/`), are readable by the owner only, and are not part of the

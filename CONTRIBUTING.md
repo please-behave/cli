@@ -28,6 +28,10 @@ Agents must not manually run comprehensive final validation, including
 are allowed as described in AGENTS.md. Developers
 can use `mise run check` for an explicit manual run of Please Behave at pre-push.
 
+Product behavior is tested only through `tests/*.rs`; tests of repository tooling live
+next to the scripts (`scripts/test_*.py`, `scripts/test-*.mjs`) and never test the product.
+Rust tests start processes only through `support::command`, which removes `PLEASE_*`,
+`GIT_*`, `CI` and `GITHUB_ACTIONS` so the governor, hooks and CI cannot leak into them.
 Tests must remain offline and credential-free; mock Codex instead of calling it.
 Keep source, configuration, documentation and product output in English.
 Update relevant docs and focused tests when behavior changes.

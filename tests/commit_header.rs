@@ -10,11 +10,11 @@ use serde_json::Value;
 use std::{
     fs,
     path::{Path, PathBuf},
-    process::{Command, Output},
+    process::Output,
 };
 
 fn cli(root: &Path, args: &[&str]) -> Output {
-    Command::new(env!("CARGO_BIN_EXE_please"))
+    support::command(env!("CARGO_BIN_EXE_please"))
         .args(args)
         .current_dir(root)
         .env("NO_COLOR", "1")
@@ -33,7 +33,7 @@ fn git(root: &Path, args: &[&str]) -> Output {
         .chain(std::env::split_paths(&std::env::var_os("PATH").unwrap())),
     )
     .unwrap();
-    Command::new("git")
+    support::command("git")
         .args(args)
         .current_dir(root)
         .env("PATH", path)
@@ -90,11 +90,12 @@ impl Fixture {
             ".please/provider.toml",
             "command = 'python3'\nargs = ['.git/adapter.py']\ntimeout_seconds = 5\n",
         );
-        support::check(
+        support::check_args(
             &root,
             "syntax",
             &["commit-msg"],
-            "#!/bin/sh\nset -eu\n[ ! -f .git/fail-check ]\nprintf checked > .git/check-marker\nif [ -f .git/change-in-check ]; then printf 'changed header\\n' > \"$PLEASE_GIT_HOOK_ARG_1\"; fi\n",
+            "@context",
+            "#!/bin/sh\nset -eu\n[ ! -f .git/fail-check ]\nprintf checked > .git/check-marker\nif [ -f .git/change-in-check ]; then file=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))[\"commit_message\"][\"file\"])' \"$1\"); printf 'changed header\\n' > \"$file\"; fi\n",
         );
         support::write(
             &root,

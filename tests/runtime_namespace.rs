@@ -5,7 +5,7 @@ use please::{
     provider::{Provider, Request},
     report::{self, Status},
 };
-use std::{fs, process::Command};
+use std::fs;
 use support::{check, write};
 
 struct Never;
@@ -18,7 +18,7 @@ impl Provider for Never {
 fn fixture() -> tempfile::TempDir {
     let root = tempfile::tempdir().unwrap();
     assert!(
-        Command::new("git")
+        support::command("git")
             .args(["init", "--quiet"])
             .current_dir(root.path())
             .status()

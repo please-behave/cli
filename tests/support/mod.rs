@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use std::{fs, path::Path};
+use std::{fs, path::Path, process::Command};
 
 pub fn write(root: &Path, path: &str, text: &str) {
     let path = root.join(path);
@@ -8,11 +8,16 @@ pub fn write(root: &Path, path: &str, text: &str) {
 }
 
 pub fn check(root: &Path, id: &str, at: &[&str], script: &str) {
-    let command = if cfg!(windows) {
-        "cmd /C @rule/entrypoint"
-    } else {
-        "sh @rule/entrypoint"
-    };
+    check_args(root, id, at, "", script);
+}
+
+/// A check whose command passes `arguments` (references such as `@context`) to its script.
+pub fn check_args(root: &Path, id: &str, at: &[&str], arguments: &str, script: &str) {
+    let command = format!(
+        "{} @rule/entrypoint {arguments}",
+        if cfg!(windows) { "cmd /C" } else { "sh" }
+    );
+    let command = command.trim_end();
     write(
         root,
         &format!(".please/checks/{id}/rule.toml"),
@@ -50,13 +55,33 @@ pub fn context_provider(directory: &Path) -> std::path::PathBuf {
     let script = directory.join("fake-adapter");
     fs::write(&script, r#"#!/usr/bin/env python3
 import json, os, sys
-assert os.environ["PLEASE_EXECUTION_POINT"] == os.environ["EXPECTED_EXECUTION_POINT"]
+assert not [name for name in os.environ if name.startswith("PLEASE_")]
 with open(os.environ["CONTEXT_CALLS"], "a") as log:
     log.write("review\n")
 request = json.load(sys.stdin)
 assert request['protocol_version'] == 1
+assert request['execution_point'] == os.environ["EXPECTED_EXECUTION_POINT"]
+assert os.path.isfile(request['context_file'])
 print(json.dumps({'protocol_version': 1, 'reviews': [{'id': r['id'], 'status': 'PASS', 'reason': 'Context delivered', 'findings': [{'message': 'Evidence inspected', 'path': 'evidence', 'line': 1}]} for r in request['reviews']]}))
 "#).unwrap();
     fs::set_permissions(&script, fs::Permissions::from_mode(0o755)).unwrap();
     script
+}
+
+/// The only way tests start processes: the harness environment must never leak into them.
+///
+/// Removes every `PLEASE_*` and `GIT_*` variable plus `CI` and `GITHUB_ACTIONS`, which the
+/// governor, Git hooks and CI export while running this very test suite.
+pub fn command(program: impl AsRef<std::ffi::OsStr>) -> Command {
+    let mut command = Command::new(program);
+    for (name, _) in std::env::vars_os() {
+        let text = name.to_string_lossy();
+        if text.starts_with("PLEASE_")
+            || text.starts_with("GIT_")
+            || matches!(text.as_ref(), "CI" | "GITHUB_ACTIONS")
+        {
+            command.env_remove(name);
+        }
+    }
+    command
 }

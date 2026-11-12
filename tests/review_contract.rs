@@ -7,7 +7,7 @@ use please::{
     reviews,
 };
 use serde_json::{Value, json};
-use std::{collections::BTreeSet, process::Command};
+use std::collections::BTreeSet;
 
 fn object_contract(schema: &Value, wire: &Value) {
     let keys: BTreeSet<_> = wire
@@ -81,7 +81,7 @@ fn schema_and_wire_types_cover_the_same_fields_and_verdicts() {
 fn review_contract_enforces_boundaries_and_semantic_evidence_locally() {
     let root = tempfile::tempdir().unwrap();
     assert!(
-        Command::new("git")
+        support::command("git")
             .args(["init", "--quiet"])
             .current_dir(root.path())
             .status()

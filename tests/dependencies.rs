@@ -7,7 +7,6 @@ use please::{
 };
 use std::{
     fs,
-    process::Command,
     sync::atomic::{AtomicUsize, Ordering},
 };
 use tempfile::TempDir;
@@ -15,7 +14,7 @@ use tempfile::TempDir;
 fn project() -> TempDir {
     let root = tempfile::tempdir().unwrap();
     assert!(
-        Command::new("git")
+        support::command("git")
             .args(["init", "--quiet"])
             .current_dir(root.path())
             .status()
@@ -77,7 +76,7 @@ fn invalid_dependencies_block_planning_before_execution() {
             .err()
             .expect("invalid plan");
         assert!(format!("{error:#}").contains(expected), "{error:#}");
-        let output = Command::new(env!("CARGO_BIN_EXE_please"))
+        let output = support::command(env!("CARGO_BIN_EXE_please"))
             .args(["run", "--at", "check", "--plan", "--json"])
             .current_dir(root.path())
             .output()

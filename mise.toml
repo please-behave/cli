@@ -28,11 +28,6 @@ run = 'python3 scripts/release.py ${usage_install:+--install}'
 description = "Install the explicit pre-commit, commit-msg and pre-push hooks"
 run = "sh scripts/setup-git-hooks.sh"
 
-[tasks."hooks:test"]
-description = "Test managed Git hooks with synthetic rules in an isolated repository"
-run = "python3 scripts/test_commit_hook.py"
-run_windows = "python scripts/test_commit_hook.py"
-
 [tasks.format]
 description = "Format Rust source"
 run = "cargo fmt --all"

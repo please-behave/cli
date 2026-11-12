@@ -7,7 +7,7 @@ use please::{
 };
 use serde::{Serialize, de::DeserializeOwned};
 use serde_json::Value;
-use std::{collections::BTreeMap, fs, process::Command};
+use std::{collections::BTreeMap, fs};
 use tempfile::TempDir;
 
 const CONFIGURATION: &str = include_str!("../docs/configuration.md");
@@ -110,7 +110,7 @@ fn contract<T: Serialize + DeserializeOwned>(sample: &T, text: &str, prefix: &st
 fn project() -> TempDir {
     let root = tempfile::tempdir().unwrap();
     assert!(
-        Command::new("git")
+        support::command("git")
             .args(["init", "--quiet"])
             .current_dir(root.path())
             .status()
@@ -157,9 +157,7 @@ fn every_configuration_field_required_marker_and_default_is_documented() {
         parameters: Default::default(),
         check: Some(config::CheckDefinition {
             resource: None,
-            entrypoint: Some("index.sh".into()),
-            command: None,
-            interpreter: None,
+            command: please::check_command::Command::new("sh @rule/index.sh").unwrap(),
             timeout_seconds: 30,
         }),
         review: Some(config::ReviewDefinition {

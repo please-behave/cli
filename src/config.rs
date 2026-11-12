@@ -136,11 +136,9 @@ pub struct Check {
     pub description: String,
     pub enabled: bool,
     pub blocking: bool,
-    pub entrypoint: Option<PathBuf>,
-    pub command: Option<crate::check_command::Command>,
+    pub command: crate::check_command::Command,
     pub source_root: PathBuf,
     pub rule_directory: PathBuf,
-    pub interpreter: Option<String>,
     pub timeout_seconds: u64,
     pub run_at: Vec<String>,
     pub parameters: crate::parameters::Binding,
@@ -205,10 +203,8 @@ pub struct RuleDefinition {
 #[serde(deny_unknown_fields)]
 pub struct CheckDefinition {
     pub resource: Option<String>,
-    pub entrypoint: Option<String>,
-    #[serde(default, deserialize_with = "crate::check_command::deserialize")]
-    pub command: Option<crate::check_command::Command>,
-    pub interpreter: Option<String>,
+    #[serde(deserialize_with = "crate::check_command::deserialize")]
+    pub command: crate::check_command::Command,
     #[serde(default = "default_timeout")]
     pub timeout_seconds: u64,
 }

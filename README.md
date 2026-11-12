@@ -491,7 +491,7 @@ Security and open-source-software Rule Sets against `HEAD`. No reviews or real p
 
 `mise docs:check` checks links, specification references, configuration fields and
 executable documentation examples. Individual tasks remain available: `format`,
-`format:check`, `lint`, `test`, `smoke`, `hooks:test` for manual development use.
+`format:check`, `lint`, `test`, `smoke` for manual development use.
 Local hooks verify working files; CI checks clean checkouts.
 
 See [repository quality gates](docs/self-governance.md) for setup, every execution point,

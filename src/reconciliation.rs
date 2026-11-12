@@ -57,14 +57,6 @@ impl HookContext {
     }
     pub fn configure(&self, command: &mut Command) {
         command.env(GUARD, &self.owner);
-        command.env("PLEASE_GIT_HOOK", &self.invocation.event);
-        command.env(
-            "PLEASE_GIT_HOOK_ARG_COUNT",
-            self.invocation.arguments.len().to_string(),
-        );
-        for (index, argument) in self.invocation.arguments.iter().enumerate() {
-            command.env(format!("PLEASE_GIT_HOOK_ARG_{}", index + 1), argument);
-        }
     }
 }
 

@@ -9,11 +9,10 @@ use please::{
 use std::{
     fs,
     path::{Path, PathBuf},
-    process::Command,
 };
 
 fn git(root: &Path, args: &[&str]) -> String {
-    let result = Command::new("git")
+    let result = support::command("git")
         .current_dir(root)
         .args([
             "-c",

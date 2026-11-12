@@ -82,14 +82,8 @@ pub(crate) fn snapshot_inputs(root: &Path) -> Result<BTreeSet<PathBuf>> {
                 &mut paths,
             );
             if let Some(check) = rule.check {
-                if let Some(entrypoint) = check.entrypoint {
-                    let entrypoint = check_entrypoint(root, &dir, &entrypoint)?;
-                    paths.insert(entrypoint.strip_prefix(root)?.to_path_buf());
-                }
-                if let Some(command) = check.command {
-                    for path in command.input_paths(root, &root.join(&dir))? {
-                        argument(root, &path, &mut paths);
-                    }
+                for path in check.command.input_paths(root, &root.join(&dir))? {
+                    argument(root, &path, &mut paths);
                 }
             }
             if let Some(review) = rule.review {
@@ -241,18 +235,6 @@ fn resource(root: &Path, directory: &Path, filename: &str) -> Result<PathBuf> {
     resolve_resource(root, &directory.join(filename))
 }
 
-fn check_entrypoint(root: &Path, directory: &Path, entrypoint: &str) -> Result<PathBuf> {
-    if !entrypoint.contains('/') {
-        return resource(root, directory, entrypoint);
-    }
-    ensure!(
-        !entrypoint.contains(['\\', ':', '\0']),
-        "check entrypoint must be a relative source path using /: {entrypoint:?}"
-    );
-    config::relative(Path::new(entrypoint))?;
-    resolve_resource(root, Path::new(entrypoint))
-}
-
 fn resolve_resource(root: &Path, relative: &Path) -> Result<PathBuf> {
     let path = match source_path(root, relative) {
         Ok(path) => path,
@@ -329,34 +311,22 @@ fn load_rules(
         match (kind.as_str(), rule.check, rule.review) {
             ("checks", Some(check), None) => {
                 ensure!(
-                    check.entrypoint.is_some() != check.command.is_some(),
-                    "{}: check requires exactly one of entrypoint or command",
+                    check
+                        .command
+                        .first()
+                        .is_some_and(|program| !program.trim().is_empty())
+                        && check
+                            .command
+                            .iter()
+                            .all(|argument| !argument.contains('\0')),
+                    "{}: command requires a nonblank executable and arguments without NUL",
                     path.display()
                 );
-                ensure!(
-                    check.command.is_none() || check.interpreter.is_none(),
-                    "{}: interpreter requires entrypoint and cannot be used with command",
-                    path.display()
-                );
-                if let Some(command) = &check.command {
+                for name in check.command.parameter_names() {
                     ensure!(
-                        command
-                            .first()
-                            .is_some_and(|program| !program.trim().is_empty())
-                            && command.iter().all(|argument| !argument.contains('\0')),
-                        "{}: command requires a nonblank executable and arguments without NUL",
+                        rule.parameters.contains_key(name),
+                        "{}: command refers to undeclared parameter {name:?}",
                         path.display()
-                    );
-                }
-                let entrypoint = check
-                    .entrypoint
-                    .as_deref()
-                    .map(|entrypoint| check_entrypoint(root, &dir, entrypoint))
-                    .transpose()?;
-                if let Some(interpreter) = &check.interpreter {
-                    ensure!(
-                        !interpreter.trim().is_empty() && !interpreter.contains('\0'),
-                        "interpreter must name one executable"
                     );
                 }
                 loaded.checks.push((
@@ -375,11 +345,9 @@ fn load_rules(
                         description: rule.description,
                         enabled: rule.enabled,
                         blocking: rule.blocking,
-                        entrypoint,
                         command: check.command,
                         source_root: root.to_path_buf(),
                         rule_directory: full,
-                        interpreter: check.interpreter,
                         timeout_seconds: check.timeout_seconds,
                         run_at: rule.run_at.clone(),
                         parameters: crate::parameters::Binding::local(rule.parameters),
@@ -493,10 +461,16 @@ pub(crate) fn init(root: &Path) -> Result<usize> {
         imports: vec![],
         provider_imports: vec![],
     };
-    let (entrypoint, pass, fail) = if cfg!(windows) {
-        ("index.cmd", "@git --version\r\n", "@exit /b 1\r\n")
+    let (runner, entrypoint, pass, fail) = if cfg!(windows) {
+        (
+            "cmd /C",
+            "index.cmd",
+            "@git --version\r\n",
+            "@exit /b 1\r\n",
+        )
     } else {
         (
+            "sh",
             "index.sh",
             "#!/bin/sh\nexec git --version\n",
             "#!/bin/sh\nexit 1\n",
@@ -514,9 +488,9 @@ pub(crate) fn init(root: &Path) -> Result<usize> {
             parameters: Default::default(),
             check: Some(crate::config::CheckDefinition {
                 resource: None,
-                entrypoint: Some(entrypoint.into()),
-                command: None,
-                interpreter: None,
+                command: crate::check_command::Command::new(&format!(
+                    "{runner} @rule/{entrypoint}"
+                ))?,
                 timeout_seconds: 30,
             }),
             review: None,

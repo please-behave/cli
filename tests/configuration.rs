@@ -7,7 +7,6 @@ use please::{
 use std::{
     fs,
     path::{Path, PathBuf},
-    process::Command,
 };
 use tempfile::TempDir;
 
@@ -17,7 +16,7 @@ fn write(root: &Path, path: &str, text: &str) {
     fs::write(path, text).unwrap();
 }
 fn git(root: &Path, args: &[&str]) -> String {
-    let out = Command::new("git")
+    let out = support::command("git")
         .current_dir(root)
         .args([
             "-c",
@@ -332,8 +331,8 @@ fn direct_and_interpreter_execution_keep_consumer_and_resources() {
             d.path(),
             "readme",
             "run_at = ['check']",
-            &format!("command = '{interpreter}@rule/index.sh'"),
-            "#!/bin/sh\ntest -s README.md || exit 1\ncat \"$PLEASE_RULE_DIRECTORY/data.txt\"\n",
+            &format!("command = '{interpreter}@rule/index.sh @rule/data.txt'"),
+            "#!/bin/sh\ntest -s README.md || exit 1\ncat \"$1\"\n",
         );
         write(d.path(), ".please/checks/readme/data.txt", "bundled data\n");
         if interpreter.is_empty() {
@@ -509,7 +508,7 @@ fn all_designated_paths_reject_symlinks() {
         if relative == "checks/readme/index.sh" {
             let p = config::load(d.path()).unwrap();
             assert_eq!(
-                please::checks::execute(&p, &p.checks[0], "check").status,
+                please::checks::execute(&p, &p.checks[0]).status,
                 Status::Error
             );
         } else {
@@ -544,12 +543,12 @@ impl External {
             write(
                 &remote,
                 &format!("{name}/checks/readme/rule.toml"),
-                "id = 'readme'\ndescription = 'Consumer README'\n[check]\ncommand = 'sh @rule/index.sh'\n",
+                "id = 'readme'\ndescription = 'Consumer README'\n[check]\ncommand = 'sh @rule/index.sh @rule/data.txt'\n",
             );
             write(
                 &remote,
                 &format!("{name}/checks/readme/index.sh"),
-                "test -s README.md || exit 1\ntest -s \"$PLEASE_RULE_DIRECTORY/data.txt\" || exit 1\n",
+                "test -s README.md || exit 1\ntest -s \"$1\" || exit 1\n",
             );
             write(
                 &remote,
@@ -790,7 +789,7 @@ fn local_rules_share_entrypoints_with_independent_results() {
         write(
             d.path(),
             "scripts/shared.sh",
-            "#!/bin/sh\ntest -s README.md || exit 2\ncat \"$PLEASE_RULE_DIRECTORY/resource\"\nexit \"$PLEASE_PARAM_CODE\"\n",
+            "#!/bin/sh\ntest -s README.md || exit 2\ncat \"$1\"\nexit \"$2\"\n",
         );
         fs::set_permissions(
             d.path().join("scripts/shared.sh"),
@@ -804,7 +803,9 @@ fn local_rules_share_entrypoints_with_independent_results() {
                 &format!(
                     "run_at = ['check']\nblocking = false\n[parameters.code]\ntype = 'string'\nvalue = '{code}'"
                 ),
-                &format!("command = '{interpreter}@source/scripts/shared.sh'"),
+                &format!(
+                    "command = '{interpreter}@source/scripts/shared.sh @rule/resource @param/code'"
+                ),
                 "exit 2",
             );
             write(d.path(), &format!(".please/checks/{id}/resource"), id);
@@ -838,11 +839,7 @@ fn local_rules_share_entrypoints_with_independent_results() {
             .iter()
             .filter(|c| matches!(c.id.as_str(), "pass" | "fail" | "error"))
             .collect();
-        assert!(
-            shared
-                .iter()
-                .all(|c| c.command.as_deref() == shared[0].command.as_deref())
-        );
+        assert!(shared.iter().all(|c| *c.command == *shared[0].command));
         let report = please::verify_project_at(
             p,
             &Never,
@@ -896,12 +893,12 @@ fn shared_commands_reject_symlinks_at_execution() {
         } else {
             let reloaded = config::load(d.path()).unwrap();
             assert_eq!(
-                please::checks::execute(&reloaded, &reloaded.checks[0], "check").status,
+                please::checks::execute(&reloaded, &reloaded.checks[0]).status,
                 Status::Error,
                 "accepted {target}"
             );
         }
-        let result = please::checks::execute(&p, &p.checks[0], "check");
+        let result = please::checks::execute(&p, &p.checks[0]);
         assert_eq!(
             result.status,
             Status::Error,
@@ -921,14 +918,14 @@ fn shared_commands_reject_symlinks_at_execution() {
     symlink("../outside", d.path().join("scripts")).unwrap();
     let p = config::load(d.path()).unwrap();
     assert_eq!(
-        please::checks::execute(&p, &p.checks[0], "check").status,
+        please::checks::execute(&p, &p.checks[0]).status,
         Status::Error
     );
     fs::remove_file(d.path().join("scripts")).unwrap();
     fs::create_dir_all(d.path().join("scripts/shared.sh")).unwrap();
     let p = config::load(d.path()).unwrap();
     assert_eq!(
-        please::checks::execute(&p, &p.checks[0], "check").status,
+        please::checks::execute(&p, &p.checks[0]).status,
         Status::Error
     );
 }
@@ -950,7 +947,7 @@ fn shared_entrypoints_recheck_missing_and_nonregular_files_before_execution() {
         if replace_with_directory {
             fs::create_dir(d.path().join("scripts/shared.sh")).unwrap();
         }
-        let result = please::checks::execute(&p, &p.checks[0], "check");
+        let result = please::checks::execute(&p, &p.checks[0]);
         assert_eq!(result.status, Status::Error);
         assert!(result.stdout.is_none());
     }
@@ -1000,12 +997,7 @@ fn string_commands_parse_arguments_without_a_shell() {
             "exit 2",
         );
         let p = config::load(d.path()).unwrap();
-        assert_eq!(
-            &**p.checks[0].command.as_ref().unwrap(),
-            &expected,
-            "{command}"
-        );
-        assert!(p.checks[0].entrypoint.is_none());
+        assert_eq!(&*p.checks[0].command, &expected, "{command}");
     }
 }
 
@@ -1085,7 +1077,7 @@ fn string_command_arguments_reach_the_process_unchanged() {
         "exit 2",
     );
     let p = config::load(d.path()).unwrap();
-    let result = please::checks::execute(&p, &p.checks[0], "check");
+    let result = please::checks::execute(&p, &p.checks[0]);
     assert_eq!(result.status, Status::Pass, "{}", result.reason);
     assert_eq!(
         result.stdout.unwrap().text,
@@ -1110,7 +1102,7 @@ fn command_representations_execute_equivalently() {
             d.path(),
             relative,
             &format!(
-                "#!/bin/sh\ntest -s README.md || exit 2\ncat \"$PLEASE_RULE_DIRECTORY/resource\"\nprintf '\\n%s\\n%s' \"$PLEASE_PARAM_LABEL\" \"$PLEASE_EXECUTION_POINT\"\nprintf diagnostic >&2\nexit {code}\n"
+                "#!/bin/sh\ntest -s README.md || exit 2\ncat \"$1\"\nprintf '\\n%s' \"$2\"\nprintf diagnostic >&2\nexit {code}\n"
             ),
         );
         let executable = d.path().join(relative);
@@ -1118,10 +1110,13 @@ fn command_representations_execute_equivalently() {
         let quoted = format!("\"{}\"", executable.display());
         let mut previous = None;
         for implementation in [
-            format!("command = {}", serde_json::to_string(&quoted).unwrap()),
             format!(
                 "command = {}",
-                serde_json::to_string(&format!("sh {quoted}")).unwrap()
+                serde_json::to_string(&format!("{quoted} @rule/resource @param/label")).unwrap()
+            ),
+            format!(
+                "command = {}",
+                serde_json::to_string(&format!("sh {quoted} @rule/resource @param/label")).unwrap()
             ),
         ] {
             check(
@@ -1133,7 +1128,7 @@ fn command_representations_execute_equivalently() {
             );
             write(d.path(), ".please/checks/equivalent/resource", "bundled");
             let p = config::load(d.path()).unwrap();
-            let result = please::checks::execute(&p, &p.checks[0], "check");
+            let result = please::checks::execute(&p, &p.checks[0]);
             assert_eq!(
                 result.status, expected,
                 "{implementation}: {}",
@@ -1146,7 +1141,7 @@ fn command_representations_execute_equivalently() {
                 result.stdout.unwrap().text,
                 result.stderr.unwrap().text,
             );
-            assert_eq!(output.1, "bundled\nindependent\ncheck");
+            assert_eq!(output.1, "bundled\nindependent");
             assert_eq!(output.2, "diagnostic");
             if let Some(previous) = &previous {
                 assert_eq!(&output, previous, "{implementation}");
@@ -1198,7 +1193,6 @@ fn commands_validate_without_execution() {
         "exit 0",
     );
     let p = config::load(d.path()).unwrap();
-    assert!(p.checks.iter().all(|c| c.entrypoint.is_none()));
     assert_eq!(
         planner::build(&p, Some("check"), false)
             .unwrap()
@@ -1231,11 +1225,13 @@ fn commands_preserve_literal_arguments_and_rule_context() {
         let d = project();
         let literal = "two words; $HOME $(echo expanded) *.md";
         let script = format!(
-            "test -s README.md || exit 2; cat \"$PLEASE_RULE_DIRECTORY/resource\"; printf '\\n<%s>\\n<%s>\\n%s\\n%s' \"$1\" \"$2\" \"$PLEASE_PARAM_LABEL\" \"$PLEASE_EXECUTION_POINT\"; exit {code}"
+            "test -s README.md || exit 2; cat \"$3\"; printf '\\n<%s>\\n<%s>\\n%s' \"$1\" \"$2\" \"$4\"; exit {code}"
         );
         write(d.path(), "scripts/probe.sh", &script);
-        let command =
-            serde_json::to_string(&format!("sh @source/scripts/probe.sh '' '{literal}'")).unwrap();
+        let command = serde_json::to_string(&format!(
+            "sh @source/scripts/probe.sh '' '{literal}' @rule/resource @param/label"
+        ))
+        .unwrap();
         check(
             d.path(),
             "native",
@@ -1247,13 +1243,13 @@ fn commands_preserve_literal_arguments_and_rule_context() {
         let p = config::load(d.path()).unwrap();
         let plan = planner::build(&p, Some("check"), false).unwrap().plan;
         assert_eq!(plan.scheduled.len(), 1);
-        let result = please::checks::execute(&p, &p.checks[0], "check");
+        let result = please::checks::execute(&p, &p.checks[0]);
         assert_eq!(result.status, expected, "{}", result.reason);
         assert!(!result.blocking);
         assert_eq!(result.exit_code, Some(code));
         assert_eq!(
             result.stdout.unwrap().text,
-            format!("bundled\n<>\n<{literal}>\nindependent\ncheck")
+            format!("bundled\n<>\n<{literal}>\nindependent")
         );
     }
 }
@@ -1273,7 +1269,7 @@ fn direct_commands_use_the_existing_process_runner() {
         .unwrap()
         .plan
         .plan_id;
-    let result = please::checks::execute(&p, &p.checks[0], "check");
+    let result = please::checks::execute(&p, &p.checks[0]);
     assert_eq!(result.status, Status::Pass);
     assert!(result.stdout.unwrap().text.starts_with("git version"));
     check(
@@ -1323,7 +1319,7 @@ fn local_path_references_execute_with_consumer_working_directory() {
             "exit 2",
         );
         let p = config::load(d.path()).unwrap();
-        let result = please::checks::execute(&p, &p.checks[0], "check");
+        let result = please::checks::execute(&p, &p.checks[0]);
         assert_eq!(result.status, Status::Pass, "{}", result.reason);
         let root = d.path().canonicalize().unwrap();
         assert_eq!(

@@ -189,8 +189,7 @@ The external Rule Set documents its complete policy and limitations.
 The `rulesets/multi-point/open-source-software` import pins the same migrated full Git commit as
 the other imports in `.please/config.toml`. It includes only the blocking `license`
 Rule at `check` and `pre-push`, with `target = "LICENSE"`. The Rule uses the shared
-`scripts/file-reference.py` entrypoint and resolves bundled references relative
-to `PLEASE_RULE_DIRECTORY`. LICENSE must match Apache-2.0,
+`scripts/file-reference.py` script and receives bundled references as arguments. LICENSE must match Apache-2.0,
 PolyForm-Noncommercial-1.0.0 or Unlicense byte-for-byte; this repository uses the
 SPDX PolyForm-Noncommercial-1.0.0 reference. `check` reads the working-tree file;
 `pre-push` reads HEAD. Missing or nonmatching files produce FAIL; technical errors produce ERROR.

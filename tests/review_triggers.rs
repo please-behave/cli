@@ -1,15 +1,11 @@
 #![cfg(unix)]
 mod support;
 use please::{config, git_snapshot, planner::Plan, report, review_trigger};
-use std::{
-    fs,
-    path::Path,
-    process::{Command, Output},
-};
+use std::{fs, path::Path, process::Output};
 use support::write;
 
 fn git(root: &Path, args: &[&str]) -> String {
-    let out = Command::new("git")
+    let out = support::command("git")
         .current_dir(root)
         .args(args)
         .output()
@@ -69,7 +65,7 @@ fn review(root: &Path, trigger: &str, extra: &str) {
     );
 }
 fn invoke(root: &Path, base: Option<&str>, preview: bool) -> Output {
-    let mut cmd = Command::new(env!("CARGO_BIN_EXE_please"));
+    let mut cmd = support::command(env!("CARGO_BIN_EXE_please"));
     cmd.current_dir(root)
         .args(["run", "--at", "check"])
         .env_remove("PLEASE_CHANGE_BASE")
@@ -406,7 +402,7 @@ fn matched_triggers_execute_through_adapter_boundary() {
         let preview = plan(root.path(), Some("HEAD"));
         assert!(preview.executable());
         assert_eq!(preview.planned_model_calls, 1);
-        let output = Command::new(env!("CARGO_BIN_EXE_please"))
+        let output = support::command(env!("CARGO_BIN_EXE_please"))
             .current_dir(root.path())
             .args(["run", "--at", "check"])
             .env("PLEASE_CHANGE_BASE", "HEAD")

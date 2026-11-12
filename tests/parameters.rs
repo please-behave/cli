@@ -5,7 +5,7 @@ use please::{
     provider::{Provider, Request},
     report::{self, Status},
 };
-use std::{fs, path::Path, process::Command, sync::Mutex};
+use std::{fs, path::Path, sync::Mutex};
 use support::{check, write};
 use tempfile::TempDir;
 
@@ -18,7 +18,7 @@ impl Provider for Never {
 fn project() -> TempDir {
     let root = tempfile::tempdir().unwrap();
     assert!(
-        Command::new("git")
+        support::command("git")
             .args(["init", "--quiet"])
             .current_dir(root.path())
             .status()
@@ -50,17 +50,18 @@ fn run(root: &Path) -> report::Report {
 fn local_parameters_deliver_strings_and_consumer_files_without_changing_rule_resources() {
     let root = project();
     write(root.path(), "conventions/scopes.txt", "cli\n");
-    check(
+    support::check_args(
         root.path(),
         "parameters",
         &["check"],
+        "@param/label @param/scopes_file @rule/resource.txt",
         r#"
 test "$PWD" = "$(git rev-parse --show-toplevel)" || exit 1
-test "$PLEASE_PARAM_LABEL" = 'arbitrary value $with spaces' || exit 1
-test "$PLEASE_PARAM_SCOPES_FILE" = "$PWD/conventions/scopes.txt" || exit 1
-test "$(cat "$PLEASE_PARAM_SCOPES_FILE")" = cli || exit 1
-test "$(cat "$PLEASE_RULE_DIRECTORY/resource.txt")" = bundled || exit 1
-test "${PLEASE_PARAM_UNUSED+x}" != x || exit 1
+test "$1" = 'arbitrary value $with spaces' || exit 1
+test "$2" = "$PWD/conventions/scopes.txt" || exit 1
+test "$(cat "$2")" = cli || exit 1
+test "$(cat "$3")" = bundled || exit 1
+test -z "$(env | grep '^PLEASE_' | grep -v '^PLEASE_ACTIVE_HOOK=' || true)" || exit 1
 "#,
     );
     write(
@@ -105,7 +106,7 @@ type = 'file'
         .resolve(&p.root, "parameters")
         .unwrap();
     assert_eq!(
-        env["PLEASE_PARAM_SCOPES_FILE"],
+        env["scopes_file"],
         p.root.join(".commit-scopes").to_str().unwrap()
     );
 }
@@ -152,11 +153,6 @@ fn invalid_parameters_are_named_execution_errors_and_block_nonblocking_rules() {
             "[parameters.scope]\ntype = 'string'\nvalue = \"\\u0000\"",
             "scope",
             "NUL",
-        ),
-        (
-            "[parameters.scope]\ntype = 'string'\n[parameters.SCOPE]\ntype = 'string'",
-            "scope",
-            "collides",
         ),
         (
             "[parameters.'bad-name']\ntype = 'string'",
@@ -215,11 +211,7 @@ fn file_parameters_reject_symlink_traversal_even_when_the_target_is_inside() {
             "\n[parameters.scope]\ntype = 'file'\nvalue = 'link/scopes'\n",
         );
         let p = config::load(root.path()).unwrap();
-        let item = please::checks::execute(
-            &p,
-            p.checks.iter().find(|c| c.id == "linked").unwrap(),
-            "check",
-        );
+        let item = please::checks::execute(&p, p.checks.iter().find(|c| c.id == "linked").unwrap());
         assert_eq!(item.status, Status::Error);
         assert!(item.reason.contains("scope") && item.reason.contains("symlink"));
     }
@@ -306,7 +298,7 @@ struct Reviews {
 impl Provider for Reviews {
     fn review(&self, request: &Request<'_>) -> anyhow::Result<String> {
         self.calls.lock().unwrap().push(request.parameters.clone());
-        assert!(please::provider::prompt(request)?.contains("parameter_environment"));
+        assert!(please::provider::prompt(request)?.contains("rule_parameters"));
         Ok(serde_json::json!({"reviews": request.reviews.iter().map(|r| serde_json::json!({
             "id":r.id, "status":"PASS", "reason":"Satisfied", "findings":[{"message":"Verified", "path":"evidence", "line":1}]
         })).collect::<Vec<_>>()}).to_string())
@@ -370,10 +362,10 @@ fn reviews_validate_and_batch_by_resolved_environment_and_nonblocking_fail_conti
     assert_eq!(report.overall, Status::Pass);
     let calls = provider.calls.lock().unwrap();
     assert_eq!(calls.len(), 2);
-    assert_eq!(calls[0]["PLEASE_PARAM_LABEL"], "first");
-    assert_eq!(calls[1]["PLEASE_PARAM_LABEL"], "second");
+    assert_eq!(calls[0]["label"], "first");
+    assert_eq!(calls[1]["label"], "second");
     assert_eq!(
-        calls[0]["PLEASE_PARAM_FILE"],
+        calls[0]["file"],
         root.path()
             .canonicalize()
             .unwrap()
@@ -420,20 +412,22 @@ fn provider_subprocess_receives_only_its_batch_parameters_and_clears_inherited_v
     );
     let fake = tempfile::tempdir().unwrap();
     let script = fake.path().join("fake-adapter");
-    fs::write(&script, r#"#!/bin/sh
-set -eu
-test "$PLEASE_EXECUTION_POINT" = check
-test "${PLEASE_PARAM_UNDECLARED+x}" != x
-test "${PLEASE_PARAM_UNDECLARED+x}" != x
-test "${PLEASE_PARAM_OPTIONAL+x}" != x
-case "$PLEASE_PARAM_LABEL" in
- first) id=a; test "$PLEASE_PARAM_FILE" = "$PWD/evidence"; test -f "$PLEASE_PARAM_FILE";;
- second) id=b; test "${PLEASE_PARAM_FILE+x}" != x;;
- *) exit 2;;
-esac
-cat >/dev/null
-printf '{"protocol_version":1,"reviews":[{"id":"%s","status":"PASS","reason":"Parameters delivered","findings":[{"message":"Evidence read","path":"evidence","line":1}]}],"usage":{"input_tokens":10,"cached_input_tokens":3,"output_tokens":4}}' "$id"
-
+    fs::write(&script, r#"#!/usr/bin/env python3
+import json, os, sys
+assert not [name for name in os.environ if name.startswith("PLEASE_")]
+request = json.load(sys.stdin)
+assert request["execution_point"] == "check"
+parameters = request["rule_parameters"]
+assert "undeclared" not in parameters and "optional" not in parameters
+if parameters["label"] == "first":
+    identifier = "a"
+    assert parameters["file"] == os.getcwd() + "/evidence" and os.path.isfile(parameters["file"])
+elif parameters["label"] == "second":
+    identifier = "b"
+    assert "file" not in parameters
+else:
+    sys.exit(2)
+print(json.dumps({"protocol_version": 1, "reviews": [{"id": identifier, "status": "PASS", "reason": "Parameters delivered", "findings": [{"message": "Evidence read", "path": "evidence", "line": 1}]}], "usage": {"input_tokens": 10, "cached_input_tokens": 3, "output_tokens": 4}}))
 "#).unwrap();
     fs::set_permissions(&script, fs::Permissions::from_mode(0o755)).unwrap();
     // Use an isolated child rather than mutating this test process's environment.
@@ -444,7 +438,7 @@ printf '{"protocol_version":1,"reviews":[{"id":"%s","status":"PASS","reason":"Pa
         std::iter::once(harness).chain(std::env::split_paths(&std::env::var_os("PATH").unwrap())),
     )
     .unwrap();
-    let output = Command::new(env!("CARGO_BIN_EXE_please"))
+    let output = support::command(env!("CARGO_BIN_EXE_please"))
         .args(["run", "--at", "check"])
         .current_dir(root.path())
         .env("PATH", path)
@@ -494,7 +488,7 @@ fn execution_errors_fail_closed_for_explicit_points_ci_and_managed_hooks() {
             .replace("enabled = true", "enabled = true\nblocking = false"),
     )
     .unwrap();
-    let setup = Command::new(env!("CARGO_BIN_EXE_please"))
+    let setup = support::command(env!("CARGO_BIN_EXE_please"))
         .args(["sync", "--yes"])
         .current_dir(root.path())
         .output()
@@ -505,7 +499,7 @@ fn execution_errors_fail_closed_for_explicit_points_ci_and_managed_hooks() {
         String::from_utf8_lossy(&setup.stderr)
     );
     for point in ["check", "ci", "pre-commit", "commit-msg", "pre-push"] {
-        let result = Command::new(env!("CARGO_BIN_EXE_please"))
+        let result = support::command(env!("CARGO_BIN_EXE_please"))
             .args(["run", "--at", point])
             .current_dir(root.path())
             .output()
@@ -536,7 +530,7 @@ fn execution_errors_fail_closed_for_explicit_points_ci_and_managed_hooks() {
     )
     .unwrap();
     for event in ["pre-commit", "commit-msg", "pre-push"] {
-        let result = Command::new(root.path().join(".git/hooks").join(event))
+        let result = support::command(root.path().join(".git/hooks").join(event))
             .current_dir(root.path())
             .env("PATH", &paths)
             .output()

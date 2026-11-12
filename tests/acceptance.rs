@@ -16,11 +16,10 @@ use std::{
     cell::Cell,
     fs,
     path::{Path, PathBuf},
-    process::Command,
 };
 use tempfile::{TempDir, tempdir};
 fn git(root: &Path, args: &[&str]) {
-    let out = Command::new("git")
+    let out = support::command("git")
         .current_dir(root)
         .args(args)
         .output()
@@ -90,7 +89,7 @@ fn mock(values: Vec<serde_json::Value>) -> Mock {
     }
 }
 fn cli(root: &Path, args: &[&str]) -> std::process::Output {
-    Command::new(env!("CARGO_BIN_EXE_please"))
+    support::command(env!("CARGO_BIN_EXE_please"))
         .args(args)
         .current_dir(root)
         .env("NO_COLOR", "1")
@@ -443,9 +442,9 @@ fn validation_does_not_execute_checks_or_provider() {
         d.path(),
         "checks/always-ok/rule.toml",
         if cfg!(windows) {
-            r#"entrypoint = "index.cmd""#
+            r#"command = "cmd /C @rule/index.cmd""#
         } else {
-            r#"entrypoint = "index.sh""#
+            r#"command = "sh @rule/index.sh""#
         },
         r#"command = "nonexistent-command-please""#,
     );
@@ -503,9 +502,9 @@ fn spawn_error_writes_blocking_error_report() {
         d.path(),
         "checks/always-ok/rule.toml",
         if cfg!(windows) {
-            r#"entrypoint = "index.cmd""#
+            r#"command = "cmd /C @rule/index.cmd""#
         } else {
-            r#"entrypoint = "index.sh""#
+            r#"command = "sh @rule/index.sh""#
         },
         r#"command = "nonexistent-command-please""#,
     );
@@ -827,7 +826,7 @@ fn no_root_detection_or_git_mutation() {
 fn timeout_output_capture_and_shell_are_explicit() {
     let start = Instant::now();
     let output = process::run(
-        Command::new("sh").args(["-c", "printf before; while :; do :; done"]),
+        support::command("sh").args(["-c", "printf before; while :; do :; done"]),
         Duration::from_millis(80),
     )
     .unwrap();
@@ -835,7 +834,7 @@ fn timeout_output_capture_and_shell_are_explicit() {
     assert!(start.elapsed() < Duration::from_secs(3));
     assert_eq!(output.stdout.text, "before");
     let output = process::run(
-        Command::new("sh").args(["-c", "yes x | head -c 200000; yes y | head -c 200000 >&2"]),
+        support::command("sh").args(["-c", "yes x | head -c 200000; yes y | head -c 200000 >&2"]),
         Duration::from_secs(10),
     )
     .unwrap();
@@ -1105,7 +1104,7 @@ fn piped_help_and_errors_never_include_ansi_even_if_color_is_forced() {
         vec!["quatsch"],
         vec!["--no-color", "quatsch"],
     ] {
-        let output = Command::new(env!("CARGO_BIN_EXE_please"))
+        let output = support::command(env!("CARGO_BIN_EXE_please"))
             .args(&args)
             .current_dir(d.path())
             .env_remove("NO_COLOR")
@@ -1192,7 +1191,7 @@ fn detailed_status_reads_saved_findings_without_another_adapter_call() {
     let executable = fake.path().join("fake-adapter");
     write_executable(
         &executable,
-        "#!/bin/sh\nprintf 'called' > \"$PLEASE_TEST_PROVIDER_MARKER\"\nexit 90\n",
+        "#!/bin/sh\nprintf 'called' > \"$TEST_PROVIDER_MARKER\"\nexit 90\n",
     )
     .unwrap();
     let marker = fake.path().join("provider-called");
@@ -1202,7 +1201,7 @@ fn detailed_status_reads_saved_findings_without_another_adapter_call() {
     )
     .unwrap();
     for detailed in [false, true] {
-        let mut command = Command::new(env!("CARGO_BIN_EXE_please"));
+        let mut command = support::command(env!("CARGO_BIN_EXE_please"));
         command.args(["status"]);
         if detailed {
             command.arg("--details");
@@ -1210,7 +1209,7 @@ fn detailed_status_reads_saved_findings_without_another_adapter_call() {
         let output = command
             .current_dir(d.path())
             .env("PATH", &env_path)
-            .env("PLEASE_TEST_PROVIDER_MARKER", &marker)
+            .env("TEST_PROVIDER_MARKER", &marker)
             .env("NO_COLOR", "1")
             .output()
             .unwrap();
@@ -1349,7 +1348,7 @@ fn cli_flushes_rule_start_while_the_check_is_still_running_and_keeps_raw_output_
         d.path(),
         "always-ok",
         &["pre-push"],
-        "printf RAW_CHECK_OUTPUT; while [ ! -f \"$PLEASE_TEST_RELEASE\" ]; do sleep 0.02; done",
+        "printf RAW_CHECK_OUTPUT; while [ ! -f \"$TEST_RELEASE\" ]; do sleep 0.02; done",
     );
     replace(
         d.path(),
@@ -1359,10 +1358,10 @@ fn cli_flushes_rule_start_while_the_check_is_still_running_and_keeps_raw_output_
     );
     let marker = external.path().join("release");
     synchronize(d.path());
-    let mut child = Command::new(env!("CARGO_BIN_EXE_please"))
+    let mut child = support::command(env!("CARGO_BIN_EXE_please"))
         .args(["run"])
         .current_dir(d.path())
-        .env("PLEASE_TEST_RELEASE", &marker)
+        .env("TEST_RELEASE", &marker)
         .env("NO_COLOR", "1")
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -1494,7 +1493,7 @@ fn copy_executable(source: &Path, executable: &Path) {
         // A concurrent fork can inherit fs::copy's writable descriptor until exec,
         // causing ETXTBSY even after the copying thread closes it. Copy in a child
         // process so no writer for this executable exists in the test process.
-        let output = Command::new("cp")
+        let output = support::command("cp")
             .arg(source)
             .arg(executable)
             .output()
@@ -1543,9 +1542,9 @@ fn checks_only_never_calls_provider_and_counts_only_checks_even_on_failure() {
                 d.path(),
                 "checks/always-ok/rule.toml",
                 if cfg!(windows) {
-                    r#"entrypoint = "index.cmd""#
+                    r#"command = "cmd /C @rule/index.cmd""#
                 } else {
-                    r#"entrypoint = "index.sh""#
+                    r#"command = "sh @rule/index.sh""#
                 },
                 r#"command = "please-nonexistent-executable-for-test""#,
             );
@@ -1639,7 +1638,7 @@ fn checks_only_cli_skips_enabled_adapter_reviews_and_status_keeps_the_scope() {
     let marker = fake.path().join("called");
     write_executable(
         &executable,
-        "#!/bin/sh\nprintf called > \"$PLEASE_PROVIDER_MARKER\"\nexit 23\n",
+        "#!/bin/sh\nprintf called > \"$TEST_PROVIDER_MARKER\"\nexit 23\n",
     )
     .unwrap();
     let search_path = std::env::join_paths(
@@ -1648,11 +1647,11 @@ fn checks_only_cli_skips_enabled_adapter_reviews_and_status_keeps_the_scope() {
     )
     .unwrap();
     let run = |args: &[&str]| {
-        Command::new(env!("CARGO_BIN_EXE_please"))
+        support::command(env!("CARGO_BIN_EXE_please"))
             .args(args)
             .current_dir(d.path())
             .env("PATH", &search_path)
-            .env("PLEASE_PROVIDER_MARKER", &marker)
+            .env("TEST_PROVIDER_MARKER", &marker)
             .env("NO_COLOR", "1")
             .output()
             .unwrap()

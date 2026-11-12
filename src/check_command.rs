@@ -1,11 +1,26 @@
-//! Decode string commands once; legacy arrays and execution keep their existing contract.
+//! Decode check commands once and resolve their explicit references at execution time.
+//!
+//! A command is one string: an executable and arguments without a shell. A token starting with
+//! `@` is a reference. Rule inputs are passed explicitly as arguments, never through the
+//! environment, so a script decides itself what it forwards to the tools it starts:
+//!
+//! | Token | Resolves to |
+//! | --- | --- |
+//! | `@rule/<path>` | a file or directory inside the rule directory |
+//! | `@repo/<path>` | a path inside the consumer repository |
+//! | `@source/<path>` | a path inside the rule source repository |
+//! | `@param/<name>` | the value of a declared rule parameter |
+//! | `@context` | the absolute path of the run context file |
+//!
+//! `@@` escapes a literal leading `@`.
+use crate::parameters::Environment;
 use serde::{Deserialize, Deserializer, de::Error};
 
-/// A tokenized command retaining whether explicit references are supported.
+/// A tokenized command and the original text it was written as.
 #[derive(Debug, Clone)]
 pub struct Command {
     arguments: Vec<String>,
-    original: Option<String>,
+    original: String,
 }
 
 impl std::ops::Deref for Command {
@@ -17,54 +32,59 @@ impl std::ops::Deref for Command {
 
 impl serde::Serialize for Command {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        match &self.original {
-            Some(text) => serializer.serialize_str(text),
-            None => self.arguments.serialize(serializer),
-        }
+        serializer.serialize_str(&self.original)
     }
 }
 
-pub(crate) fn deserialize<'de, D>(deserializer: D) -> Result<Option<Command>, D::Error>
+pub(crate) fn deserialize<'de, D>(deserializer: D) -> Result<Command, D::Error>
 where
     D: Deserializer<'de>,
 {
-    #[derive(Deserialize)]
-    #[serde(untagged)]
-    enum Input {
-        String(String),
-        Array(Vec<String>),
+    let original = String::deserialize(deserializer)?;
+    let arguments = parse(&original).map_err(D::Error::custom)?;
+    for argument in &arguments {
+        reference(argument).map_err(D::Error::custom)?;
     }
-    match Option::<Input>::deserialize(deserializer)? {
-        Some(Input::String(text)) => {
-            let arguments = parse(&text).map_err(D::Error::custom)?;
-            for argument in &arguments {
-                reference(argument).map_err(D::Error::custom)?;
-            }
-            Ok(Some(Command {
-                arguments,
-                original: Some(text),
-            }))
-        }
-        Some(Input::Array(arguments)) => Ok(Some(Command {
-            arguments,
-            original: None,
-        })),
-        None => Ok(None),
-    }
+    Ok(Command {
+        arguments,
+        original,
+    })
+}
+
+enum Reference<'a> {
+    Path(&'a str, &'a str),
+    Parameter(&'a str),
+    Context,
 }
 
 /// Validate reserved tokens without consulting the filesystem.
-fn reference(argument: &str) -> anyhow::Result<Option<(&str, &str)>> {
+fn reference(argument: &str) -> anyhow::Result<Option<Reference<'_>>> {
     use anyhow::ensure;
     if !argument.starts_with('@') || argument.starts_with("@@") {
         return Ok(None);
     }
+    if argument == "@context" {
+        return Ok(Some(Reference::Context));
+    }
     let (prefix, suffix) = argument.split_once('/').ok_or_else(|| anyhow::anyhow!(
-        "check.command: invalid path reference {argument:?}; use @rule/, @repo/ or @source/ followed by a relative path, or @@ for a literal @"
+        "check.command: invalid reference {argument:?}; use @context, @param/<name>, or @rule/, @repo/ or @source/ followed by a relative path, or @@ for a literal @"
     ))?;
+    if prefix == "@param" {
+        ensure!(
+            suffix
+                .as_bytes()
+                .first()
+                .is_some_and(u8::is_ascii_alphabetic)
+                && suffix
+                    .bytes()
+                    .all(|c| c.is_ascii_alphanumeric() || c == b'_'),
+            "check.command: invalid parameter reference {argument:?}; use @param/ followed by a declared parameter name"
+        );
+        return Ok(Some(Reference::Parameter(suffix)));
+    }
     ensure!(
         matches!(prefix, "@rule" | "@repo" | "@source"),
-        "check.command: unsupported path reference {argument:?}; supported prefixes are @rule/, @repo/ and @source/; use @@ for a literal @"
+        "check.command: unsupported reference {argument:?}; supported are @context, @param/<name>, @rule/, @repo/ and @source/; use @@ for a literal @"
     );
     ensure!(
         !suffix.contains(['\\', ':', '\0'])
@@ -73,10 +93,33 @@ fn reference(argument: &str) -> anyhow::Result<Option<(&str, &str)>> {
                 .all(|part| !part.is_empty() && part != "." && part != ".."),
         "check.command: invalid path reference {argument:?}; use nonempty relative components separated by /, without ., .., backslashes or drive prefixes"
     );
-    Ok(Some((prefix, suffix)))
+    Ok(Some(Reference::Path(prefix, suffix)))
 }
 
 impl Command {
+    /// Parse a command written in a rule definition.
+    pub fn new(text: &str) -> anyhow::Result<Self> {
+        let arguments = parse(text).map_err(anyhow::Error::msg)?;
+        for argument in &arguments {
+            reference(argument)?;
+        }
+        Ok(Self {
+            arguments,
+            original: text.to_owned(),
+        })
+    }
+
+    /// Names of the rule parameters this command refers to.
+    pub(crate) fn parameter_names(&self) -> Vec<&str> {
+        self.arguments
+            .iter()
+            .filter_map(|argument| match reference(argument) {
+                Ok(Some(Reference::Parameter(name))) => Some(name),
+                _ => None,
+            })
+            .collect()
+    }
+
     /// Explicit references and literal arguments can name local snapshot inputs.
     pub(crate) fn input_paths(
         &self,
@@ -86,13 +129,17 @@ impl Command {
         self.arguments
             .iter()
             .map(|argument| {
-                if self.original.is_some() {
-                    if let Some((prefix, suffix)) = reference(argument)? {
+                match reference(argument)? {
+                    Some(Reference::Path(prefix, suffix)) => {
                         return Ok(if prefix == "@rule" { rule } else { repo }.join(suffix));
                     }
-                    if let Some(literal) = argument.strip_prefix("@@") {
-                        return Ok(repo.join(format!("@{literal}")));
+                    Some(Reference::Parameter(_) | Reference::Context) => {
+                        return Ok(repo.join(argument));
                     }
+                    None => {}
+                }
+                if let Some(literal) = argument.strip_prefix("@@") {
+                    return Ok(repo.join(format!("@{literal}")));
                 }
                 Ok(repo.join(argument))
             })
@@ -101,33 +148,47 @@ impl Command {
 
     pub(crate) fn resolve(
         &self,
-        repo: &std::path::Path,
-        source: &std::path::Path,
-        rule: &std::path::Path,
+        locations: &Locations<'_>,
     ) -> anyhow::Result<Vec<std::ffi::OsString>> {
         use anyhow::Context;
         self.arguments.iter().map(|argument| {
-            if self.original.is_none() {
-                return Ok(argument.into());
-            }
             if let Some(literal) = argument.strip_prefix("@@") {
                 return Ok(format!("@{literal}").into());
             }
-            let Some((prefix, suffix)) = reference(argument)? else {
-                return Ok(argument.into());
-            };
-            let root = match prefix {
-                "@rule" => rule,
-                "@source" => source,
-                "@repo" => repo,
-                _ => unreachable!(),
-            };
-            crate::config::source_path(root, std::path::Path::new(suffix))
-                .and_then(|path| Ok(path.canonicalize()?))
-                .map(|path| path.into_os_string())
-                .with_context(|| format!("check.command: cannot resolve {argument:?} under {}; referenced paths must exist and contain no symlinks", root.display()))
+            match reference(argument)? {
+                None => Ok(argument.into()),
+                Some(Reference::Context) => locations
+                    .context
+                    .map(|path| path.as_os_str().to_owned())
+                    .ok_or_else(|| anyhow::anyhow!("check.command: {argument:?} needs a run context, which is not available here")),
+                Some(Reference::Parameter(name)) => locations
+                    .parameters
+                    .get(name)
+                    .map(std::ffi::OsString::from)
+                    .ok_or_else(|| anyhow::anyhow!("check.command: parameter {name:?} has no value")),
+                Some(Reference::Path(prefix, suffix)) => {
+                    let root = match prefix {
+                        "@rule" => locations.rule,
+                        "@source" => locations.source,
+                        _ => locations.repo,
+                    };
+                    crate::config::source_path(root, std::path::Path::new(suffix))
+                        .and_then(|path| Ok(path.canonicalize()?))
+                        .map(|path| path.into_os_string())
+                        .with_context(|| format!("check.command: cannot resolve {argument:?} under {}; referenced paths must exist and contain no symlinks", root.display()))
+                }
+            }
         }).collect()
     }
+}
+
+/// Everything a command's references may resolve against.
+pub(crate) struct Locations<'a> {
+    pub repo: &'a std::path::Path,
+    pub source: &'a std::path::Path,
+    pub rule: &'a std::path::Path,
+    pub context: Option<&'a std::path::Path>,
+    pub parameters: &'a Environment,
 }
 
 fn parse(command: &str) -> Result<Vec<String>, &'static str> {
@@ -192,16 +253,28 @@ mod tests {
         #[derive(Deserialize)]
         struct Definition {
             #[serde(deserialize_with = "deserialize")]
-            command: Option<Command>,
+            command: Command,
         }
-        toml::from_str::<Definition>(value)
-            .unwrap()
-            .command
-            .unwrap()
+        toml::from_str::<Definition>(value).unwrap().command
+    }
+
+    fn locations<'a>(
+        repo: &'a std::path::Path,
+        source: &'a std::path::Path,
+        rule: &'a std::path::Path,
+        parameters: &'a Environment,
+    ) -> Locations<'a> {
+        Locations {
+            repo,
+            source,
+            rule,
+            context: None,
+            parameters,
+        }
     }
 
     #[test]
-    fn references_resolve_after_tokenization_and_arrays_stay_literal() {
+    fn references_resolve_after_tokenization() {
         let temp = tempfile::tempdir().unwrap();
         let repo = temp.path().join("consumer root");
         let source = temp.path().join("cached source");
@@ -214,7 +287,10 @@ mod tests {
         let parsed = command(
             r#"command = '"@rule/file with spaces" "@repo/file with spaces" "@source/file with spaces" @@rule/file @@unknown @@@literal ordinary/path --file=@rule/literal'"#,
         );
-        let resolved = parsed.resolve(&repo, &source, &rule).unwrap();
+        let parameters = Environment::new();
+        let resolved = parsed
+            .resolve(&locations(&repo, &source, &rule, &parameters))
+            .unwrap();
         for (actual, root) in resolved.iter().zip([&rule, &repo, &source]) {
             assert_eq!(
                 actual,
@@ -234,19 +310,52 @@ mod tests {
                 "--file=@rule/literal"
             ]
         );
-        let array =
-            command(r#"command = ['@rule/missing', '@unknown', '@@literal', '@source/../escape']"#);
+    }
+
+    #[test]
+    fn context_and_parameters_are_explicit_arguments() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path();
+        let parameters = Environment::from([
+            ("scopes_file".to_owned(), "/abs/scopes.txt".to_owned()),
+            ("label".to_owned(), "two words".to_owned()),
+        ]);
+        let parsed = command("command = 'tool @context @param/scopes_file @param/label'");
+        assert_eq!(parsed.parameter_names(), ["scopes_file", "label"]);
+        let mut locations = locations(path, path, path, &parameters);
+        assert!(parsed.resolve(&locations).is_err(), "no context available");
+        let context = path.join("context.json");
+        locations.context = Some(&context);
         assert_eq!(
-            array.resolve(&repo, &source, &rule).unwrap(),
-            array
-                .iter()
-                .map(std::ffi::OsString::from)
-                .collect::<Vec<_>>()
+            parsed.resolve(&locations).unwrap(),
+            [
+                "tool",
+                context.to_str().unwrap(),
+                "/abs/scopes.txt",
+                "two words"
+            ]
         );
-        // Serialization must retain string/array identity for a subsequent load.
-        for original in [parsed, array] {
-            let serialized = serde_json::to_value(&original).unwrap();
-            assert_eq!(serialized.is_string(), original.original.is_some());
+        let missing = command("command = 'tool @param/absent'");
+        assert!(format!("{:#}", missing.resolve(&locations).unwrap_err()).contains("no value"));
+    }
+
+    #[test]
+    fn malformed_references_are_rejected_when_loading() {
+        for text in [
+            "command = 'tool @unknown/path'",
+            "command = 'tool @rule'",
+            "command = 'tool @param/'",
+            "command = 'tool @param/a/b'",
+            "command = 'tool @context/extra'",
+            "command = 'tool @source/../escape'",
+        ] {
+            #[derive(Deserialize)]
+            struct Definition {
+                #[serde(deserialize_with = "deserialize")]
+                #[allow(dead_code)]
+                command: Command,
+            }
+            assert!(toml::from_str::<Definition>(text).is_err(), "{text}");
         }
     }
 
@@ -257,7 +366,10 @@ mod tests {
         fs::create_dir(&rule).unwrap();
         fs::write(temp.path().join("only-in-repo"), "exists").unwrap();
         let parsed = command("command = 'tool @rule/only-in-repo'");
-        let error = parsed.resolve(temp.path(), temp.path(), &rule).unwrap_err();
+        let parameters = Environment::new();
+        let error = parsed
+            .resolve(&locations(temp.path(), temp.path(), &rule, &parameters))
+            .unwrap_err();
         assert!(format!("{error:#}").contains("@rule/only-in-repo"));
     }
 
@@ -272,17 +384,19 @@ mod tests {
         symlink(root.join("real"), root.join("linked")).unwrap();
         symlink(root.join("real/file"), root.join("file-link")).unwrap();
         symlink("/", root.join("escape")).unwrap();
+        let parameters = Environment::new();
+        let here = locations(root, root, root, &parameters);
         for prefix in ["@rule", "@source", "@repo"] {
             for suffix in ["linked/file", "file-link", "escape/tmp"] {
                 let parsed = command(&format!("command = 'tool {prefix}/{suffix}'"));
-                assert!(parsed.resolve(root, root, root).is_err());
+                assert!(parsed.resolve(&here).is_err());
             }
         }
         // Resolve anew at execution time rather than trusting a previous path.
         let parsed = command("command = 'tool @rule/real/file'");
-        assert!(parsed.resolve(root, root, root).is_ok());
+        assert!(parsed.resolve(&here).is_ok());
         fs::remove_file(root.join("real/file")).unwrap();
         symlink("/tmp", root.join("real/file")).unwrap();
-        assert!(parsed.resolve(root, root, root).is_err());
+        assert!(parsed.resolve(&here).is_err());
     }
 }

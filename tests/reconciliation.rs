@@ -5,16 +5,11 @@ use please::{
     config,
     reconciliation::{self, HookInvocation},
 };
-use std::{
-    fs,
-    os::unix::fs::PermissionsExt,
-    path::Path,
-    process::{Command, Output},
-};
+use std::{fs, os::unix::fs::PermissionsExt, path::Path, process::Output};
 use tempfile::TempDir;
 
 fn git(root: &Path, args: &[&str]) -> Output {
-    Command::new("git")
+    support::command("git")
         .args(args)
         .current_dir(root)
         .env("GIT_CONFIG_GLOBAL", "/dev/null")
@@ -70,7 +65,7 @@ fn executable(path: &Path, text: &str) {
     fs::set_permissions(path, fs::Permissions::from_mode(0o755)).unwrap();
 }
 fn cli(root: &Path, args: &[&str]) -> Output {
-    Command::new(env!("CARGO_BIN_EXE_please"))
+    support::command(env!("CARGO_BIN_EXE_please"))
         .args(args)
         .current_dir(root)
         .env("NO_COLOR", "1")
@@ -88,7 +83,7 @@ fn hooked_git(root: &Path, args: &[&str]) -> Output {
         .chain(std::env::split_paths(&std::env::var_os("PATH").unwrap())),
     )
     .unwrap();
-    Command::new("git")
+    support::command("git")
         .args(args)
         .current_dir(root)
         .env("PATH", path)
@@ -111,7 +106,20 @@ fn checker(root: &Path, script: &str) {
         .iter()
         .map(|point| point.as_str().unwrap())
         .collect();
-    support::check(root, "always-ok", &points, "exec sh checker.sh");
+    support::check_args(
+        root,
+        "always-ok",
+        &points,
+        "@context",
+        "exec sh checker.sh \"$1\"",
+    );
+}
+
+/// Script text asserting the context names this execution point; `$1` is the context file.
+fn point_is(point: &str) -> String {
+    format!(
+        "python3 -c 'import json,sys; assert json.load(open(sys.argv[1]))[\"execution_point\"] == sys.argv[2]' \"$1\" {point}\n"
+    )
 }
 
 #[test]
@@ -329,7 +337,14 @@ fn real_commit_hooks_forward_message_path_and_preserve_index_and_worktree() {
     let root = project(&["pre-commit", "commit-msg"]);
     checker(
         root.path(),
-        "set -eu\ntest \"$PLEASE_EXECUTION_POINT\" = \"$PLEASE_GIT_HOOK\"\ncase \"$PLEASE_GIT_HOOK\" in\npre-commit) test \"$PLEASE_GIT_HOOK_ARG_COUNT\" = 0;;\ncommit-msg) test \"$PLEASE_GIT_HOOK_ARG_COUNT\" = 1; grep -q '^test: accepted' \"$PLEASE_GIT_HOOK_ARG_1\";;\n*) exit 19;;\nesac\n",
+        r#"set -eu
+point=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["execution_point"])' "$1")
+case "$point" in
+pre-commit) python3 -c 'import json,sys; assert "commit_message" not in json.load(open(sys.argv[1]))' "$1";;
+commit-msg) file=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["commit_message"]["file"])' "$1"); grep -q '^test: accepted' "$file";;
+*) exit 19;;
+esac
+"#,
     );
     fs::write(root.path().join("file"), "staged\n").unwrap();
     ok(git(root.path(), &["add", "file"]));
@@ -392,7 +407,10 @@ fn actual_push_hook_blocks_and_allows_pushes() {
     );
     checker(
         root.path(),
-        "test \"$PLEASE_GIT_HOOK\" = pre-push && test \"$PLEASE_GIT_HOOK_ARG_COUNT\" = 2\n",
+        &format!(
+            "{}python3 -c 'import json,sys; assert json.load(open(sys.argv[1]))[\"push\"][\"remote\"]' \"$1\"\n",
+            point_is("pre-push")
+        ),
     );
     ok(hooked_git(
         root.path(),
@@ -495,7 +513,7 @@ fn invocation_validation_recursion_and_missing_executable_block_commits() {
     );
     // Invoke Git with a PATH containing Git/sh but no Please Behave.
     let bins = tempfile::tempdir().unwrap();
-    let git_path = Command::new("sh")
+    let git_path = support::command("sh")
         .args(["-c", "command -v git"])
         .output()
         .unwrap();
@@ -504,7 +522,7 @@ fn invocation_validation_recursion_and_missing_executable_block_commits() {
         bins.path().join("git"),
     )
     .unwrap();
-    let output = Command::new(bins.path().join("git"))
+    let output = support::command(bins.path().join("git"))
         .args(["commit", "--allow-empty", "-m", "test: unavailable"])
         .current_dir(root.path())
         .env("PATH", bins.path())
@@ -577,7 +595,7 @@ fn actual_terminal_approval_and_rejection_gate_execution() {
         );
         let mut master = unsafe { fs::File::from_raw_fd(master_fd) };
         let slave = unsafe { fs::File::from_raw_fd(slave_fd) };
-        let mut child = Command::new(env!("CARGO_BIN_EXE_please"))
+        let mut child = support::command(env!("CARGO_BIN_EXE_please"))
             .args(args)
             .current_dir(root)
             .env("NO_COLOR", "1")
@@ -738,20 +756,16 @@ fn fixed_hooks_select_only_their_own_effective_rules() {
     let root = project(&["check", "first"]);
     // A local Rule Set overrides the Rule's own custom assignment.
     fs::create_dir_all(root.path().join(".please/rule-sets")).unwrap();
-    support::check(
+    support::check_args(
         root.path(),
         "set-rule",
         &["first"],
-        "test \"$PLEASE_GIT_HOOK\" = commit-msg",
+        "@context",
+        &point_is("commit-msg"),
     );
     fs::write(root.path().join(".please/rule-sets/message.toml"), "id = 'message'\ndescription = 'Message checks'\nrules = ['set-rule']\nrun_at = ['commit-msg']\n").unwrap();
     for event in ["pre-commit", "pre-push"] {
-        support::check(
-            root.path(),
-            event,
-            &[event],
-            &format!("test \"$PLEASE_GIT_HOOK\" = {event}"),
-        );
+        support::check_args(root.path(), event, &[event], "@context", &point_is(event));
     }
     ok(cli(root.path(), &["sync", "--yes"]));
     for (event, expected) in [
@@ -792,7 +806,7 @@ fn direct_execution_blocks_nested_execution_and_reconciliation() {
             checker(
                 root.path(),
                 &format!(
-                    "if [ \"${{PLEASE_RECURSION_TEST:-}}\" = 1 ]; then\n echo 'nested execution admitted'\n exit 0\nfi\nexport PLEASE_RECURSION_TEST=1\nexec {:?} {nested}\n",
+                    "if [ \"${{TEST_RECURSION:-}}\" = 1 ]; then\n echo 'nested execution admitted'\n exit 0\nfi\nexport TEST_RECURSION=1\nexec {:?} {nested}\n",
                     env!("CARGO_BIN_EXE_please")
                 ),
             );

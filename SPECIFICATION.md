@@ -110,7 +110,7 @@ project resolution state. Failure preserves prior state. Execution, hooks and
 plans use the validated cache offline, never substitute revisions, and fail when
 state or contents are missing/corrupt. Git-directory state, shared caches, bounded
 OS locks, integrity receipts and retrieval trust boundaries remain in effect.
-Checks run in the consumer root; PLEASE_RULE_DIRECTORY locates bundled resources.
+Checks run in the consumer root; `@rule/` references locate bundled resources.
 Imported code has Please Behave's permissions and must be trusted; path confinement is
 not a sandbox. Credential-bearing HTTP URLs are rejected and diagnostics never
 echo Git stderr or secret repository selectors.
@@ -160,7 +160,7 @@ One unversioned configuration model uses lowercase .please/config.toml, optional
 provider.toml, providers/*.toml, checks/*/rule.toml, reviews/*/rule.toml and rule-sets/*.toml.
 There is no configuration version field. Unknown fields, duplicate keys/IDs,
 invalid references and unsafe rule resources fail, including disabled Rules.
-Missing check entrypoints or review prompts are execution errors only when
+Missing referenced check files or review prompts are execution errors only when
 selected and enabled.
 No recursive TOML discovery is supported. External sets explicitly select Rule
 directories as defined in EXT-001; local definitions use only the paths above.
@@ -170,7 +170,7 @@ Project settings are project, max_display_files (default 5), execution_points,
 execution, imports and provider_imports. The configuration reference defines all fields and bounds. Review prompt filenames
 must be single nonempty names directly in a Rule directory: no separators,
 absolute paths, parent traversal, symlinks or special files. Review prompts are
-UTF-8 Markdown without frontmatter requirements. Check entrypoints follow CHK-001.
+UTF-8 Markdown without frontmatter requirements. Check commands follow CHK-001.
 Checks may bundle helpers.
 
 init requires `.please/` to be absent. Any existing entry, including an empty
@@ -244,8 +244,8 @@ Provider parameters and review.parameters are arbitrary JSON-compatible TOML
 tables. Merge top-level keys, with each review value replacing the provider value
 at that key; nested tables and arrays are replaced whole. Please validates only
 JSON compatibility and transports values without interpreting provider meaning.
-Existing Rule parameter environments remain separate and are delivered as before.
-Batching requires equal provider references, Rule parameter environments, input
+Rule parameters remain separate and reach adapters as `rule_parameters`.
+Batching requires equal provider references, resolved Rule parameters, input
 sources and diff selection. Each review retains its own effective adapter parameters.
 
 Responses require protocol_version = 1 and reviews matching the common verdict
@@ -291,17 +291,17 @@ Invalid review parameters and missing prompts remain fatal. A point requiring re
 execution before any check starts. Empty execution points succeed without proving
 any rule PASS.
 
-Checks and AI provider subprocesses receive `PLEASE_EXECUTION_POINT` from the
-validated execution plan, including custom points and mapped imported assignments.
-Please Behave overrides any inherited value. This is runtime context, not a configurable
-rule parameter or TOML field; parameters, rule resources and Git hook arguments
-retain their existing contracts.
+Rule processes receive no `PLEASE_*` environment variables. Every inherited `PLEASE_*`
+variable is removed before a check or adapter starts, so the harness environment never
+reaches the code a rule runs; only a reserved internal recursion guard is set. The
+execution point from the validated plan, including custom points and mapped imported
+assignments, is part of the run context (CTX-001) and of the adapter request.
 
 ## CHK-001: Deterministic checks
 
-[check] requires exactly one of entrypoint or command, including for disabled
-Rules. The preferred command syntax is a single string containing an executable
-and arguments. After TOML decoding, spaces and tabs separate arguments outside
+[check] requires `command`, including for disabled Rules: a single string containing
+an executable and arguments, with an optional `timeout_seconds` (default 30, 1..=3600).
+After TOML decoding, spaces and tabs separate arguments outside
 quotes. Single and double quotes group text and are removed; adjacent quoted and
 unquoted segments concatenate, and empty quotes preserve an empty argument.
 Backslash escapes the next character outside single quotes, including inside
@@ -312,71 +312,46 @@ backticks are rejected outside single quotes, including inside double quotes.
 Quoted or escaped special characters are literal arguments. There is no shell,
 operator evaluation, pipeline, redirection, variable expansion, command chaining,
 comment processing or globbing; wildcard and tilde characters remain literal.
-
-The deprecated nonempty array syntax remains supported unchanged: executable
-first, then literal arguments, without string-command parsing. The executable
-must be nonblank and no element may contain NUL. Empty arguments are allowed.
-The deprecated entrypoint and interpreter syntax remains supported unchanged.
-Both command forms are mutually exclusive with entrypoint and interpreter.
+The executable must be nonblank and no argument may contain NUL. Legacy forms (command
+arrays, `entrypoint` and `interpreter`) do not exist and are rejected.
 Programs resolve through PATH or an explicit executable path, with the consumer
-root as working directory. Please Behave performs no runtime installation.
-Command availability is checked only during execution; missing executables
-produce per-rule ERROR and offline plans never launch them. Parameters,
-rule-directory context, timeouts, blocking and results use the same execution
-path for commands and files. Review resolution is unchanged.
+root as working directory and null stdin. Please Behave performs no runtime
+installation. Command availability is checked only during execution; missing
+executables produce per-rule ERROR and offline plans never launch them. Timeouts,
+blocking and results are shared by all commands.
 
-String-command tokens support exactly three explicit path prefixes after
-tokenization: @rule/ uses the declaring Rule directory; @repo/ uses the consumer
-repository root; @source/ uses the imported cached Git repository root, or the
-consumer repository root for local Rules (the local ruleset source root, not
-.please/ or a Rule Set directory). References may occupy the executable or any
-argument position. Resolved native absolute paths remain single arguments,
-including spaces; they are never tokenized again. Ordinary paths retain consumer
-root semantics. No shell, expansion, new execution mechanism or working-directory
-change is introduced.
+Rule inputs are passed only as arguments, through reserved tokens resolved after
+tokenization: `@rule/` uses the declaring Rule directory; `@repo/` the consumer
+repository root; `@source/` the imported cached Git repository root, or the consumer
+repository root for local Rules (the local ruleset source root, not .please/ or a Rule
+Set directory); `@param/<name>` the value of a declared Rule parameter (PARAM-001); and
+`@context` the absolute path of the run context file (CTX-001). References may occupy
+the executable or any argument position. Resolved native absolute paths remain single
+arguments, including spaces; they are never tokenized again. Ordinary paths retain
+consumer root semantics. No shell, expansion or working-directory change is introduced.
 
 A leading @ reserves a token for references; @@ removes exactly one leading @
 and passes the rest literally. Quoting and escaping do not suppress references.
-Tokens not beginning with @, including --file=@rule/data, are untouched. Arrays
-retain literal @ and @@ tokens and never resolve references.
+Tokens not beginning with @, including --file=@rule/data, are untouched.
 
-Reference suffixes use / on every platform and must consist of nonempty relative
+Path suffixes use / on every platform and must consist of nonempty relative
 components. Empty suffixes, empty components, trailing separators, ., ..,
-backslashes and colons are configuration errors, including in disabled Rules.
-Unknown prefixes and malformed reserved references are errors with supported
-prefixes and literal-escape guidance. Before each execution, resolve using the
+backslashes and colons are configuration errors, including in disabled Rules. A
+malformed `@param/` name, a reference to an undeclared parameter, unknown prefixes and
+malformed reserved references are configuration errors with supported tokens and
+literal-escape guidance. Before each execution, resolve path references using the
 actual Rule provenance, reject all symlink components under the root and a
 symlink root, enforce source containment and canonicalize the existing path.
-This policy applies to all three prefixes. Missing/unsafe paths are per-rule
+Missing or unsafe paths, a missing context and a parameter without a value are per-rule
 ERRORs without fallback. Files and directories are allowed as arguments; OS
 executable lookup/permissions still apply. Plans validate syntax without
 requiring existence. Existing filesystem race and trust boundaries remain;
 references provide no sandbox.
 
-For file entrypoints, a filename such as index.sh resolves in the declaring
-Rule directory. A relative path containing `/`, such as scripts/check.py, resolves
-from the rule-source root: the consumer repository root for local Rules and the
-imported repository root for Git Rules, regardless of the selected Rule Set path.
-Resolution depends only on syntax; there is no fallback search. Paths use `/`;
-empty paths, absolute paths, backslashes, drive prefixes, parent traversal,
-symlinks in any component and nonregular files are rejected, including for disabled
-Rules. Missing entrypoints remain per-rule execution ERRORs only when selected and
-enabled. Source containment and regular-file checks run again before execution.
-Review prompt resolution is unchanged.
-
-Multiple Rules may use one entrypoint. Each retains its identity, parameters,
-timeout, blocking behavior, execution and result; sharing never deduplicates
-executions. PLEASE_RULE_DIRECTORY always identifies the declaring Rule directory,
-including when the entrypoint lives elsewhere in the source. Cached Git imports
-support the same resolution offline.
-
-[check] accepts optional interpreter and timeout_seconds
-(default 30, 1..=3600). Direct execution uses native OS behavior with no shebang
-parsing or language detection. Explicit interpreters receive the absolute
-entrypoint as one argument; no implicit shell, runtime installation or interpreter
-argument parsing occurs. The consuming root stays the working directory and
-PLEASE_RULE_DIRECTORY identifies bundled resources. Unix scripts may need an
-installed interpreter on Windows; arbitrary scripts are not universally portable.
+Multiple Rules may run one script. Each retains its identity, parameters, timeout,
+blocking behavior, execution and result; sharing never deduplicates executions.
+`@rule/` always identifies the declaring Rule directory, also when the script lives
+elsewhere in the source. Cached Git imports support the same resolution offline.
 
 Exit 0 is PASS, 1 is FAIL and 2 explicitly reports an execution ERROR.
 Unexpected numeric exit codes remain FAIL with an explicit diagnostic; signal
@@ -489,22 +464,21 @@ Rules declare named `parameters` tables with `type` (`string` or `file`),
 `required` (default false) and optional `description`. Local declarations provide
 `value` directly. Imported declarations must omit `value`; consumers supply values
 in that import's `rule_parameters.<rule-id>` table. There is no global value table.
-Names use ASCII letters, digits and underscores, starting with a letter; their
-uppercase forms must be unique within a rule. Values must be strings without NUL.
+Names use ASCII letters, digits and underscores, starting with a letter, and are
+case-sensitive. Values must be strings without NUL.
 
 Before an enabled selected rule executes, validate required values, supported
 types and undeclared supplied names. Optional omissions stay absent. Failures
 produce rule-specific ERROR results identifying the parameter and reason, even
 for nonblocking rules. Disabled rules do not resolve parameters or dependencies.
 File values must be repository-root-relative paths to existing regular files;
-absolute paths, parent traversal and symlink traversal are rejected. Deliver
-canonical absolute paths for files and unchanged strings through environment
-variables named `PLEASE_PARAM_` plus the uppercase parameter name. Clear inherited
-variables with this prefix so omitted/undeclared values cannot leak into rules.
-Checks and provider subprocesses use the same delivery mechanism. Different review
-environments use separate calls; prepared context remains shared. Review prompts
-and filename-only Check entrypoints continue resolving within their own
-directories; shared Check paths follow CHK-001.
+absolute paths, parent traversal and symlink traversal are rejected. A check receives a
+value only through `@param/<name>` (canonical absolute path for files, unchanged string
+otherwise); a reference to an undeclared parameter is a configuration error and a
+reference to an omitted optional parameter is an execution ERROR. Adapters receive all
+resolved values as `rule_parameters` in their request. Different review parameter values
+use separate calls; prepared context remains shared. Review prompts continue resolving
+within their own directories; shared Check paths follow CHK-001.
 
 ## REV-001: Reviews and provider isolation
 
@@ -626,13 +600,13 @@ A working-tree PASS does not certify staged/pushed commits or deployed artifacts
 
 Each run that executes rules writes one JSON context document, specified by
 `docs/schemas/context.schema.json` (`schema_version` 1), and supplies its absolute path to
-checks and review adapters in `PLEASE_CONTEXT`. Offline plans and blocked plans (for example an incomplete snapshot) write none. The document holds
+checks as the `@context` argument and to review adapters as `context_file` in their request. Offline plans and blocked plans (for example an incomplete snapshot) write none. The document holds
 Git facts only, never file contents: `repository`, `head` (commit, branch, message) and
 `workspace` (clean flag, staged, unstaged, untracked and conflicted paths with statuses, and
 staged and unstaged patches) are always present. `commit_message` exists at commit-msg, `push`
 (per-reference kind, new commits, changed files, patch and whether the tip is HEAD) at pre-push,
-and `changes` (net changes since the resolved `PLEASE_CHANGE_BASE`) when that variable names an
-available commit; an unusable value omits the section and never fails the run.
+and `changes` (net changes since the resolved `PLEASE_CHANGE_BASE`, an input of the cli that is
+consumed and never forwarded) when that variable names an available commit; an unusable value omits the section and never fails the run.
 Absent sections mean not applicable, never empty.
 
 Facts are computed once per run with read-only Git commands and described without sampling:
@@ -794,11 +768,10 @@ instructs the user to run `please sync` manually. Nested execution from checks
 is rejected using a repository-scoped guard, including checks started by direct
 execution of Git-backed, check and custom points. The guard also blocks nested
 reconciliation in that repository.
-Checks receive `PLEASE_GIT_HOOK`,
-`PLEASE_GIT_HOOK_ARG_COUNT` and one-based `PLEASE_GIT_HOOK_ARG_1`, etc.; a dedicated
-checker script reads these without shell expansion by Please Behave. `commit-msg` supplies
-the message file in argument 1, unlike pre-commit; no commit policy is hardcoded.
-Pre-push stdin is not forwarded to checks; its reference list is available through CTX-001. All execution points still verify working files,
+Hook arguments are not exported. `commit-msg` supplies the message file through CTX-001; no commit
+policy is hardcoded.
+Pre-push stdin is read by Please Behave and not forwarded to checks; its reference list is
+available through CTX-001. All execution points still verify working files,
 not the exact staged index or pushed commit.
 
 ## ARC-001: Shared configuration contract
@@ -845,7 +818,7 @@ Public documentation explains supported behavior; proposals remain in the roadma
 | PARAM-001 | `tests/parameters.rs::local_parameters_deliver_strings_and_consumer_files_without_changing_rule_resources` |
 | CFG-001 | `tests/configuration.rs::strict_configuration_and_implementation_validation` |
 | SEL-001 | `tests/configuration.rs::checks_only_requires_complete_selection` |
-| CHK-001 | `tests/configuration.rs::direct_and_interpreter_execution_keep_consumer_and_resources` |
+| CHK-001 | `tests/configuration.rs::command_representations_execute_equivalently` |
 | REV-001 | `tests/cli_providers.rs::stdin_results_and_provider_isolation` |
 | PREP-001 | `tests/configuration.rs::prepared_input_is_shared_without_rereading_resources` |
 | OUT-001 | `tests/review_contract.rs::review_contract_enforces_boundaries_and_semantic_evidence_locally` |
@@ -856,8 +829,8 @@ Public documentation explains supported behavior; proposals remain in the roadma
 
 ## Runtime namespace isolation
 
-Product-owned runtime variables use `PLEASE_*`, including parameter, Rule
-directory, execution-point, change-base, hook context and recursion guard.
+Rules receive no `PLEASE_*` variables and every inherited one is removed. The cli reads
+the input `PLEASE_CHANGE_BASE` and keeps one reserved internal recursion-guard variable.
 Hannes variables are not aliases or fallback inputs.
 Third-party credentials and standard tool variables keep their upstream names.
 The product uses `.please/` and its own cache and managed-hook markers; it never

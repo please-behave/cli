@@ -1,11 +1,7 @@
 //! Rule declarations and import-local values, resolved only for active execution.
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    path::Path,
-    process::Command,
-};
+use std::{collections::BTreeMap, path::Path};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -25,6 +21,7 @@ pub struct Binding {
     pub imported: bool,
 }
 
+/// Resolved parameter values by declared name; rules receive them through `@param/<name>`.
 pub type Environment = BTreeMap<String, String>;
 
 impl Binding {
@@ -40,7 +37,6 @@ impl Binding {
     }
     pub fn resolve(&self, root: &Path, rule: &str) -> Result<Environment> {
         let mut environment = Environment::new();
-        let mut names = BTreeSet::new();
         for name in self.values.keys() {
             ensure!(
                 self.declarations.contains_key(name),
@@ -52,8 +48,6 @@ impl Binding {
                 ensure!(name.as_bytes().first().is_some_and(u8::is_ascii_alphabetic)
                     && name.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'_'),
                     "use ASCII letters, digits and underscores, starting with a letter");
-                let variable = format!("PLEASE_PARAM_{}", name.to_ascii_uppercase());
-                ensure!(names.insert(variable.clone()), "environment variable name collides after uppercasing");
                 ensure!(matches!(declaration.kind.as_str(), "string" | "file"),
                     "unsupported type {:?}; use string or file", declaration.kind);
                 ensure!(!self.imported || declaration.value.is_none(),
@@ -71,20 +65,10 @@ impl Binding {
                     ensure!(path.is_file(), "file must be a regular file");
                     path.canonicalize()?.to_str().context("file path must be UTF-8")?.to_owned()
                 } else { value.to_owned() };
-                environment.insert(variable, value);
+                environment.insert(name.clone(), value);
                 Ok(())
             })().with_context(|| format!("Rule {rule}: parameter '{name}'"))?;
         }
         Ok(environment)
     }
-}
-
-/// Omitted or undeclared parameters must not be supplied by the parent process.
-pub fn configure(command: &mut Command, environment: &Environment) {
-    for (name, _) in std::env::vars_os() {
-        if name.to_string_lossy().starts_with("PLEASE_PARAM_") {
-            command.env_remove(name);
-        }
-    }
-    command.envs(environment);
 }

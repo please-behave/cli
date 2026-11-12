@@ -4,11 +4,11 @@ use please::{
     provider::{Provider, Request},
     report::{self, Status},
 };
-use std::{fs, path::Path, process::Command, sync::Mutex};
+use std::{fs, path::Path, sync::Mutex};
 use support::write;
 
 fn git(root: &Path, args: &[&str]) -> String {
-    let output = Command::new("git")
+    let output = support::command("git")
         .current_dir(root)
         .args([
             "-c",

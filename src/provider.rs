@@ -185,11 +185,7 @@ fn execute(request: &Request<'_>) -> Result<Response> {
     command
         .args(&runtime.args)
         .current_dir(&request.project.root);
-    crate::parameters::configure(&mut command, request.parameters);
-    command.env("PLEASE_EXECUTION_POINT", request.execution_point);
-    if let Some(context) = &request.project.context {
-        command.env("PLEASE_CONTEXT", context);
-    }
+    crate::environment::scrub(&mut command);
     requirements(&command, &request.project.root, runtime)?;
     let ids = request
         .reviews
@@ -210,7 +206,7 @@ fn execute(request: &Request<'_>) -> Result<Response> {
     let input = serde_json::to_vec(&json!({
         "protocol_version":1, "execution_point":request.execution_point,
         "head":if request.input.commit_header.is_some() { None } else { request.snapshot.head.as_deref() }, "input":request.input,
-        "parameter_environment":request.parameters, "reviews":reviews,
+        "context_file":request.project.context, "rule_parameters":request.parameters, "reviews":reviews,
         "prompt":prompt(request)?, "response_schema":if request.input.commit_header.is_some() { crate::review_contract::header_schema(&ids) } else { schema(&ids) }
     }))?;
     let bytes = Arc::new(Mutex::new(Vec::new()));
@@ -315,7 +311,7 @@ pub fn prompt(request: &Request<'_>) -> Result<String> {
         .map(|review| {
             json!({
                 "id":review.id, "criteria":review.text, "entry_files":review.files,
-                "parameter_environment":request.parameters,
+                "rule_parameters":request.parameters,
                 "context_files":review.context.iter().map(|source| &source.path).collect::<Vec<_>>()
             })
         })
