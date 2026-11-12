@@ -476,13 +476,13 @@ shell activation or equivalent PATH setup; `mise install` alone does not activat
 tools. The separately installed governor must still be on PATH.
 
 Install the pre-commit, commit-msg and pre-push hooks explicitly with
-`mise hooks:install`. Commit and push then invoke Please Behave automatically: pre-commit
+`please sync --yes`. Commit and push then invoke Please Behave automatically: pre-commit
 checks formatting and documentation, and pre-push runs the complete local suite.
 Agents rely on this feedback and must not manually run checks, tests, linters or
 builds. They may format source and inspect saved results with
 `please status --details`.
 
-For developers who want an explicit manual run, `mise check` delegates to the
+For developers who want an explicit manual run, `please run --at pre-push` runs the
 pinned published governor at the `pre-push` execution point:
 formatting, documentation validation, Clippy, Rust tests, Python helper tests,
 JavaScript release tests, workflow validation, minimum Rust, an optimized

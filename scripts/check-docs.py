@@ -3,6 +3,7 @@
 from pathlib import Path
 import re
 import subprocess
+import sys
 from urllib.parse import unquote
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -58,4 +59,11 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except AssertionError as error:  # A verdict about the documentation.
+        print(f"FAIL: {error}", file=sys.stderr)
+        sys.exit(1)
+    except Exception as error:  # A crash is a technical failure, never a FAIL verdict.
+        print(f"ERROR: {type(error).__name__}: {error}", file=sys.stderr)
+        sys.exit(2)

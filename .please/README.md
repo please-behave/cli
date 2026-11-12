@@ -43,8 +43,7 @@ checks remain permitted by AGENTS.md.
 Use `--fail-fast` only for targeted diagnosis when the first blocker is enough;
 normal hooks, CI and release validation collect independent findings. Configuration
 explicitly keeps running checks alive after fail-fast triggers.
-The manual `mise check` task remains available to developers and delegates to
-Please Behave at pre-push.
+Developers can run the gate manually with `please run --at pre-push`.
 
 See [repository self-integration](../docs/self-governance.md) for setup, required
 coverage, reports and CI. The general [configuration reference](../docs/configuration.md)

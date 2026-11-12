@@ -789,8 +789,8 @@ match the configuration reference. Its examples must validate and plan
 offline. Local links/anchors and specification acceptance references must resolve.
 Repository Git hooks run link/specification checks at pre-commit and pre-push;
 pre-push also runs the Rust documentation acceptance tests.
-CI runs them through check. The manual `mise docs:check` and `mise check` tasks
-remain available to developers; agents rely on Git hooks. Automated checks
+CI runs them through check. The manual `mise docs:check` task and
+`please run --at pre-push` remain available to developers; agents rely on Git hooks. Automated checks
 complement editorial review; they do not prove prose understandable.
 
 ## Acceptance coverage and change process

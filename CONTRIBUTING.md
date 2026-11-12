@@ -12,7 +12,7 @@ See the [README](README.md#build-locally) for tooling. With mise:
 mise trust
 mise install
 mise run ci:prepare
-mise hooks:install
+please sync --yes
 ```
 
 Development is governed by the separately installed Please Behave release pinned
@@ -24,9 +24,9 @@ explicitly before running pre-commit and pre-push, which remain offline.
 
 Commit and push to receive validation feedback from the installed Please Behave hooks.
 Agents must not manually run comprehensive final validation, including
-`mise run check` and `mise docs:check`. Source formatting and targeted diagnosis
+`please run --at pre-push` and `mise docs:check`. Source formatting and targeted diagnosis
 are allowed as described in AGENTS.md. Developers
-can use `mise run check` for an explicit manual run of Please Behave at pre-push.
+can use `please run --at pre-push` for an explicit manual run.
 
 Product behavior is tested only through `tests/*.rs`; tests of repository tooling live
 next to the scripts (`scripts/test_*.py`, `scripts/test-*.mjs`) and never test the product.
@@ -85,8 +85,7 @@ for combined changes and reverts.
 | `docs`, `tests` | Documentation and test infrastructure |
 
 ```sh
-sh scripts/setup-git-hooks.sh
-# Or: mise run hooks:install
+please sync --yes
 ```
 
 The Please Behave governor manages the three hooks through `please sync` and

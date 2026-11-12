@@ -20,7 +20,7 @@ Prepare tools and dependencies explicitly:
 mise trust
 mise install
 mise run ci:prepare
-mise hooks:install
+please sync --yes
 ```
 
 The setup task delegates hook management to please sync. If an old clone still
@@ -116,19 +116,18 @@ For manual developer use:
 ```sh
 please run --at pre-commit
 please run --at pre-push --plan
-PLEASE_CHANGE_BASE="<baseline-commit>" python3 scripts/run-execution-point.py check --reviews
+PLEASE_CHANGE_BASE="<baseline-commit>" please run --at check --reviews
 please status --details
 ```
 
-For explicit manual use, mise check delegates through the execution wrapper to
-Please Behave at pre-push. Individual format, lint, test, smoke and docs:check tasks
+For explicit manual use, `please run --at pre-push` runs the full local gate. Individual format, lint, test, smoke and docs:check tasks
 remain available to developers. Format explicitly edits source; verification
 only checks formatting.
 
 ## Agent workflow
 
 Agents receive final validation feedback from Git commit and push. They must not
-manually run comprehensive validation as a final quality gate, including mise check,
+manually run comprehensive validation as a final quality gate, including `please run --at pre-push`,
 mise docs:check, full Cargo/npm suites or direct Please Behave execution of a full
 point. Source formatting and targeted diagnostic checks are permitted by AGENTS.md;
 use `--fail-fast` only when finding the first blocker is sufficient. Normal hooks, CI and release

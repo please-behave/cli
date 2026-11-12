@@ -24,10 +24,6 @@ description = "Start the GitHub Release workflow for remote main; --install wait
 usage = 'flag "--install" help="Wait for success, pin the new version in mise.toml and run mise install"'
 run = 'python3 scripts/release.py ${usage_install:+--install}'
 
-[tasks."hooks:install"]
-description = "Install the explicit pre-commit, commit-msg and pre-push hooks"
-run = "sh scripts/setup-git-hooks.sh"
-
 [tasks.format]
 description = "Format Rust source"
 run = "cargo fmt --all"
@@ -53,10 +49,6 @@ run_windows = "python scripts/smoke.py target/release/please.exe"
 [tasks."docs:check"]
 description = "Check documentation links, configuration reference and executable examples"
 run = ["python3 scripts/check-docs.py", "cargo test --locked --test documentation"]
-
-[tasks.check]
-description = "Manually run the Please Behave pre-push gate (agents use Git hooks)"
-run = "python3 scripts/run-execution-point.py pre-push"
 
 [tasks."ci:prepare"]
 alias = "setup"

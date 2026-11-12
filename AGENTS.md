@@ -81,7 +81,7 @@ Do not migrate early or close an issue while required stages remain.
 ## Validation
 
 - Git hooks are the authoritative validation gates. Install the repository's
-  own hooks with `sh scripts/setup-git-hooks.sh` when needed; this is explicitly
+  own hooks with `please sync --yes` when needed; this is explicitly
   authorized.
 - Individual tests and targeted checks may be run for diagnosis during
   development. Do not manually run the complete test suite, linters, builds
