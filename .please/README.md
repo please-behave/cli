@@ -1,9 +1,9 @@
 # Please Behave repository rules
 
 This repository uses unversioned deterministic Rules with three pinned external
-Rule Sets: repository conventions, security and open-source software. A conditional AGENTS.md Review runs only at check through a named
-Gemini REST adapter. Commit-msg also runs an imported advisory header-only
-wording Review through the independently imported Gemini Flash-Lite provider.
+Rule Sets: repository conventions, security and open-source software. The imported repository-conventions set also runs two advisory Reviews through the
+independently imported Gemini Flash-Lite provider: a header-only wording Review at
+commit-msg and a conditional AGENTS.md quality Review that runs only at check.
 Pre-commit, pre-push and release points select checks only.
 
 `checks/*/rule.toml` defines local Rules using string commands for installed
@@ -35,8 +35,7 @@ please status --details
 ```
 
 The exact published governor pin is recorded in mise.toml, shared by local
-hooks and GitHub Actions. The AGENTS.md review excludes the Git diff and its
-Gemini REST provider delegates deadlines to the adapter.
+hooks and GitHub Actions. The AGENTS.md review is triggered only by changes to AGENTS.md.
 Do not use a candidate built from this checkout as the governor.
 Agents rely on pre-commit and pre-push for final validation; targeted diagnostic
 checks remain permitted by AGENTS.md.
@@ -50,8 +49,8 @@ coverage, reports and CI. The general [configuration reference](../docs/configur
 describes the schema. Reports remain ignored.
 
 The imported blocking agents-size Check limits AGENTS.md to 1500 approximate tokens.
-The [quality-review example](../docs/agents-quality-review.md) explains counting,
-full-document context, the rubric, Gemini setup, triggers and CI summaries.
+The imported `agents-quality` Review, documented with the Rule Set, evaluates a changed
+AGENTS.md at check.
 
 ## Release workflow ownership
 

@@ -454,10 +454,9 @@ See [repository self-integration](docs/self-governance.md) for setup and coverag
 The `rulesets/multi-point/open-source-software` Rule Set is pinned to a full Git commit and checks
 LICENSE against its permitted reference texts at `pre-push` and `check`.
 
-The [AGENTS.md quality-review example](docs/agents-quality-review.md) combines a
-blocking size limit with a conditional, non-blocking Gemini review at `check`.
-It receives the complete document and rubric; provider errors remain visible in reports.
-Git hooks need no Gemini credentials.
+The imported repository-conventions Rule Set combines a blocking AGENTS.md size limit with a
+conditional, non-blocking Gemini quality review at `check`; provider errors remain visible
+in reports and Git hooks need no Gemini credentials.
 
 This repository's deterministic quality checks run through an installed published
 Please Behave release. Run `mise install` for the configured rule tools (including
