@@ -396,8 +396,11 @@ of the declaring Rule, even when its entrypoint is shared, for bundled resources
 such as a scanner configuration or helper.
 For example, Python can read `Path(os.environ["PLEASE_RULE_DIRECTORY"]) / "config.json"`.
 
-Exit **0 = PASS**, **1 = FAIL**, **2 = ERROR**. Unexpected numeric codes produce
-FAIL with an explicit diagnostic. Signal termination, missing entrypoints,
+Exit **0 = PASS**, **1 = FAIL**, **2 = ERROR**. FAIL is a verdict about the checked
+subject; a script's own technical failure must exit 2. Interpreters report an uncaught
+exception with their default code (Python traceback 1, `cargo` 101), which reads as
+FAIL, so wrap the entry point in a catch-all that exits 2. Unexpected numeric codes
+produce FAIL with an explicit diagnostic. Signal termination, missing entrypoints,
 process-launch, capture and timeout failures are ERROR. Wrap external tools to
 translate their own exit-code contracts: a scanner's exit 2 may mean a violation,
 so map that to 1 and map actual execution problems to 2. Please Behave does not parse
@@ -410,6 +413,16 @@ Resource confinement is not process sandboxing. Checks execute with Please Behav
 permissions and can access files, credentials and the network. Only import
 executable checks from trusted sources. Changes to evaluated files during
 execution prevent PASS.
+
+### Result statuses
+
+| Status | Meaning | Assigned by | Effect on success |
+| --- | --- | --- | --- |
+| `PASS` | The rule ran and its expectation holds. | Check exit 0 or review verdict | None |
+| `FAIL` | The rule ran and found a violation. | Check exit 1 or review verdict | Blocks only when the rule is blocking |
+| `ERROR` | The rule could not complete or produce a trustworthy result, such as a crash, missing tool, timeout or invalid provider response. | Check exit 2 or Please Behave | A check ERROR always blocks; a review ERROR blocks only when the review is blocking |
+| `NOT_RUN` | The selected rule was not executed because of a failed prerequisite, fail-fast or check-phase gating. | Please Behave | A dependency skip inherits the originating outcome; fail-fast and gating skips follow the blocking failure |
+| `CANCELLED` | A running check was interrupted by fail-fast termination. | Please Behave | Blocks success |
 
 ### Configure the AI provider
 
