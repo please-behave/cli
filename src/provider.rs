@@ -118,12 +118,9 @@ fn executable_available(command: &Command, root: &Path, executable: &str) -> boo
     child_env(command, std::ffi::OsStr::new("PATH")).is_some_and(|paths| {
         std::env::split_paths(&paths).any(|directory| {
             let candidate = directory.join(path);
-            if executable_file(candidate.clone()) {
-                return true;
-            }
             #[cfg(windows)]
-            {
-                return child_env(command, std::ffi::OsStr::new("PATHEXT"))
+            let with_extension = || {
+                child_env(command, std::ffi::OsStr::new("PATHEXT"))
                     .unwrap_or_else(|| ".COM;.EXE;.BAT;.CMD".into())
                     .to_string_lossy()
                     .split(';')
@@ -133,12 +130,11 @@ fn executable_available(command: &Command, root: &Path, executable: &str) -> boo
                             candidate.display(),
                             extension
                         )))
-                    });
-            }
+                    })
+            };
             #[cfg(not(windows))]
-            {
-                false
-            }
+            let with_extension = || false;
+            executable_file(candidate.clone()) || with_extension()
         })
     })
 }
