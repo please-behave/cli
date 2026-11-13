@@ -15,14 +15,11 @@ scope:
   - >-
     Holds the banner and help texts that the executable shows.
 out_of_scope:
-  - description: >-
-      Formatting results, progress, plans and status views.
+  - description: Formatting results, progress, plans and status views.
     owner: COMP-0015
-  - description: >-
-      Executing rules and assembling run reports.
+  - description: Executing rules and assembling run reports.
     owner: COMP-0002
-  - description: >-
-      Writing the initial configuration.
+  - description: Writing the initial configuration.
     owner: COMP-0005
 must_not:
   - >-

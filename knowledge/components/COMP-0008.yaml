@@ -12,11 +12,9 @@ scope:
   - >-
     Removes every inherited PLEASE_ variable from rule processes.
 out_of_scope:
-  - description: >-
-      Deciding what to run and how to interpret an exit status.
+  - description: Deciding what to run and how to interpret an exit status.
     owner: COMP-0007
-  - description: >-
-      Assembling commands from configuration.
+  - description: Assembling commands from configuration.
     owner: COMP-0003
 must_not:
   - >-

@@ -13,14 +13,11 @@ scope:
     Applies color, fits rows to the terminal width and sanitizes untrusted
     text.
 out_of_scope:
-  - description: >-
-      Computing outcomes and results.
+  - description: Computing outcomes and results.
     owner: COMP-0014
-  - description: >-
-      Choosing exit codes.
+  - description: Choosing exit codes.
     owner: COMP-0001
-  - description: >-
-      Persisting reports.
+  - description: Persisting reports.
     owner: COMP-0014
 must_not:
   - >-

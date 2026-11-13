@@ -23,14 +23,11 @@ scope:
   - >-
     Holds the shared defaults and bounds of the public contract.
 out_of_scope:
-  - description: >-
-      Fetching and caching external rule sets.
+  - description: Fetching and caching external rule sets.
     owner: COMP-0004
-  - description: >-
-      Deciding which rules apply at an execution point.
+  - description: Deciding which rules apply at an execution point.
     owner: COMP-0006
-  - description: >-
-      Writing the initial configuration.
+  - description: Writing the initial configuration.
     owner: COMP-0005
 must_not:
   - >-

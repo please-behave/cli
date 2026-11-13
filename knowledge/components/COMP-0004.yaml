@@ -14,11 +14,9 @@ scope:
     Loads imported definitions in isolation and combines them with the local
     configuration into one project.
 out_of_scope:
-  - description: >-
-      What imported rules mean and how they are validated.
+  - description: What imported rules mean and how they are validated.
     owner: COMP-0003
-  - description: >-
-      Executing imported rules.
+  - description: Executing imported rules.
     owner: COMP-0002
 must_not:
   - >-

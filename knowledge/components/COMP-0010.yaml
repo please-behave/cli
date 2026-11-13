@@ -13,13 +13,10 @@ scope:
     Establishes that the executable and required environment of a selected
     adapter are available before execution.
 out_of_scope:
-  - description: >-
-      Choosing models, credentials or tool permissions; adapters decide.
-  - description: >-
-      Judging the meaning of review verdicts beyond the wire contract.
+  - description: Choosing models, credentials or tool permissions; adapters decide.
+  - description: Judging the meaning of review verdicts beyond the wire contract.
     owner: COMP-0009
-  - description: >-
-      Supplying any provider implementation.
+  - description: Supplying any provider implementation.
 must_not:
   - >-
     Contain provider-specific or model-specific logic.

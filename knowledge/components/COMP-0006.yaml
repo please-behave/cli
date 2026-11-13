@@ -18,17 +18,13 @@ scope:
   - >-
     Validates check dependencies within the effective selection.
 out_of_scope:
-  - description: >-
-      Running checks.
+  - description: Running checks.
     owner: COMP-0007
-  - description: >-
-      Running reviews.
+  - description: Running reviews.
     owner: COMP-0009
-  - description: >-
-      Loading and validating configuration documents.
+  - description: Loading and validating configuration documents.
     owner: COMP-0003
-  - description: >-
-      Rendering a plan for people.
+  - description: Rendering a plan for people.
     owner: COMP-0015
 must_not:
   - >-

@@ -18,17 +18,13 @@ scope:
   - >-
     Exposes the library entry points that run a verification.
 out_of_scope:
-  - description: >-
-      Running a single check.
+  - description: Running a single check.
     owner: COMP-0007
-  - description: >-
-      Preparing and evaluating a review.
+  - description: Preparing and evaluating a review.
     owner: COMP-0009
-  - description: >-
-      Choosing which rules run.
+  - description: Choosing which rules run.
     owner: COMP-0006
-  - description: >-
-      Drawing progress for people.
+  - description: Drawing progress for people.
     owner: COMP-0015
 must_not:
   - >-

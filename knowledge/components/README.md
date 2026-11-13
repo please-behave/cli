@@ -62,6 +62,10 @@ stale within days.
 | `depends_on` | Components whose code this one uses. It must equal the dependencies in the source, so it is a record, not a wish. |
 | `decisions`, `requirements` | Constraints and obligations that apply to the whole component. Link only what shapes it; a decision that touches every component belongs on none. |
 
+Write each `out_of_scope` description as a single-line plain value. A folded
+block followed by `owner` makes syntax highlighting, GitHub's included, show the
+owner as part of the text instead of as a property of the entry.
+
 Keep statements short and testable by reading code. A prohibition no reviewer
 could ever see violated does not belong here.
 [COMP-0007](COMP-0007.yaml) is a representative example.

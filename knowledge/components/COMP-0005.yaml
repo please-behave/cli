@@ -12,13 +12,10 @@ scope:
   - >-
     Fails without changing anything when the .please directory already exists.
 out_of_scope:
-  - description: >-
-      Installing Git hooks.
+  - description: Installing Git hooks.
     owner: COMP-0013
-  - description: >-
-      Migrating or reconciling an existing configuration.
-  - description: >-
-      Configuring a provider or adapter.
+  - description: Migrating or reconciling an existing configuration.
+  - description: Configuring a provider or adapter.
 must_not:
   - >-
     Modify or overwrite anything inside an existing .please directory.

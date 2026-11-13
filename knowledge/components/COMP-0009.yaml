@@ -19,14 +19,11 @@ scope:
   - >-
     Sums token usage per actual model call.
 out_of_scope:
-  - description: >-
-      Talking to the adapter process.
+  - description: Talking to the adapter process.
     owner: COMP-0010
-  - description: >-
-      Deciding which reviews are selected or triggered.
+  - description: Deciding which reviews are selected or triggered.
     owner: COMP-0006
-  - description: >-
-      Deciding whether a review result blocks success.
+  - description: Deciding whether a review result blocks success.
     owner: COMP-0014
 must_not:
   - >-

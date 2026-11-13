@@ -20,14 +20,11 @@ scope:
     Stops scheduling further checks after the first blocking failure when
     fail-fast is requested.
 out_of_scope:
-  - description: >-
-      Selecting which checks are part of a run.
+  - description: Selecting which checks are part of a run.
     owner: COMP-0006
-  - description: >-
-      Starting and supervising operating-system processes.
+  - description: Starting and supervising operating-system processes.
     owner: COMP-0008
-  - description: >-
-      AI reviews.
+  - description: AI reviews.
     owner: COMP-0009
 must_not:
   - >-

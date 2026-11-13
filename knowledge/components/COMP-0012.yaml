@@ -13,14 +13,11 @@ scope:
     Writes patches as separate owner-only files, flags truncated sections and
     keeps only the newest completed runs.
 out_of_scope:
-  - description: >-
-      Handing the context to checks and adapters.
+  - description: Handing the context to checks and adapters.
     owner: COMP-0002
-  - description: >-
-      Validating a Git hook invocation.
+  - description: Validating a Git hook invocation.
     owner: COMP-0013
-  - description: >-
-      Preparing review evidence.
+  - description: Preparing review evidence.
     owner: COMP-0009
 must_not:
   - >-

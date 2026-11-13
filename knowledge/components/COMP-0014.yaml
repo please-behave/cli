@@ -14,14 +14,11 @@ scope:
     Writes the saved report atomically and reads it back, rejecting corrupt,
     inconsistent or mismatched reports.
 out_of_scope:
-  - description: >-
-      Presenting reports for people.
+  - description: Presenting reports for people.
     owner: COMP-0015
-  - description: >-
-      Deciding whether saved results are still current.
+  - description: Deciding whether saved results are still current.
     owner: COMP-0011
-  - description: >-
-      Producing the results.
+  - description: Producing the results.
     owner: COMP-0002
 must_not:
   - >-

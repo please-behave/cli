@@ -13,11 +13,9 @@ scope:
   - >-
     Guards against recursive hook invocation.
 out_of_scope:
-  - description: >-
-      Running the rules that a hook triggers.
+  - description: Running the rules that a hook triggers.
     owner: COMP-0002
-  - description: >-
-      Content of hook files outside its managed sections.
+  - description: Content of hook files outside its managed sections.
 must_not:
   - >-
     Modify or remove content outside its own managed sections.

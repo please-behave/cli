@@ -18,14 +18,11 @@ scope:
     Enforces the snapshot bounds and reports incomplete coverage instead of
     hiding it.
 out_of_scope:
-  - description: >-
-      Deciding which configuration files are governance inputs.
+  - description: Deciding which configuration files are governance inputs.
     owner: COMP-0003
-  - description: >-
-      Deciding what incomplete coverage means for a run outcome.
+  - description: Deciding what incomplete coverage means for a run outcome.
     owner: COMP-0002
-  - description: >-
-      Describing Git state for rules.
+  - description: Describing Git state for rules.
     owner: COMP-0012
 must_not:
   - >-
