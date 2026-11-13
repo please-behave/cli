@@ -1,12 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Requirement",
-  "description": "Guiding question: What must Please demonstrably satisfy?\n\nA requirement defines a binding, unambiguous, and verifiable condition concerning the behavior or properties of Please. Requirements describe the agreed product specification independently of implementation progress and validation results. A requirement is binding unless explicitly marked as obsolete.",
+  "description": "Guiding question: What must Please demonstrably satisfy?\n\nA requirement defines a binding, unambiguous, and verifiable condition concerning the behavior or properties of Please. Requirements describe the agreed product specification independently of implementation progress and validation results. A requirement is binding unless explicitly marked as obsolete. Requirements never name components, tests or code; components and tests name the requirements they implement or verify.",
   "type": "object",
   "additionalProperties": false,
   "required": [
     "id",
     "name",
+    "area",
     "description"
   ],
   "properties": {
@@ -22,31 +23,36 @@
       "description": "Short, descriptive name of the requirement.",
       "examples": ["Immutable Git References"]
     },
+    "area": {
+      "type": "string",
+      "enum": [
+        "setup",
+        "configuration",
+        "rules",
+        "checks",
+        "reviews",
+        "integrity",
+        "reporting",
+        "distribution"
+      ],
+      "description": "The part of the product the requirement belongs to, exactly one.\n\nsetup: initialization, synchronization and Git hook management.\nconfiguration: configuration files, validation, parameters and limits.\nrules: rule definitions, rule sets, execution points, external rule sets, selection and plans.\nchecks: deterministic checks, concurrency, dependencies, fail-fast and scheduling.\nreviews: AI reviews, adapters, triggers, review input, commit-header reviews and review results.\nintegrity: snapshots, stability, freshness and run context.\nreporting: reports, status, progress, terminal output and exit codes.\ndistribution: release artifacts, versions and installation."
+    },
     "description": {
       "type": "string",
       "minLength": 1,
-      "description": "Defines a binding, unambiguous, and verifiable condition that Please must satisfy. It describes required behavior or properties without prescribing unnecessary implementation details.",
+      "description": "Defines a binding, unambiguous, and verifiable condition that Please must satisfy, as one statement. It describes required behavior or properties without prescribing unnecessary implementation details.",
       "examples": [
         "Please must support importing external rule sets using immutable Git commit references."
       ]
     },
-    "capabilities": {
+    "decisions": {
       "type": "array",
       "uniqueItems": true,
       "items": {
         "type": "string",
-        "pattern": "^CAP-[0-9]{4}$"
+        "pattern": "^DEC-[0-9]{4}$"
       },
-      "description": "Capabilities directly related to this requirement."
-    },
-    "use_cases": {
-      "type": "array",
-      "uniqueItems": true,
-      "items": {
-        "type": "string",
-        "pattern": "^UC-[0-9]{4}$"
-      },
-      "description": "Use cases directly related to this requirement."
+      "description": "Decisions that shaped this requirement. Omit the property when no significant choice stands behind the requirement."
     },
     "obsolete": {
       "type": "boolean",

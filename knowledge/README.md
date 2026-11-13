@@ -10,7 +10,7 @@ The knowledge model records **agreed-upon product knowledge**, including retaine
 |---|---|
 | **Capability** | Describes what the product is intended to be capable of. |
 | **Use Case** | Describes an actor's goal and interaction with the product. |
-| **Requirement** | Defines a binding, verifiable condition the product must satisfy. |
+| **[Requirement](requirements/README.md)** | Defines a binding, verifiable condition the product must satisfy. |
 | **Decision** | Records an architectural choice and its rationale. |
 | **[Component](components/README.md)** | Assigns every compiled file to one responsibility with explicit boundaries. |
 
