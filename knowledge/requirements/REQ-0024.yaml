@@ -7,4 +7,5 @@ description: >-
   for any other numeric exit status, and as ERROR when a signal terminated it.
 rationale: >-
   The exit status separates a found violation from a technical failure, and
-  the product must never mix the two up.
+  because common tools report violations with their own codes, any other
+  number counts as a violation with a diagnostic.
