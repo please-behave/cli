@@ -55,6 +55,32 @@ An example of the right size: "A check must start only after every check it
 depends on has completed with PASS." A statement that bundles scheduling,
 dependency validation and reporting is too large.
 
+## Writing them well
+
+- **State the condition.** A trigger belongs in the statement: "When fail-fast is
+  requested, ..." rather than a bare "must trigger".
+- **Name the obligation precisely.** Write "must not" or "may not" for
+  prohibitions. A negated "must be invoked" can be read as "nobody has to".
+- **Say it once.** A property that holds for several settings, such as an
+  unchanged plan identity, is one requirement and not one per setting. A
+  statement that follows from another one is dropped.
+- **Keep the original meaning.** Do not tighten or loosen the conditions of the
+  source text. Check quantifiers such as "outside quotes" against "outside
+  single quotes".
+- **Leave out what is not a promise.** Hints for rule authors, known limitations,
+  internal file or field names and implementation steps belong in the
+  documentation.
+- **Refer instead of copying.** Defaults, bounds and character lists stay in the
+  configuration reference.
+- **Mention no earlier forms.** Before 1.0.0 there are no deprecations, so a
+  requirement describes only what exists. Rejecting a retired form is not a
+  requirement.
+- **Cite a decision sparingly.** Only when a significant choice with a real
+  alternative stands behind the requirement.
+- **Do not resolve conflicts silently.** When the source text contradicts a
+  decision or the product vision, ask the owner and record where the code
+  deviates in a GitHub issue.
+
 ## Fields
 
 | Field | What to write |
