@@ -1,0 +1,55 @@
+id: COMP-0009
+name: Review Execution
+purpose: >-
+  Prepares the evidence for AI reviews and evaluates their results through the
+  adapter.
+scope:
+  - >-
+    Prepares provider-neutral review input once for planning and execution,
+    including file selections, diffs and the commit header for header reviews.
+  - >-
+    Collects bounded, deduplicated requirements excerpts with their original
+    line numbers.
+  - >-
+    Batches reviews into adapter calls and runs them through the configured
+    adapter, honoring fail-fast between batches.
+  - >-
+    Defines the review result contract and validates structured verdicts and
+    their evidence.
+  - >-
+    Sums token usage per actual model call.
+out_of_scope:
+  - description: >-
+      Talking to the adapter process.
+    owner: COMP-0010
+  - description: >-
+      Deciding which reviews are selected or triggered.
+    owner: COMP-0006
+  - description: >-
+      Deciding whether a review result blocks success.
+    owner: COMP-0014
+must_not:
+  - >-
+    Contain provider-specific execution or response handling.
+  - >-
+    Restrict what an adapter may read beyond the initially selected context.
+  - >-
+    Read the body of a commit message as evidence for a header review.
+  - >-
+    Accept an unparseable or incomplete response as PASS.
+files:
+  - src/reviews.rs
+  - src/review_input.rs
+  - src/review_context.rs
+  - src/review_contract.rs
+depends_on:
+  - COMP-0003
+  - COMP-0007
+  - COMP-0010
+  - COMP-0011
+  - COMP-0013
+  - COMP-0014
+decisions:
+  - DEC-0007
+  - DEC-0010
+  - DEC-0011

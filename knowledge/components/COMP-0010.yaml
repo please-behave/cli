@@ -1,0 +1,40 @@
+id: COMP-0010
+name: Adapter Protocol
+purpose: >-
+  Defines and speaks the versioned boundary to executable provider adapters.
+scope:
+  - >-
+    Defines the versioned, provider-neutral request an adapter receives and
+    the response it returns.
+  - >-
+    Starts the configured adapter command, passes the request and enforces its
+    timeout and limits.
+  - >-
+    Establishes that the executable and required environment of a selected
+    adapter are available before execution.
+out_of_scope:
+  - description: >-
+      Choosing models, credentials or tool permissions; adapters decide.
+  - description: >-
+      Judging the meaning of review verdicts beyond the wire contract.
+    owner: COMP-0009
+  - description: >-
+      Supplying any provider implementation.
+must_not:
+  - >-
+    Contain provider-specific or model-specific logic.
+  - >-
+    Ship or default to a built-in provider or model.
+  - >-
+    Pass inherited PLEASE_ variables to an adapter.
+files:
+  - src/provider.rs
+depends_on:
+  - COMP-0003
+  - COMP-0008
+  - COMP-0009
+  - COMP-0011
+  - COMP-0014
+decisions:
+  - DEC-0010
+  - DEC-0011

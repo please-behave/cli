@@ -1,0 +1,41 @@
+id: COMP-0014
+name: Reporting
+purpose: >-
+  Models verification results, derives the overall outcome and persists the
+  report.
+scope:
+  - >-
+    Defines result items, statuses, findings, evidence sources, token usage
+    and the report schema.
+  - >-
+    Derives the overall outcome, including the precedence of errors over
+    failures, advisory review errors, fail-fast stops and dependency skips.
+  - >-
+    Writes the saved report atomically and reads it back, rejecting corrupt,
+    inconsistent or mismatched reports.
+out_of_scope:
+  - description: >-
+      Presenting reports for people.
+    owner: COMP-0015
+  - description: >-
+      Deciding whether saved results are still current.
+    owner: COMP-0011
+  - description: >-
+      Producing the results.
+    owner: COMP-0002
+must_not:
+  - >-
+    Treat a provider failure, invalid JSON or incomplete coverage as PASS.
+  - >-
+    Accept reports or plans of other schema versions or of another repository.
+  - >-
+    Present saved reports as tamper-proof attestations.
+files:
+  - src/report.rs
+depends_on:
+  - COMP-0003
+  - COMP-0006
+  - COMP-0008
+  - COMP-0011
+decisions:
+  - DEC-0007

@@ -1,0 +1,58 @@
+id: COMP-0002
+name: Run Orchestration
+purpose: >-
+  Carries one verification from the prepared plan to the saved report.
+scope:
+  - >-
+    Prepares the plan and the working-file snapshot, then executes checks
+    before reviews.
+  - >-
+    Applies invocation-level fail-fast and starts reviews only after the check
+    phase succeeded.
+  - >-
+    Compares working files before provider calls and at the end of the run to
+    detect changes during execution.
+  - >-
+    Emits progress events while rules run, then assembles and saves the final
+    report.
+  - >-
+    Exposes the library entry points that run a verification.
+out_of_scope:
+  - description: >-
+      Running a single check.
+    owner: COMP-0007
+  - description: >-
+      Preparing and evaluating a review.
+    owner: COMP-0009
+  - description: >-
+      Choosing which rules run.
+    owner: COMP-0006
+  - description: >-
+      Drawing progress for people.
+    owner: COMP-0015
+must_not:
+  - >-
+    Start a provider adapter after a blocking check failed, a fail-fast stop
+    or a blocked plan.
+  - >-
+    Treat an unstable or incomplete snapshot as PASS.
+  - >-
+    Write to the terminal directly; progress reaches callers only through the
+    progress callback.
+files:
+  - src/lib.rs
+  - src/run.rs
+depends_on:
+  - COMP-0003
+  - COMP-0006
+  - COMP-0007
+  - COMP-0008
+  - COMP-0009
+  - COMP-0010
+  - COMP-0011
+  - COMP-0012
+  - COMP-0013
+  - COMP-0014
+decisions:
+  - DEC-0013
+  - DEC-0018

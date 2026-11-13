@@ -12,6 +12,9 @@ The knowledge model records **agreed-upon product knowledge**, including retaine
 | **Use Case** | Describes an actor's goal and interaction with the product. |
 | **Requirement** | Defines a binding, verifiable condition the product must satisfy. |
 | **Decision** | Records an architectural choice and its rationale. |
+| **[Component](components/README.md)** | Assigns every compiled file to one responsibility with explicit boundaries. |
+
+Components are the only artifact that describes the current implementation structure rather than the specification. A deterministic rule keeps them complete and true to the code.
 
 Requirements form the **verifiable contract between specification and implementation**. Implementation and test results are evaluated against this contract; they do not determine its validity.
 
@@ -25,4 +28,3 @@ Requirements form the **verifiable contract between specification and implementa
 - Decisions remain authoritative unless superseded by a newer decision referencing them through `supersedes`.
 - Historical artifacts may be retained for traceability. Artifacts withdrawn without replacement may be deleted; Git preserves their history.
 - Schemas define the permitted structure of each artifact.
-- 

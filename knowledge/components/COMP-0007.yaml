@@ -1,0 +1,51 @@
+id: COMP-0007
+name: Check Execution
+purpose: >-
+  Runs deterministic checks and schedules them within dependency and resource
+  limits.
+scope:
+  - >-
+    Runs each selected check as a command and turns its exit status into a
+    result.
+  - >-
+    Runs independent checks concurrently within the concurrency limit and
+    exclusive resource locks.
+  - >-
+    Starts a check only after all its declared dependencies passed and reports
+    dependents of failed prerequisites as not run.
+  - >-
+    Orders runnable checks by estimated remaining duration using local run
+    history.
+  - >-
+    Stops scheduling further checks after the first blocking failure when
+    fail-fast is requested.
+out_of_scope:
+  - description: >-
+      Selecting which checks are part of a run.
+    owner: COMP-0006
+  - description: >-
+      Starting and supervising operating-system processes.
+    owner: COMP-0008
+  - description: >-
+      AI reviews.
+    owner: COMP-0009
+must_not:
+  - >-
+    Treat a failed check or an execution error as non-blocking.
+  - >-
+    Start a check whose prerequisite did not pass.
+  - >-
+    Treat scheduling history as verification evidence or share it between
+    environments.
+files:
+  - src/checks.rs
+  - src/scheduling.rs
+depends_on:
+  - COMP-0003
+  - COMP-0008
+  - COMP-0013
+  - COMP-0014
+decisions:
+  - DEC-0006
+  - DEC-0016
+  - DEC-0017

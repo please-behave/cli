@@ -1,0 +1,36 @@
+id: COMP-0013
+name: Git Hook Integration
+purpose: >-
+  Keeps managed Git hook sections in line with the configuration and validates
+  hook invocations.
+scope:
+  - >-
+    Computes and, after approval, applies the changes that add, update or
+    remove Please Behave's managed sections in Git hook files.
+  - >-
+    Validates a Git hook invocation, including the commit message file and
+    pre-push input, and makes it available to checks and reviews.
+  - >-
+    Guards against recursive hook invocation.
+out_of_scope:
+  - description: >-
+      Running the rules that a hook triggers.
+    owner: COMP-0002
+  - description: >-
+      Content of hook files outside its managed sections.
+must_not:
+  - >-
+    Modify or remove content outside its own managed sections.
+  - >-
+    Overwrite or corrupt a hook that cannot be changed safely; it must fail
+    instead.
+  - >-
+    Change hook files without confirmation.
+files:
+  - src/reconciliation.rs
+depends_on:
+  - COMP-0003
+  - COMP-0008
+  - COMP-0015
+decisions:
+  - DEC-0020

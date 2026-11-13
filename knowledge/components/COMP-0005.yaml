@@ -1,0 +1,36 @@
+id: COMP-0005
+name: Project Initialization
+purpose: >-
+  Creates the initial .please directory exactly once.
+scope:
+  - >-
+    Scaffolds a passing check, a disabled failing check and a disabled review
+    in self-contained directories.
+  - >-
+    Embeds the configuration reference as the README of the new directory;
+    docs/configuration.md is documentation first and compiled input second.
+  - >-
+    Fails without changing anything when the .please directory already exists.
+out_of_scope:
+  - description: >-
+      Installing Git hooks.
+    owner: COMP-0013
+  - description: >-
+      Migrating or reconciling an existing configuration.
+  - description: >-
+      Configuring a provider or adapter.
+must_not:
+  - >-
+    Modify or overwrite anything inside an existing .please directory.
+  - >-
+    Install hooks, stage files or create commits.
+  - >-
+    Supply a provider configuration or an adapter.
+files:
+  - src/init.rs
+  - docs/configuration.md
+depends_on:
+  - COMP-0003
+  - COMP-0011
+decisions:
+  - DEC-0019

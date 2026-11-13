@@ -1,0 +1,42 @@
+id: COMP-0011
+name: Input Snapshot
+purpose: >-
+  Captures and compares the exact working-file state that a verification
+  evaluated.
+scope:
+  - >-
+    Captures a snapshot: Git HEAD plus a sorted manifest of tracked and non-
+    ignored untracked files with hashes, sizes and executable flags, and the
+    local governance inputs.
+  - >-
+    Compares snapshots to establish CURRENT, STALE or UNKNOWN freshness with
+    bounded lists of changed paths.
+  - >-
+    Provides bounded diffs, path lists and working-tree summaries, and
+    requires the working directory to be the Git root.
+  - >-
+    Enforces the snapshot bounds and reports incomplete coverage instead of
+    hiding it.
+out_of_scope:
+  - description: >-
+      Deciding which configuration files are governance inputs.
+    owner: COMP-0003
+  - description: >-
+      Deciding what incomplete coverage means for a run outcome.
+    owner: COMP-0002
+  - description: >-
+      Describing Git state for rules.
+    owner: COMP-0012
+must_not:
+  - >-
+    Create temporary commits, change the index or take optional Git locks.
+  - >-
+    Report coverage as complete when files were skipped, unreadable or beyond
+    the bounds.
+  - >-
+    Invent line deltas; the baseline stores hashes, not prior content.
+files:
+  - src/git_snapshot.rs
+depends_on:
+  - COMP-0003
+  - COMP-0008

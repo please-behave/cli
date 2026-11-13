@@ -1,0 +1,42 @@
+id: COMP-0004
+name: External Sources
+purpose: >-
+  Fetches external rule sets and providers from Git and loads them in
+  isolation.
+scope:
+  - >-
+    Resolves configured Git imports of rule sets and provider definitions at
+    the selected references.
+  - >-
+    Caches fetched sources locally and records the origin of every imported
+    rule.
+  - >-
+    Loads imported definitions in isolation and combines them with the local
+    configuration into one project.
+out_of_scope:
+  - description: >-
+      What imported rules mean and how they are validated.
+    owner: COMP-0003
+  - description: >-
+      Executing imported rules.
+    owner: COMP-0002
+must_not:
+  - >-
+    Let a consumer override properties of an imported rule such as its
+    blocking behavior.
+  - >-
+    Detect available updates or ask for interactive update confirmation.
+  - >-
+    Derive rule namespaces from repository URLs or directory paths.
+files:
+  - src/external.rs
+  - src/external/cache.rs
+depends_on:
+  - COMP-0003
+  - COMP-0006
+  - COMP-0008
+  - COMP-0009
+  - COMP-0011
+decisions:
+  - DEC-0008
+  - DEC-0012

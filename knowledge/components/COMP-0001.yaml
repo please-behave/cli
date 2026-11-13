@@ -1,0 +1,49 @@
+id: COMP-0001
+name: Command Line Interface
+purpose: >-
+  Exposes the five commands as the `please` executable and maps their outcomes
+  to exit codes and output streams.
+scope:
+  - >-
+    Parses arguments and shows help for the commands init, sync, run, status
+    and help.
+  - >-
+    Dispatches each command to the component that does the work and prints the
+    outcome.
+  - >-
+    Maps outcomes to the documented exit codes.
+  - >-
+    Holds the banner and help texts that the executable shows.
+out_of_scope:
+  - description: >-
+      Formatting results, progress, plans and status views.
+    owner: COMP-0015
+  - description: >-
+      Executing rules and assembling run reports.
+    owner: COMP-0002
+  - description: >-
+      Writing the initial configuration.
+    owner: COMP-0005
+must_not:
+  - >-
+    Contain verification logic; commands only call into other components.
+  - >-
+    Create commits, modify the Git index or silently discover another
+    repository root.
+  - >-
+    Offer command aliases or renamed option aliases.
+files:
+  - src/main.rs
+  - src/cli.rs
+  - src/banner.txt
+  - src/help.txt
+depends_on:
+  - COMP-0002
+  - COMP-0003
+  - COMP-0005
+  - COMP-0006
+  - COMP-0010
+  - COMP-0011
+  - COMP-0013
+  - COMP-0014
+  - COMP-0015

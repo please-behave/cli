@@ -1,0 +1,54 @@
+id: COMP-0006
+name: Rule Selection and Planning
+purpose: >-
+  Decides which rules run at an execution point and prepares the offline plan.
+scope:
+  - >-
+    Resolves effective rules from execution points and rule sets, including
+    membership, overrides and disabled rules.
+  - >-
+    Enforces rule identity: names, namespaces and uniqueness within the
+    effective selection.
+  - >-
+    Selects reviews by file-change triggers using the restricted portable glob
+    grammar.
+  - >-
+    Builds execution plans that describe the selected rules, input and context
+    without running anything, shared by preview and execution.
+  - >-
+    Validates check dependencies within the effective selection.
+out_of_scope:
+  - description: >-
+      Running checks.
+    owner: COMP-0007
+  - description: >-
+      Running reviews.
+    owner: COMP-0009
+  - description: >-
+      Loading and validating configuration documents.
+    owner: COMP-0003
+  - description: >-
+      Rendering a plan for people.
+    owner: COMP-0015
+must_not:
+  - >-
+    Execute checks, call providers or write a run context while planning.
+  - >-
+    Let an execution point override the parameters of a rule.
+  - >-
+    Derive a rule namespace implicitly instead of taking the one the rule set
+    defines.
+files:
+  - src/rules.rs
+  - src/review_trigger.rs
+  - src/planner.rs
+depends_on:
+  - COMP-0003
+  - COMP-0004
+  - COMP-0009
+  - COMP-0011
+  - COMP-0013
+decisions:
+  - DEC-0014
+  - DEC-0015
+  - DEC-0016

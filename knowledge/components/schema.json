@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Component",
+  "description": "Guiding question: Where does it live, and what is it responsible for?\n\nA component is a cohesive part of the compiled product with one responsibility. Every file that lands in the compiled executable belongs to exactly one component. Components describe the current structure of the implementation: purpose, boundaries, prohibitions and permitted dependencies. They never describe tests, build scripts or release scripts.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "name",
+    "purpose",
+    "scope",
+    "out_of_scope",
+    "must_not",
+    "files",
+    "depends_on"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^COMP-[0-9]{4}$",
+      "description": "Permanent, unique identifier. IDs must never be reused.",
+      "examples": ["COMP-0001"]
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Short name of the responsibility, not of a file or module.",
+      "examples": ["Check Execution"]
+    },
+    "purpose": {
+      "type": "string",
+      "minLength": 1,
+      "description": "One sentence stating why this component exists.",
+      "examples": ["Runs deterministic checks and reports their outcomes."]
+    },
+    "scope": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "What the component is responsible for. Each entry is one responsibility stated as a complete sentence."
+    },
+    "out_of_scope": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["description"],
+        "properties": {
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Something a reader might expect here that this component deliberately does not do."
+          },
+          "owner": {
+            "type": "string",
+            "pattern": "^COMP-[0-9]{4}$",
+            "description": "The component that is responsible instead. Omit it when no component owns the matter."
+          }
+        }
+      },
+      "description": "Plausible responsibilities that belong elsewhere. They mark the boundary and point to the component that takes over."
+    },
+    "must_not": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Prohibitions for the code of this component that hold even when a task seems to call for them. A prohibition is not a boundary: out_of_scope says whose job something is, must_not says what is forbidden."
+    },
+    "files": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.-]*(/[A-Za-z0-9_][A-Za-z0-9_.-]*)*$"
+      },
+      "description": "Every file of the component as a path relative to the repository root. No wildcards, no directories. A file may appear in exactly one component."
+    },
+    "depends_on": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^COMP-[0-9]{4}$"
+      },
+      "description": "Components whose code this component uses. The list must equal the dependencies found in the source files."
+    },
+    "requirements": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^REQ-[0-9]{4}$"
+      },
+      "description": "Requirements this component implements."
+    },
+    "decisions": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^DEC-[0-9]{4}$"
+      },
+      "description": "Decisions that constrain this component's structure or behavior."
+    }
+  }
+}

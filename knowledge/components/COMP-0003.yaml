@@ -1,0 +1,55 @@
+id: COMP-0003
+name: Project Configuration
+purpose: >-
+  Defines what a valid configuration is and loads and validates it.
+scope:
+  - >-
+    Defines the configuration model: project settings, execution points, rule
+    sets, checks, reviews and providers.
+  - >-
+    Discovers and loads the local configuration documents below .please and
+    rejects unknown fields, duplicate identities and invalid references.
+  - >-
+    Decodes check commands once and resolves their explicit references at
+    execution time.
+  - >-
+    Declares rule parameters and resolves them only for active execution.
+  - >-
+    Enumerates the local files that make up the governance configuration so
+    snapshots can include them.
+  - >-
+    Resolves repository-relative resource paths without following symlinks and
+    reads files within size bounds.
+  - >-
+    Holds the shared defaults and bounds of the public contract.
+out_of_scope:
+  - description: >-
+      Fetching and caching external rule sets.
+    owner: COMP-0004
+  - description: >-
+      Deciding which rules apply at an execution point.
+    owner: COMP-0006
+  - description: >-
+      Writing the initial configuration.
+    owner: COMP-0005
+must_not:
+  - >-
+    Execute checks or provider adapters while loading or validating.
+  - >-
+    Accept unknown fields, recursive TOML discovery or rule resources reached
+    through symlinks.
+  - >-
+    Read a resource without a size bound.
+files:
+  - src/config.rs
+  - src/discovery.rs
+  - src/limits.rs
+  - src/parameters.rs
+  - src/check_command.rs
+depends_on:
+  - COMP-0004
+  - COMP-0006
+  - COMP-0009
+decisions:
+  - DEC-0005
+  - DEC-0015

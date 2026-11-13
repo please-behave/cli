@@ -1,0 +1,32 @@
+id: COMP-0008
+name: Process Execution
+purpose: >-
+  Starts external processes with bounded time, output and environment.
+scope:
+  - >-
+    Runs commands with timeouts, bounded output capture, optional standard
+    input and optional output observation.
+  - >-
+    Terminates the whole process tree on timeout or cancellation after the
+    configured grace period.
+  - >-
+    Removes every inherited PLEASE_ variable from rule processes.
+out_of_scope:
+  - description: >-
+      Deciding what to run and how to interpret an exit status.
+    owner: COMP-0007
+  - description: >-
+      Assembling commands from configuration.
+    owner: COMP-0003
+must_not:
+  - >-
+    Leave child processes running after a timeout or a cancellation.
+  - >-
+    Collect output without a bound.
+  - >-
+    Pass inherited PLEASE_ variables on to rule processes.
+files:
+  - src/process.rs
+  - src/environment.rs
+depends_on:
+  - COMP-0003

@@ -1,0 +1,38 @@
+id: COMP-0012
+name: Run Context
+purpose: >-
+  Writes the content-free Git facts that rules receive for one run.
+scope:
+  - >-
+    Writes one JSON context document per executed run that follows
+    docs/schemas/context.schema.json.
+  - >-
+    Describes repository, HEAD and workspace always, and commit message,
+    pushed references or net changes when the run applies.
+  - >-
+    Writes patches as separate owner-only files, flags truncated sections and
+    keeps only the newest completed runs.
+out_of_scope:
+  - description: >-
+      Handing the context to checks and adapters.
+    owner: COMP-0002
+  - description: >-
+      Validating a Git hook invocation.
+    owner: COMP-0013
+  - description: >-
+      Preparing review evidence.
+    owner: COMP-0009
+must_not:
+  - >-
+    Include file contents; the document holds paths, states and patches only.
+  - >-
+    Cut a section silently; truncated sections are flagged and counted.
+  - >-
+    Change the repository; facts are read with read-only Git commands.
+files:
+  - src/context.rs
+depends_on:
+  - COMP-0003
+  - COMP-0008
+  - COMP-0011
+  - COMP-0013

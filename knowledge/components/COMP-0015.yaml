@@ -1,0 +1,40 @@
+id: COMP-0015
+name: Terminal Presentation
+purpose: >-
+  Renders progress, results, plans, status and help for people at the
+  terminal.
+scope:
+  - >-
+    Renders live progress as redrawn rows or plain lines and the closing
+    summary of a run.
+  - >-
+    Renders saved results, details, execution plans and freshness changes.
+  - >-
+    Applies color, fits rows to the terminal width and sanitizes untrusted
+    text.
+out_of_scope:
+  - description: >-
+      Computing outcomes and results.
+    owner: COMP-0014
+  - description: >-
+      Choosing exit codes.
+    owner: COMP-0001
+  - description: >-
+      Persisting reports.
+    owner: COMP-0014
+must_not:
+  - >-
+    Change saved data, freshness, stream assignment or exit codes through
+    presentation.
+  - >-
+    Print untrusted terminal content unsanitized.
+  - >-
+    Emit cursor controls in plain progress mode.
+files:
+  - src/terminal.rs
+depends_on:
+  - COMP-0001
+  - COMP-0002
+  - COMP-0006
+  - COMP-0011
+  - COMP-0014
