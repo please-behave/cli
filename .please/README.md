@@ -12,6 +12,8 @@ and run at pre-push and again in CI. Cargo build, test and Clippy commands
 explicitly select offline mode. Every local Rule has a display name and a
 description that states what must hold, and keeps its script and tests in its own
 directory. Local Rules declare their own run_at; no local Rule Sets are used.
+The `knowledge` Rule keeps the [component map](../knowledge/components/README.md)
+complete and consistent with the source.
 
 `release` selects the independent release-smoke Rule for an already-built
 candidate. Actions builds first, then runs the quality gate. Packaging, CI proof,

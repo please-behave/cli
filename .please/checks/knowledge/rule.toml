@@ -1,0 +1,9 @@
+id = "knowledge"
+name = "Component map"
+description = "Every compiled file belongs to exactly one component and component dependencies match the code"
+enabled = true
+run_at = ["pre-commit", "pre-push", "check"]
+
+[check]
+command = "python3 @rule/check.py"
+timeout_seconds = 60
