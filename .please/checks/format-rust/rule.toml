@@ -1,5 +1,6 @@
-id = "rust-format"
-description = "Verify Rust formatting"
+id = "format-rust"
+name = "Rust formatting"
+description = "Rust sources are formatted with rustfmt"
 enabled = true
 run_at = ["pre-commit", "pre-push", "check"]
 

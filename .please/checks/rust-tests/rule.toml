@@ -1,5 +1,6 @@
 id = "rust-tests"
-description = "Run unit acceptance documentation and compatibility tests"
+name = "Rust tests"
+description = "All Rust unit, acceptance, documentation and compatibility tests pass"
 enabled = true
 run_at = ["pre-push", "check"]
 

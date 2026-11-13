@@ -194,10 +194,9 @@ Native downloads still need Git and, for enabled reviews, Codex CLI/login.
 
 - Push/PR: Linux x64 formatting, Clippy, unit/acceptance tests, optimized build and smoke. Release: versioned builds and real CLI smoke on all four native hosts. Tests use fake providers,
   never real Codex, credentials or paid APIs.
-- Linux: compile-check all Rust targets in the package with the declared minimum
-  Rust 1.85 and test Git hook integration offline.
-- Workflow syntax/expressions: pinned actionlint. Release rules, breaking-change
-  notes, version stamping and archive-integrity checks: credential-free tests.
+- Linux: test Git hook integration offline.
+- Workflow syntax/expressions: pinned actionlint. Version stamping and
+  archive-integrity checks: credential-free tests.
 - Dependency audits: cargo-audit checks Cargo.lock against RustSec; npm audit
   blocks high/critical release-tooling advisories. Moderate npm advisories remain
   visible but do not block. Advisory feeds require network access; unavailable
@@ -222,7 +221,7 @@ changes. Git hooks run local validation at commit and push; agents must not run
 `please run --at pre-push` or other checks manually. The [quality-gate catalogue](self-governance.md)
 documents every execution point, installation, the Renovate-managed pin and report artifacts.
 
-The pipeline also runs actionlint, dependency audits and the minimum-Rust check.
+The pipeline also runs actionlint, and dependency audits.
 Do not run `npm run release` locally as a test: it is a publishing command. Local
 validation cannot certify other hosted platforms; inspect all GitHub jobs before
 using a release.

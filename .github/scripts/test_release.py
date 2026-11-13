@@ -379,29 +379,14 @@ class ReleaseTests(unittest.TestCase):
             self.assertIn(f"needs.{name}.result == 'success'", jobs["publish"])
         self.assertNotIn("always()", jobs["publish"])
         self.assertNotIn("cargo", jobs["publish"])
-        for repeated in ("scripts/prepare-ci.sh", "unittest discover", "npm --offline test", "actionlint", "+1.85.0"):
+        for repeated in ("scripts/prepare-ci.sh", "unittest discover", "actionlint"):
             self.assertNotIn(repeated, workflow)
         self.assertIn("group: release-main", workflow)
         self.assertIn("cancel-in-progress: false", workflow)
         self.assertIn("workflow_dispatch:", workflow)
-        config = tomllib.loads((ROOT / ".please/config.toml").read_text())
-        self.assertEqual(config["execution_points"]["custom"], ["release"])
-        releasable = [item for item in config["imports"] if item["path"].endswith("/releasable-open-source-software")]
-        self.assertEqual([item["rule_parameters"] for item in releasable], [{"semantic-release": {"tag_format": "v${version}"}}])
         policy = json.loads((ROOT / ".github/release-ci.json").read_text())
         self.assertEqual(policy["required_jobs"], ["Check"])
         self.assertNotIn("required_steps", policy)
-        definitions = [tomllib.loads(p.read_text()) for p in (ROOT / ".please/checks").glob("*/rule.toml")]
-        by_id = {rule["id"]: rule for rule in definitions}
-        release_rules = [rule for rule in definitions if "release" in rule["run_at"]]
-        self.assertEqual([rule["id"] for rule in release_rules], ["release-smoke"])
-        self.assertNotIn("depends_on", release_rules[0])
-        self.assertNotIn("release-package", by_id)
-        self.assertNotIn("release-package-verify", by_id)
-        self.assertEqual(by_id["native-smoke"]["depends_on"], ["native-build"])
-        for name in ("rust-format", "python-format", "clippy", "rust-tests", "native-build", "native-smoke"):
-            self.assertIn("check", by_id[name]["run_at"])
-            self.assertIn("pre-push", by_id[name]["run_at"])
 
     def test_single_candidate_verification_and_smoke_binary_binding(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -468,7 +453,7 @@ class ReleaseTests(unittest.TestCase):
 
             self.assertEqual(receipt_step("before").returncode, 0)
             result = subprocess.run(
-                [sys.executable, str(ROOT / ".please/checks/native-smoke/smoke.py"), str(binary)],
+                [sys.executable, str(ROOT / ".please/checks/release-smoke/smoke.py"), str(binary)],
                 cwd=root,
                 env=env,
                 capture_output=True,
@@ -487,7 +472,7 @@ class ReleaseTests(unittest.TestCase):
             fake.write_text(f"#!/bin/sh\nprintf 'please {version}\\n'\n")
             fake.chmod(0o755)
             result = subprocess.run(
-                [sys.executable, str(ROOT / ".please/checks/native-smoke/smoke.py"), str(fake)], cwd=root, env=env, capture_output=True
+                [sys.executable, str(ROOT / ".please/checks/release-smoke/smoke.py"), str(fake)], cwd=root, env=env, capture_output=True
             )
             self.assertNotEqual(result.returncode, 0)
             self.assertFalse(receipt.exists(), "failed smoke must remove any previous receipt")

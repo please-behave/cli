@@ -1,5 +1,6 @@
 id = "native-build"
-description = "Build the candidate native release executable"
+name = "Native build"
+description = "The release executable builds"
 enabled = true
 run_at = ["pre-push", "check"]
 

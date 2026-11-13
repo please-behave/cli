@@ -457,11 +457,10 @@ in reports and Git hooks need no Gemini credentials.
 
 This repository's deterministic quality checks run through an installed published
 Please Behave release. Run `mise install` for the configured rule tools (including
-Gitleaks, actionlint, the published governor and both Rust toolchains), then
+Gitleaks, actionlint, the published governor and the Rust toolchain), then
 `mise prepare` to fetch locked dependencies. Git and a
 native compiler/linker remain host prerequisites. All mise tool versions, including
-the Rust toolchain, are pinned and updated by Renovate; Rust 1.85.0 independently
-verifies minimum compatibility.
+the Rust toolchain, are pinned and updated by Renovate.
 See the [setup guide](docs/self-governance.md#local-setup).
 
 Use `mise exec -- please run --at pre-commit` or `mise exec -- please run --at pre-push`
@@ -480,7 +479,7 @@ builds. They may format source and inspect saved results with
 For developers who want an explicit manual run, `please run --at pre-push` runs the
 pinned published governor at the `pre-push` execution point:
 formatting, documentation validation, Clippy, Rust tests, Python helper tests,
-JavaScript release tests, workflow validation, minimum Rust, an optimized
+workflow validation, an optimized
 candidate build, smoke test and the imported
 Security and open-source-software Rule Sets against `HEAD`. No reviews or real provider calls run. The governor never comes from the candidate build.
 

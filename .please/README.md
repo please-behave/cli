@@ -7,10 +7,11 @@ commit-msg and a conditional AGENTS.md quality Review that runs only at check.
 Pre-commit, pre-push and release points select checks only.
 
 `checks/*/rule.toml` defines local Rules using string commands for installed
-tools and consumer-root scripts. Cargo, Python helper and JavaScript tests each
-have one Rule and run at pre-push and again in CI. Cargo build, test, Clippy and
-MSRV commands and npm tests explicitly select offline mode. Local Rules declare
-their own run_at; no local Rule Sets are used.
+tools and consumer-root scripts. Cargo and Python helper tests each have one Rule
+and run at pre-push and again in CI. Cargo build, test and Clippy commands
+explicitly select offline mode. Every local Rule has a display name and a
+description that states what must hold, and keeps its script and tests in its own
+directory. Local Rules declare their own run_at; no local Rule Sets are used.
 
 `release` selects the independent release-smoke Rule for an already-built
 candidate. Actions builds first, then runs the quality gate. Packaging, CI proof,

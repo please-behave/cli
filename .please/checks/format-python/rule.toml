@@ -1,5 +1,6 @@
-id = "python-format"
-description = "Verify Python formatting"
+id = "format-python"
+name = "Python formatting"
+description = "Python sources are formatted with Ruff"
 enabled = true
 run_at = ["pre-commit", "pre-push", "check"]
 

@@ -39,7 +39,7 @@ Hook setup installs no tools or dependencies. Conflicts still fail. Generated wr
 live at Git's effective hook path and carry local ownership; never check them in
 or copy them between repositories.
 
-`mise install` prepares the governor, tools and Rust toolchains pinned in `mise.toml`.
+`mise install` prepares the governor, tools and the Rust toolchain pinned in `mise.toml`.
 Git and a native compiler/linker remain host prerequisites. All tool versions,
 including the Rust toolchain, are exact pins that Renovate updates. `mise prepare`
 fetches locked npm and Cargo dependencies online without validation.
@@ -52,8 +52,8 @@ setup; installing tools alone does not activate them. The published governor mus
 still be installed separately and available on PATH. Credentials are external.
 
 Prepare dependencies online first, using `mise install` followed by `mise prepare`.
-Cargo build, Clippy, test and MSRV
-commands explicitly use --offline; npm tests use --offline too. The execution
+Cargo build, Clippy and test
+commands explicitly use --offline. The execution
 wrapper also sets Cargo/npm offline mode and disables Rustup auto-install when
 invoking a Git-backed point. Direct Rule commands need no launcher. Dependency
 audits run at check in CI with advisory access; they remain outside pre-commit and pre-push.
@@ -80,7 +80,7 @@ Imported Rules retain their git-prefixed binding namespace. The native-smoke Che
 declares `depends_on = ["native-build"]` at every point where it runs, so it tests
 the candidate executable only after a successful build. Build, smoke, Clippy and
 Rust tests share the `cargo` resource lock. The independent release-smoke Rule
-has no dependency on other Rules; GitHub Actions supplies the built candidate.
+has its own copy of the smoke script and no dependency on other Rules; GitHub Actions supplies the built candidate.
 Each local Rule declares its own execution points. Three external sets supply
 commit-message, security and license checks at a shared immutable revision.
 
@@ -95,14 +95,14 @@ All Rust unit, integration, acceptance and documentation tests run in one Cargo
 Rule. Python helper tests use one unittest discovery Rule; test modules use
 importable test_*.py names and include release and real Git-hook fixtures.
 The public Please Behave Action tests belong to the separate Action repository.
-JavaScript release tests run once through npm test. All three suites run at
+The Rust and Python suites run at
 pre-push and again in CI, including when local hooks were bypassed. Release builds
 and the smoke test of the built executable remain separate mandatory checks.
 CARGO_BUILD_TARGET selects Cargo's output target in CI; BUILD_TARGET selects the
 same binary for smoke testing and packaging. Neither needs an extra launcher.
 
 Formatting, documentation, Clippy, Rust acceptance tests
-and release regression tests, Conventional Commits, actionlint, minimum Rust 1.85,
+and release regression tests, Conventional Commits, actionlint,
 Rust/npm dependency audits remain required at the points shown above. Audits
 need advisory feeds. Release artifact verification runs directly in the publish
 job after download and checksum generation; it requires EXPECTED_RELEASE_VERSION,
@@ -122,7 +122,7 @@ please status --details
 
 For explicit manual use, `please run --at pre-push` runs the full local gate. The `format` task
 remains available to developers. `mise format` rewrites Rust and Python source; the
-`rust-format` and `python-format` rules only check it, one rule per formatter so they run in parallel.
+`format-rust` and `format-python` rules only check it, one rule per formatter so they run in parallel.
 
 ## Agent workflow
 
@@ -243,5 +243,4 @@ installation is needed. `mise run build --offline` and `mise run package`
 expose focused candidate build and packaging operations. The Rust toolchain is
 pinned like every other tool, so compiler and lint changes arrive through a
 Renovate pull request that must pass the checks, not through an unrelated push.
-Renovate leaves the minimum-version toolchain (1.85.0) unchanged.
 See the [release sequence](releasing.md#release-sequence).

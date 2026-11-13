@@ -1,5 +1,6 @@
 id = "native-smoke"
-description = "Smoke-test the candidate executable"
+name = "Native smoke test"
+description = "The built executable passes its smoke test"
 enabled = true
 run_at = ["pre-push", "check"]
 depends_on = ["native-build"]

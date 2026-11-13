@@ -1,5 +1,6 @@
 id = "rust-audit"
-description = "Audit Rust dependencies"
+name = "Rust dependency audit"
+description = "No Rust dependency has a known vulnerability"
 enabled = true
 run_at = ["check"]
 

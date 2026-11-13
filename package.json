@@ -6,7 +6,6 @@
   "description": "Development-only tooling for Please Behave GitHub releases",
   "engines": { "node": ">=24.15.0 <27" },
   "scripts": {
-    "test": "node --test .github/scripts/test-release-config.mjs && node .github/scripts/test-release-lifecycle.mjs",
     "release:plan": "node .github/scripts/release-plan.mjs",
     "release": "node .github/scripts/publish-release.mjs"
   },

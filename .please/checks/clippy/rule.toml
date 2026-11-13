@@ -1,5 +1,6 @@
 id = "clippy"
-description = "Lint Rust with warnings denied"
+name = "Clippy"
+description = "Rust code has no Clippy warnings"
 enabled = true
 run_at = ["pre-push", "check"]
 

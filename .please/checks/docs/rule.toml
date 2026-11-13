@@ -1,5 +1,6 @@
 id = "docs"
-description = "Validate documentation links and specification references"
+name = "Documentation links"
+description = "Documentation links and specification references resolve"
 enabled = true
 run_at = ["pre-commit", "pre-push", "check"]
 
