@@ -99,9 +99,7 @@ Download the archive matching the release version and `SHA256SUMS` from
 | Linux x64 | `x86_64-unknown-linux-gnu` |
 | Linux ARM64 | `aarch64-unknown-linux-gnu` |
 
-From this source checkout, `mise deploy` installs the published Please Behave
-release pinned in `mise.toml`, with checksum and executable verification.
-See [native downloads](docs/releasing.md#native-downloads).
+Releases are described under [native downloads](docs/releasing.md#native-downloads).
 
 For manual installation, verify the checksum, then extract and install it. Replace
 `VERSION` and `TARGET` below with the downloaded archive's values:
@@ -486,9 +484,6 @@ JavaScript release tests, workflow validation, minimum Rust, an optimized
 candidate build, smoke test and the imported
 Security and open-source-software Rule Sets against `HEAD`. No reviews or real provider calls run. The governor never comes from the candidate build.
 
-`mise docs:check` checks links, specification references, configuration fields and
-executable documentation examples. Individual tasks remain available: `format`,
-`lint`, `test`, `smoke` for manual development use.
 Local hooks verify working files; CI checks clean checkouts.
 
 See [repository quality gates](docs/self-governance.md) for setup, every execution point,
@@ -500,7 +495,7 @@ checks without reviews and stops at the first blocker; hooks and CI stay complet
 
 CI uses `mise install` through the mise Action and `mise run prepare`; preparation
 only fetches locked dependencies. Release jobs install only their required tools.
-`mise run build --offline` builds a prepared native candidate; `mise run release:package`
+`mise run build --offline` builds a prepared native candidate; `mise run package`
 packages it after smoke validation. Actions owns stamping, receipts, archive checks
 and publication.
 

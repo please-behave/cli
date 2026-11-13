@@ -18,11 +18,6 @@ ruff = "0.17.4"
 description = "Build the native release executable"
 run = "cargo build --release --locked"
 
-[tasks.deploy]
-description = "Download and install the pinned Please Behave release for this platform"
-run = "python3 tools/deploy.py"
-run_windows = "python tools/deploy.py"
-
 [tasks.release]
 description = "Start the GitHub Release workflow for remote main; --install waits, then adopts the release as governor"
 usage = 'flag "--install" help="Wait for success, pin the new version in mise.toml and run mise install"'
@@ -36,28 +31,10 @@ run = ["cargo fmt --all", "ruff format"]
 description = "Run the deterministic Please Behave checks and stop at the first blocker"
 run = "please run --at pre-push --checks-only --fail-fast"
 
-[tasks.lint]
-description = "Run Clippy with warnings treated as errors"
-run = "cargo clippy --all-targets --locked -- -D warnings"
-
-[tasks.test]
-description = "Run credential-free tests"
-run = "cargo test --locked"
-
-[tasks.smoke]
-description = "Smoke-test the release CLI in an isolated Git repository"
-depends = ["build"]
-run = "python3 .please/checks/native-smoke/smoke.py target/release/please"
-run_windows = "python .please/checks/native-smoke/smoke.py target/release/please.exe"
-
-[tasks."docs:check"]
-description = "Check documentation links, configuration reference and executable examples"
-run = ["python3 .please/checks/docs/check.py", "cargo test --locked --test documentation"]
-
 [tasks.prepare]
 description = "Fetch locked npm and Cargo dependencies for CI and offline Git hooks"
 run = ["npm ci --ignore-scripts", "cargo fetch --locked", "cargo +1.85.0 fetch --locked"]
 
-[tasks."release:package"]
+[tasks.package]
 description = "Package the already-built and smoke-tested native candidate"
 run = "python3 .github/scripts/package-release.py"

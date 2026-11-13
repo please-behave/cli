@@ -93,7 +93,7 @@ Release CI and artifact policies are workflow-owned files under `.github/`.
 
 All Rust unit, integration, acceptance and documentation tests run in one Cargo
 Rule. Python helper tests use one unittest discovery Rule; test modules use
-importable test_*.py names and include deployment, release and real Git-hook fixtures.
+importable test_*.py names and include release and real Git-hook fixtures.
 The public Please Behave Action tests belong to the separate Action repository.
 JavaScript release tests run once through npm test. All three suites run at
 pre-push and again in CI, including when local hooks were bypassed. Release builds
@@ -101,7 +101,7 @@ and the smoke test of the built executable remain separate mandatory checks.
 CARGO_BUILD_TARGET selects Cargo's output target in CI; BUILD_TARGET selects the
 same binary for smoke testing and packaging. Neither needs an extra launcher.
 
-Formatting, documentation, Clippy, Rust acceptance tests, deployment
+Formatting, documentation, Clippy, Rust acceptance tests
 and release regression tests, Conventional Commits, actionlint, minimum Rust 1.85,
 Rust/npm dependency audits remain required at the points shown above. Audits
 need advisory feeds. Release artifact verification runs directly in the publish
@@ -120,15 +120,15 @@ PLEASE_CHANGE_BASE="<baseline-commit>" please run --at check --reviews
 please status --details
 ```
 
-For explicit manual use, `please run --at pre-push` runs the full local gate. Individual format, lint, test, smoke and docs:check tasks
-remain available to developers. `mise format` rewrites Rust and Python source; the
+For explicit manual use, `please run --at pre-push` runs the full local gate. The `format` task
+remains available to developers. `mise format` rewrites Rust and Python source; the
 `rust-format` and `python-format` rules only check it, one rule per formatter so they run in parallel.
 
 ## Agent workflow
 
 Agents receive final validation feedback from Git commit and push. They must not
 manually run comprehensive validation as a final quality gate, including `please run --at pre-push`,
-mise docs:check, full Cargo/npm suites or direct Please Behave execution of a full
+full Cargo/npm suites or direct Please Behave execution of a full
 point. Source formatting and targeted diagnostic checks are permitted by AGENTS.md;
 use `--fail-fast` only when finding the first blocker is sufficient. Normal hooks, CI and release
 validation run without fail-fast to collect independent findings. The explicit
@@ -203,10 +203,7 @@ future work.
 ## CI, pinning and Renovate
 
 [mise.toml](../mise.toml) pins the separately installed governor through `github:please-behave/cli`. Mise installs the published executable
-with checksum and available artifact-attestation verification. The optional
-`mise deploy` task retains the checksum-verifying
-[tools/deploy.py](../tools/deploy.py) installer for a separate installation.
-CI and native release workflows use
+with checksum and available artifact-attestation verification. CI and native release workflows use
 the Please Behave Action, pinned to a full commit in the workflow files. Mise installs the governor
 from `mise.toml`; the Action uses it with `install: 'false'` and synchronizes with
 `sync: 'true'` before execution. No version extraction or second installation is needed.
@@ -242,7 +239,7 @@ runs `mise run prepare` solely to fetch locked npm and Cargo dependencies.
 Release jobs select only Node for planning, Python for readiness, Python/Rust/the governor for native candidates, and Python/Node for publishing.
 Mise automatic installation is disabled in workflows so tasks do not install
 unrelated tools. Native hosts already include their Rust target; no cross target
-installation is needed. `mise run build --offline` and `mise run release:package`
+installation is needed. `mise run build --offline` and `mise run package`
 expose focused candidate build and packaging operations. The Rust toolchain is
 pinned like every other tool, so compiler and lint changes arrive through a
 Renovate pull request that must pass the checks, not through an unrelated push.

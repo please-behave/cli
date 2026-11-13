@@ -26,10 +26,7 @@ dispatched run and, if it published a release for that source commit, sets
 the governor pin in `mise.toml` to the new version and runs `mise install`. It stops if
 `mise.toml` has uncommitted changes, never commits or pushes, and leaves the pin untouched
 when the run published nothing. Review and commit the pin separately; governance
-configuration may need migrating first. `mise deploy` instead
-downloads and installs the pinned published Please Behave development governor for the
-current OS/CPU, verifying its checksum and executable compatibility before
-replacement. Candidate builds remain separate; see the
+configuration may need migrating first. Candidate builds remain separate; see the
 [source build instructions](../README.md#build-locally).
 
 ## Version policy
@@ -171,7 +168,7 @@ names. CI and all four native Candidate jobs use the SHA-pinned
 Mise installs the governor pinned in `mise.toml`. Each gate uses `install: 'false'`
 and `sync: 'true'` to synchronize and execute in one Action step with a Job Summary.
 Candidate builds and packaging use
-`mise run build --offline` and `mise run release:package`; integrity checks remain
+`mise run build --offline` and `mise run package`; integrity checks remain
 explicit workflow steps.
 Release gates run the `release` point, which selects no reviews; no workflow uses `checks-only`, which is for local development.
 The governor is always a published binary, separate from the candidate under test.

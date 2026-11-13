@@ -112,7 +112,7 @@ jobs:
       - name: Verify smoke-tested candidate identity
         run: python3 .github/scripts/smoke-receipt.py after
       - name: Package smoke-tested candidate
-        run: mise run release:package
+        run: mise run package
       - name: Verify candidate archive
         run: python3 .github/scripts/check-release-artifacts.py --candidate
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

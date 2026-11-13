@@ -351,7 +351,7 @@ class ReleaseTests(unittest.TestCase):
             ".github/scripts/smoke-receipt.py before",
             "execution-point: release",
             ".github/scripts/smoke-receipt.py after",
-            "mise run release:package",
+            "mise run package",
             ".github/scripts/check-release-artifacts.py --candidate",
             ".github/scripts/release-evidence.py record",
         ]
@@ -369,7 +369,7 @@ class ReleaseTests(unittest.TestCase):
         self.assertNotIn("rustup target add", workflow)  # All release runners build natively.
         tasks = tomllib.loads((ROOT / "mise.toml").read_text())["tasks"]
         self.assertEqual(tasks["build"]["run"], "cargo build --release --locked")
-        self.assertEqual(tasks["release:package"]["run"], "python3 .github/scripts/package-release.py")
+        self.assertEqual(tasks["package"]["run"], "python3 .github/scripts/package-release.py")
         self.assertNotIn("setup-node", jobs["release-candidate"])
         for name in ("plan",):
             self.assertNotIn("please run", jobs[name])

@@ -24,7 +24,7 @@ explicitly before running pre-commit and pre-push, which remain offline.
 
 Commit and push to receive validation feedback from the installed Please Behave hooks.
 Agents must not manually run comprehensive final validation, including
-`please run --at pre-push` and `mise docs:check`. Source formatting and targeted diagnosis
+`please run --at pre-push`. Source formatting and targeted diagnosis
 are allowed as described in AGENTS.md. Developers
 can use `please run --at pre-push` for an explicit manual run.
 
