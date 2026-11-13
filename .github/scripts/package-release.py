@@ -1,4 +1,5 @@
 """Package an already-built native executable; no network operations."""
+
 import os
 import hashlib
 import json
@@ -41,8 +42,15 @@ with tempfile.TemporaryDirectory() as temporary:
         archive.add(folder, arcname=name)
     metadata = output / "metadata"
     metadata.mkdir(exist_ok=True)
-    (metadata / f"{target}.json").write_text(json.dumps(dict(
-        **context, binary_version=actual_version,
-        archive_sha256=hashlib.sha256(archive_path.read_bytes()).hexdigest(),
-        binary_sha256=binary_hash, smoke_binary_sha256=binary_hash,
-    )) + "\n")
+    (metadata / f"{target}.json").write_text(
+        json.dumps(
+            dict(
+                **context,
+                binary_version=actual_version,
+                archive_sha256=hashlib.sha256(archive_path.read_bytes()).hexdigest(),
+                binary_sha256=binary_hash,
+                smoke_binary_sha256=binary_hash,
+            )
+        )
+        + "\n"
+    )

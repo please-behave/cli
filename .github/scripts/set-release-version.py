@@ -1,4 +1,5 @@
 """Set only the root crate's version, without dependency resolution or publication."""
+
 from pathlib import Path
 import re
 import sys
@@ -12,16 +13,18 @@ def set_version(version, root=Path(".")):
     lock = root / "Cargo.lock"
     original_manifest, original_lock = manifest.read_text(), lock.read_text()
     package = tomllib.loads(original_manifest)["package"]
-    locked = [p for p in tomllib.loads(original_lock)["package"]
-              if p["name"] == package["name"] and "source" not in p]
+    locked = [p for p in tomllib.loads(original_lock)["package"] if p["name"] == package["name"] and "source" not in p]
     if len(locked) != 1 or locked[0]["version"] != package["version"]:
         raise ValueError("Root manifest/lock versions must agree")
     updated_manifest, count = re.subn(
         r'(\[package\]\s*\n(?:(?!\[).)*?^version\s*=\s*)"[^"]+"',
-        lambda m: f'{m[1]}"{version}"', original_manifest, count=1, flags=re.M | re.S)
-    pattern = (r'(\[\[package\]\]\nname = "' + re.escape(package["name"])
-               + r'"\nversion = ")[^"]+("\n)')
-    updated_lock, lock_count = re.subn(pattern, lambda m: f'{m[1]}{version}{m[2]}', original_lock)
+        lambda m: f'{m[1]}"{version}"',
+        original_manifest,
+        count=1,
+        flags=re.M | re.S,
+    )
+    pattern = r'(\[\[package\]\]\nname = "' + re.escape(package["name"]) + r'"\nversion = ")[^"]+("\n)'
+    updated_lock, lock_count = re.subn(pattern, lambda m: f"{m[1]}{version}{m[2]}", original_lock)
     if count != 1 or lock_count != 1:
         raise ValueError("Expected exactly one root package version in each file")
     assert tomllib.loads(updated_manifest)["package"]["version"] == version

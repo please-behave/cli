@@ -1,4 +1,5 @@
 """Install a published native release without building local source."""
+
 import hashlib
 import io
 import json
@@ -23,7 +24,9 @@ def detect_target():
     cpu = {"arm64": "aarch64", "aarch64": "aarch64", "amd64": "x86_64", "x86_64": "x86_64"}.get(machine)
     suffix = {"Darwin": "apple-darwin", "Linux": "unknown-linux-gnu"}.get(system)
     if not cpu or not suffix or (system == "Linux" and platform.libc_ver()[0] != "glibc"):
-        raise ValueError(f"Unsupported platform: {system}/{machine}. Release downloads support macOS and glibc Linux on x86_64 or ARM64. Build from source on other systems; see {REPOSITORY}#build-locally.")
+        raise ValueError(
+            f"Unsupported platform: {system}/{machine}. Release downloads support macOS and glibc Linux on x86_64 or ARM64. Build from source on other systems; see {REPOSITORY}#build-locally."
+        )
     return f"{cpu}-{suffix}"
 
 
@@ -66,7 +69,12 @@ def deploy(tag=None, prefix=None):
         if not isinstance(release, dict):
             raise ValueError("GitHub Releases API returned invalid release metadata.")
         tag = release.get("tag_name")
-        if not isinstance(tag, str) or not re.fullmatch(r"v(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)", tag) or release.get("draft") or release.get("prerelease"):
+        if (
+            not isinstance(tag, str)
+            or not re.fullmatch(r"v(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)", tag)
+            or release.get("draft")
+            or release.get("prerelease")
+        ):
             raise ValueError("Latest release has no supported stable version tag.")
     name = f"please-{tag}-{target}"
     archive_name = f"{name}.tar.gz"
@@ -95,12 +103,15 @@ def deploy(tag=None, prefix=None):
         candidate.write_bytes(binary)
         candidate.chmod(0o755)
         try:
-            result = subprocess.run([str(candidate.resolve()), "--version"], capture_output=True, text=True, timeout=15,
-                                    env=dict(os.environ, NO_COLOR="1"))
+            result = subprocess.run(
+                [str(candidate.resolve()), "--version"], capture_output=True, text=True, timeout=15, env=dict(os.environ, NO_COLOR="1")
+            )
             if result.returncode or result.stdout.strip() != f"please {tag[1:]}":
                 raise ValueError("Downloaded executable failed its version check.")
         except (OSError, subprocess.SubprocessError, ValueError) as error:
-            raise ValueError(f"Release {tag} cannot run on this system ({target}); Linux requires a glibc version compatible with Ubuntu 24.04. Build from source instead. {error}") from error
+            raise ValueError(
+                f"Release {tag} cannot run on this system ({target}); Linux requires a glibc version compatible with Ubuntu 24.04. Build from source instead. {error}"
+            ) from error
         os.replace(candidate, destination)
     print(f"Installed please {tag[1:]} ({target}) to {destination}")
     return destination

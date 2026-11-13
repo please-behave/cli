@@ -1,4 +1,5 @@
 """Run the unit tests of the release scripts, the developer tools and every rule directory."""
+
 import sys
 import unittest
 from pathlib import Path

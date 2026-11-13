@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Check local Markdown links/anchors and specification-to-test references offline."""
+
 from pathlib import Path
 import re
 import subprocess
@@ -51,7 +52,11 @@ def check_requirements(root):
 
 
 def main():
-    tracked = subprocess.check_output(["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z", "--", "*.md"], cwd=ROOT).decode().split("\0")
+    tracked = (
+        subprocess.check_output(["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z", "--", "*.md"], cwd=ROOT)
+        .decode()
+        .split("\0")
+    )
     files = [ROOT / name for name in sorted(set(filter(None, tracked))) if (ROOT / name).is_file()]
     check_links(ROOT, files)
     check_requirements(ROOT)

@@ -1,4 +1,5 @@
 """Start the Release workflow; with --install, adopt the published version as the governor."""
+
 import json
 from pathlib import Path
 import re
@@ -23,15 +24,31 @@ def run(*command, capture=True):
 
 
 def run_ids():
-    runs = json.loads(run("gh", "run", "list", "--workflow", WORKFLOW, "--branch", "main",
-                          "--event", "workflow_dispatch", "--limit", "20", "--json", "databaseId,headSha"))
+    runs = json.loads(
+        run(
+            "gh",
+            "run",
+            "list",
+            "--workflow",
+            WORKFLOW,
+            "--branch",
+            "main",
+            "--event",
+            "workflow_dispatch",
+            "--limit",
+            "20",
+            "--json",
+            "databaseId,headSha",
+        )
+    )
     return {item["databaseId"]: item["headSha"] for item in runs}
 
 
 def running_ci():
     """Return the IDs of unfinished CI runs on main."""
-    runs = json.loads(run("gh", "run", "list", "--workflow", CI_WORKFLOW, "--branch", "main",
-                          "--limit", "20", "--json", "databaseId,status"))
+    runs = json.loads(
+        run("gh", "run", "list", "--workflow", CI_WORKFLOW, "--branch", "main", "--limit", "20", "--json", "databaseId,status")
+    )
     return [item["databaseId"] for item in runs if item["status"] != "completed"]
 
 

@@ -1,4 +1,5 @@
 """Verify native candidate archives and the complete set before publication."""
+
 import hashlib
 import io
 import json
@@ -17,12 +18,15 @@ def digest(data):
 
 def release_context(version, source_sha, target):
     run_id, attempt = os.environ.get("GITHUB_RUN_ID", ""), os.environ.get("GITHUB_RUN_ATTEMPT", "")
-    if (not re.fullmatch(r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)", version)
-            or not re.fullmatch(r"[0-9a-f]{40}", source_sha) or target not in TARGETS
-            or not re.fullmatch(r"[1-9][0-9]*", run_id) or not re.fullmatch(r"[1-9][0-9]*", attempt)):
+    if (
+        not re.fullmatch(r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)", version)
+        or not re.fullmatch(r"[0-9a-f]{40}", source_sha)
+        or target not in TARGETS
+        or not re.fullmatch(r"[1-9][0-9]*", run_id)
+        or not re.fullmatch(r"[1-9][0-9]*", attempt)
+    ):
         raise ValueError("Invalid release version, source, target or workflow run/attempt")
-    return dict(version=version, source_sha=source_sha, target=target,
-                release_run_id=run_id, release_run_attempt=attempt)
+    return dict(version=version, source_sha=source_sha, target=target, release_run_id=run_id, release_run_attempt=attempt)
 
 
 def verify(version, source_sha, dist=Path("dist"), *, candidate=False):
@@ -51,15 +55,23 @@ def verify(version, source_sha, dist=Path("dist"), *, candidate=False):
         if smoke != dict(**contexts[target], binary_sha256=binary_hash):
             raise ValueError(f"Mismatched smoke identity: {target}")
         data = archive.read_bytes()
-        if metadata != dict(**contexts[target], binary_version=f"please {version}",
-                            archive_sha256=digest(data), binary_sha256=binary_hash,
-                            smoke_binary_sha256=binary_hash):
+        if metadata != dict(
+            **contexts[target],
+            binary_version=f"please {version}",
+            archive_sha256=digest(data),
+            binary_sha256=binary_hash,
+            smoke_binary_sha256=binary_hash,
+        ):
             raise ValueError(f"Mismatched artifact metadata: {target}")
         with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as packaged:
             members = packaged.getmembers()
             files = {m.name: m for m in members if m.isfile()}
             wanted_files = {f"{name}/{file}" for file in ("please", "README.md", "LICENSE")}
-            if len({m.name for m in members}) != len(members) or set(files) != wanted_files or any(not (m.isfile() or (m.isdir() and m.name == name)) for m in members):
+            if (
+                len({m.name for m in members}) != len(members)
+                or set(files) != wanted_files
+                or any(not (m.isfile() or (m.isdir() and m.name == name)) for m in members)
+            ):
                 raise ValueError(f"Unexpected archive contents: {target}")
             binary = files[f"{name}/please"]
             if not binary.mode & 0o111 or digest(packaged.extractfile(binary).read()) != binary_hash:

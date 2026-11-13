@@ -1,4 +1,5 @@
 """Offline tests for the release task; never call GitHub or modify the real mise.toml."""
+
 import importlib.util
 import os
 from pathlib import Path
@@ -12,7 +13,7 @@ spec.loader.exec_module(release)
 
 
 class ReleaseTaskTests(unittest.TestCase):
-    def in_project(self, text="[tools]\n\"github:please-behave/cli\" = \"0.7.0\"\npython = \"3.15.2\"\n"):
+    def in_project(self, text='[tools]\n"github:please-behave/cli" = "0.7.0"\npython = "3.15.2"\n'):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         previous = os.getcwd()
@@ -23,18 +24,21 @@ class ReleaseTaskTests(unittest.TestCase):
     def test_adopt_replaces_only_the_governor_pin(self):
         self.in_project()
         release.adopt("0.8.0")
-        self.assertEqual(Path("mise.toml").read_text(), "[tools]\n\"github:please-behave/cli\" = \"0.8.0\"\npython = \"3.15.2\"\n")
+        self.assertEqual(Path("mise.toml").read_text(), '[tools]\n"github:please-behave/cli" = "0.8.0"\npython = "3.15.2"\n')
 
     def test_adopt_requires_a_pin(self):
-        self.in_project("[tools]\npython = \"3.15.2\"\n")
+        self.in_project('[tools]\npython = "3.15.2"\n')
         with self.assertRaisesRegex(ValueError, "no Please Behave governor pin"):
             release.adopt("0.8.0")
 
     def test_unchanged_release_leaves_pin_and_skips_install(self):
         self.in_project()
-        with patch.object(release, "wait_for_ci"), patch.object(release, "dispatch", return_value=(1, "new")), \
-             patch.object(release, "latest_release", return_value=("v0.7.0", "0.7.0")), \
-             patch.object(release, "run", side_effect=lambda *a, **k: "" if a[:2] == ("git", "status") else "new") as run:
+        with (
+            patch.object(release, "wait_for_ci"),
+            patch.object(release, "dispatch", return_value=(1, "new")),
+            patch.object(release, "latest_release", return_value=("v0.7.0", "0.7.0")),
+            patch.object(release, "run", side_effect=lambda *a, **k: "" if a[:2] == ("git", "status") else "new") as run,
+        ):
             release.release_and_install()
         self.assertNotIn(("mise", "install"), [call.args for call in run.call_args_list])
         self.assertIn("0.7.0", Path("mise.toml").read_text())
@@ -46,9 +50,13 @@ class ReleaseTaskTests(unittest.TestCase):
         def fake(*command, **kwargs):
             calls.append(command)
             return "" if command[:2] == ("git", "status") else "abc"
-        with patch.object(release, "wait_for_ci"), patch.object(release, "dispatch", return_value=(1, "abc")), \
-             patch.object(release, "latest_release", return_value=("v0.8.0", "0.8.0")), \
-             patch.object(release, "run", side_effect=fake):
+
+        with (
+            patch.object(release, "wait_for_ci"),
+            patch.object(release, "dispatch", return_value=(1, "abc")),
+            patch.object(release, "latest_release", return_value=("v0.8.0", "0.8.0")),
+            patch.object(release, "run", side_effect=fake),
+        ):
             release.release_and_install()
         self.assertIn('"github:please-behave/cli" = "0.8.0"', Path("mise.toml").read_text())
         self.assertIn(("mise", "install"), calls)
@@ -69,11 +77,14 @@ class ReleaseTaskTests(unittest.TestCase):
         def fake_running():
             order.append("poll")
             return next(pending)
-        with patch.object(release, "running_ci", side_effect=fake_running), \
-             patch.object(release.time, "sleep"), \
-             patch.object(release, "dispatch", side_effect=lambda: order.append("dispatch") or (1, "abc")), \
-             patch.object(release, "latest_release", return_value=("v0.7.0", "0.7.0")), \
-             patch.object(release, "run", side_effect=lambda *a, **k: "" if a[:2] == ("git", "status") else "abc"):
+
+        with (
+            patch.object(release, "running_ci", side_effect=fake_running),
+            patch.object(release.time, "sleep"),
+            patch.object(release, "dispatch", side_effect=lambda: order.append("dispatch") or (1, "abc")),
+            patch.object(release, "latest_release", return_value=("v0.7.0", "0.7.0")),
+            patch.object(release, "run", side_effect=lambda *a, **k: "" if a[:2] == ("git", "status") else "abc"),
+        ):
             release.release_and_install()
         self.assertEqual(order, ["poll", "poll", "poll", "dispatch"])
 

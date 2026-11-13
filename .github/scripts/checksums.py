@@ -1,4 +1,5 @@
 """Compute SHA-256 checksums for downloaded release archives."""
+
 import hashlib
 from pathlib import Path
 

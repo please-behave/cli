@@ -1,4 +1,5 @@
 """Verify collected artifacts before the release workflow invokes publication."""
+
 import os
 from pathlib import Path
 import subprocess

@@ -1,4 +1,5 @@
 """Exercise the real CLI in an isolated, uncommitted Git repository. No AI calls."""
+
 import json
 import os
 from pathlib import Path
@@ -19,8 +20,7 @@ def main():
         environment = dict(os.environ, NO_COLOR="1")
 
         def run(words, code=0):
-            result = subprocess.run([str(binary), *words.split()], cwd=root,
-                                    env=environment, capture_output=True, text=True)
+            result = subprocess.run([str(binary), *words.split()], cwd=root, env=environment, capture_output=True, text=True)
             if result.returncode != code:
                 raise AssertionError(f"{words}: expected {code}, got {result.returncode}\n{result.stdout}\n{result.stderr}")
             if "\x1b" in result.stdout:
@@ -73,7 +73,9 @@ def main():
         assert not (root / ".git/index.lock").exists()
         commits = subprocess.run(["git", "rev-parse", "--verify", "HEAD"], cwd=root, capture_output=True)
         assert commits.returncode != 0
-        print("Smoke test passed: all commands, PASS/FAIL reports, skipped reviews, CURRENT/STALE, exact totals and five-path limit. No commits or AI calls.")
+        print(
+            "Smoke test passed: all commands, PASS/FAIL reports, skipped reviews, CURRENT/STALE, exact totals and five-path limit. No commits or AI calls."
+        )
 
 
 if __name__ == "__main__":

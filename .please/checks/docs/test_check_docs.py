@@ -1,4 +1,5 @@
 """The documentation check reports technical failures as exit 2, never as a FAIL verdict (exit 1)."""
+
 from pathlib import Path
 import subprocess
 import sys

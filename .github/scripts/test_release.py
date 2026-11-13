@@ -1,4 +1,5 @@
 """Credential-free release integrity tests; never tag or publish a real repository."""
+
 import hashlib
 import importlib.util
 import io
@@ -39,15 +40,19 @@ class ReleaseTests(unittest.TestCase):
     def write_smoke(self, dist, version, sha, target, binary_hash):
         folder = dist / "smoke"
         folder.mkdir(exist_ok=True)
-        (folder / f"{target}.json").write_text(json.dumps(dict(
-            **verification.release_context(version, sha, target), binary_sha256=binary_hash)))
+        (folder / f"{target}.json").write_text(
+            json.dumps(dict(**verification.release_context(version, sha, target), binary_sha256=binary_hash))
+        )
 
     def test_package_metadata_matches_lockfile(self):
         root = ROOT
         package = tomllib.loads((root / "Cargo.toml").read_text())["package"]
         self.assertEqual(package["name"], "please")
-        locked = [entry for entry in tomllib.loads((root / "Cargo.lock").read_text())["package"]
-                  if entry["name"] == "please" and "source" not in entry]
+        locked = [
+            entry
+            for entry in tomllib.loads((root / "Cargo.lock").read_text())["package"]
+            if entry["name"] == "please" and "source" not in entry
+        ]
         self.assertEqual(len(locked), 1)
         self.assertEqual(locked[0]["version"], package["version"])
 
@@ -64,8 +69,9 @@ class ReleaseTests(unittest.TestCase):
                 binary.write_text("#!/bin/sh\nprintf 'please 9.9.9\\n'\n")
                 binary.chmod(0o755)
                 env["BUILD_TARGET"] = target
-                result = subprocess.run([sys.executable, str(SCRIPTS / "package-release.py")],
-                                        cwd=root, env=env, capture_output=True, text=True)
+                result = subprocess.run(
+                    [sys.executable, str(SCRIPTS / "package-release.py")], cwd=root, env=env, capture_output=True, text=True
+                )
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn("Binary version mismatch", result.stderr)
                 self.assertFalse((root / f"dist/please-v0.1.0-{target}.tar.gz").exists())
@@ -73,8 +79,12 @@ class ReleaseTests(unittest.TestCase):
                 self.write_smoke(root / "dist", "0.1.0", "a" * 40, target, verification.digest(binary.read_bytes()))
                 subprocess.run([sys.executable, str(SCRIPTS / "package-release.py")], cwd=root, env=env, check=True)
             subprocess.run([sys.executable, str(SCRIPTS / "checksums.py")], cwd=root, check=True)
-            subprocess.run([sys.executable, str(SCRIPTS / "check-release-artifacts.py")], cwd=root,
-                           env=dict(env, EXPECTED_RELEASE_VERSION="0.1.0"), check=True)
+            subprocess.run(
+                [sys.executable, str(SCRIPTS / "check-release-artifacts.py")],
+                cwd=root,
+                env=dict(env, EXPECTED_RELEASE_VERSION="0.1.0"),
+                check=True,
+            )
 
     def test_publish_requires_verified_artifacts_before_publication(self):
         release = (ROOT / ".github/workflows/release.yml").read_text()
@@ -82,9 +92,14 @@ class ReleaseTests(unittest.TestCase):
         self.assertIn("needs: [plan, release-readiness, release-candidate]", publisher)
         self.assertIn("contents: write", publisher)
         self.assertIn("persist-credentials: false", publisher)
-        for required in ("actions/download-artifact@", "pattern: please-${{ github.run_id }}-${{ github.run_attempt }}-*",
-                         "python3 .github/scripts/checksums.py", "python3 .github/scripts/check-release-artifacts.py", "npm run release",
-                         "EXPECTED_RELEASE_VERSION: ${{ needs.plan.outputs.version }}"):
+        for required in (
+            "actions/download-artifact@",
+            "pattern: please-${{ github.run_id }}-${{ github.run_attempt }}-*",
+            "python3 .github/scripts/checksums.py",
+            "python3 .github/scripts/check-release-artifacts.py",
+            "npm run release",
+            "EXPECTED_RELEASE_VERSION: ${{ needs.plan.outputs.version }}",
+        ):
             self.assertIn(required, publisher)
         self.assertLess(publisher.index("actions/download-artifact@"), publisher.index(".github/scripts/checksums.py"))
         self.assertLess(publisher.index(".github/scripts/checksums.py"), publisher.index(".github/scripts/check-release-artifacts.py"))
@@ -125,19 +140,25 @@ class ReleaseTests(unittest.TestCase):
                 archive = dist / f"{name}.tar.gz"
                 binary = f"fixture executable for {target}".encode()
                 with tarfile.open(archive, "w:gz") as output:
-                    for file, data in (("please", binary), ("README.md", Path("README.md").read_bytes()),
-                                       ("LICENSE", Path("LICENSE").read_bytes())):
+                    for file, data in (
+                        ("please", binary),
+                        ("README.md", Path("README.md").read_bytes()),
+                        ("LICENSE", Path("LICENSE").read_bytes()),
+                    ):
                         member = tarfile.TarInfo(f"{name}/{file}")
                         member.mode = 0o755 if file == "please" else 0o644
                         member.size = len(data)
                         output.addfile(member, io.BytesIO(data))
-                metadata = dict(**verification.release_context("1.2.3", "a" * 40, target), binary_version="please 1.2.3",
-                                archive_sha256=verification.digest(archive.read_bytes()),
-                                binary_sha256=verification.digest(binary), smoke_binary_sha256=verification.digest(binary))
+                metadata = dict(
+                    **verification.release_context("1.2.3", "a" * 40, target),
+                    binary_version="please 1.2.3",
+                    archive_sha256=verification.digest(archive.read_bytes()),
+                    binary_sha256=verification.digest(binary),
+                    smoke_binary_sha256=verification.digest(binary),
+                )
                 (dist / "metadata" / f"{target}.json").write_text(json.dumps(metadata))
                 self.write_smoke(dist, "1.2.3", "a" * 40, target, verification.digest(binary))
-            sums = "".join(f"{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}\n"
-                           for p in sorted(dist.glob("*.tar.gz")))
+            sums = "".join(f"{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}\n" for p in sorted(dist.glob("*.tar.gz")))
             subprocess.run([sys.executable, str(SCRIPTS / "checksums.py")], cwd=root, check=True)
             self.assertEqual((dist / "SHA256SUMS").read_text(), sums)
             verification.verify("1.2.3", "a" * 40, dist)
@@ -161,7 +182,9 @@ class ReleaseTests(unittest.TestCase):
             duplicate_metadata = json.loads(original_metadata)
             duplicate_metadata["archive_sha256"] = verification.digest(archive_path.read_bytes())
             metadata_path.write_text(json.dumps(duplicate_metadata))
-            (dist / "SHA256SUMS").write_text("".join(f"{verification.digest(p.read_bytes())}  {p.name}\n" for p in sorted(dist.glob("*.tar.gz"))))
+            (dist / "SHA256SUMS").write_text(
+                "".join(f"{verification.digest(p.read_bytes())}  {p.name}\n" for p in sorted(dist.glob("*.tar.gz")))
+            )
             with self.assertRaisesRegex(ValueError, "Unexpected archive contents"):
                 verification.verify("1.2.3", "a" * 40, dist)
             archive_path.write_bytes(original_archive)
@@ -181,8 +204,7 @@ class ReleaseTests(unittest.TestCase):
 
     def test_native_matrix_and_archive_contract_cover_the_same_platforms(self):
         workflow = (ROOT / ".github/workflows/release.yml").read_text()
-        release = [dict(os=os_name, target=target) for os_name, target in
-                   re.findall(r"- \{os: ([^,]+), target: ([^}]+)\}", workflow)]
+        release = [dict(os=os_name, target=target) for os_name, target in re.findall(r"- \{os: ([^,]+), target: ([^}]+)\}", workflow)]
         self.assertEqual({entry["target"] for entry in release}, set(verification.TARGETS))
         self.assertEqual(len(release), len(verification.TARGETS))
         self.assertIn(dict(os="ubuntu-24.04-arm", target="aarch64-unknown-linux-gnu"), release)
@@ -191,8 +213,24 @@ class ReleaseTests(unittest.TestCase):
         self.assertIn("BUILD_TARGET: x86_64-unknown-linux-gnu", ci)
 
     def test_artifact_gate_blocks_missing_corrupt_version_and_source(self):
-        for failure in (None, "missing", "corrupt", "version", "source", "missing-version", "missing-source",
-                        "run", "attempt", "missing-smoke", "smoke", "permissions", "readme", "license", "link", "extra"):
+        for failure in (
+            None,
+            "missing",
+            "corrupt",
+            "version",
+            "source",
+            "missing-version",
+            "missing-source",
+            "run",
+            "attempt",
+            "missing-smoke",
+            "smoke",
+            "permissions",
+            "readme",
+            "license",
+            "link",
+            "extra",
+        ):
             with self.subTest(failure=failure), tempfile.TemporaryDirectory() as temporary:
                 root = Path(temporary)
                 (root / ".github/scripts").mkdir(parents=True)
@@ -207,16 +245,27 @@ class ReleaseTests(unittest.TestCase):
                     data = b"fixture binary already verified on its native runner"
                     archive = dist / f"{name}.tar.gz"
                     with tarfile.open(archive, "w:gz") as output:
-                        for filename, content in (("please", data), ("README.md", (root / "README.md").read_bytes()), ("LICENSE", (root / "LICENSE").read_bytes())):
+                        for filename, content in (
+                            ("please", data),
+                            ("README.md", (root / "README.md").read_bytes()),
+                            ("LICENSE", (root / "LICENSE").read_bytes()),
+                        ):
                             member = tarfile.TarInfo(f"{name}/{filename}")
                             member.size = len(content)
                             member.mode = 0o755 if filename == "please" else 0o644
                             output.addfile(member, io.BytesIO(content))
-                    metadata = dict(**verification.release_context("1.2.3", "a" * 40, target), binary_version="please 1.2.3",
-                                    archive_sha256=verification.digest(archive.read_bytes()), binary_sha256=verification.digest(data), smoke_binary_sha256=verification.digest(data))
+                    metadata = dict(
+                        **verification.release_context("1.2.3", "a" * 40, target),
+                        binary_version="please 1.2.3",
+                        archive_sha256=verification.digest(archive.read_bytes()),
+                        binary_sha256=verification.digest(data),
+                        smoke_binary_sha256=verification.digest(data),
+                    )
                     (dist / "metadata" / f"{target}.json").write_text(json.dumps(metadata))
                     self.write_smoke(dist, "1.2.3", "a" * 40, target, verification.digest(data))
-                (dist / "SHA256SUMS").write_text("".join(f"{verification.digest(p.read_bytes())}  {p.name}\n" for p in sorted(dist.glob("*.tar.gz"))))
+                (dist / "SHA256SUMS").write_text(
+                    "".join(f"{verification.digest(p.read_bytes())}  {p.name}\n" for p in sorted(dist.glob("*.tar.gz")))
+                )
                 archive = next(dist.glob("*.tar.gz"))
                 if failure == "missing":
                     archive.unlink()
@@ -230,7 +279,9 @@ class ReleaseTests(unittest.TestCase):
                                 content = source.extractfile(member).read()
                                 if failure == "permissions" and member.name.endswith("/please"):
                                     member.mode = 0o644
-                                if (failure == "readme" and member.name.endswith("/README.md")) or (failure == "license" and member.name.endswith("/LICENSE")):
+                                if (failure == "readme" and member.name.endswith("/README.md")) or (
+                                    failure == "license" and member.name.endswith("/LICENSE")
+                                ):
                                     content = b"changed packaged documentation"
                                     member.size = len(content)
                                 output.addfile(member, io.BytesIO(content))
@@ -243,7 +294,9 @@ class ReleaseTests(unittest.TestCase):
                     record = json.loads(meta.read_text())
                     record["archive_sha256"] = verification.digest(archive.read_bytes())
                     meta.write_text(json.dumps(record))
-                    (dist / "SHA256SUMS").write_text("".join(f"{verification.digest(p.read_bytes())}  {p.name}\n" for p in sorted(dist.glob("*.tar.gz"))))
+                    (dist / "SHA256SUMS").write_text(
+                        "".join(f"{verification.digest(p.read_bytes())}  {p.name}\n" for p in sorted(dist.glob("*.tar.gz")))
+                    )
                 if failure == "extra":
                     (dist / "unexpected.tar.gz").write_bytes(b"extra")
                 if failure in ("missing-smoke", "smoke"):
@@ -254,8 +307,11 @@ class ReleaseTests(unittest.TestCase):
                         record = json.loads(receipt.read_text())
                         record["binary_sha256"] = "0" * 64
                         receipt.write_text(json.dumps(record))
-                env = dict(os.environ, EXPECTED_RELEASE_VERSION="9.9.9" if failure == "version" else "1.2.3",
-                           GITHUB_SHA=("b" if failure == "source" else "a") * 40)
+                env = dict(
+                    os.environ,
+                    EXPECTED_RELEASE_VERSION="9.9.9" if failure == "version" else "1.2.3",
+                    GITHUB_SHA=("b" if failure == "source" else "a") * 40,
+                )
                 if failure == "run":
                     env["GITHUB_RUN_ID"] = "124"
                 if failure == "attempt":
@@ -264,8 +320,9 @@ class ReleaseTests(unittest.TestCase):
                     env.pop("EXPECTED_RELEASE_VERSION")
                 elif failure == "missing-source":
                     env.pop("GITHUB_SHA")
-                result = subprocess.run([sys.executable, ".github/scripts/check-release-artifacts.py"], cwd=root,
-                                        env=env, capture_output=True, text=True)
+                result = subprocess.run(
+                    [sys.executable, ".github/scripts/check-release-artifacts.py"], cwd=root, env=env, capture_output=True, text=True
+                )
                 if failure is None:
                     self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
                     self.assertIn("Verified 4 archives", result.stdout)
@@ -289,14 +346,17 @@ class ReleaseTests(unittest.TestCase):
             self.assertNotIn("please sync", jobs[name])
         self.assertIn("python3 .github/scripts/check-release-ci.py", jobs["release-readiness"])
         candidate = jobs["release-candidate"]
-        ordered = ["mise run build --offline", ".github/scripts/smoke-receipt.py before",
-                   "execution-point: release", ".github/scripts/smoke-receipt.py after",
-                   "mise run release:package", ".github/scripts/check-release-artifacts.py --candidate",
-                   ".github/scripts/release-evidence.py record"]
-        self.assertEqual([candidate.index(step) for step in ordered],
-                         sorted(candidate.index(step) for step in ordered))
-        self.assertLess(jobs["publish"].index(".github/scripts/release-evidence.py verify"),
-                        jobs["publish"].index("npm run release"))
+        ordered = [
+            "mise run build --offline",
+            ".github/scripts/smoke-receipt.py before",
+            "execution-point: release",
+            ".github/scripts/smoke-receipt.py after",
+            "mise run release:package",
+            ".github/scripts/check-release-artifacts.py --candidate",
+            ".github/scripts/release-evidence.py record",
+        ]
+        self.assertEqual([candidate.index(step) for step in ordered], sorted(candidate.index(step) for step in ordered))
+        self.assertLess(jobs["publish"].index(".github/scripts/release-evidence.py verify"), jobs["publish"].index("npm run release"))
         self.assertIn("actions: read", jobs["release-readiness"])
         for name in ("plan", "release-candidate", "publish"):
             self.assertNotIn("actions: write", jobs[name])
@@ -306,7 +366,7 @@ class ReleaseTests(unittest.TestCase):
         self.assertIn("install_args: python rust github:please-behave/cli", candidate)
         self.assertIn("MISE_AUTO_INSTALL: 'false'", workflow)
         self.assertNotIn("rustup toolchain install", workflow)
-        self.assertNotIn("rustup target add", workflow) # All release runners build natively.
+        self.assertNotIn("rustup target add", workflow)  # All release runners build natively.
         tasks = tomllib.loads((ROOT / "mise.toml").read_text())["tasks"]
         self.assertEqual(tasks["build"]["run"], "cargo build --release --locked")
         self.assertEqual(tasks["release:package"]["run"], "python3 .github/scripts/package-release.py")
@@ -327,8 +387,7 @@ class ReleaseTests(unittest.TestCase):
         config = tomllib.loads((ROOT / ".please/config.toml").read_text())
         self.assertEqual(config["execution_points"]["custom"], ["release"])
         releasable = [item for item in config["imports"] if item["path"].endswith("/releasable-open-source-software")]
-        self.assertEqual([item["rule_parameters"] for item in releasable],
-                         [{"semantic-release": {"tag_format": "v${version}"}}])
+        self.assertEqual([item["rule_parameters"] for item in releasable], [{"semantic-release": {"tag_format": "v${version}"}}])
         policy = json.loads((ROOT / ".github/release-ci.json").read_text())
         self.assertEqual(policy["required_jobs"], ["Check"])
         self.assertNotIn("required_steps", policy)
@@ -357,17 +416,30 @@ class ReleaseTests(unittest.TestCase):
             dist = root / "dist"
             dist.mkdir()
             env = dict(os.environ, RELEASE_TAG="v0.1.0", EXPECTED_RELEASE_VERSION="0.1.0", GITHUB_SHA="a" * 40, BUILD_TARGET=target)
+
             def package():
                 return subprocess.run([sys.executable, str(SCRIPTS / "package-release.py")], cwd=root, env=env, capture_output=True)
+
             self.assertNotEqual(package().returncode, 0)  # Missing smoke evidence.
             self.write_smoke(dist, "0.1.0", "a" * 40, target, verification.digest(binary.read_bytes()))
             self.assertEqual(package().returncode, 0)
+
             def verify(**changes):
-                return subprocess.run([sys.executable, str(SCRIPTS / "check-release-artifacts.py"), "--candidate"],
-                                      cwd=root, env=dict(env, **changes), capture_output=True)
+                return subprocess.run(
+                    [sys.executable, str(SCRIPTS / "check-release-artifacts.py"), "--candidate"],
+                    cwd=root,
+                    env=dict(env, **changes),
+                    capture_output=True,
+                )
+
             self.assertEqual(verify().returncode, 0)
-            for changes in (dict(GITHUB_RUN_ID="124"), dict(GITHUB_RUN_ATTEMPT="2"), dict(GITHUB_SHA="b" * 40),
-                            dict(EXPECTED_RELEASE_VERSION="0.2.0"), dict(BUILD_TARGET=verification.TARGETS[1])):
+            for changes in (
+                dict(GITHUB_RUN_ID="124"),
+                dict(GITHUB_RUN_ATTEMPT="2"),
+                dict(GITHUB_SHA="b" * 40),
+                dict(EXPECTED_RELEASE_VERSION="0.2.0"),
+                dict(BUILD_TARGET=verification.TARGETS[1]),
+            ):
                 self.assertNotEqual(verify(**changes).returncode, 0)
             binary.write_text(binary.read_text() + "# changed after smoke\n")
             self.assertNotEqual(package().returncode, 0)
@@ -388,11 +460,20 @@ class ReleaseTests(unittest.TestCase):
             binary = root / f"target/{target}/release/please"
             binary.parent.mkdir(parents=True)
             shutil.copy2(governor, binary)
+
             def receipt_step(operation):
-                return subprocess.run([sys.executable, str(SCRIPTS / "smoke-receipt.py"), operation],
-                                      cwd=root, env=env, capture_output=True)
+                return subprocess.run(
+                    [sys.executable, str(SCRIPTS / "smoke-receipt.py"), operation], cwd=root, env=env, capture_output=True
+                )
+
             self.assertEqual(receipt_step("before").returncode, 0)
-            result = subprocess.run([sys.executable, str(ROOT / ".please/checks/native-smoke/smoke.py"), str(binary)], cwd=root, env=env, capture_output=True, text=True)
+            result = subprocess.run(
+                [sys.executable, str(ROOT / ".please/checks/native-smoke/smoke.py"), str(binary)],
+                cwd=root,
+                env=env,
+                capture_output=True,
+                text=True,
+            )
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             receipt = root / "dist/smoke" / f"{target}.json"
             self.assertFalse(receipt.exists(), "quality checks do not record release evidence")
@@ -405,7 +486,9 @@ class ReleaseTests(unittest.TestCase):
             fake = root / "fake"
             fake.write_text(f"#!/bin/sh\nprintf 'please {version}\\n'\n")
             fake.chmod(0o755)
-            result = subprocess.run([sys.executable, str(ROOT / ".please/checks/native-smoke/smoke.py"), str(fake)], cwd=root, env=env, capture_output=True)
+            result = subprocess.run(
+                [sys.executable, str(ROOT / ".please/checks/native-smoke/smoke.py"), str(fake)], cwd=root, env=env, capture_output=True
+            )
             self.assertNotEqual(result.returncode, 0)
             self.assertFalse(receipt.exists(), "failed smoke must remove any previous receipt")
 
@@ -415,8 +498,7 @@ class ReleaseTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 verification.verify("1.0.0", "a" * 40, dist)
             (dist / "dist").mkdir()
-            result = subprocess.run([sys.executable, str(SCRIPTS / "checksums.py")], cwd=dist,
-                                    capture_output=True, text=True)
+            result = subprocess.run([sys.executable, str(SCRIPTS / "checksums.py")], cwd=dist, capture_output=True, text=True)
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("No native archives found", result.stderr)
 
