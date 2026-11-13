@@ -18,7 +18,7 @@ fn fixture() -> tempfile::TempDir {
             .unwrap()
             .success()
     );
-    config::init(root.path()).unwrap();
+    please::init::init(root.path()).unwrap();
     fs::remove_dir_all(root.path().join(".please/checks")).unwrap();
     fs::remove_dir_all(root.path().join(".please/reviews")).unwrap();
     write(root.path(), "evidence", "Evidence\n");

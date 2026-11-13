@@ -41,7 +41,7 @@ fn commit(root: &Path) -> String {
 fn fixture() -> tempfile::TempDir {
     let root = tempfile::tempdir().unwrap();
     git(root.path(), &["init", "-q"]);
-    config::init(root.path()).unwrap();
+    please::init::init(root.path()).unwrap();
     support::configure_adapter(root.path());
     fs::remove_dir_all(root.path().join(".please/checks")).unwrap();
     fs::remove_dir_all(root.path().join(".please/reviews")).unwrap();

@@ -593,7 +593,7 @@ mod tests {
                 .unwrap()
                 .success()
         );
-        crate::config::init(root.path()).unwrap();
+        crate::init::init(root.path()).unwrap();
         fs::write(
             root.path().join(".please/config.toml"),
             "project = 'My_App'\nmax_display_files = 5\n",

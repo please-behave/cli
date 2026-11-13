@@ -95,7 +95,7 @@ print(json.dumps({'protocol_version':1, 'reviews':[{'id':r['id'],'status':'PASS'
         );
         let rules_ref = commit(&rules);
         let provider_ref = commit(&providers);
-        config::init(&consumer).unwrap();
+        please::init::init(&consumer).unwrap();
         fs::remove_dir_all(consumer.join(".please/checks")).unwrap();
         fs::remove_dir_all(consumer.join(".please/reviews")).unwrap();
         support::write(&consumer, "evidence", "Verified evidence\n");

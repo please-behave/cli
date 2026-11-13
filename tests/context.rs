@@ -1,7 +1,6 @@
 //! CTX-001: the structured run context follows its JSON Schema in real Git scenarios.
 #![cfg(unix)]
 mod support;
-use please::config;
 use serde_json::Value;
 use std::{
     fs,
@@ -92,7 +91,7 @@ fn project(settings: &str) -> tempfile::TempDir {
         root.path(),
         &["init", "--quiet", "--initial-branch=main"],
     ));
-    config::init(root.path()).unwrap();
+    please::init::init(root.path()).unwrap();
     write(
         root.path(),
         ".please/config.toml",
@@ -211,7 +210,7 @@ fn unborn_repository_has_no_head_and_a_dirty_workspace() {
         root.path(),
         &["init", "--quiet", "--initial-branch=main"],
     ));
-    config::init(root.path()).unwrap();
+    please::init::init(root.path()).unwrap();
     support::check_args(
         root.path(),
         "capture",

@@ -645,7 +645,3 @@ impl Project {
         }
     }
 }
-
-pub fn init(root: &Path) -> Result<usize> {
-    crate::discovery::init(root)
-}

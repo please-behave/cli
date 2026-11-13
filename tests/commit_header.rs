@@ -66,7 +66,7 @@ impl Fixture {
         let temporary = tempfile::tempdir().unwrap();
         let root = temporary.path().canonicalize().unwrap();
         ok(git(&root, &["init", "--quiet", "--initial-branch=main"]));
-        config::init(&root).unwrap();
+        please::init::init(&root).unwrap();
         fs::remove_dir_all(root.join(".please/checks")).unwrap();
         fs::remove_dir_all(root.join(".please/reviews")).unwrap();
         support::write(&root, ".gitignore", ".please/reports/\n");

@@ -13,7 +13,7 @@ fn execute(cli: Cli) -> Result<i32> {
     let color = terminal::use_color(cli.no_color);
     match cli.command {
         Words::Init => {
-            let created = config::init(&root)?;
+            let created = please::init::init(&root)?;
             println!(
                 "{}",
                 terminal::paint(

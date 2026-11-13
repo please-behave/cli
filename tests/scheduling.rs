@@ -23,7 +23,7 @@ fn project() -> tempfile::TempDir {
             .unwrap()
             .success()
     );
-    config::init(root.path()).unwrap();
+    please::init::init(root.path()).unwrap();
     support::check(root.path(), "a", &["check"], "exit 0");
     support::check(root.path(), "b", &["check"], "exit 0");
     let path = root.path().join(".please/config.toml");
@@ -229,7 +229,7 @@ fn linked_worktree_history_stays_outside_governed_files_and_is_isolated() {
             .unwrap()
             .success()
     );
-    config::init(linked.path()).unwrap();
+    please::init::init(linked.path()).unwrap();
     support::check(linked.path(), "a", &["check"], "exit 0");
     let (report, starts) = run(linked.path());
     assert_eq!(report.overall, Status::Pass);

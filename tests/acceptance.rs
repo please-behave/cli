@@ -33,7 +33,7 @@ fn git(root: &Path, args: &[&str]) {
 fn project() -> TempDir {
     let dir = tempdir().unwrap();
     git(dir.path(), &["init", "--quiet"]);
-    config::init(dir.path()).unwrap();
+    please::init::init(dir.path()).unwrap();
     support::configure_adapter(dir.path());
     dir
 }
@@ -421,7 +421,7 @@ fn predecessor_configuration_is_not_loaded_or_modified() {
         "published governor configuration",
     );
     assert!(config::load(root.path()).is_err());
-    config::init(root.path()).unwrap();
+    please::init::init(root.path()).unwrap();
     support::configure_adapter(root.path());
     assert!(root.path().join(".please/config.toml").is_file());
     assert!(config::load(root.path()).is_ok());
@@ -815,7 +815,7 @@ fn no_root_detection_or_git_mutation() {
     assert!(!d.path().join(".git/refs/heads/master").exists());
     let nested = d.path().join("nested");
     fs::create_dir(&nested).unwrap();
-    assert!(config::init(&nested).is_err());
+    assert!(please::init::init(&nested).is_err());
     assert!(!nested.join(".please").exists());
 }
 #[cfg(unix)]

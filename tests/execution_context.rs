@@ -1,9 +1,6 @@
 #![cfg(unix)]
 mod support;
-use please::{
-    config,
-    report::{self, Status},
-};
+use please::report::{self, Status};
 use sha2::{Digest, Sha256};
 use std::fs;
 use support::write;
@@ -19,7 +16,7 @@ fn validated_execution_point_overrides_inherited_context_for_checks_and_provider
             .unwrap()
             .success()
     );
-    config::init(root.path()).unwrap();
+    please::init::init(root.path()).unwrap();
     support::configure_adapter(root.path());
     write(
         root.path(),

@@ -143,7 +143,7 @@ impl Fixture {
         fs::create_dir(&cache).unwrap();
         git(&root, &["init", "--quiet", "--initial-branch=main"]);
         git(&remote, &["init", "--quiet", "--initial-branch=main"]);
-        config::init(&root).unwrap();
+        please::init::init(&root).unwrap();
         support::configure_adapter(&root);
         write(
             &root,
@@ -829,7 +829,7 @@ fn separate_projects_resolving_concurrently_share_one_cache() {
     let second = f.root.with_file_name("second");
     fs::create_dir(&second).unwrap();
     git(&second, &["init", "--quiet"]);
-    config::init(&second).unwrap();
+    please::init::init(&second).unwrap();
     fs::copy(
         f.root.join(".please/config.toml"),
         second.join(".please/config.toml"),

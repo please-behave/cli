@@ -28,7 +28,7 @@ fn project() -> TempDir {
             .unwrap()
             .success()
     );
-    config::init(root.path()).unwrap();
+    please::init::init(root.path()).unwrap();
     support::configure_adapter(root.path());
     support::write(root.path(), ".gitignore", ".please/reports/\n");
     support::check(root.path(), "first", &["check"], "exit 0");

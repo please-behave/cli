@@ -686,7 +686,7 @@ fn external_invalid_roots_import_overrides_and_scope_references_fail() {
 fn initialization_is_one_time() {
     let d = tempfile::tempdir().unwrap();
     git(d.path(), &["init", "--quiet"]);
-    assert_eq!(config::init(d.path()).unwrap(), 9);
+    assert_eq!(please::init::init(d.path()).unwrap(), 9);
     config::load(d.path()).unwrap();
     assert!(
         !fs::read_to_string(d.path().join(".please/config.toml"))
@@ -699,7 +699,7 @@ fn initialization_is_one_time() {
             .is_file()
     );
     assert_eq!(
-        config::init(d.path()).unwrap_err().to_string(),
+        please::init::init(d.path()).unwrap_err().to_string(),
         "Already initialized (.please/ exists)."
     );
     assert_eq!(

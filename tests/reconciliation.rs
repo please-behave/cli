@@ -33,7 +33,7 @@ fn ok(output: Output) -> Output {
 fn project(points: &[&str]) -> TempDir {
     let root = tempfile::tempdir().unwrap();
     ok(git(root.path(), &["init", "--quiet"]));
-    config::init(root.path()).unwrap();
+    please::init::init(root.path()).unwrap();
     support::configure_adapter(root.path());
     fs::write(
         root.path().join(".please/config.toml"),

@@ -117,7 +117,7 @@ fn project() -> TempDir {
             .unwrap()
             .success()
     );
-    config::init(root.path()).unwrap();
+    please::init::init(root.path()).unwrap();
     root
 }
 #[test]

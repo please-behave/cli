@@ -7,6 +7,7 @@ pub mod discovery;
 mod environment;
 pub mod external;
 pub mod git_snapshot;
+pub mod init;
 pub mod limits;
 pub mod parameters;
 pub mod planner;
