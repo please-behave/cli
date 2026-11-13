@@ -45,6 +45,14 @@
         "Please must support importing external rule sets using immutable Git commit references."
       ]
     },
+    "rationale": {
+      "type": "string",
+      "minLength": 1,
+      "description": "One sentence in plain language on why the product needs this requirement, written for an owner who reads it without the code. A requirement whose reason does not fit into one sentence is probably not significant enough and should be merged with another or dropped.",
+      "examples": [
+        "Without it, a user could read a progress line as proof that a rule was checked when it never ran."
+      ]
+    },
     "decisions": {
       "type": "array",
       "uniqueItems": true,

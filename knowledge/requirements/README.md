@@ -43,6 +43,10 @@ code to know what the product promises.
 - **Stated once.** A fact that another source already defines, such as a default,
   a limit or an exit code in the [configuration reference](../../docs/configuration.md),
   is referred to, not copied, so the two cannot drift apart.
+- **Significant.** A requirement is worth keeping when it is durable, so that it
+  stays true after a refactoring, visible from outside the product, and
+  justified in one sentence. A statement that follows from other requirements,
+  or whose later change nobody would notice, is merged into another or dropped.
 - **Code-free.** A requirement never names components, tests or source files.
   Components name the requirements they implement and tests name the ones they
   verify, so the specification survives refactoring.
@@ -58,6 +62,7 @@ dependency validation and reporting is too large.
 | `name` | A short noun phrase that identifies the requirement. |
 | `area` | Exactly one of the areas listed in the schema. The overview of what the product can do is generated from the areas, so it is never written by hand. |
 | `description` | The statement itself. |
+| `rationale` | One plain sentence on why the product needs this. It is what the owner judges, since the statement alone says what holds but not why anyone wants it. If the reason needs more than a sentence, the requirement is probably too large or too small. |
 | `decisions` | The decisions that shaped this requirement. Omit it when no significant choice stands behind it; most requirements need none. |
 | `obsolete` | Set to `true` when the requirement no longer binds. Delete a requirement that was withdrawn without replacement. |
 
