@@ -199,6 +199,9 @@ Please Behave must not become:
 - An autonomous software developer.
 - A replacement for Git.
 - A CI/CD platform.
+- A verifier of release, build or deployment processes. Shared rule sets govern
+  software development; workflow structure, CI evidence and publication guards stay
+  with each project's own tooling.
 - A general-purpose workflow engine.
 - A mandatory development methodology.
 - A proprietary wrapper around one LLM provider.
