@@ -46,9 +46,15 @@ stale within days.
   release scripts are not components. They are verified through requirements.
 - **A view of the implementation.** Components describe the current structure.
   They are not specification, so they hold no requirements text. A component
-  names the requirements it implements and the decisions that constrain it;
-  requirements and decisions never name components, so the specification
+  names the requirements it implements and the components it depends on or
+  hands matters to. Requirements never name components, so the specification
   survives refactoring.
+- **One direction for every reference.** A reference is stored once, from the
+  more volatile artifact to the more stable one: component to requirement,
+  requirement to decision. A decision names only the decisions it supersedes.
+  A decision reaches a component through the requirements that cite it. Reverse
+  links are derived by tools and never written by hand, so no pair of artifacts
+  has to be kept consistent from both sides.
 
 ## Fields
 
@@ -60,7 +66,7 @@ stale within days.
 | `must_not` | Prohibitions for the code of this component. A prohibition differs from a boundary: `out_of_scope` says whose job something is, `must_not` says what is forbidden. |
 | `files` | Every file of the component, one path each. |
 | `depends_on` | Components whose code this one uses. It must equal the dependencies in the source, so it is a record, not a wish. |
-| `decisions`, `requirements` | Constraints and obligations that apply to the whole component. Link only what shapes it; a decision that touches every component belongs on none. |
+| `requirements` | Requirements this component implements. Decisions are reached through them and are never listed here. |
 
 Write each `out_of_scope` description as a single-line plain value. A folded
 block followed by `owner` makes syntax highlighting, GitHub's included, show the

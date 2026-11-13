@@ -149,10 +149,9 @@ def check(root):
         for entry in component["out_of_scope"]:
             if entry.get("owner") not in (None, *components):
                 errors.append(f"{identifier}: unknown owner {entry['owner']}")
-        for kind, folder in (("decisions", "decisions"), ("requirements", "requirements")):
-            for reference in component.get(kind, []):
-                if not (root / f"knowledge/{folder}/{reference}.yaml").is_file():
-                    errors.append(f"{identifier}: unknown {kind[:-1]} {reference}")
+        for reference in component.get("requirements", []):
+            if not (root / f"knowledge/requirements/{reference}.yaml").is_file():
+                errors.append(f"{identifier}: unknown requirement {reference}")
     module_owner = {module_of(path): owner[path] for path in owner if path.startswith("src/") and path.endswith(".rs")}
     found = {identifier: {} for identifier in components}
     for source, target in sorted(observed_dependencies(root)):

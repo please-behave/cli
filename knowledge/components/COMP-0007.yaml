@@ -42,7 +42,3 @@ depends_on:
   - COMP-0008
   - COMP-0013
   - COMP-0014
-decisions:
-  - DEC-0006
-  - DEC-0016
-  - DEC-0017

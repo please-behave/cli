@@ -103,15 +103,6 @@
         "pattern": "^REQ-[0-9]{4}$"
       },
       "description": "Requirements this component implements."
-    },
-    "decisions": {
-      "type": "array",
-      "uniqueItems": true,
-      "items": {
-        "type": "string",
-        "pattern": "^DEC-[0-9]{4}$"
-      },
-      "description": "Decisions that constrain this component's structure or behavior."
     }
   }
 }

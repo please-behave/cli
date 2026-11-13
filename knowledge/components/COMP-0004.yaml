@@ -35,6 +35,3 @@ depends_on:
   - COMP-0008
   - COMP-0009
   - COMP-0011
-decisions:
-  - DEC-0008
-  - DEC-0012

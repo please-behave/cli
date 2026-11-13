@@ -29,5 +29,3 @@ files:
 depends_on:
   - COMP-0003
   - COMP-0011
-decisions:
-  - DEC-0019
