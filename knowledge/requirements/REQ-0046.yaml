@@ -4,5 +4,7 @@ area: checks
 description: >-
   Estimated durations must never override eligibility, resource exclusion or
   the concurrency limit.
+rationale: >-
+  A guess about duration must never change which checks are allowed to run.
 decisions:
   - DEC-0017

@@ -6,3 +6,6 @@ description: >-
   relative components, and an empty suffix or component, a trailing separator,
   `.`, `..`, a backslash or a colon must be rejected as a configuration error,
   including for disabled rules.
+rationale: >-
+  Rejecting odd path forms early keeps references from reaching outside their
+  intended location.

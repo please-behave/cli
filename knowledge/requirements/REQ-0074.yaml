@@ -5,3 +5,6 @@ description: >-
   A project may enable termination of running checks after fail-fast triggers,
   in the project configuration only and not through an invocation option, and
   enabling termination must not enable fail-fast.
+rationale: >-
+  Projects that value speed over completeness can stop running checks, but
+  only on purpose.

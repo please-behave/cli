@@ -4,3 +4,6 @@ area: checks
 description: >-
   A command token that does not start with `@`, such as `--file=@rule/data`,
   must be passed on unchanged.
+rationale: >-
+  Ordinary arguments, including options that contain an at sign, must reach
+  the tool exactly as written.

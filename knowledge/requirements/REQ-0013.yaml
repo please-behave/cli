@@ -4,3 +4,6 @@ area: checks
 description: >-
   A reference token must be accepted as the executable and as any argument of
   a check command, and it may point to a file or a directory.
+rationale: >-
+  Authors need a reference wherever a path belongs, including for the program
+  to run.

@@ -6,3 +6,6 @@ description: >-
   reason, its elapsed duration, its exit code when available and its captured
   partial output, and checks that completed before the cancellation must keep
   their ordinary results.
+rationale: >-
+  An interrupted check must be recognizable as cancelled, together with what
+  it had produced so far.

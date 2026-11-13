@@ -3,5 +3,7 @@ name: Only PASS Satisfies A Dependency
 area: checks
 description: >-
   A dependency must be satisfied only by a PASS of its prerequisite.
+rationale: >-
+  A prerequisite that did not pass cannot vouch for what depends on it.
 decisions:
   - DEC-0016

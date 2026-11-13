@@ -4,3 +4,6 @@ area: checks
 description: >-
   A command token that starts with `@@` must be passed on literally with
   exactly one leading `@` removed.
+rationale: >-
+  Authors need a way to pass a literal at sign without it being read as a
+  reference.

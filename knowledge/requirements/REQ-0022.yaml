@@ -4,3 +4,6 @@ area: checks
 description: >-
   References of checks from cached Git imports must resolve without network
   access.
+rationale: >-
+  Imported rules must keep working without network access once they are
+  cached.

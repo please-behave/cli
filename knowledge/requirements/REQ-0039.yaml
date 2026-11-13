@@ -5,3 +5,6 @@ description: >-
   Interactive progress must show for each rule a state that matches the actual
   run, with elapsed times and the counts of completed, total and running
   rules.
+rationale: >-
+  A developer watching a run must be able to tell what waits, what runs and
+  what is finished.

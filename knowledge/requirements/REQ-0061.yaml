@@ -3,5 +3,7 @@ name: Skips Propagate Transitively
 area: checks
 description: >-
   A skip caused by a prerequisite must propagate to all transitive dependents.
+rationale: >-
+  Everything downstream of a failure must be stopped, not just the next check.
 decisions:
   - DEC-0016

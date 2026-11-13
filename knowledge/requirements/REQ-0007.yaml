@@ -4,3 +4,6 @@ area: checks
 description: >-
   A check command must be rejected as a configuration error when its
   executable is blank or when an argument contains a NUL character.
+rationale: >-
+  A blank executable or a NUL character can never describe a runnable command
+  and is caught early.

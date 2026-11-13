@@ -5,5 +5,8 @@ description: >-
   A review that was not invoked because the check phase did not satisfy the
   gating condition must be reported as NOT_RUN with a reason that names the
   check-phase gating.
+rationale: >-
+  A review that did not run must be visible as such and not be mistaken for a
+  pass.
 decisions:
   - DEC-0018

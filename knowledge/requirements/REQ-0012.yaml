@@ -11,3 +11,6 @@ description: >-
   rule, but never inside `.please/` or a rule set directory; `@param/<name>`
   for the value of a declared rule parameter; and `@context` for the absolute
   path of the run context file.
+rationale: >-
+  Rules, including imported ones, must reach their own files and parameters
+  regardless of the working directory and of where the rule is stored.

@@ -4,3 +4,6 @@ area: checks
 description: >-
   A check that defines its command as an array or through entrypoint or
   interpreter must be rejected as a configuration error.
+rationale: >-
+  Having a single way to write a command keeps configurations consistent and
+  stops old forms from lingering.

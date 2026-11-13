@@ -4,5 +4,8 @@ area: checks
 description: >-
   Please must not support non-blocking checks, and a check definition that
   declares a `blocking` property must be rejected as a configuration error.
+rationale: >-
+  Allowing advisory checks would weaken enforcement and add a setting that
+  nobody should need.
 decisions:
   - DEC-0006

@@ -4,3 +4,6 @@ area: checks
 description: >-
   Execution plans must record the canonical dependency IDs of each scheduled
   check.
+rationale: >-
+  A plan must show how checks depend on each other, so that the order of a run
+  can be understood.

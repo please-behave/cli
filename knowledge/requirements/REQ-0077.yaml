@@ -5,3 +5,6 @@ description: >-
   On macOS and Linux, termination must send SIGTERM to the process group of
   each running check and SIGKILL after the grace period if processes remain,
   including when the direct child has already exited.
+rationale: >-
+  Stopping only the parent would leave the check's own child processes
+  running.

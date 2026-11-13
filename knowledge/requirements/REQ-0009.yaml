@@ -4,3 +4,6 @@ area: checks
 description: >-
   Please must not install tools or dependencies in order to run a check
   command.
+rationale: >-
+  Please verifies a project and must not change a developer's environment on
+  its own.

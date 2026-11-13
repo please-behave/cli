@@ -3,5 +3,7 @@ name: No Persistent Fail-Fast Setting
 area: checks
 description: >-
   Fail-fast must not be configurable as a persistent project setting.
+rationale: >-
+  Incomplete results must not become a project-wide default.
 decisions:
   - DEC-0013

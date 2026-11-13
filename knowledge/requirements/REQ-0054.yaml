@@ -4,5 +4,8 @@ area: checks
 description: >-
   Dependencies must be resolved against the enabled checks selected at the
   requested execution point, after rule set assignments and import mappings.
+rationale: >-
+  A dependency must never silently pull a check into a run that did not select
+  it.
 decisions:
   - DEC-0016

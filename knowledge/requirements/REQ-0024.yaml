@@ -5,3 +5,6 @@ description: >-
   A check must be reported as PASS for exit status 0, as FAIL for exit status
   1, as ERROR for exit status 2, as FAIL with a diagnostic naming the status
   for any other numeric exit status, and as ERROR when a signal terminated it.
+rationale: >-
+  The exit status separates a found violation from a technical failure, and
+  the product must never mix the two up.

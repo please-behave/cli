@@ -6,3 +6,6 @@ description: >-
   the termination setting and grace period, estimated durations, the order and
   duplication of declared dependencies, or whether fail-fast is requested, and
   a plan must keep its full selection regardless of fail-fast.
+rationale: >-
+  An unchanged plan identity tells everyone that two runs used the same
+  selection, however they were scheduled.

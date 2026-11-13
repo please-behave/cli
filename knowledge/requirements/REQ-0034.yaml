@@ -6,3 +6,6 @@ description: >-
   run at the same time within one invocation, checks without a resource must
   not be restricted by it, and the exclusion must not lock other Please
   invocations.
+rationale: >-
+  Checks that touch the same mutable state must not run together, or they
+  corrupt each other's results.

@@ -3,5 +3,7 @@ name: No Scheduling Settings
 area: checks
 description: >-
   Scheduling priorities and estimated durations must not be configurable.
+rationale: >-
+  Users must not have to maintain timing data for scheduling to work.
 decisions:
   - DEC-0017

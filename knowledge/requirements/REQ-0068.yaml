@@ -6,5 +6,8 @@ description: >-
   of further rules once a check FAIL or ERROR, a FAIL or ERROR of a blocking
   review, or a review parameter error or missing review prompt is known, while
   a FAIL or ERROR of a non-blocking review must not stop it.
+rationale: >-
+  Developers sometimes want the first blocking problem quickly, while complete
+  results stay the default.
 decisions:
   - DEC-0013

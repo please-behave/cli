@@ -4,3 +4,5 @@ area: checks
 description: >-
   Please must not roll back or repair changes left behind by an interrupted
   check.
+rationale: >-
+  Please must not promise to repair what an interrupted check left behind.

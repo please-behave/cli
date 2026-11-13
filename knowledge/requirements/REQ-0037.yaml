@@ -4,3 +4,6 @@ area: checks
 description: >-
   A failure, timeout or worker error of a check must release the resources the
   check holds.
+rationale: >-
+  A failed check must not leave a resource locked and starve the rest of the
+  run.

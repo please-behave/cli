@@ -4,3 +4,6 @@ area: checks
 description: >-
   Checks must run concurrently by default, up to the default limit defined in
   the configuration reference.
+rationale: >-
+  Running independent checks together shortens the wait that developers face
+  on every run.

@@ -5,3 +5,5 @@ description: >-
   The maximum number of concurrently running checks must be configurable as a
   positive integer in the project configuration, and a limit of one must run
   checks serially.
+rationale: >-
+  Projects must be able to cap parallel work to fit their machines and tools.

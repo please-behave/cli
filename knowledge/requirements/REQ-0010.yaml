@@ -5,3 +5,6 @@ description: >-
   The executable of a check command must be found through the search path or
   through an explicit executable path, and a relative explicit path must be
   resolved against the consumer repository root.
+rationale: >-
+  Checks use the tools that are already installed, found the way a developer
+  would expect.

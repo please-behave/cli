@@ -4,3 +4,6 @@ area: checks
 description: >-
   A check command must run with the consumer repository root as its working
   directory and with no standard input.
+rationale: >-
+  Running from the repository root without input makes checks reproducible and
+  keeps them from waiting for a prompt that nobody answers.

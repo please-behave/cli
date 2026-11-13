@@ -5,5 +5,8 @@ description: >-
   A check whose prerequisite ended with FAIL or ERROR, was cancelled or was
   skipped must not run and must be reported as NOT_RUN, naming its immediate
   prerequisite and that prerequisite's outcome.
+rationale: >-
+  Running a check whose prerequisite failed wastes time and hides the real
+  cause.
 decisions:
   - DEC-0016

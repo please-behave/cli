@@ -6,5 +6,8 @@ description: >-
   dependency path, counting the check itself and based on estimated durations
   per rule, resolving ties deterministically and using a uniform fallback
   estimate for rules without history.
+rationale: >-
+  Starting the longest chain first shortens the whole run without anyone
+  tuning priorities.
 decisions:
   - DEC-0017

@@ -4,5 +4,8 @@ area: checks
 description: >-
   Estimated durations must be kept in a local, non-versioned cache in Git's
   worktree-local directory.
+rationale: >-
+  Timing history is a private local aid and must not enter the repository or
+  travel between machines.
 decisions:
   - DEC-0017

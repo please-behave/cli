@@ -6,3 +6,6 @@ description: >-
   `@param/` name and a reference to an undeclared parameter must be rejected
   as configuration errors that name the supported tokens and the literal
   escape.
+rationale: >-
+  A mistyped reference must fail loudly with guidance instead of reaching the
+  tool as plain text.

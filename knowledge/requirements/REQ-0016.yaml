@@ -4,3 +4,6 @@ area: checks
 description: >-
   Quoting and escaping must not prevent a token that starts with `@` from
   being resolved as a reference.
+rationale: >-
+  Whether a token is a reference must not depend on how it is quoted, which
+  keeps the rule simple to predict.

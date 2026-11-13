@@ -5,5 +5,8 @@ description: >-
   A check may declare the checks it depends on in an optional top-level
   `depends_on` property, by exact check ID and never by display name, and an
   absent property must be equivalent to an empty list.
+rationale: >-
+  A check that needs another to pass first must be able to say so explicitly,
+  so that ordering does not rely on luck.
 decisions:
   - DEC-0016

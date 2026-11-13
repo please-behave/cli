@@ -6,3 +6,6 @@ description: >-
   quoting and escaping rules of the configuration reference, and a command
   with an unclosed quote, a trailing escape or a control character other than
   tab must be rejected as a configuration error.
+rationale: >-
+  One documented way of splitting a command spares authors from guessing where
+  one argument ends and the next begins.

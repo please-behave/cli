@@ -6,3 +6,6 @@ description: >-
   an unquoted shell operator or comment character, or an unescaped dollar sign
   or backtick outside single quotes, including inside double quotes, as listed
   in the configuration reference.
+rationale: >-
+  Rejecting shell syntax is safer than silently treating it as plain text that
+  does not do what its author expected.

@@ -116,7 +116,13 @@ class RepositoryTests(unittest.TestCase):
         requirements = self.root / "knowledge/requirements"
         requirements.mkdir(exist_ok=True)
         shutil.copy(REQUIREMENT_SCHEMA, requirements / "schema.json")
-        value = {"id": "REQ-0001", "name": "Name", "area": "checks", "description": "Please must do one thing."} | changes
+        value = {
+            "id": "REQ-0001",
+            "name": "Name",
+            "area": "checks",
+            "description": "Please must do one thing.",
+            "rationale": "A reason.",
+        } | changes
         (requirements / f"{value['id']}.yaml").write_text(json.dumps(value))
 
     def test_a_valid_requirement_passes(self):

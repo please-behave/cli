@@ -4,3 +4,6 @@ area: reviews
 description: >-
   Reviews in an adapter batch that was already invoked when fail-fast triggers
   must finish normally, and every completed result must be saved.
+rationale: >-
+  Reviews already in flight are paid for, so their results must not be thrown
+  away.

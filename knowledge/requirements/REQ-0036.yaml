@@ -5,3 +5,5 @@ description: >-
   A check waiting for a resource or a prerequisite must not occupy a
   concurrency slot, and other runnable checks must be allowed to start ahead
   of it.
+rationale: >-
+  A waiting check must not keep independent work from using free capacity.

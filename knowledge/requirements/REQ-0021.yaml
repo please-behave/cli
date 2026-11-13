@@ -4,3 +4,6 @@ area: checks
 description: >-
   Execution plans must validate the syntax of references without requiring the
   referenced paths to exist.
+rationale: >-
+  A plan must be usable offline and before every file exists, so it checks the
+  syntax of references only.

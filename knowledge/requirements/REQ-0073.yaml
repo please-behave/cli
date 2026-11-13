@@ -4,3 +4,6 @@ area: checks
 description: >-
   Checks that are already running when fail-fast triggers must run to
   completion unless termination is enabled.
+rationale: >-
+  Interrupting a running check can leave half-finished work, so it must be an
+  explicit choice.

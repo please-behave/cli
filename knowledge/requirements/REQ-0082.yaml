@@ -5,3 +5,6 @@ description: >-
   A CANCELLED check must prevent overall success, and a CANCELLED or NOT_RUN
   result caused by fail-fast must never replace the triggering FAIL or ERROR
   in the overall outcome or the exit status.
+rationale: >-
+  A cancelled run must never look successful or hide the failure that caused
+  the cancellation.

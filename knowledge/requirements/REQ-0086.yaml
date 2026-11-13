@@ -6,5 +6,7 @@ description: >-
   position in the results and be reported as NOT_RUN with no captured output
   and an explicit fail-fast reason, also when one of its prerequisites had not
   completed.
+rationale: >-
+  A run that stopped early must show exactly what did not run and why.
 decisions:
   - DEC-0013

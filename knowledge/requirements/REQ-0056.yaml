@@ -4,3 +4,6 @@ area: checks
 description: >-
   A disabled check must have the syntax of its dependencies validated but must
   not have them resolved.
+rationale: >-
+  Enabling a disabled check later must not reveal malformed dependencies for
+  the first time.

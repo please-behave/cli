@@ -5,3 +5,5 @@ description: >-
   The grace period before forced termination must be configurable as an
   integer with the default and bounds of the configuration reference and must
   be validated even when termination is disabled.
+rationale: >-
+  A check needs a chance to stop cleanly before it is killed.

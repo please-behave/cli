@@ -4,5 +4,7 @@ area: checks
 description: >-
   A skip caused by a prerequisite must not independently change the overall
   outcome, and the originating failure must remain authoritative.
+rationale: >-
+  The report must point at the real cause and not at its consequences.
 decisions:
   - DEC-0018

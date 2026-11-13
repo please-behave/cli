@@ -5,5 +5,8 @@ description: >-
   A missing or unselected target, an ambiguous unqualified imported identity,
   a self-dependency and a cycle must be rejected as configuration errors
   before any command starts.
+rationale: >-
+  A dependency that can never be satisfied must be found before anything
+  starts.
 decisions:
   - DEC-0016

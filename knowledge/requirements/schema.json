@@ -8,7 +8,8 @@
     "id",
     "name",
     "area",
-    "description"
+    "description",
+    "rationale"
   ],
   "properties": {
     "id": {

@@ -4,3 +4,6 @@ area: checks
 description: >-
   A check that cannot be started, whose output cannot be captured or that
   exceeds its timeout must be reported as ERROR.
+rationale: >-
+  A check that could not complete says nothing about the code, so it must
+  count neither as a pass nor as a violation.

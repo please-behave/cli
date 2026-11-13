@@ -6,3 +6,6 @@ description: >-
   pipelines, redirection, variable expansion, command chaining, comment
   processing and globbing have no effect, quoted or escaped special characters
   are literal arguments, and wildcard and tilde characters stay literal.
+rationale: >-
+  Without a shell, a command behaves the same on every platform and hidden
+  expansion cannot change what actually runs.

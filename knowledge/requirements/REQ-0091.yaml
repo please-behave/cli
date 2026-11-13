@@ -5,3 +5,6 @@ description: >-
   A check command must receive rule inputs only as arguments, and every
   inherited `PLEASE_` environment variable must be removed from the process of
   a check, except for one reserved internal recursion guard.
+rationale: >-
+  A rule's behavior must depend on what it is explicitly given, not on the
+  environment of whatever started it.

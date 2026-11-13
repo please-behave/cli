@@ -6,3 +6,5 @@ description: >-
   that is nonempty and has no control characters or surrounding whitespace,
   and an invalid name must be rejected as a configuration error, including for
   disabled checks.
+rationale: >-
+  Checks that share mutable state need a simple way to name what they share.

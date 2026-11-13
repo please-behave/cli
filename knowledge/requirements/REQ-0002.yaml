@@ -5,3 +5,6 @@ description: >-
   A check must accept an optional timeout in seconds with the default and
   bounds defined in the configuration reference, and a value outside the
   bounds must be rejected as a configuration error.
+rationale: >-
+  A check that hangs must not stall verification forever, and a bounded wait
+  keeps runs predictable.

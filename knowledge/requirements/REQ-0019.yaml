@@ -6,3 +6,6 @@ description: >-
   against the actual provenance of the rule, and a reference must be rejected
   when the root or any component below it is a symbolic link or when the
   resolved path leaves the root of its token.
+rationale: >-
+  A reference must never lead out of its source or through a symbolic link, so
+  a check cannot be steered to read or run something unintended.

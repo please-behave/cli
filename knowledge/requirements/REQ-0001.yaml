@@ -4,3 +4,6 @@ area: checks
 description: >-
   A check definition must declare a command, including when the check is
   disabled.
+rationale: >-
+  A check without a command could never run, so the mistake must surface when
+  the configuration is read, not in the middle of a run.

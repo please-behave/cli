@@ -4,3 +4,5 @@ area: reporting
 description: >-
   The captured standard output and standard error of each check must remain
   available through the saved status details.
+rationale: >-
+  Whoever investigates a failure needs the output the check produced.

@@ -4,5 +4,7 @@ area: checks
 description: >-
   A review must not declare dependencies, not even an empty list, and must not
   be the target of a dependency.
+rationale: >-
+  Dependencies stay simple by involving deterministic checks only.
 decisions:
   - DEC-0016

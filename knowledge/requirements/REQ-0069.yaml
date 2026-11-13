@@ -4,5 +4,8 @@ area: checks
 description: >-
   Without fail-fast, Please must run all selected rules that are not prevented
   by prerequisites or gating, even after failures.
+rationale: >-
+  A complete run shows all problems at once, so nobody needs repeated runs to
+  find the next one.
 decisions:
   - DEC-0013

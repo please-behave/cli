@@ -4,3 +4,6 @@ area: checks
 description: >-
   Several checks may run the same script, and each must keep its own identity,
   parameters, timeout, execution and result, without any deduplication.
+rationale: >-
+  One script used by several rules must not blur which rule failed or with
+  which parameters.

@@ -4,3 +4,6 @@ area: reporting
 description: >-
   Progress must never emit cursor controls in CI, GitHub Actions or
   non-terminal streams, not even with `--progress=tty`.
+rationale: >-
+  Logs in CI must stay readable text and must not fill with control
+  characters.

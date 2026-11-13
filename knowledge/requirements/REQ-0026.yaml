@@ -3,5 +3,8 @@ name: Check Failures Block Success
 area: checks
 description: >-
   A check that completes with FAIL or ERROR must prevent overall success.
+rationale: >-
+  Deterministic checks are reliable enough that a failure must never be waved
+  through.
 decisions:
   - DEC-0006
