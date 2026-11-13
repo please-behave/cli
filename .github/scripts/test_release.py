@@ -325,9 +325,14 @@ class ReleaseTests(unittest.TestCase):
         self.assertIn("cancel-in-progress: false", workflow)
         self.assertIn("workflow_dispatch:", workflow)
         config = tomllib.loads((ROOT / ".please/config.toml").read_text())
-        self.assertEqual(config["execution_points"]["custom"], ["release"])
-        self.assertFalse(any(item["path"].endswith("/releasable-open-source-software")
-                             for item in config["imports"]))
+        self.assertEqual(config["execution_points"]["custom"],
+                         ["release", "release-readiness", "release-record", "release-verify"])
+        releasable = [item for item in config["imports"] if item["path"].endswith("/releasable-open-source-software")]
+        self.assertEqual(len(releasable), 1)
+        parameters = releasable[0]["rule_parameters"]
+        self.assertEqual(parameters["release-contract"], {"ci_policy": ".github/release-ci.json",
+                                                          "artifacts_policy": ".github/release-artifacts.json"})
+        self.assertEqual(parameters["semantic-release"], {"tag_format": "v${version}"})
         policy = json.loads((ROOT / ".github/release-ci.json").read_text())
         self.assertEqual(policy["required_jobs"], ["Check"])
         self.assertNotIn("required_steps", policy)
