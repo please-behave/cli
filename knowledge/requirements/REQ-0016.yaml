@@ -3,5 +3,4 @@ name: References Ignore Quoting
 area: checks
 description: >-
   Quoting and escaping must not prevent a token that starts with `@` from
-  being resolved as a reference, and a token that does not start with `@`,
-  such as `--file=@rule/data`, must be passed on unchanged.
+  being resolved as a reference.

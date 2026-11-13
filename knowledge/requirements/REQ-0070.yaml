@@ -1,7 +1,0 @@
-id: REQ-0070
-name: Check Results Trigger Fail-Fast
-area: checks
-description: >-
-  A check FAIL or ERROR must trigger fail-fast.
-decisions:
-  - DEC-0013

@@ -4,4 +4,5 @@ area: checks
 description: >-
   A check interrupted by termination must be reported as CANCELLED with a
   reason, its elapsed duration, its exit code when available and its captured
-  partial output.
+  partial output, and checks that completed before the cancellation must keep
+  their ordinary results.

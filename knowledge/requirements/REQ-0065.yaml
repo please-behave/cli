@@ -3,6 +3,7 @@ name: Reviews Start After Successful Checks
 area: reviews
 description: >-
   Reviews must start only after the check phase has completed without a check
-  FAIL or ERROR and without early termination by fail-fast.
+  FAIL or ERROR and without early termination by fail-fast, and the two phases
+  must never overlap.
 decisions:
   - DEC-0018

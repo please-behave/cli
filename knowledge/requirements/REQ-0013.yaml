@@ -3,4 +3,4 @@ name: References In Any Position
 area: checks
 description: >-
   A reference token must be accepted as the executable and as any argument of
-  a check command.
+  a check command, and it may point to a file or a directory.

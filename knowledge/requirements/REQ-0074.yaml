@@ -3,4 +3,5 @@ name: Termination Setting
 area: checks
 description: >-
   A project may enable termination of running checks after fail-fast triggers,
-  and enabling termination must not enable fail-fast.
+  in the project configuration only and not through an invocation option, and
+  enabling termination must not enable fail-fast.

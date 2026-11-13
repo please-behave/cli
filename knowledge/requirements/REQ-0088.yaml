@@ -1,6 +1,0 @@
-id: REQ-0088
-name: Plans Keep The Full Selection
-area: checks
-description: >-
-  Execution plans must keep the full selection regardless of fail-fast,
-  because early termination depends on execution outcomes.

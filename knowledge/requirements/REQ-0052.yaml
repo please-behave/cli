@@ -1,7 +1,0 @@
-id: REQ-0052
-name: Dependency Identities
-area: checks
-description: >-
-  A dependency must reference an exact check ID and never a display name.
-decisions:
-  - DEC-0016

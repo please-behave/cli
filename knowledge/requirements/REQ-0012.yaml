@@ -6,7 +6,8 @@ description: >-
   are resolved after the command is split into arguments: `@rule/<path>` for a
   path inside the directory of the declaring rule, even when the script lives
   elsewhere in the source; `@repo/<path>` for a path inside the consumer
-  repository; `@source/<path>` for a path inside the cached Git repository of
-  an imported rule, or inside the consumer repository for a local rule;
-  `@param/<name>` for the value of a declared rule parameter; and `@context`
-  for the absolute path of the run context file.
+  repository; `@source/<path>` for a path inside the cached Git repository
+  root of an imported rule, or inside the consumer repository root for a local
+  rule, but never inside `.please/` or a rule set directory; `@param/<name>`
+  for the value of a declared rule parameter; and `@context` for the absolute
+  path of the run context file.

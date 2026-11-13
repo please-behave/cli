@@ -46,4 +46,6 @@ depends_on:
   - COMP-0015
 requirements:
   - REQ-0030
+  - REQ-0042
   - REQ-0068
+  - REQ-0090

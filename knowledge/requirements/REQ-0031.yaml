@@ -1,5 +1,0 @@
-id: REQ-0031
-name: Serial Execution
-area: checks
-description: >-
-  A concurrency limit of one must run checks serially.

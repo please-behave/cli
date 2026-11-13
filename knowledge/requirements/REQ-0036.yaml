@@ -3,5 +3,5 @@ name: Waiting Checks Use No Slot
 area: checks
 description: >-
   A check waiting for a resource or a prerequisite must not occupy a
-  concurrency slot, and later runnable checks must be allowed to start ahead
+  concurrency slot, and other runnable checks must be allowed to start ahead
   of it.

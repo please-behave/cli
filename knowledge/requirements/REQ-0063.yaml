@@ -1,6 +1,0 @@
-id: REQ-0063
-name: Fail-Fast Reason Is Kept
-area: checks
-description: >-
-  A check that fail-fast skipped without a completed failed prerequisite must
-  keep the ordinary fail-fast reason.

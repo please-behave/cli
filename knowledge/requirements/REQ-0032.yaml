@@ -1,5 +1,8 @@
 id: REQ-0032
-name: Concurrency Keeps Plan Identity
+name: Plan Identity Is Independent Of Execution Strategy
 area: checks
 description: >-
-  The concurrency limit must not change the identity of an execution plan.
+  The identity of an execution plan must not depend on the concurrency limit,
+  the termination setting and grace period, estimated durations, the order and
+  duplication of declared dependencies, or whether fail-fast is requested, and
+  a plan must keep its full selection regardless of fail-fast.

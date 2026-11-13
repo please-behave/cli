@@ -65,10 +65,12 @@ requirements:
   - REQ-0021
   - REQ-0022
   - REQ-0027
+  - REQ-0030
   - REQ-0033
   - REQ-0050
   - REQ-0051
-  - REQ-0052
   - REQ-0074
   - REQ-0075
+  - REQ-0078
   - REQ-0087
+  - REQ-0089

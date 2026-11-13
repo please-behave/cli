@@ -3,5 +3,5 @@ name: Concurrency Limit Setting
 area: checks
 description: >-
   The maximum number of concurrently running checks must be configurable as a
-  positive integer in the project configuration, and a single invocation must
-  be able to override it.
+  positive integer in the project configuration, and a limit of one must run
+  checks serially.

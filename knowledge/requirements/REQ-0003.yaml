@@ -4,5 +4,5 @@ area: checks
 description: >-
   A check command must be executed without a shell, so that operators,
   pipelines, redirection, variable expansion, command chaining, comment
-  processing and globbing have no effect and wildcard and tilde characters
-  stay literal.
+  processing and globbing have no effect, quoted or escaped special characters
+  are literal arguments, and wildcard and tilde characters stay literal.

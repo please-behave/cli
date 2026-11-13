@@ -1,8 +1,10 @@
 id: REQ-0068
-name: Fail-Fast Option
+name: Fail-Fast Triggers
 area: checks
 description: >-
   An invocation must be able to request fail-fast, which stops the scheduling
-  of further rules once a triggering result is known.
+  of further rules once a check FAIL or ERROR, a FAIL or ERROR of a blocking
+  review, or a review parameter error or missing review prompt is known, while
+  a FAIL or ERROR of a non-blocking review must not stop it.
 decisions:
   - DEC-0013

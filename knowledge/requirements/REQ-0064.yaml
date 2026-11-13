@@ -1,7 +1,0 @@
-id: REQ-0064
-name: Checks And Reviews Do Not Overlap
-area: reviews
-description: >-
-  The check phase and the review phase must never overlap.
-decisions:
-  - DEC-0018

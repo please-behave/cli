@@ -2,8 +2,8 @@ id: REQ-0050
 name: Dependency Declaration
 area: checks
 description: >-
-  A check may declare the checks it depends on by exact check ID in an
-  optional `depends_on` property, and an absent property must be equivalent to
-  an empty list.
+  A check may declare the checks it depends on in an optional top-level
+  `depends_on` property, by exact check ID and never by display name, and an
+  absent property must be equivalent to an empty list.
 decisions:
   - DEC-0016

@@ -1,5 +1,0 @@
-id: REQ-0080
-name: Completed Checks Keep Their Results
-area: checks
-description: >-
-  Checks that completed before cancellation must keep their ordinary results.

@@ -3,7 +3,8 @@ name: Unstarted Rules After Fail-Fast
 area: checks
 description: >-
   A selected rule that was not started because of fail-fast must keep its
-  position and blocking metadata and be reported as NOT_RUN with no captured
-  output and an explicit fail-fast reason.
+  position in the results and be reported as NOT_RUN with no captured output
+  and an explicit fail-fast reason, also when one of its prerequisites had not
+  completed.
 decisions:
   - DEC-0013

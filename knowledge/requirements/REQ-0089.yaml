@@ -1,0 +1,6 @@
+id: REQ-0089
+name: Tokens Without Leading At Sign Are Unchanged
+area: checks
+description: >-
+  A command token that does not start with `@`, such as `--file=@rule/data`,
+  must be passed on unchanged.

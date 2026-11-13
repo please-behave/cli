@@ -1,6 +1,0 @@
-id: REQ-0057
-name: Dependency Order Is Irrelevant
-area: checks
-description: >-
-  The order and duplication of declared dependencies must not affect the
-  identity of an execution plan.

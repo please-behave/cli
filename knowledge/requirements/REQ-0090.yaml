@@ -1,0 +1,6 @@
+id: REQ-0090
+name: Concurrency Limit Override
+area: checks
+description: >-
+  A single invocation must be able to override the configured concurrency
+  limit.

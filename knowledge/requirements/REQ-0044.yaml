@@ -3,6 +3,8 @@ name: Priority By Remaining Path
 area: checks
 description: >-
   Runnable checks must start in order of the largest estimated remaining
-  dependency path, based on estimated durations per rule.
+  dependency path, counting the check itself and based on estimated durations
+  per rule, resolving ties deterministically and using a uniform fallback
+  estimate for rules without history.
 decisions:
   - DEC-0017

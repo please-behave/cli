@@ -1,5 +1,0 @@
-id: REQ-0081
-name: Cancelled Checks Prevent Success
-area: checks
-description: >-
-  A CANCELLED check must prevent overall success.

@@ -2,5 +2,6 @@ id: REQ-0014
 name: References Stay One Argument
 area: checks
 description: >-
-  A resolved reference must remain exactly one argument, including when its
-  path contains spaces, and must not be split or interpreted again.
+  A resolved reference must be an absolute native path and remain exactly one
+  argument, including when it contains spaces, and must not be split or
+  interpreted again.

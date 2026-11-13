@@ -1,6 +1,0 @@
-id: REQ-0035
-name: Resource Scope
-area: checks
-description: >-
-  Resource exclusion must apply within a single invocation only and must not
-  lock other Please invocations.

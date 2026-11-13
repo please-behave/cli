@@ -2,5 +2,5 @@ id: REQ-0038
 name: Canonical Result Order
 area: checks
 description: >-
-  Saved results must keep the canonical rule order regardless of the order in
-  which checks complete.
+  Saved results and execution plans must keep the canonical rule order,
+  regardless of the order in which checks complete and of estimated durations.
