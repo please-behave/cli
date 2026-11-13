@@ -136,6 +136,7 @@ def check(root):
     components, errors = load_artifacts(root, "components", "COMP")
     requirements, requirement_errors = load_artifacts(root, "requirements", "REQ")
     errors += requirement_errors
+    errors += load_artifacts(root, "decisions", "DEC")[1]
     for identifier, requirement in requirements.items():
         for reference in requirement.get("decisions", []):
             if not (root / f"knowledge/decisions/{reference}.yaml").is_file():

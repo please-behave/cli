@@ -12,6 +12,7 @@ from pathlib import Path
 SCRIPT = Path(__file__).resolve().with_name("check.py")
 SCHEMA = SCRIPT.parents[3] / "knowledge/components/schema.json"
 REQUIREMENT_SCHEMA = SCRIPT.parents[3] / "knowledge/requirements/schema.json"
+DECISION_SCHEMA = SCRIPT.parents[3] / "knowledge/decisions/schema.json"
 spec = importlib.util.spec_from_file_location("knowledge_check", SCRIPT)
 check = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(check)
@@ -139,6 +140,21 @@ class RepositoryTests(unittest.TestCase):
         self.write_requirement()
         self.write(component("COMP-0002", ["src/b.rs"]) | {"requirements": ["REQ-0001"]})
         self.assertEqual(self.errors(), [])
+
+    def write_decision(self, **changes):
+        decisions = self.root / "knowledge/decisions"
+        decisions.mkdir(exist_ok=True)
+        shutil.copy(DECISION_SCHEMA, decisions / "schema.json")
+        value = {"id": "DEC-0001", "name": "Name", "context": "Why.", "decision": "What.", "rationale": "Because."} | changes
+        (decisions / f"{value['id']}.yaml").write_text(json.dumps(value))
+
+    def test_a_valid_decision_passes(self):
+        self.write_decision()
+        self.assertEqual(self.errors(), [])
+
+    def test_a_decision_cannot_reference_mutable_artifacts(self):
+        self.write_decision(requirements=["REQ-0001"])
+        self.assertTrue(any("unknown property requirements" in error for error in self.errors()))
 
     def test_an_embedded_file_must_belong_to_a_component(self):
         (self.root / "docs").mkdir()
