@@ -61,7 +61,7 @@ errors remain visible without blocking the commit.
 | `refactor` | Code restructuring without intended behavior changes | Patch |
 | `revert` | Undo an earlier change | Patch for effective reversions |
 | `ci` | CI/CD workflows | None |
-| `config` | Configuration changes | None |
+| `config` | Configuration changes | Patch |
 | `docs` | Documentation | None |
 | `style` | Formatting and whitespace only | None |
 | `test` | Tests and test infrastructure | None |

@@ -40,9 +40,9 @@ release tag, then generates release notes for the GitHub Release:
 | Commit | Release |
 | --- | --- |
 | `feat` | Minor |
-| `fix`, `perf`, `chore`, `build`, `refactor`, effective `revert` | Patch |
+| `fix`, `perf`, `chore`, `build`, `refactor`, `config`, effective `revert` | Patch |
 | Any allowed type with `!` or a `BREAKING CHANGE:` footer | Minor during `0.x`; Major after explicit stable graduation |
-| `ci`, `config`, `docs`, `style`, `test` without a breaking change | None |
+| `ci`, `docs`, `style`, `test` without a breaking change | None |
 | Historical `build(release)` version commit without a breaking change | None |
 
 The external repository-conventions Rule Set allows twelve types and optional
@@ -53,7 +53,7 @@ Review. CI and release readiness do not validate commit ranges or PR titles.
 Semantic Release still analyzes history to determine versions and release notes.
 
 The highest required increment across all effective commits wins. During 0.x,
-features and breaking changes both require minor; patch changes never override them. Patch maintenance (`chore`, `build`, `refactor`, `revert`)
+features and breaking changes both require minor; patch changes never override them. Patch maintenance (`chore`, `build`, `refactor`, `config`, `revert`)
 appears in the release notes alongside features, fixes and performance changes.
 Non-release types stay hidden unless they contain a breaking change.
 Historical `build(release)` version commits remain hidden from notes. Releases no

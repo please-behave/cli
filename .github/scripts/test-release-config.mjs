@@ -15,12 +15,12 @@ for (const [message, expected] of [
   ["fix: change format\n\nBREAKING CHANGE: old reports need migration", "minor"],
   ["chore(deps): update rust crate toml to v1.2.0", "patch"],
   ["chore(deps)!: drop an older runtime", "minor"],
-  ...["build", "chore", "refactor", "revert"].flatMap(type => [
+  ...["build", "chore", "config", "refactor", "revert"].flatMap(type => [
     [`${type}: maintenance`, "patch"],
     [`${type}(cli): maintenance`, "patch"],
   ]),
   ...["ci", "docs", "style", "test"].map(type => [`${type}: maintenance`, null]),
-  ...["build", "ci", "docs", "feat", "fix", "perf", "refactor", "revert", "style", "test"].map(type => [
+  ...["build", "ci", "config", "docs", "feat", "fix", "perf", "refactor", "revert", "style", "test"].map(type => [
     `${type}!: incompatible change`, "minor",
   ]),
   ["build(release): 1.2.3 [skip ci]", null],
@@ -69,12 +69,12 @@ test("a release uses the highest version increment across commits", async () => 
 
 test("patch maintenance is visible in release notes; internal and cosmetic changes are hidden", async () => {
   const commits = [
-    ...["chore", "build", "refactor", "revert"].map((type, index) => commit(`${type}(deps): visible ${type}`, String(index))),
-    ...["ci", "docs", "style", "test"].map((type, index) => commit(`${type}: hidden ${type}`, String(index + 4))),
-    commit("build(release): 1.2.3 [skip ci]", "f"),
+    ...["chore", "build", "config", "refactor", "revert"].map((type, index) => commit(`${type}(deps): visible ${type}`, String(index))),
+    ...["ci", "docs", "style", "test"].map((type, index) => commit(`${type}: hidden ${type}`, String(index + 5))),
+    commit("build(release): 1.2.3 [skip ci]", "g"),
   ];
   const notes = await notesFor(commits);
-  for (const type of ["chore", "build", "refactor", "revert"]) assert.match(notes, new RegExp(`visible ${type}`));
+  for (const type of ["chore", "build", "config", "refactor", "revert"]) assert.match(notes, new RegExp(`visible ${type}`));
   assert.doesNotMatch(notes, /hidden |skip ci/);
 });
 
