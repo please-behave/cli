@@ -31,10 +31,6 @@ run = 'python3 tools/release.py ${usage_install:+--install}'
 description = "Format Rust and Python source"
 run = ["cargo fmt --all", "ruff format"]
 
-[tasks."format:check"]
-description = "Check Rust and Python formatting"
-run = ["cargo fmt --all -- --check", "ruff format --check"]
-
 [tasks.verify]
 description = "Run the deterministic Please Behave checks and stop at the first blocker"
 run = "please run --at pre-push --checks-only --fail-fast"

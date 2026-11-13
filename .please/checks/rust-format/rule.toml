@@ -1,4 +1,4 @@
-id = "format"
+id = "rust-format"
 description = "Verify Rust formatting"
 enabled = true
 run_at = ["pre-commit", "pre-push", "check"]

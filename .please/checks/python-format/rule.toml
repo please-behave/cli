@@ -1,0 +1,8 @@
+id = "python-format"
+description = "Verify Python formatting"
+enabled = true
+run_at = ["pre-commit", "pre-push", "check"]
+
+[check]
+command = "ruff format --check --no-cache"
+timeout_seconds = 120

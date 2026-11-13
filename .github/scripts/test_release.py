@@ -399,7 +399,7 @@ class ReleaseTests(unittest.TestCase):
         self.assertNotIn("release-package", by_id)
         self.assertNotIn("release-package-verify", by_id)
         self.assertEqual(by_id["native-smoke"]["depends_on"], ["native-build"])
-        for name in ("format", "clippy", "rust-tests", "native-build", "native-smoke"):
+        for name in ("rust-format", "python-format", "clippy", "rust-tests", "native-build", "native-smoke"):
             self.assertIn("check", by_id[name]["run_at"])
             self.assertIn("pre-push", by_id[name]["run_at"])
 

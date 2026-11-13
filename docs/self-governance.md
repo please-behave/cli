@@ -121,8 +121,8 @@ please status --details
 ```
 
 For explicit manual use, `please run --at pre-push` runs the full local gate. Individual format, lint, test, smoke and docs:check tasks
-remain available to developers. Format explicitly edits source; verification
-only checks formatting.
+remain available to developers. `mise format` rewrites Rust and Python source; the
+`rust-format` and `python-format` rules only check it, one rule per formatter so they run in parallel.
 
 ## Agent workflow
 
