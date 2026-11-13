@@ -460,7 +460,7 @@ in reports and Git hooks need no Gemini credentials.
 This repository's deterministic quality checks run through an installed published
 Please Behave release. Run `mise install` for the configured rule tools (including
 Gitleaks, actionlint, the published governor and both Rust toolchains), then
-`mise run ci:prepare` (alias `setup`) to fetch locked dependencies. Git and a
+`mise prepare` to fetch locked dependencies. Git and a
 native compiler/linker remain host prerequisites. All mise tool versions, including
 the Rust toolchain, are pinned and updated by Renovate; Rust 1.85.0 independently
 verifies minimum compatibility.
@@ -494,10 +494,11 @@ Local hooks verify working files; CI checks clean checkouts.
 See [repository quality gates](docs/self-governance.md) for setup, every execution point,
 the Renovate-managed CI version pin, reports and hook limitations. Accepted commit
 types, scopes and release effects are in [Contributing](CONTRIBUTING.md#commits).
-`mise run TASK` works for every task; `mise format` formats Rust, whereas the
-built-in `mise fmt` formats `mise.toml`.
+`mise run TASK` works for every task; `mise format` formats Rust and Python, whereas the
+built-in `mise fmt` formats `mise.toml`. `mise verify` runs the deterministic `pre-push`
+checks without reviews and stops at the first blocker; hooks and CI stay complete.
 
-CI uses `mise install` through the mise Action and `mise run ci:prepare`; preparation
+CI uses `mise install` through the mise Action and `mise run prepare`; preparation
 only fetches locked dependencies. Release jobs install only their required tools.
 `mise run build --offline` builds a prepared native candidate; `mise run release:package`
 packages it after smoke validation. Actions owns stamping, receipts, archive checks

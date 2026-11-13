@@ -9,6 +9,8 @@ node = "26.13.0"
 actionlint = "1.7.12"
 shellcheck = "0.11.0"
 gitleaks = "8.30.1"
+gh = "2.103.3"
+ruff = "0.17.4"
 "cargo:cargo-audit" = "0.22.2"
 
 [tasks.build]
@@ -26,12 +28,16 @@ usage = 'flag "--install" help="Wait for success, pin the new version in mise.to
 run = 'python3 tools/release.py ${usage_install:+--install}'
 
 [tasks.format]
-description = "Format Rust source"
-run = "cargo fmt --all"
+description = "Format Rust and Python source"
+run = ["cargo fmt --all", "ruff format"]
 
 [tasks."format:check"]
-description = "Check Rust formatting"
-run = "cargo fmt --all -- --check"
+description = "Check Rust and Python formatting"
+run = ["cargo fmt --all -- --check", "ruff format --check"]
+
+[tasks.verify]
+description = "Run the deterministic Please Behave checks and stop at the first blocker"
+run = "please run --at pre-push --checks-only --fail-fast"
 
 [tasks.lint]
 description = "Run Clippy with warnings treated as errors"
@@ -51,8 +57,7 @@ run_windows = "python .please/checks/native-smoke/smoke.py target/release/please
 description = "Check documentation links, configuration reference and executable examples"
 run = ["python3 .please/checks/docs/check.py", "cargo test --locked --test documentation"]
 
-[tasks."ci:prepare"]
-alias = "setup"
+[tasks.prepare]
 description = "Fetch locked npm and Cargo dependencies for CI and offline Git hooks"
 run = ["npm ci --ignore-scripts", "cargo fetch --locked", "cargo +1.85.0 fetch --locked"]
 
