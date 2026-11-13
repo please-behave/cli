@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check that the component map is valid, assigns every compiled file once and matches the code."""
+"""Check that components and requirements are valid and that the component map matches the code."""
 
 import json
 import re
@@ -32,6 +32,8 @@ def validate(schema, value, where="$"):
         return [f"{where}: expected {kind}"]
     if "const" in schema and value != schema["const"]:
         errors.append(f"{where}: must equal {schema['const']!r}")
+    if "enum" in schema and value not in schema["enum"]:
+        errors.append(f"{where}: {value!r} is not one of {schema['enum']}")
     if kind == "string":
         if len(value) < schema.get("minLength", 0):
             errors.append(f"{where}: must not be empty")
@@ -55,19 +57,22 @@ def validate(schema, value, where="$"):
     return errors
 
 
-def load_components(root):
-    directory = root / "knowledge/components"
+def load_artifacts(root, folder, prefix):
+    """Load every `<prefix>-NNNN.yaml` file of a knowledge folder and validate it against the folder schema."""
+    directory = root / "knowledge" / folder
+    if not directory.is_dir():
+        return {}, []
     schema = json.loads((directory / "schema.json").read_text())
-    components, errors = {}, []
-    for path in sorted(directory.glob("COMP-*.yaml")):
-        component = load_yaml(path)
-        problems = validate(schema, component, path.name)
-        if not problems and component["id"] != path.stem:
-            problems = [f"{path.name}: id {component['id']} does not match the file name"]
+    artifacts, errors = {}, []
+    for path in sorted(directory.glob(f"{prefix}-*.yaml")):
+        artifact = load_yaml(path)
+        problems = validate(schema, artifact, path.name)
+        if not problems and artifact["id"] != path.stem:
+            problems = [f"{path.name}: id {artifact['id']} does not match the file name"]
         errors += problems
         if not problems:
-            components[component["id"]] = component
-    return components, errors
+            artifacts[artifact["id"]] = artifact
+    return artifacts, errors
 
 
 def compiled_files(root):
@@ -128,7 +133,13 @@ def mutual_pairs(graph):
 
 def check(root):
     root = root.resolve()
-    components, errors = load_components(root)
+    components, errors = load_artifacts(root, "components", "COMP")
+    requirements, requirement_errors = load_artifacts(root, "requirements", "REQ")
+    errors += requirement_errors
+    for identifier, requirement in requirements.items():
+        for reference in requirement.get("decisions", []):
+            if not (root / f"knowledge/decisions/{reference}.yaml").is_file():
+                errors.append(f"{identifier}: unknown decision {reference}")
     owner = {}
     for identifier, component in components.items():
         for path in component["files"]:
@@ -150,7 +161,7 @@ def check(root):
             if entry.get("owner") not in (None, *components):
                 errors.append(f"{identifier}: unknown owner {entry['owner']}")
         for reference in component.get("requirements", []):
-            if not (root / f"knowledge/requirements/{reference}.yaml").is_file():
+            if reference not in requirements:
                 errors.append(f"{identifier}: unknown requirement {reference}")
     module_owner = {module_of(path): owner[path] for path in owner if path.startswith("src/") and path.endswith(".rs")}
     found = {identifier: {} for identifier in components}
@@ -165,15 +176,17 @@ def check(root):
         for stale in sorted(declared - set(found[identifier])):
             errors.append(f"{identifier}: declared dependency on {stale} is not used by any source file")
     notes = [" <-> ".join(pair) for pair in mutual_pairs({k: set(v) for k, v in found.items()})]
-    return components, errors, notes
+    return components, requirements, errors, notes
 
 
 def main():
-    components, errors, notes = check(ROOT)
+    components, requirements, errors, notes = check(ROOT)
     assert not errors, "\n".join(errors)
     for note in notes:
         print(f"NOTE: mutual dependency {note}")
-    print(f"Knowledge passed: {len(components)} components cover every compiled file exactly once.")
+    print(
+        f"Knowledge passed: {len(components)} components cover every compiled file exactly once; {len(requirements)} requirements checked."
+    )
 
 
 if __name__ == "__main__":

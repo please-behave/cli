@@ -11,6 +11,7 @@ from pathlib import Path
 
 SCRIPT = Path(__file__).resolve().with_name("check.py")
 SCHEMA = SCRIPT.parents[3] / "knowledge/components/schema.json"
+REQUIREMENT_SCHEMA = SCRIPT.parents[3] / "knowledge/requirements/schema.json"
 spec = importlib.util.spec_from_file_location("knowledge_check", SCRIPT)
 check = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(check)
@@ -80,7 +81,7 @@ class RepositoryTests(unittest.TestCase):
         (self.root / f"knowledge/components/{value['id']}.yaml").write_text(json.dumps(value))
 
     def errors(self):
-        return check.check(self.root)[1]
+        return check.check(self.root)[2]
 
     def test_a_consistent_map_passes(self):
         self.assertEqual(self.errors(), [])
@@ -108,6 +109,35 @@ class RepositoryTests(unittest.TestCase):
 
     def test_test_only_code_does_not_count_as_a_dependency(self):
         (self.root / "src/b.rs").write_text("#[cfg(all(test, unix))]\nmod tests { use crate::a; }\n")
+        self.assertEqual(self.errors(), [])
+
+    def write_requirement(self, **changes):
+        requirements = self.root / "knowledge/requirements"
+        requirements.mkdir(exist_ok=True)
+        shutil.copy(REQUIREMENT_SCHEMA, requirements / "schema.json")
+        value = {"id": "REQ-0001", "name": "Name", "area": "checks", "description": "Please must do one thing."} | changes
+        (requirements / f"{value['id']}.yaml").write_text(json.dumps(value))
+
+    def test_a_valid_requirement_passes(self):
+        self.write_requirement()
+        self.assertEqual(self.errors(), [])
+
+    def test_a_requirement_needs_a_known_area(self):
+        self.write_requirement(area="everything")
+        self.assertTrue(any("area" in error and "not one of" in error for error in self.errors()))
+
+    def test_a_requirement_cannot_cite_a_missing_decision(self):
+        self.write_requirement(decisions=["DEC-0099"])
+        self.assertTrue(any("unknown decision DEC-0099" in error for error in self.errors()))
+
+    def test_a_component_cannot_cite_a_missing_requirement(self):
+        self.write_requirement()
+        self.write(component("COMP-0002", ["src/b.rs"]) | {"requirements": ["REQ-0002"]})
+        self.assertTrue(any("unknown requirement REQ-0002" in error for error in self.errors()))
+
+    def test_a_component_can_cite_an_existing_requirement(self):
+        self.write_requirement()
+        self.write(component("COMP-0002", ["src/b.rs"]) | {"requirements": ["REQ-0001"]})
         self.assertEqual(self.errors(), [])
 
     def test_an_embedded_file_must_belong_to_a_component(self):
