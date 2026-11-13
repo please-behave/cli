@@ -1,0 +1,8 @@
+id: REQ-0053
+name: Import Qualification
+area: checks
+description: >-
+  A bare dependency reference in an imported rule set must be resolved within
+  that import, a consumer's reference to an imported check must use its full
+  namespaced identity, and no short-name lookup across imports or implicit
+  rule selection may take place.

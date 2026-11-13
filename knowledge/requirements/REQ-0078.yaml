@@ -1,0 +1,6 @@
+id: REQ-0078
+name: Unsupported Platforms Reject Termination
+area: checks
+description: >-
+  On platforms without process-group termination, enabled termination must be
+  rejected instead of silently skipping graceful termination.

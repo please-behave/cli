@@ -1,0 +1,6 @@
+id: REQ-0029
+name: Concurrent By Default
+area: checks
+description: >-
+  Checks must run concurrently by default, up to the default limit defined in
+  the configuration reference.

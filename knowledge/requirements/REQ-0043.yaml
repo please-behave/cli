@@ -1,0 +1,5 @@
+id: REQ-0043
+name: Unstarted Rules Are Not Announced
+area: reporting
+description: >-
+  Progress must never announce a rule that was not started as started.

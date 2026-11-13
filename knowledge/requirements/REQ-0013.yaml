@@ -1,0 +1,6 @@
+id: REQ-0013
+name: References In Any Position
+area: checks
+description: >-
+  A reference token must be accepted as the executable and as any argument of
+  a check command.

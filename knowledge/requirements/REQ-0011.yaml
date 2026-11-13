@@ -1,0 +1,7 @@
+id: REQ-0011
+name: Missing Executable Is An Execution Error
+area: checks
+description: >-
+  The availability of a check's executable must be established only when the
+  check runs, and a missing executable must be reported as ERROR for that
+  check.

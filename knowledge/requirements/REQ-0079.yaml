@@ -1,0 +1,7 @@
+id: REQ-0079
+name: Interrupted Checks Are Cancelled
+area: checks
+description: >-
+  A check interrupted by termination must be reported as CANCELLED with a
+  reason, its elapsed duration, its exit code when available and its captured
+  partial output.

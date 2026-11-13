@@ -1,0 +1,7 @@
+id: REQ-0059
+name: Only PASS Satisfies A Dependency
+area: checks
+description: >-
+  A dependency must be satisfied only by a PASS of its prerequisite.
+decisions:
+  - DEC-0016

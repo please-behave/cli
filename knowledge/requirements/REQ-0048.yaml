@@ -1,0 +1,6 @@
+id: REQ-0048
+name: Cache Failures Are Harmless
+area: checks
+description: >-
+  A missing, corrupt or unwritable duration cache must never change a
+  verification outcome.

@@ -1,0 +1,8 @@
+id: REQ-0046
+name: Estimates Are Advisory
+area: checks
+description: >-
+  Estimated durations must never override eligibility, resource exclusion or
+  the concurrency limit.
+decisions:
+  - DEC-0017

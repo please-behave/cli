@@ -1,0 +1,9 @@
+id: REQ-0086
+name: Unstarted Rules After Fail-Fast
+area: checks
+description: >-
+  A selected rule that was not started because of fail-fast must keep its
+  position and blocking metadata and be reported as NOT_RUN with no captured
+  output and an explicit fail-fast reason.
+decisions:
+  - DEC-0013

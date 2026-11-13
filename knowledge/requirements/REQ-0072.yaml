@@ -1,0 +1,6 @@
+id: REQ-0072
+name: Review Configuration Errors Trigger Fail-Fast
+area: reviews
+description: >-
+  A review parameter error or a missing review prompt must trigger fail-fast
+  even for a non-blocking review.

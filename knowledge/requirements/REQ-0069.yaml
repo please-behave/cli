@@ -1,0 +1,8 @@
+id: REQ-0069
+name: Complete Execution By Default
+area: checks
+description: >-
+  Without fail-fast, Please must run all selected rules that are not prevented
+  by prerequisites or gating, even after failures.
+decisions:
+  - DEC-0013

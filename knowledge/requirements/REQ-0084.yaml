@@ -1,0 +1,6 @@
+id: REQ-0084
+name: Invoked Review Batches Finish
+area: reviews
+description: >-
+  Reviews in an adapter batch that was already invoked when fail-fast triggers
+  must finish normally, and every completed result must be saved.

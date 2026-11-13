@@ -1,0 +1,5 @@
+id: REQ-0032
+name: Concurrency Keeps Plan Identity
+area: checks
+description: >-
+  The concurrency limit must not change the identity of an execution plan.

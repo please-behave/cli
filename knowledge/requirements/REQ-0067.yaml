@@ -1,0 +1,9 @@
+id: REQ-0067
+name: Gated Reviews Are Reported
+area: reviews
+description: >-
+  A review that was not invoked because the check phase did not satisfy the
+  gating condition must be reported as NOT_RUN with a reason that names the
+  check-phase gating.
+decisions:
+  - DEC-0018

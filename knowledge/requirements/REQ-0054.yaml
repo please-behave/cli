@@ -1,0 +1,8 @@
+id: REQ-0054
+name: Resolution Within The Selection
+area: checks
+description: >-
+  Dependencies must be resolved against the enabled checks selected at the
+  requested execution point, after rule set assignments and import mappings.
+decisions:
+  - DEC-0016

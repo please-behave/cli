@@ -1,0 +1,8 @@
+id: REQ-0005
+name: Command Tokenization
+area: checks
+description: >-
+  A check command must be split into an executable and arguments by the
+  quoting and escaping rules of the configuration reference, and a command
+  with an unclosed quote, a trailing escape or a control character other than
+  tab must be rejected as a configuration error.

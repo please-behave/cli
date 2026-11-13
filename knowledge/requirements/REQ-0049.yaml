@@ -1,0 +1,7 @@
+id: REQ-0049
+name: No Scheduling Settings
+area: checks
+description: >-
+  Scheduling priorities and estimated durations must not be configurable.
+decisions:
+  - DEC-0017

@@ -1,0 +1,7 @@
+id: REQ-0034
+name: Resource Exclusion
+area: checks
+description: >-
+  Checks that declare the same resource, whether local or imported, must never
+  run at the same time within one invocation, and checks without a resource
+  must not be restricted by it.

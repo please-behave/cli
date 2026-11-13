@@ -1,0 +1,6 @@
+id: REQ-0025
+name: Technical Failures Are Errors
+area: checks
+description: >-
+  A check that cannot be started, whose output cannot be captured or that
+  exceeds its timeout must be reported as ERROR.

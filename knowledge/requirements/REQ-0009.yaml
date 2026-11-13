@@ -1,0 +1,6 @@
+id: REQ-0009
+name: No Runtime Installation
+area: checks
+description: >-
+  Please must not install tools or dependencies in order to run a check
+  command.

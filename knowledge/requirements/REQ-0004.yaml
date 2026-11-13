@@ -1,0 +1,7 @@
+id: REQ-0004
+name: Shell Syntax Is Rejected
+area: checks
+description: >-
+  A check command must be rejected as a configuration error when it contains
+  shell operator characters, comment characters or unescaped expansion
+  characters outside quotes, as listed in the configuration reference.

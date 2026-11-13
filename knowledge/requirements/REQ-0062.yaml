@@ -1,0 +1,8 @@
+id: REQ-0062
+name: Skips Keep The Originating Outcome
+area: checks
+description: >-
+  A skip caused by a prerequisite must not independently change the overall
+  outcome, and the originating failure must remain authoritative.
+decisions:
+  - DEC-0018

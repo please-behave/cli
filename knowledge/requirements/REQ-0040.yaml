@@ -1,0 +1,6 @@
+id: REQ-0040
+name: Progress Numbering
+area: reporting
+description: >-
+  Rule numbers shown in progress must follow the actual start order rather
+  than the position in the plan.

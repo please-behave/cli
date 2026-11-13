@@ -1,0 +1,5 @@
+id: REQ-0085
+name: Later Review Batches Are Not Invoked
+area: reviews
+description: >-
+  No further adapter batch must be invoked after fail-fast has triggered.

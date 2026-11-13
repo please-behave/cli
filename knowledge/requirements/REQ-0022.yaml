@@ -1,0 +1,6 @@
+id: REQ-0022
+name: Cached Imports Resolve Offline
+area: checks
+description: >-
+  References of checks from cached Git imports must resolve without network
+  access.

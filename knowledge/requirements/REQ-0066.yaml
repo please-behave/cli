@@ -1,0 +1,5 @@
+id: REQ-0066
+name: Failed Snapshots Prevent Reviews
+area: reviews
+description: >-
+  A failed or incomplete snapshot must prevent reviews from starting.

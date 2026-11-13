@@ -1,0 +1,8 @@
+id: REQ-0045
+name: Local Duration History
+area: checks
+description: >-
+  Estimated durations must be kept in a local, non-versioned cache in Git's
+  worktree-local directory.
+decisions:
+  - DEC-0017

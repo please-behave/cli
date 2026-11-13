@@ -1,0 +1,7 @@
+id: REQ-0026
+name: Check Failures Block Success
+area: checks
+description: >-
+  A check that completes with FAIL or ERROR must prevent overall success.
+decisions:
+  - DEC-0006

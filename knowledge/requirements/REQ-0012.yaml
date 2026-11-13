@@ -1,0 +1,12 @@
+id: REQ-0012
+name: Reference Tokens
+area: checks
+description: >-
+  A check command must be able to receive inputs through reserved tokens that
+  are resolved after the command is split into arguments: `@rule/<path>` for a
+  path inside the directory of the declaring rule, even when the script lives
+  elsewhere in the source; `@repo/<path>` for a path inside the consumer
+  repository; `@source/<path>` for a path inside the cached Git repository of
+  an imported rule, or inside the consumer repository for a local rule;
+  `@param/<name>` for the value of a declared rule parameter; and `@context`
+  for the absolute path of the run context file.

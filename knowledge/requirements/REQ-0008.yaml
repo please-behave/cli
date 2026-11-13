@@ -1,0 +1,6 @@
+id: REQ-0008
+name: Working Directory And Input
+area: checks
+description: >-
+  A check command must run with the consumer repository root as its working
+  directory and with no standard input.

@@ -1,0 +1,6 @@
+id: REQ-0006
+name: Legacy Command Forms Are Rejected
+area: checks
+description: >-
+  A check that defines its command as an array or through entrypoint or
+  interpreter must be rejected as a configuration error.

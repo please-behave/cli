@@ -1,0 +1,9 @@
+id: REQ-0055
+name: Invalid Dependencies Are Rejected
+area: checks
+description: >-
+  A missing or unselected target, an ambiguous unqualified imported identity,
+  a self-dependency and a cycle must be rejected as configuration errors
+  before any command starts.
+decisions:
+  - DEC-0016

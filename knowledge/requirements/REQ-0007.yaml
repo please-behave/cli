@@ -1,0 +1,6 @@
+id: REQ-0007
+name: Executable And Arguments Must Be Valid
+area: checks
+description: >-
+  A check command must be rejected as a configuration error when its
+  executable is blank or when an argument contains a NUL character.

@@ -1,0 +1,7 @@
+id: REQ-0061
+name: Skips Propagate Transitively
+area: checks
+description: >-
+  A skip caused by a prerequisite must propagate to all transitive dependents.
+decisions:
+  - DEC-0016

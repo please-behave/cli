@@ -1,0 +1,8 @@
+id: REQ-0027
+name: No Non-Blocking Checks
+area: checks
+description: >-
+  Please must not support non-blocking checks, and a check definition that
+  declares itself non-blocking must be rejected as a configuration error.
+decisions:
+  - DEC-0006

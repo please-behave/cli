@@ -1,0 +1,6 @@
+id: REQ-0047
+name: Estimates Do Not Affect Plans
+area: checks
+description: >-
+  Estimated durations must not change plan identity, offline previews or the
+  canonical order of plans and reports.

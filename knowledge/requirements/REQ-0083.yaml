@@ -1,0 +1,6 @@
+id: REQ-0083
+name: No Rollback
+area: checks
+description: >-
+  Please must not roll back or repair changes left behind by an interrupted
+  check.

@@ -1,0 +1,6 @@
+id: REQ-0010
+name: Executable Lookup
+area: checks
+description: >-
+  The executable of a check command must be found through the search path or
+  through an explicit executable path.

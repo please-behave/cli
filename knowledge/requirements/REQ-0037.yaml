@@ -1,0 +1,7 @@
+id: REQ-0037
+name: Failures Do Not Stop Other Checks
+area: checks
+description: >-
+  A failure, timeout or worker error of a check must release the check's
+  resources and must not stop the remaining checks unless fail-fast is
+  requested.

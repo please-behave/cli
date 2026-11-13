@@ -1,0 +1,7 @@
+id: REQ-0087
+name: No Persistent Fail-Fast Setting
+area: checks
+description: >-
+  Fail-fast must not be configurable as a persistent project setting.
+decisions:
+  - DEC-0013

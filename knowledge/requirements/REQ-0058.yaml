@@ -1,0 +1,6 @@
+id: REQ-0058
+name: Plans Record Dependencies
+area: checks
+description: >-
+  Execution plans must record the canonical dependency IDs of each scheduled
+  check.

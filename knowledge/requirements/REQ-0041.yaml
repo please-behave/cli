@@ -1,0 +1,6 @@
+id: REQ-0041
+name: Bounded Progress Refresh
+area: reporting
+description: >-
+  Interactive progress must refresh at a bounded rate and must show a
+  selection of rows when the terminal is too short for all rules.

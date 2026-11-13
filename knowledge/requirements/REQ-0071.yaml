@@ -1,0 +1,8 @@
+id: REQ-0071
+name: Review Results And Fail-Fast
+area: reviews
+description: >-
+  A FAIL or ERROR of a blocking review must trigger fail-fast, and a FAIL or
+  ERROR of a non-blocking review must not.
+decisions:
+  - DEC-0013

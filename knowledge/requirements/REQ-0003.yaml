@@ -1,0 +1,8 @@
+id: REQ-0003
+name: Commands Run Without A Shell
+area: checks
+description: >-
+  A check command must be executed without a shell, so that operators,
+  pipelines, redirection, variable expansion, command chaining, comment
+  processing and globbing have no effect and wildcard and tilde characters
+  stay literal.

@@ -1,0 +1,6 @@
+id: REQ-0015
+name: Literal At Sign
+area: checks
+description: >-
+  A command token that starts with `@@` must be passed on literally with
+  exactly one leading `@` removed.

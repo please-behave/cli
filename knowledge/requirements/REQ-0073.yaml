@@ -1,0 +1,6 @@
+id: REQ-0073
+name: Running Checks Finish By Default
+area: checks
+description: >-
+  Checks that are already running when fail-fast triggers must run to
+  completion unless termination is enabled.

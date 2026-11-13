@@ -1,0 +1,7 @@
+id: REQ-0002
+name: Check Timeout Setting
+area: checks
+description: >-
+  A check must accept an optional timeout in seconds with the default and
+  bounds defined in the configuration reference, and a value outside the
+  bounds must be rejected as a configuration error.

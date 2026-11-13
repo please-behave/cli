@@ -1,0 +1,8 @@
+id: REQ-0018
+name: Malformed References Are Rejected
+area: checks
+description: >-
+  An unknown reference prefix, a malformed reserved reference, a malformed
+  `@param/` name and a reference to an undeclared parameter must be rejected
+  as configuration errors that name the supported tokens and the literal
+  escape.

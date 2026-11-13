@@ -1,0 +1,8 @@
+id: REQ-0019
+name: Safe Reference Resolution
+area: checks
+description: >-
+  Before each execution of a check, its path references must be resolved
+  against the actual provenance of the rule, and a reference must be rejected
+  when the root or any component below it is a symbolic link or when the
+  resolved path leaves its source.

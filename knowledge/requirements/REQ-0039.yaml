@@ -1,0 +1,7 @@
+id: REQ-0039
+name: Progress States
+area: reporting
+description: >-
+  Interactive progress must show pending, resource-waiting, running and
+  finished states of rules together with elapsed times and the counts of
+  completed, total and running rules.

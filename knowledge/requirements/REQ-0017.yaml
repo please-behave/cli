@@ -1,0 +1,8 @@
+id: REQ-0017
+name: Reference Path Suffixes
+area: checks
+description: >-
+  A reference path suffix must use forward slashes and consist of nonempty
+  relative components, and an empty suffix or component, a trailing separator,
+  `.`, `..`, a backslash or a colon must be rejected as a configuration error,
+  including for disabled rules.

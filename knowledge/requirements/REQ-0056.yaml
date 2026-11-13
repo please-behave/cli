@@ -1,0 +1,6 @@
+id: REQ-0056
+name: Disabled Checks Keep Syntax Validation
+area: checks
+description: >-
+  A disabled check must have the syntax of its dependencies validated but must
+  not have them resolved.

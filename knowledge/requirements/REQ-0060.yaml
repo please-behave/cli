@@ -1,0 +1,9 @@
+id: REQ-0060
+name: Blocked Dependents Are Not Run
+area: checks
+description: >-
+  A check whose prerequisite ended with FAIL or ERROR, was cancelled or was
+  skipped must not run and must be reported as NOT_RUN, naming its immediate
+  prerequisite and that prerequisite's outcome.
+decisions:
+  - DEC-0016

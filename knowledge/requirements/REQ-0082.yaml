@@ -1,0 +1,6 @@
+id: REQ-0082
+name: Fail-Fast Results Never Replace The Trigger
+area: checks
+description: >-
+  A CANCELLED or NOT_RUN result caused by fail-fast must never replace the
+  triggering FAIL or ERROR in the overall outcome or the exit status.

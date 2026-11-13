@@ -1,0 +1,6 @@
+id: REQ-0021
+name: References In Plans
+area: checks
+description: >-
+  Execution plans must validate the syntax of references without requiring the
+  referenced paths to exist.

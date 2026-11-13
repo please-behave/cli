@@ -1,0 +1,8 @@
+id: REQ-0044
+name: Priority By Remaining Path
+area: checks
+description: >-
+  Runnable checks must start in order of the largest estimated remaining
+  dependency path, based on estimated durations per rule.
+decisions:
+  - DEC-0017

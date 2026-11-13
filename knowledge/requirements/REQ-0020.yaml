@@ -1,0 +1,7 @@
+id: REQ-0020
+name: Unusable References Fail The Check
+area: checks
+description: >-
+  A reference to a missing or unsafe path, a missing run context or a
+  parameter without a value must be reported as ERROR for that check, without
+  a fallback.

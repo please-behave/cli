@@ -1,0 +1,6 @@
+id: REQ-0028
+name: Captured Output Stays Available
+area: reporting
+description: >-
+  The captured standard output and standard error of each check must remain
+  available through the saved status details.

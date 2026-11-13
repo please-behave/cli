@@ -1,0 +1,6 @@
+id: REQ-0001
+name: Check Command Required
+area: checks
+description: >-
+  A check definition must declare a command, including when the check is
+  disabled.

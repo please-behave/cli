@@ -1,0 +1,8 @@
+id: REQ-0068
+name: Fail-Fast Option
+area: checks
+description: >-
+  An invocation must be able to request fail-fast, which stops the scheduling
+  of further rules once a triggering result is known.
+decisions:
+  - DEC-0013

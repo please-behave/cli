@@ -1,0 +1,6 @@
+id: REQ-0076
+name: Termination Settings Keep Plan Identity
+area: checks
+description: >-
+  The termination setting and the grace period must not affect the identity of
+  an execution plan.
