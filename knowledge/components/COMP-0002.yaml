@@ -52,7 +52,6 @@ depends_on:
 requirements:
   - REQ-0043
   - REQ-0065
-  - REQ-0066
   - REQ-0067
   - REQ-0068
   - REQ-0069
