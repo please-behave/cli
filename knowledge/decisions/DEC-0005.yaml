@@ -14,7 +14,3 @@ rationale: >-
   and the structural flexibility of YAML, particularly for relatively small
   configuration files. YAML remains appropriate where its characteristics
   are advantageous, such as the project's knowledge documents.
-capabilities:
-  - CAP-0001
-  - CAP-0002
-  - CAP-0003

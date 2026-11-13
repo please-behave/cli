@@ -8,7 +8,6 @@ The knowledge model records **agreed-upon product knowledge**, including retaine
 
 | Artifact | Purpose |
 |---|---|
-| **Capability** | Describes what the product is intended to be capable of. |
 | **Use Case** | Describes an actor's goal and interaction with the product. |
 | **[Requirement](requirements/README.md)** | Defines a binding, verifiable condition the product must satisfy. |
 | **Decision** | Records an architectural choice and its rationale. |
@@ -24,7 +23,8 @@ Requirements form the **verifiable contract between specification and implementa
 - Artifacts complement rather than duplicate one another.
 - Requirements describe observable behavior or properties, not unnecessary implementation details.
 - Relationships are recorded in one direction; reverse relationships are derived.
-- Capabilities and requirements are authoritative unless marked `obsolete: true`.
+- References point from the more volatile artifact to the more stable one: component to requirement, requirement to decision. A decision names only the decisions it supersedes.
+- Requirements are authoritative unless marked `obsolete: true`.
 - Decisions remain authoritative unless superseded by a newer decision referencing them through `supersedes`.
 - Historical artifacts may be retained for traceability. Artifacts withdrawn without replacement may be deleted; Git preserves their history.
 - Schemas define the permitted structure of each artifact.

@@ -26,7 +26,3 @@ rationale: >-
   of the rules that actually matter. Separating structural validity
   from runtime readiness also produces more relevant diagnostics
   without weakening governance enforcement.
-capabilities:
-  - CAP-0002
-  - CAP-0007
-  - CAP-0014

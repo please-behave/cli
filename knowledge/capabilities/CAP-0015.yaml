@@ -1,3 +1,0 @@
-id: CAP-0015
-name: Git Hook Integration
-description: Please installs and maintains managed Git hooks that enforce configured governance rules during supported Git operations.

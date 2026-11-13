@@ -1,3 +1,0 @@
-id: CAP-0011
-name: Review Triggering
-description: Please selectively executes reviews based on configured file-change conditions, avoiding unnecessary evaluations when relevant files have not changed.

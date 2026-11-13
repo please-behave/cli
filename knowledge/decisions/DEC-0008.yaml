@@ -19,6 +19,3 @@ rationale: >-
   rather than through independent local exceptions. Whether a
   repository is required to include a particular Rule Set is a
   separate organizational enforcement concern.
-capabilities:
-  - CAP-0005
-  - CAP-0006

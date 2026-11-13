@@ -35,9 +35,3 @@ rationale: >-
   preserving correctness independently of scheduling decisions. A simple
   heuristic offers practical improvements without the complexity of
   globally optimal scheduling.
-capabilities:
-  - CAP-0007
-  - CAP-0009
-  - CAP-0012
-  - CAP-0013
-  - CAP-0016

@@ -28,11 +28,3 @@ rationale: >-
   results. A fixed default keeps execution predictable and
   cost-conscious while allowing future extensions if justified by
   concrete use cases.
-capabilities:
-  - CAP-0007
-  - CAP-0008
-  - CAP-0010
-  - CAP-0011
-  - CAP-0012
-  - CAP-0013
-  - CAP-0016

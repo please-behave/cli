@@ -1,3 +1,0 @@
-id: CAP-0005
-name: External Rule Set Integration
-description: Please imports reusable rule sets from Git repositories at explicitly selected revisions, preserving their origin and validating their integrity.

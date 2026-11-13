@@ -21,6 +21,3 @@ rationale: >-
   parameters rather than requiring dedicated application code.
   Organizations remain responsible for selecting and validating models
   appropriate to their review requirements.
-capabilities:
-  - CAP-0010
-  - CAP-0014

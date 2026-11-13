@@ -17,5 +17,3 @@ rationale: >-
   situations requiring immediate action should be handled through
   explicitly authorized processes outside Please, such as emergency
   deployment workflows.
-capabilities:
-  - CAP-0008

@@ -29,8 +29,3 @@ rationale: >-
   other implementations to be reused. Restricting uniqueness to
   the effective execution selection avoids rejecting unrelated
   configurations that are never executed together.
-capabilities:
-  - CAP-0003
-  - CAP-0004
-  - CAP-0005
-  - CAP-0007

@@ -39,33 +39,6 @@
       "minLength": 1,
       "description": "Explains why this approach was chosen, including relevant trade-offs or rejected alternatives."
     },
-    "capabilities": {
-      "type": "array",
-      "uniqueItems": true,
-      "items": {
-        "type": "string",
-        "pattern": "^CAP-[0-9]{4}$"
-      },
-      "description": "Capabilities directly affected by this decision."
-    },
-    "requirements": {
-      "type": "array",
-      "uniqueItems": true,
-      "items": {
-        "type": "string",
-        "pattern": "^REQ-[0-9]{4}$"
-      },
-      "description": "Requirements directly affected by this decision."
-    },
-    "use_cases": {
-      "type": "array",
-      "uniqueItems": true,
-      "items": {
-        "type": "string",
-        "pattern": "^UC-[0-9]{4}$"
-      },
-      "description": "Use cases directly affected by this decision."
-    },
     "supersedes": {
       "type": "array",
       "minItems": 1,

@@ -18,7 +18,3 @@ rationale: >-
   execution environment, while repository protection rules can make
   successful verification mandatory. Local and CI governance therefore
   complement rather than replace each other.
-capabilities:
-  - CAP-0004
-  - CAP-0007
-  - CAP-0015

@@ -1,3 +1,0 @@
-id: CAP-0003
-name: Rule Definition
-description: Please allows developers to define deterministic checks and AI-based reviews as version-controlled rules with configurable execution behavior.

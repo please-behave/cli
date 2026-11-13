@@ -20,6 +20,3 @@ rationale: >-
   that it is valid or up to date. Avoiding implicit migrations and
   reconciliation keeps initialization predictable and prevents
   unintended changes to existing governance configurations.
-capabilities:
-  - CAP-0001
-

@@ -13,7 +13,3 @@ rationale: >-
   whether verification is deterministic. Separating governance into
   independent systems based on verification technology would introduce an
   artificial distinction for users.
-capabilities:
-  - CAP-0003
-  - CAP-0008
-  - CAP-0010

@@ -17,6 +17,3 @@ rationale: >-
   Git operations and CI workflows, enables early enforcement without
   requiring continuous monitoring. Runtime security monitoring is outside
   the intended scope of Please.
-capabilities:
-  - CAP-0007
-  - CAP-0015

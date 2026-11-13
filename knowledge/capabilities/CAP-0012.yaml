@@ -1,3 +1,0 @@
-id: CAP-0012
-name: Execution Planning
-description: Please generates execution plans describing the selected rules, execution context, and expected evaluations without executing checks or invoking AI providers.

@@ -19,5 +19,3 @@ rationale: >-
   provide sufficient flexibility without introducing a dedicated version
   management mechanism into Please. Update coordination remains an
   organizational responsibility.
-capabilities:
-  - CAP-0005

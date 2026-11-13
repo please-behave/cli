@@ -26,6 +26,3 @@ rationale: >-
   adapter configuration. Please remains responsible for orchestration,
   result validation, enforcement, and reporting rather than managing
   the internal behavior of AI providers.
-capabilities:
-  - CAP-0010
-  - CAP-0014

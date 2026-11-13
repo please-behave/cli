@@ -23,7 +23,3 @@ rationale: >-
   default. Keeping this behavior outside persistent configuration also
   allows local and CI workflows to choose independently without changing
   the governance definition.
-capabilities:
-  - CAP-0009
-  - CAP-0013
-  - CAP-0016

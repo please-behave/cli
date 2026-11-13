@@ -34,11 +34,3 @@ rationale: >-
   independent of dependency ordering. Reporting skipped dependents
   separately from actual failures preserves accurate execution and
   audit information.
-capabilities:
-  - CAP-0003
-  - CAP-0007
-  - CAP-0008
-  - CAP-0009
-  - CAP-0012
-  - CAP-0013
-  - CAP-0016

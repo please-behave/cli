@@ -22,6 +22,3 @@ rationale: >-
   consequences remain separate so that reporting can distinguish
   successful verification, detected violations, and unsuccessful
   evaluations.
-capabilities:
-  - CAP-0010
-  - CAP-0016

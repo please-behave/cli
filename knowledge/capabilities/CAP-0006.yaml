@@ -1,3 +1,0 @@
-id: CAP-0006
-name: Rule Parameterization
-description: Please supports configurable rule parameters, allowing reusable checks and reviews to receive project-specific values and file references.

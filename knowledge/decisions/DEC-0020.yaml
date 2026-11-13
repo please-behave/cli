@@ -24,6 +24,3 @@ rationale: >-
   repository integrity over automatic reconciliation. The
   approach is sufficient for current requirements and avoids
   premature complexity.
-capabilities:
-  - CAP-0015
-

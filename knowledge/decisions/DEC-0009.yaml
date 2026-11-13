@@ -19,7 +19,3 @@ rationale: >-
   dependency into local development and CI workflows. Centralized
   visibility and organizational enforcement can be added separately
   without changing the fundamental execution model.
-capabilities:
-  - CAP-0008
-  - CAP-0010
-  - CAP-0016

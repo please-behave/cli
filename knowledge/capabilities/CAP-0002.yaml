@@ -1,3 +1,0 @@
-id: CAP-0002
-name: Configuration Validation
-description: Please validates project configuration, rule definitions, rule sets, provider settings, and their references, rejecting invalid or inconsistent configurations.
