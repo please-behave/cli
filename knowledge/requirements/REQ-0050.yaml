@@ -6,7 +6,9 @@ description: >-
   `depends_on` property, by exact check ID and never by display name, and an
   absent property must be equivalent to an empty list.
 rationale: >-
-  A check that needs another to pass first must be able to say so explicitly,
-  so that ordering does not rely on luck.
+  A check may need the effects of another check, such as a build artifact, so
+  it must be able to say so explicitly instead of relying on luck. Reviews have
+  no such need: they read only text content tracked in Git and run nothing, so
+  dependencies exist for checks only.
 decisions:
   - DEC-0016
