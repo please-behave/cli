@@ -6,7 +6,8 @@ description: >-
   skipped must not run and must be reported as NOT_RUN, naming its immediate
   prerequisite and that prerequisite's outcome.
 rationale: >-
-  Running a check whose prerequisite failed wastes time and hides the real
-  cause.
+  A dependent check may rely on preconditions that its prerequisite did not
+  establish when it was unsuccessful, so running it would waste time, produce
+  misleading results and hide the real cause.
 decisions:
   - DEC-0016
