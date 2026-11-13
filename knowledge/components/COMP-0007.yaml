@@ -42,3 +42,38 @@ depends_on:
   - COMP-0008
   - COMP-0013
   - COMP-0014
+requirements:
+  - REQ-0003
+  - REQ-0008
+  - REQ-0009
+  - REQ-0011
+  - REQ-0020
+  - REQ-0023
+  - REQ-0024
+  - REQ-0025
+  - REQ-0026
+  - REQ-0029
+  - REQ-0030
+  - REQ-0031
+  - REQ-0034
+  - REQ-0035
+  - REQ-0036
+  - REQ-0037
+  - REQ-0038
+  - REQ-0044
+  - REQ-0045
+  - REQ-0046
+  - REQ-0047
+  - REQ-0048
+  - REQ-0049
+  - REQ-0059
+  - REQ-0060
+  - REQ-0061
+  - REQ-0062
+  - REQ-0063
+  - REQ-0069
+  - REQ-0070
+  - REQ-0073
+  - REQ-0079
+  - REQ-0080
+  - REQ-0083

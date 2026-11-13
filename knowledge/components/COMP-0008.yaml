@@ -28,3 +28,11 @@ files:
   - src/environment.rs
 depends_on:
   - COMP-0003
+requirements:
+  - REQ-0003
+  - REQ-0008
+  - REQ-0010
+  - REQ-0025
+  - REQ-0073
+  - REQ-0077
+  - REQ-0078

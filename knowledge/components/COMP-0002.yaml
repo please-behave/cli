@@ -49,3 +49,17 @@ depends_on:
   - COMP-0012
   - COMP-0013
   - COMP-0014
+requirements:
+  - REQ-0043
+  - REQ-0064
+  - REQ-0065
+  - REQ-0066
+  - REQ-0067
+  - REQ-0068
+  - REQ-0069
+  - REQ-0070
+  - REQ-0071
+  - REQ-0072
+  - REQ-0082
+  - REQ-0085
+  - REQ-0086

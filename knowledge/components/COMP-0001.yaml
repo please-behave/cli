@@ -44,3 +44,6 @@ depends_on:
   - COMP-0013
   - COMP-0014
   - COMP-0015
+requirements:
+  - REQ-0030
+  - REQ-0068

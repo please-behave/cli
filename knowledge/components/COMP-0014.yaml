@@ -34,3 +34,10 @@ depends_on:
   - COMP-0006
   - COMP-0008
   - COMP-0011
+requirements:
+  - REQ-0024
+  - REQ-0026
+  - REQ-0038
+  - REQ-0062
+  - REQ-0081
+  - REQ-0082
