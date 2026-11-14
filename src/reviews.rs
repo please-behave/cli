@@ -17,15 +17,15 @@ pub fn parse(
     snapshot: &Snapshot,
     json: &str,
 ) -> Result<Vec<Item>> {
-    parse_with_header(project, active, snapshot, json, None)
+    parse_with_message(project, active, snapshot, json, None)
 }
 
-fn parse_with_header(
+fn parse_with_message(
     project: &Project,
     active: &[&Review],
     snapshot: &Snapshot,
     json: &str,
-    header: Option<&str>,
+    message_lines: Option<usize>,
 ) -> Result<Vec<Item>> {
     ensure!(
         json.len() as u64 <= crate::limits::MAX_PROVIDER_RESPONSE_BYTES,
@@ -64,8 +64,6 @@ fn parse_with_header(
             verdict.findings.len() <= crate::limits::MAX_FINDINGS,
             "too many findings"
         );
-        let header_review = active.iter().find(|r| r.id == verdict.id).unwrap().input
-            == crate::config::ReviewInput::CommitHeader;
         let mut grounded = false;
         for finding in &verdict.findings {
             ensure!(
@@ -74,21 +72,6 @@ fn parse_with_header(
                 "invalid finding message"
             );
             ensure!(finding.line != Some(0), "evidence line must be positive");
-            if header_review {
-                ensure!(
-                    header.is_some()
-                        && finding.source == Some(crate::report::EvidenceSource::CommitHeader)
-                        && finding.path.is_none()
-                        && finding.line == Some(1),
-                    "commit-header findings require captured header evidence, source commit-header, null path and line 1"
-                );
-                grounded = true;
-                continue;
-            }
-            ensure!(
-                finding.source.is_none(),
-                "file reviews cannot cite commit-header evidence"
-            );
             if let Some(path) = &finding.path {
                 ensure!(
                     snapshot.files.contains_key(path),
@@ -105,8 +88,13 @@ fn parse_with_header(
                     );
                     grounded = true;
                 }
-            } else {
-                ensure!(finding.line.is_none(), "line requires evidence path");
+            } else if let Some(line) = finding.line {
+                // Without a path, the line cites the commit message.
+                ensure!(
+                    message_lines.is_some_and(|count| (line as usize) <= count),
+                    "line requires evidence path or a commit message line"
+                );
+                grounded = true;
             }
         }
         ensure!(
@@ -248,21 +236,20 @@ pub(crate) fn execute_prepared_observed(
             Ok(())
         };
         let invalid_provider = provider_integrity().err();
-        let call_input = input.for_source(review.input);
         let start = Instant::now();
         let response = if stable && invalid_provider.is_none() {
             provider.review_with_usage(&Request {
                 project,
                 reviews: &reviews,
                 snapshot,
-                input: &call_input,
+                input,
                 parameters: &parameters,
                 execution_point,
             })
         } else {
             crate::provider::Response {
                 verdict: Err(anyhow::anyhow!(
-                    "Working files or commit header changed, or input is incomplete; no provider call made"
+                    "Working files or commit message changed, or input is incomplete; no provider call made"
                 )),
                 usage: None,
                 output: None,
@@ -280,7 +267,7 @@ pub(crate) fn execute_prepared_observed(
             .verdict
             .and_then(|json| {
                 input.ensure_stable()?;
-                parse_with_header(project, &reviews, snapshot, &json, call_input.commit_header.as_deref()).map_err(|_| anyhow::anyhow!("Invalid adapter review response; structured verdict and evidence requirements were not met; inspect captured output with please status --details"))
+                parse_with_message(project, &reviews, snapshot, &json, input.commit_message.as_ref().map(|m| m.lines.len())).map_err(|_| anyhow::anyhow!("Invalid adapter review response; structured verdict and evidence requirements were not met; inspect captured output with please status --details"))
             })
         };
         let mut results = match result {

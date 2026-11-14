@@ -94,7 +94,6 @@ pub fn init(root: &Path) -> Result<usize> {
         parameters: Default::default(),
         check: None,
         review: Some(crate::config::ReviewDefinition {
-            input: Default::default(),
             parameters: Default::default(),
             include_diff: true,
             trigger: None,

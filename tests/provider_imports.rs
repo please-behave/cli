@@ -380,7 +380,7 @@ fn executable_references_and_literal_arguments_preserve_token_boundaries() {
 }
 
 #[test]
-fn imported_header_review_uses_an_independent_cached_adapter() {
+fn imported_message_review_uses_an_independent_cached_adapter() {
     let mut f = Fixture::new();
     support::write(
         &f.rules,
@@ -390,18 +390,15 @@ fn imported_header_review_uses_an_independent_cached_adapter() {
     support::write(
         &f.rules,
         "rules/reviews/evidence/rule.toml",
-        "id = 'evidence'\ndescription = 'Inspect header'\n[review]\nprovider = 'quality'\ninput = 'commit-header'\nprompt = 'prompt.md'\n",
+        "id = 'evidence'\ndescription = 'Inspect message'\n[review]\nprovider = 'quality'\nprompt = 'prompt.md'\n",
     );
     support::write(
         &f.providers,
         "packages/quality/adapter.py",
         r#"import json, sys
 request = json.load(sys.stdin)
-assert request['input']['commit_header'] == 'fix: preserve focus'
-assert request['input']['manifest'] == request['input']['excerpts'] == []
-assert request['head'] is None and request['input']['diff'] == ''
-assert request['response_schema']['properties']['reviews']['items']['properties']['findings']['minItems'] == 1
-print(json.dumps({'protocol_version':1,'reviews':[{'id':r['id'],'status':'PASS','reason':'Header inspected','findings':[{'source':'commit-header','path':None,'line':1,'message':'Specific imperative summary'}]} for r in request['reviews']]}))
+assert request['input']['commit_message']['lines'][0] == {'number': 1, 'text': 'fix: preserve focus'}
+print(json.dumps({'protocol_version':1,'reviews':[{'id':r['id'],'status':'PASS','reason':'Message inspected','findings':[{'path':None,'line':3,'message':'Specific imperative summary'}]} for r in request['reviews']]}))
 "#,
     );
     f.rules_ref = commit(&f.rules);
@@ -437,8 +434,8 @@ print(json.dumps({'protocol_version':1,'reviews':[{'id':r['id'],'status':'PASS',
     assert_eq!(report.overall, Status::Pass, "{:?}", report.results);
     assert!(report.plan.scheduled[0].provider_origin.is_some());
     assert_eq!(
-        report.plan.input.commit_header.as_deref(),
-        Some("fix: preserve focus")
+        report.plan.input.commit_message.as_deref(),
+        Some("fix: preserve focus\n\nUnsent body")
     );
     assert!(!f.consumer.join(".please/adapters").exists());
 }

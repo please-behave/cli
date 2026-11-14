@@ -1,4 +1,4 @@
-//! HDR-001: only captured hook input reaches commit-header review adapters.
+//! HDR-001: reviews at commit-msg receive the whole commit message.
 #![cfg(unix)]
 mod support;
 
@@ -70,19 +70,15 @@ impl Fixture {
         fs::remove_dir_all(root.join(".please/checks")).unwrap();
         fs::remove_dir_all(root.join(".please/reviews")).unwrap();
         support::write(&root, ".gitignore", ".please/reports/\n");
+        support::write(&root, "private-source", "source text\n");
         support::write(
             &root,
-            "private-source",
-            "SOURCE MUST NEVER REACH HEADER ADAPTER\n",
+            ".please/reviews/message/rule.toml",
+            "id = 'message'\ndescription = 'Review message wording'\nrun_at = ['commit-msg']\n[review]\nprompt = 'prompt.md'\n",
         );
         support::write(
             &root,
-            ".please/reviews/header/rule.toml",
-            "id = 'header'\ndescription = 'Review header wording'\nrun_at = ['commit-msg']\n[review]\ninput = 'commit-header'\nprompt = 'prompt.md'\n",
-        );
-        support::write(
-            &root,
-            ".please/reviews/header/prompt.md",
+            ".please/reviews/message/prompt.md",
             "Reject vague wording; require imperative English.\n",
         );
         support::write(
@@ -95,7 +91,7 @@ impl Fixture {
             "syntax",
             &["commit-msg"],
             "@context",
-            "#!/bin/sh\nset -eu\n[ ! -f .git/fail-check ]\nprintf checked > .git/check-marker\nif [ -f .git/change-in-check ]; then file=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))[\"commit_message\"][\"file\"])' \"$1\"); printf 'changed header\\n' > \"$file\"; fi\n",
+            "#!/bin/sh\nset -eu\n[ ! -f .git/fail-check ]\nprintf checked > .git/check-marker\nif [ -f .git/change-in-check ]; then file=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))[\"commit_message\"][\"file\"])' \"$1\"); printf 'changed message\\n' > \"$file\"; fi\n",
         );
         support::write(
             &root,
@@ -106,40 +102,22 @@ root = pathlib.Path('.git')
 assert (root / 'check-marker').exists()
 with (root / 'calls').open('a') as log:
     log.write(json.dumps(request) + '\n')
-if request['reviews'][0]['input'] == 'worktree':
-    assert 'commit_header' not in request['input']
-    mode = (root / 'mode').read_text() if (root / 'mode').exists() else 'PASS'
-    finding = {'path': 'private-source', 'line': 1, 'message': 'File evidence inspected'}
-    if mode == 'header-in-file':
-        finding = {'source': 'commit-header', 'path': None, 'line': 1, 'message': 'Wrong source'}
-    print(json.dumps({'protocol_version': 1, 'reviews': [{'id': request['reviews'][0]['id'], 'status': 'PASS', 'reason': 'File reviewed', 'findings': [finding]}]}))
-    sys.exit(0)
-assert request['response_schema']['properties']['reviews']['items']['properties']['findings']['minItems'] == 1
-assert request['head'] is None
-assert request['input']['excerpts'] == []
-assert request['input']['manifest'] == []
-assert request['input']['focused_paths'] == []
-assert request['input']['diff'] == ''
-assert 'diff_truncated' not in request['input']
-assert 'SOURCE MUST NEVER REACH' not in json.dumps(request)
-assert 'BODY MUST NEVER REACH' not in json.dumps(request)
 assert len(request['reviews']) == 1
-assert request['reviews'][0]['input'] == 'commit-header'
-assert request['response_schema']['properties']['reviews']['items']['properties']['findings']['items']['properties']['source']['enum'] == ['commit-header']
+assert 'input' not in request['reviews'][0]
+assert 'commit_header' not in request['input']
+assert 'source' not in json.dumps(request['response_schema'])
+lines = request['input']['commit_message']['lines']
 mode = (root / 'mode').read_text() if (root / 'mode').exists() else 'PASS'
 if mode == 'malformed':
     print('not JSON'); sys.exit(0)
 if mode == 'change':
-    (root / 'COMMIT_EDITMSG').write_text('changed header\n')
-if mode == 'body-change':
-    (root / 'COMMIT_EDITMSG').write_text(request['input']['commit_header'] + '\n\nnew body\n')
-finding = {'source': 'commit-header', 'path': None, 'line': 1, 'message': 'Header wording evaluated'}
-if mode == 'file-evidence':
-    finding = {'path': 'private-source', 'line': 1, 'message': 'Wrong evidence'}
-if mode == 'bad-line':
-    finding['line'] = 2
+    (root / 'COMMIT_EDITMSG').write_text('changed message\n')
+if lines:
+    finding = {'path': None, 'line': len(lines) + (1 if mode == 'bad-line' else 0), 'message': 'Message evaluated'}
+else:
+    finding = {'path': 'private-source', 'line': 1, 'message': 'File evaluated'}
 status = mode if mode in ['PASS', 'FAIL', 'ERROR'] else 'PASS'
-print(json.dumps({'protocol_version': 1, 'reviews': [{'id': request['reviews'][0]['id'], 'status': status, 'reason': 'Header evaluated', 'findings': [] if status == 'ERROR' or mode == 'ungrounded' else [finding]}]}))
+print(json.dumps({'protocol_version': 1, 'reviews': [{'id': request['reviews'][0]['id'], 'status': status, 'reason': 'Message evaluated', 'findings': [] if status == 'ERROR' or mode == 'ungrounded' else [finding]}]}))
 "#,
         );
         ok(cli(&root, &["sync", "--yes"]));
@@ -177,7 +155,7 @@ print(json.dumps({'protocol_version': 1, 'reviews': [{'id': request['reviews'][0
 }
 
 #[test]
-fn commit_header_hook_and_adapter_contract() {
+fn commit_message_hook_and_adapter_contract() {
     let f = Fixture::new();
     ok(git(&f.root, &["add", "."]));
     ok(git(
@@ -189,38 +167,41 @@ fn commit_header_hook_and_adapter_contract() {
             "-m",
             "fix: preserve focus",
             "-m",
-            "BODY MUST NEVER REACH",
+            "Body line",
         ],
     ));
+    let lines = &f.calls()[0]["input"]["commit_message"]["lines"];
     assert_eq!(
-        f.calls()[0]["input"]["commit_header"],
-        "fix: preserve focus"
+        lines[0],
+        serde_json::json!({"number": 1, "text": "fix: preserve focus"})
+    );
+    assert_eq!(
+        lines[2],
+        serde_json::json!({"number": 3, "text": "Body line"})
     );
     let saved = report::read(&f.root).unwrap();
     assert_eq!(saved.overall, Status::Pass);
     assert_eq!(
-        saved.plan.input.commit_header.as_deref(),
-        Some("fix: preserve focus")
+        saved.plan.input.commit_message.as_deref(),
+        Some("fix: preserve focus\n\nBody line")
     );
     let details = cli(&f.root, &["status", "--details"]);
     assert_eq!(details.status.code(), Some(1)); // The completed commit changed HEAD.
-    assert!(String::from_utf8_lossy(&details.stdout).contains("commit-header:1"));
+    assert!(String::from_utf8_lossy(&details.stdout).contains("commit-message:3"));
 
     for (mode, expected) in [
         ("FAIL", Status::Fail),
         ("ERROR", Status::Error),
         ("malformed", Status::Error),
-        ("file-evidence", Status::Error),
         ("bad-line", Status::Error),
         ("ungrounded", Status::Error),
         ("change", Status::Error),
-        ("body-change", Status::Pass),
     ] {
         support::write(&f.root, ".git/mode", mode);
         support::write(
             &f.root,
             ".git/COMMIT_EDITMSG",
-            "fix: preserve focus\n\nBODY MUST NEVER REACH\n",
+            "fix: preserve focus\n\nBody line\n",
         );
         let output = f.hook();
         assert_eq!(
@@ -234,7 +215,7 @@ fn commit_header_hook_and_adapter_contract() {
 }
 
 #[test]
-fn missing_context_invalid_headers_and_failed_checks_never_call_adapter() {
+fn missing_context_invalid_messages_and_failed_checks_never_call_adapter() {
     let f = Fixture::new();
     for args in [
         vec!["run", "--at", "commit-msg"],
@@ -243,7 +224,7 @@ fn missing_context_invalid_headers_and_failed_checks_never_call_adapter() {
         assert!(!cli(&f.root, &args).status.success());
         assert!(f.calls().is_empty());
     }
-    // Checks-only needs no hook context: the header review is NOT_RUN and no adapter is called.
+    // Checks-only needs no hook context: the review is NOT_RUN and no adapter is called.
     assert!(
         cli(&f.root, &["run", "--at", "commit-msg", "--checks-only"])
             .status
@@ -251,10 +232,9 @@ fn missing_context_invalid_headers_and_failed_checks_never_call_adapter() {
     );
     assert!(f.calls().is_empty());
     for bytes in [
-        vec![],
-        vec![b'x'; 4097],
+        vec![b'x'; 65537],
         vec![0xff],
-        b"fix: bad\0header\n".to_vec(),
+        b"fix: bad\0message\n".to_vec(),
     ] {
         fs::write(f.root.join(".git/COMMIT_EDITMSG"), bytes).unwrap();
         assert!(!f.hook().status.success());
@@ -281,27 +261,22 @@ fn missing_context_invalid_headers_and_failed_checks_never_call_adapter() {
 }
 
 #[test]
-fn header_bounds_identity_and_selection_are_explicit() {
+fn empty_messages_run_and_the_whole_message_is_bounded_and_part_of_identity() {
     let f = Fixture::new();
-    for header in ["é".repeat(2048), "x".repeat(4096)] {
-        support::write(
-            &f.root,
-            ".git/COMMIT_EDITMSG",
-            &format!("{header}\r\n\nBODY MUST NEVER REACH"),
-        );
-        ok(f.hook());
-        assert_eq!(f.calls().last().unwrap()["input"]["commit_header"], header);
-    }
-    let mut message = b"fix: preserve focus\n".to_vec();
-    message.extend(vec![0xff; 100_000]);
-    fs::write(f.root.join(".git/custom message"), message).unwrap();
-    ok(f.hook_message(".git/custom message"));
+    support::write(&f.root, ".git/COMMIT_EDITMSG", "");
+    ok(f.hook());
     assert_eq!(
-        f.calls().last().unwrap()["input"]["commit_header"],
-        "fix: preserve focus"
+        f.calls().last().unwrap()["input"]["commit_message"]["lines"],
+        serde_json::json!([])
     );
+    let message = format!("{}\r\n\nbody\ttab\n", "x".repeat(60_000));
+    support::write(&f.root, ".git/COMMIT_EDITMSG", &message);
+    ok(f.hook());
+    let lines = f.calls().last().unwrap()["input"]["commit_message"]["lines"].clone();
+    assert_eq!(lines.as_array().unwrap().len(), 3);
+    assert_eq!(lines[2]["text"], "body\ttab");
     let before = report::read(&f.root).unwrap().plan.plan_id;
-    support::write(&f.root, ".git/COMMIT_EDITMSG", "different header\n");
+    support::write(&f.root, ".git/COMMIT_EDITMSG", "different message\n");
     ok(f.hook());
     assert_ne!(report::read(&f.root).unwrap().plan.plan_id, before);
     let project = config::load(&f.root).unwrap();
@@ -311,56 +286,24 @@ fn header_bounds_identity_and_selection_are_explicit() {
             .plan
             .executable()
     );
-    let rule = f.root.join(".please/reviews/header/rule.toml");
+    // Reviews at commit-msg may select files, context and triggers like any other review.
+    let rule = f.root.join(".please/reviews/message/rule.toml");
     let original = fs::read_to_string(&rule).unwrap();
     for extra in [
         "files = ['private-source']",
         "context = [{path = 'private-source'}]",
-        "trigger = {changed_files = ['**']}",
     ] {
         fs::write(&rule, format!("{original}{extra}\n")).unwrap();
-        assert!(config::load(&f.root).is_err(), "{extra}");
+        assert!(config::load(&f.root).is_ok(), "{extra}");
     }
-    fs::write(
-        &rule,
-        original.replace("run_at =", "enabled = false\nrun_at ="),
-    )
-    .unwrap();
-    assert!(
-        planner::build(&config::load(&f.root).unwrap(), Some("commit-msg"), false)
-            .unwrap()
-            .plan
-            .executable()
-    );
+    fs::write(&rule, format!("{original}input = 'commit-header'\n")).unwrap();
+    assert!(config::load(&f.root).is_err());
 }
 
 #[test]
-fn mixed_sources_use_separate_calls_and_cannot_substitute_evidence() {
+fn advisory_verdicts_preserve_enforcement_but_message_changes_are_fatal() {
     let f = Fixture::new();
-    support::write(
-        &f.root,
-        ".please/reviews/file/rule.toml",
-        "id = 'file'\ndescription = 'Inspect a file'\nrun_at = ['commit-msg']\n[review]\nprompt = 'prompt.md'\nfiles = ['private-source']\ninclude_diff = false\n",
-    );
-    support::write(
-        &f.root,
-        ".please/reviews/file/prompt.md",
-        "Inspect file evidence.\n",
-    );
-    ok(cli(&f.root, &["sync", "--yes"]));
-    support::write(&f.root, ".git/COMMIT_EDITMSG", "fix: preserve focus\n");
-    ok(f.hook());
-    assert_eq!(f.calls().len(), 2);
-    assert_eq!(report::read(&f.root).unwrap().plan.planned_model_calls, 2);
-    support::write(&f.root, ".git/mode", "header-in-file");
-    assert!(!f.hook().status.success());
-    assert_eq!(report::read(&f.root).unwrap().overall, Status::Error);
-}
-
-#[test]
-fn advisory_verdicts_preserve_enforcement_but_header_changes_are_fatal() {
-    let f = Fixture::new();
-    let rule = f.root.join(".please/reviews/header/rule.toml");
+    let rule = f.root.join(".please/reviews/message/rule.toml");
     let original = fs::read_to_string(&rule).unwrap();
     fs::write(
         &rule,
@@ -378,7 +321,7 @@ fn advisory_verdicts_preserve_enforcement_but_header_changes_are_fatal() {
             report
                 .results
                 .iter()
-                .any(|r| r.id == "header" && r.status.label() == mode && !r.blocking)
+                .any(|r| r.id == "message" && r.status.label() == mode && !r.blocking)
         );
     }
     support::write(&f.root, ".git/mode", "change");
@@ -387,7 +330,7 @@ fn advisory_verdicts_preserve_enforcement_but_header_changes_are_fatal() {
 }
 
 #[test]
-fn imported_header_reviews_use_the_same_hook_contract() {
+fn imported_message_reviews_use_the_same_hook_contract() {
     let f = Fixture::new();
     let source = tempfile::tempdir().unwrap();
     let source = source.path().canonicalize().unwrap();
@@ -395,16 +338,16 @@ fn imported_header_reviews_use_the_same_hook_contract() {
     support::write(
         &source,
         "commit-msg/quality/config.toml",
-        "id = 'quality'\ndescription = 'Commit header wording'\nrun_at = ['commit-msg']\nrules = ['rules/reviews/header']\n",
+        "id = 'quality'\ndescription = 'Commit message wording'\nrun_at = ['commit-msg']\nrules = ['rules/reviews/message']\n",
     );
     support::write(
         &source,
-        "rules/reviews/header/rule.toml",
-        "id = 'header'\ndescription = 'Review header wording'\n[review]\ninput = 'commit-header'\nprompt = 'prompt.md'\n",
+        "rules/reviews/message/rule.toml",
+        "id = 'message'\ndescription = 'Review message wording'\n[review]\nprompt = 'prompt.md'\n",
     );
     support::write(
         &source,
-        "rules/reviews/header/prompt.md",
+        "rules/reviews/message/prompt.md",
         "Reject vague wording; require imperative English.\n",
     );
     ok(git(&source, &["add", "."]));
@@ -415,7 +358,7 @@ fn imported_header_reviews_use_the_same_hook_contract() {
             "commit.gpgsign=false",
             "commit",
             "-m",
-            "test: define external header review",
+            "test: define external message review",
         ],
     ));
     let revision = String::from_utf8(ok(git(&source, &["rev-parse", "HEAD"])).stdout).unwrap();

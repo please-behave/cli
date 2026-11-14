@@ -343,10 +343,10 @@ pub fn verify_project_with_fail_fast(
     if let Some(input) = &review_input {
         if let Err(error) = input.ensure_stable() {
             items.push(Item::simple(
-                "please-commit-header-stability",
+                "please-commit-message-stability",
                 "integrity",
                 Status::Error,
-                format!("Commit header unavailable or changed: {error:#}"),
+                format!("Commit message unavailable or changed: {error:#}"),
             ));
         }
     }

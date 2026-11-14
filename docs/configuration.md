@@ -439,7 +439,6 @@ consumer through the adapter, one call per review, after deterministic checks.
 
 | Field | Required / default | Meaning |
 | --- | --- | --- |
-| `review.input` | Optional; `"worktree"` | Evidence source: `worktree` or `commit-header`. Header reviews require the managed `commit-msg` hook. |
 | `review.provider` | Optional; `null` (omitted in TOML) | Named provider ID; omission requires an explicit default for selected reviews. |
 | `review.parameters` | Optional; `{}` | Structured adapter settings overriding provider keys. |
 | `review.trigger` | Optional; `null` (omitted in TOML) | Select this review only for matching changed files. |
@@ -451,7 +450,10 @@ consumer through the adapter, one call per review, after deterministic checks.
 | `review.context.path` | Required | Existing UTF-8 consumer-relative file. |
 | `review.context.headings` | Optional; `[]` | Up to 32 nonblank exact ATX Markdown headings; empty selects the whole document. |
 
-For a lightweight commit-header review, select the invocation input explicitly:
+At `commit-msg` the whole commit message (up to 64 KiB of UTF-8 without control
+characters other than tab and line breaks) is part of every review's input with line
+numbers, and the prompt decides which part counts. An empty message is valid. To review
+only the summary line:
 
 ```toml
 id = "commit-wording"
@@ -459,27 +461,17 @@ description = "Require a specific English imperative commit summary"
 run_at = ["commit-msg"]
 
 [review]
-input = "commit-header"
 provider = "commit-quality"
 prompt = "prompt.md"
+include_diff = false
 ```
 
-Configure `commit-quality` as an ordinary named executable adapter. The product
-supplies no model or provider. Header reviews always omit the diff and reject
-`files`, `context` and file-change triggers. They run after deterministic checks.
-Only the first line of Git's
-message file is evidence: 1–4096 UTF-8 bytes excluding LF/CRLF, without control
-characters. The body, source files, file manifest and HEAD are not sent to their
-adapter. See the [adapter protocol](adapter-protocol.md) for header findings.
-
-A selected header review blocks direct `please run --at commit-msg` and offline
+A review at `commit-msg` blocks direct `please run --at commit-msg` and offline
 preview because those invocations have no validated message-file argument.
 `please sync` installs the managed hook; Git supplies the message when committing
-or amending. The header is captured during planning, included in plan identity
-and saved as `plan.input.commit_header`. Changes to the header during checks or
-review invalidate verification; body-only changes do not. Saved status compares
-working-tree freshness and retains the reviewed invocation's header; it does not
-revalidate a new candidate message. Header reviews are blocking by default.
+or amending. The message is captured during planning, included in plan identity
+and saved as `plan.input.commit_message`. Changes to it during checks or review
+invalidate verification. See the [adapter protocol](adapter-protocol.md).
 
 Context includes subsections and preserves original lines. Code-block headings
 are ignored; missing or ambiguous headings are errors. Overlapping selections
@@ -536,8 +528,7 @@ limits remain unchanged.
 
 The provider must return exactly one PASS/FAIL/ERROR per requested ID. PASS/FAIL
 need an existing in-snapshot file and positive line reference for worktree reviews.
-Header reviews instead require `source = "commit-header"`, `path = null` and
-`line = 1` against the captured header. Malformed JSON,
+At commit-msg, `path = null` with a `line` cites that line of the commit message. Malformed JSON,
 missing/duplicate verdicts, invalid evidence and provider failures produce ERROR.
 Summaries are single lines up to 120 characters; at most 20 findings per review,
 2000 bytes each. Non-blocking FAIL is visible; incomplete verification stays fatal.

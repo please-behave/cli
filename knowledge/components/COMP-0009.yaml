@@ -6,7 +6,7 @@ purpose: >-
 scope:
   - >-
     Prepares provider-neutral review input once for planning and execution,
-    including file selections, diffs and the commit header for header reviews.
+    including file selections, diffs and, at commit-msg, the whole commit message.
   - >-
     Collects bounded, deduplicated requirements excerpts with their original
     line numbers.
@@ -31,8 +31,6 @@ must_not:
   - >-
     Restrict what an adapter may read beyond the initially selected context.
   - >-
-    Read the body of a commit message as evidence for a header review.
-  - >-
     Accept an unparseable or incomplete response as PASS.
 files:
   - src/reviews.rs
@@ -44,7 +42,6 @@ depends_on:
   - COMP-0007
   - COMP-0010
   - COMP-0011
-  - COMP-0013
   - COMP-0014
 requirements:
   - REQ-0084

@@ -184,9 +184,9 @@ It scaffolds a passing enabled Check, a disabled failing Check and disabled
 product-consistency Review in self-contained directories. Reports remain local.
 Initialization supplies no provider configuration or adapter. Configure an adapter
 before enabling reviews.
-## HDR-001: Commit-header reviews
+## HDR-001: Commit message input
 
-The [requirements](knowledge/requirements/README.md) REQ-0099 and REQ-0130 to REQ-0132 specify what a review receives and how its verdict is reported; there is no separate commit-header mode.
+The [requirements](knowledge/requirements/README.md) REQ-0099 and REQ-0130 to REQ-0132 specify what a review receives and how its verdict is reported; reviews at commit-msg receive the whole commit message like any other declared input.
 They replace the text of this section. The [components](knowledge/components/README.md) name the
 requirements they implement.
 
@@ -228,8 +228,7 @@ Each review is one adapter call and retains its own effective adapter parameters
 Responses require protocol_version = 1 and reviews matching the common verdict
 contract. Optional usage contains common token counters; absent usage remains
 unavailable. Each requested ID must occur exactly once with PASS, FAIL or ERROR.
-PASS/FAIL require source-appropriate evidence: existing manifest paths and valid
-line numbers for worktree reviews, or captured header evidence under HDR-001. Technical
+PASS/FAIL require evidence: an existing manifest path with a valid line number or, at commit-msg, a line of the commit message. Technical
 adapter failures may exit nonzero; no verdict is accepted on nonzero exit.
 Unsupported versions, unknown fields, malformed, incomplete, oversized or invalid
 responses produce ERROR. The standard output and error output of an adapter call that ends as ERROR are retained unmasked within the capture bounds and shown by `please status --details`.
@@ -243,7 +242,7 @@ unknown versions never silently fall back.
 
 `--at NAME` selects a known execution point, defaulting to pre-push. Selection
 uses only centrally resolved effective assignments. Execution snapshots use the
-worktree; HDR-001 adds captured invocation evidence for commit-header reviews.
+worktree; at commit-msg the whole commit message is added to the review input (HDR-001).
 Rules run once, checks first; results retain ID order within each kind.
 
 `--plan` uses the same selection/preparation as execution. Its human-readable
@@ -592,7 +591,7 @@ Public documentation explains supported behavior; proposals remain in the roadma
 | --- | --- |
 | TRIG-001 | `tests/review_triggers.rs::preview_and_execution_agree_and_nonmatches_need_no_provider_or_context` |
 | PROV-002 | `tests/cli_providers.rs::stdin_results_and_provider_isolation` |
-| HDR-001 | `tests/commit_header.rs::commit_header_hook_and_adapter_contract` |
+| HDR-001 | `tests/commit_message.rs::commit_message_hook_and_adapter_contract` |
 | PROV-001 | `tests/named_providers.rs::named_references_load_without_changing_legacy_defaults` |
 | EXT-002 | `tests/provider_imports.rs::separate_provider_and_ruleset_repositories_run_offline` |
 | EXT-001 | `tests/external_rule_sets.rs::shared_rules_are_reused_across_sets_and_points_offline` |
@@ -625,6 +624,6 @@ to development governance, not the product.
 
 Rule and provider IDs reserve `please-`. Generated integrity results use
 `please-plan`, `please-snapshot`, `please-tree-stability` and
-`please-commit-header-stability`, with report schema 4
+`please-commit-message-stability`, with report schema 4
 and existing execution semantics unchanged. Public library phase callbacks use
 English messages.

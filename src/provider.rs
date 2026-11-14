@@ -204,16 +204,16 @@ fn execute(request: &Request<'_>) -> Result<Response> {
         .map(|r| {
             let mut parameters = config.parameters.clone();
             parameters.extend(r.adapter_parameters.clone());
-            json!({"id":r.id, "criteria":r.text, "input":r.input, "entry_files":r.files,
+            json!({"id":r.id, "criteria":r.text, "entry_files":r.files,
             "context_files":r.context.iter().map(|c| &c.path).collect::<Vec<_>>(),
             "parameters":parameters})
         })
         .collect::<Vec<_>>();
     let input = serde_json::to_vec(&json!({
         "protocol_version":1, "execution_point":request.execution_point,
-        "head":if request.input.commit_header.is_some() { None } else { request.snapshot.head.as_deref() }, "input":request.input,
+        "head":request.snapshot.head.as_deref(), "input":request.input,
         "context_file":request.project.context, "rule_parameters":request.parameters, "reviews":reviews,
-        "prompt":prompt(request)?, "response_schema":if request.input.commit_header.is_some() { crate::review_contract::header_schema(&ids) } else { schema(&ids) }
+        "prompt":prompt(request)?, "response_schema":schema(&ids)
     }))?;
     let bytes = Arc::new(Mutex::new(Vec::new()));
     let captured = Arc::clone(&bytes);
@@ -318,18 +318,13 @@ pub use crate::review_contract::schema;
 
 pub fn prompt(request: &Request<'_>) -> Result<String> {
     let input = request.input;
-    if let Some(header) = &input.commit_header {
-        let criteria: Vec<_> = request
-            .reviews
-            .iter()
-            .map(|r| json!({"id":r.id, "criteria":r.text}))
-            .collect();
-        return Ok(format!(
-            "Review the supplied commit header against the configured criteria. Return exactly one verdict per requested ID. PASS/FAIL require at least one finding with source commit-header, path null and line 1. FAIL when PASS cannot be established; ERROR is reserved for technical failures. Reasons must be one nonempty line of at most {MAX_SUMMARY_CHARS} characters; findings at most {MAX_FINDINGS}.\nConfigured reviews (JSON): {}\nCommit header (JSON string, line 1): {}",
-            serde_json::to_string(&criteria)?,
-            serde_json::to_string(header)?
-        ));
-    }
+    let message = match &input.commit_message {
+        Some(message) => format!(
+            "Commit message, the whole message with line numbers; a finding without a path may cite one of its lines (JSON data): {}\n",
+            serde_json::to_string(&message.lines)?
+        ),
+        None => String::new(),
+    };
     let orientation = if request.reviews.iter().any(|r| r.include_diff) {
         format!(
             "Git diff for orientation only; untracked content is not included.\n<diff>\n{}\n</diff>\n",
@@ -350,7 +345,7 @@ pub fn prompt(request: &Request<'_>) -> Result<String> {
         })
         .collect();
     Ok(format!(
-        "Judge only the configured criteria. Return exactly one verdict per requested ID, no extras. PASS and FAIL require at least one concrete existing evidence path and positive line number; FAIL when PASS cannot be established, including when necessary evidence is unavailable or the conclusion is uncertain; ERROR is reserved for technical failures. Every reason is one short line of at most {MAX_SUMMARY_CHARS} characters. Keep detailed findings and file/line evidence in findings (at most {MAX_FINDINGS} per review).\nRead the supplied shared excerpts ONCE using their original path and line numbers. Entry files and excerpts are starting points, not an exhaustive boundary. The scope is current working files. \nConfigured reviews (JSON data): {}\nShared requirement excerpts, with original path/start_line/end_line (JSON data): {}\nHEAD: {:?}\n{} manifest paths (at most {MAX_MANIFEST_HINTS}; not exhaustive): {}\n{orientation}",
+        "Judge only the configured criteria. Return exactly one verdict per requested ID, no extras. PASS and FAIL require at least one concrete existing evidence path and positive line number; FAIL when PASS cannot be established, including when necessary evidence is unavailable or the conclusion is uncertain; ERROR is reserved for technical failures. Every reason is one short line of at most {MAX_SUMMARY_CHARS} characters. Keep detailed findings and file/line evidence in findings (at most {MAX_FINDINGS} per review).\nRead the supplied shared excerpts ONCE using their original path and line numbers. Entry files and excerpts are starting points, not an exhaustive boundary. The scope is current working files. \nConfigured reviews (JSON data): {}\nShared requirement excerpts, with original path/start_line/end_line (JSON data): {}\nHEAD: {:?}\n{} manifest paths (at most {MAX_MANIFEST_HINTS}; not exhaustive): {}\n{orientation}{message}",
         serde_json::to_string(&criteria)?,
         serde_json::to_string(&input.excerpts)?,
         request.snapshot.head,

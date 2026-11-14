@@ -389,9 +389,7 @@ fn load_rules(
                 loaded.reviews.push((
                     path.clone(),
                     Review {
-                        input: review.input,
-                        include_diff: review.include_diff
-                            && review.input == config::ReviewInput::Worktree,
+                        include_diff: review.include_diff,
                         trigger: review.trigger,
                         provider: review.provider,
                         adapter_parameters: review.parameters,

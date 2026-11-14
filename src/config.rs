@@ -142,16 +142,8 @@ pub struct Check {
     pub run_at: Vec<String>,
     pub parameters: crate::parameters::Binding,
 }
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum ReviewInput {
-    #[default]
-    Worktree,
-    CommitHeader,
-}
 #[derive(Debug, Clone, Serialize)]
 pub struct Review {
-    pub input: ReviewInput,
     pub adapter_parameters: BTreeMap<String, serde_json::Value>,
     pub include_diff: bool,
     pub trigger: Option<ReviewTrigger>,
@@ -211,8 +203,6 @@ pub struct CheckDefinition {
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct ReviewDefinition {
-    #[serde(default)]
-    pub input: ReviewInput,
     #[serde(
         default,
         deserialize_with = "adapter_parameters",
@@ -508,10 +498,6 @@ pub(crate) fn validate(root: PathBuf, loaded: crate::discovery::Loaded) -> Resul
     for (path, mut review) in loaded.reviews {
         (|| -> Result<()> {
             identity(&review.id, &review.description, &mut ids)?;
-            if review.input == ReviewInput::CommitHeader {
-                ensure!(review.files.is_empty() && review.context.is_empty() && review.trigger.is_none(),
-                    "commit-header reviews cannot select files, context or file-change triggers");
-            }
             if let Some(trigger) = &review.trigger {
                 crate::review_trigger::validate(trigger)?;
             }

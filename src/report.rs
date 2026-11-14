@@ -57,16 +57,9 @@ impl Status {
         }
     }
 }
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum EvidenceSource {
-    CommitHeader,
-}
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Finding {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub source: Option<EvidenceSource>,
     pub message: String,
     pub path: Option<String>,
     pub line: Option<u32>,
@@ -278,14 +271,10 @@ pub fn read(root: &Path) -> Result<Report> {
     );
     for item in &report.results {
         for finding in &item.findings {
-            if finding.source == Some(EvidenceSource::CommitHeader) {
+            if finding.path.is_none() && finding.line.is_some() {
                 ensure!(
-                    finding.path.is_none()
-                        && finding.line == Some(1)
-                        && plan.input.commit_header.is_some()
-                        && plan.scheduled.iter().any(|r| r.id == item.id
-                            && r.review_input == Some(crate::config::ReviewInput::CommitHeader)),
-                    "inconsistent commit-header evidence"
+                    plan.input.commit_message.is_some(),
+                    "inconsistent commit message evidence"
                 );
             }
         }

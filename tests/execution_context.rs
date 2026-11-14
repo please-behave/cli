@@ -59,8 +59,13 @@ printf '%s' "$point"
     write(
         root.path(),
         ".please/reviews/context/rule.toml",
+        // A review at commit-msg needs the hook's message file, so it is not selected there.
         &format!(
-            "id = 'context-review'\ndescription = 'Context review'\nrun_at = {points:?}\n[review]\nprompt = 'prompt.md'\n"
+            "id = 'context-review'\ndescription = 'Context review'\nrun_at = {:?}\n[review]\nprompt = 'prompt.md'\n",
+            points
+                .iter()
+                .filter(|p| **p != "commit-msg")
+                .collect::<Vec<_>>()
         ),
     );
     write(
@@ -132,6 +137,13 @@ printf '%s' "$point"
         assert_eq!(report.overall, Status::Pass);
         let item = report.results.iter().find(|r| r.id == "context").unwrap();
         assert_eq!(item.stdout.as_ref().unwrap().text, expected);
-        assert_eq!(fs::read_to_string(calls).unwrap(), "review\n");
+        assert_eq!(
+            fs::read_to_string(calls).unwrap(),
+            if expected == "commit-msg" {
+                ""
+            } else {
+                "review\n"
+            }
+        );
     }
 }

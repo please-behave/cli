@@ -74,8 +74,8 @@ Parameter declarations live in the Rule schema and the `parameters` module resol
 active Rules, removing inherited variables before applying values; no global environment
 mutation occurs. File-change triggers filter reviews inside the planner before input
 preparation, using a net commit-to-worktree comparison against an explicit baseline that
-enters plan identity. Commit-header reviews use a separate evidence source: adapters
-receive the bounded first line, never the raw path or hook arguments.
+enters plan identity. At commit-msg every review also receives the whole bounded commit message with line
+numbers, never the raw path or hook arguments.
 
 Check dependencies are canonicalized at discovery, validated against the effective
 selection with cycle detection before execution, and dispatched by the existing

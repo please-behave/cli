@@ -145,36 +145,20 @@ Statuses are exactly PASS, FAIL and ERROR. Reasons are nonempty single lines of
 at most 120 characters. Findings contain message (1–2000 UTF-8 bytes), path and
 line, with at most 20 findings per review. Path and line must be present, although
 both can be null. For worktree evidence, a line requires a path. Worktree
-PASS/FAIL need at least one path in the verified manifest and a positive line within that file. ERROR may have no findings.
+PASS/FAIL need at least one path in the verified manifest and a positive line within that file, or at commit-msg a line of the commit message. ERROR may have no findings.
 Wrong types, extra fields, missing/duplicate/extra review IDs and invalid evidence
 invalidate the response. Provider-specific envelopes and Markdown fences are
 not accepted; adapters must translate them.
 
-Commit-header reviews use the same versioned envelope, with a source-specific
-response schema. Each review has `input: "commit-header"`; `input.commit_header`
-is the captured first line as a JSON string. The remaining input fields contain
-empty excerpts, manifest, focused paths and diff;
-`head` is null. The prompt contains the configured criteria and header, without
-repository orientation. Adapters must not add repository or commit-body context.
-Worktree review metadata uses
-`input: "worktree"` and retains its existing evidence contract.
+At the `commit-msg` execution point `input.commit_message` carries the whole message as
+`{"lines": [{"number": 1, "text": "..."}]}`; an empty message has no lines. The field is
+absent at other execution points. The adapter receives no raw Git hook arguments or path.
+The prompt contains the message with the review's other input, and the review decides
+which part counts.
 
-For header PASS/FAIL, provide at least one finding like:
-
-```json
-{"source":"commit-header","message":"The summary names a concrete action in the imperative.","path":null,"line":1}
-```
-
-The header generation schema requires at least one finding, including for PASS.
-Adapter-generated technical ERROR responses may still omit findings.
-
-`source` is an optional addition to the response wire type, required only for
-header evidence; file findings continue to omit it. Header reviews reject file
-findings, absent header evidence and any line except 1. Worktree reviews reject
-header findings. ERROR may have no findings. The CLI captures and revalidates the
-message independently; the adapter receives no raw Git hook arguments or path.
-Older adapters may continue serving worktree reviews unchanged, but must support
-the supplied header schema before they can serve this new input kind.
+A finding with `path: null` and a `line` cites that line of the commit message. It is
+valid only when `input.commit_message` is present and contains the line, and it grounds
+PASS/FAIL like a file path and line. ERROR may have no findings.
 
 Usage is optional or null and never changes the verdict. It may contain input_tokens,
 cached_input_tokens, output_tokens, reasoning_output_tokens and cache_write_input_tokens.

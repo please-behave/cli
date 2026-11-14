@@ -83,17 +83,13 @@ prerequisite outcome in the reason. They inherit the original failure's enforcem
 Check failures and errors, incomplete fail-fast execution and input errors prevent reviews.
 The check phase always finishes before review invocation.
 
-Reviews may select `input = "commit-header"` instead of the default worktree
-input. The managed `commit-msg` hook supplies the message file; direct/offline
-plans without that validated context are blocked when a header review is selected.
-Plans save the captured header in optional `input.commit_header` and identify such
-rules with `review_input: "commit-header"`. Header contents participate in plan
-identity. Header calls carry no repository evidence.
-The header is rechecked before/after adapter calls and at completion; source-tree
-and header stability are independent integrity gates. Reports keep schema 4 and
-plans schema 3 with additive optional fields; older reports without header fields
-remain readable. The saved header belongs to that invocation; status continues
-to measure the working-tree snapshot's freshness.
+At `commit-msg` every review receives the whole commit message. The managed hook supplies
+the message file; direct or offline plans without it are blocked when a review is
+selected, while an empty message file is valid. Plans save the message in optional
+`input.commit_message`, and it participates in plan identity. The message is rechecked
+before and after adapter calls and at completion; source-tree and message stability are
+independent integrity gates. The saved message belongs to that invocation; status
+continues to measure the working-tree snapshot's freshness.
 
 Independent provider imports use the same immutable Git cache and atomic
 resolution state as Rule Sets. They select no Rules or execution points. Named

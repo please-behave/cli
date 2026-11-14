@@ -16,8 +16,6 @@ pub const PLAN_SCHEMA_VERSION: u32 = 3;
 pub struct Rule {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub provider_origin: Option<crate::external::Origin>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub review_input: Option<crate::config::ReviewInput>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub depends_on: Vec<String>,
     pub id: String,
@@ -51,7 +49,7 @@ pub struct Omission {
 #[serde(deny_unknown_fields)]
 pub struct Input {
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub commit_header: Option<String>,
+    pub commit_message: Option<String>,
     pub kind: String,
     pub head: Option<String>,
     pub fingerprint: String,
@@ -245,9 +243,6 @@ pub fn build_with_context(
                 .as_ref()
                 .and_then(|id| project.external_providers.get(id))
                 .map(|source| source.origin.clone()),
-            review_input: review
-                .filter(|r| r.input == crate::config::ReviewInput::CommitHeader)
-                .map(|r| r.input),
             depends_on: project
                 .checks
                 .iter()
@@ -331,9 +326,21 @@ pub fn build_with_context(
         .dedup_by(|a, b| a.path == b.path && a.headings == b.headings);
     let mut review_input = None;
     if !active.is_empty() && blocking_reasons.is_empty() {
-        match crate::review_input::PreparedReviewInput::prepare_with_context(
-            project, &active, &snapshot, hook,
-        ) {
+        // At commit-msg the whole message is declared input, so its file is required.
+        let message_file = if name == "commit-msg" {
+            hook.ok_or_else(|| {
+                anyhow::anyhow!("a review at commit-msg requires the managed commit-msg hook")
+            })
+            .and_then(|hook| hook.commit_message_path(&project.root))
+            .map(Some)
+        } else {
+            Ok(None)
+        };
+        match message_file.and_then(|file| {
+            crate::review_input::PreparedReviewInput::prepare_with_message(
+                project, &active, &snapshot, file,
+            )
+        }) {
             Ok(input) => {
                 context.selected_bytes = input.excerpts.iter().map(|e| e.text.len()).sum();
                 context.sections = input
@@ -374,9 +381,9 @@ pub fn build_with_context(
         blocking_reasons,
         at: name.into(),
         input: Input {
-            commit_header: review_input
+            commit_message: review_input
                 .as_ref()
-                .and_then(|input| input.commit_header.clone()),
+                .and_then(|input| input.commit_message.as_ref().map(|m| m.text())),
             kind: "worktree".into(),
             head: snapshot.head.clone(),
             fingerprint: snapshot.fingerprint.clone(),
@@ -444,7 +451,7 @@ pub fn build_with_context(
         "project": project.config.project,
         "at": name, "checks_only": checks_only, "checks": checks, "reviews": reviews,
         "provider": plan.provider, "named_providers": named_providers, "head": snapshot.head, "files": files, "context": excerpts,
-        "commit_header": plan.input.commit_header,
+        "commit_message": plan.input.commit_message,
         "provider_origins": project.external_providers.iter().map(|(id, source)| (id, &source.origin)).collect::<std::collections::BTreeMap<_,_>>(),
         "complete": snapshot.complete, "change_base": plan.change_base, "scheduled": plan.scheduled, "omitted": plan.omitted,
     });

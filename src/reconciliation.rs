@@ -44,7 +44,7 @@ impl HookContext {
     pub(crate) fn commit_message_path(&self, root: &Path) -> Result<PathBuf> {
         ensure!(
             self.invocation.event == "commit-msg" && self.invocation.arguments.len() == 1,
-            "commit-header review requires exactly one message file from the managed commit-msg hook"
+            "a review at commit-msg requires exactly one message file from the managed commit-msg hook"
         );
         let path = PathBuf::from(&self.invocation.arguments[0]);
         let path = if path.is_absolute() {
