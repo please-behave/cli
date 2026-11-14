@@ -57,12 +57,21 @@ pub trait Provider {
         Response {
             verdict: self.review(request),
             usage: None,
+            output: None,
         }
     }
 }
 pub struct Response {
     pub verdict: Result<String>,
     pub usage: Option<TokenUsage>,
+    /// Retained from a completed adapter process so an ERROR can be diagnosed.
+    pub output: Option<AdapterOutput>,
+}
+#[derive(Clone)]
+pub struct AdapterOutput {
+    pub exit_code: Option<i32>,
+    pub stdout: crate::process::Capture,
+    pub stderr: crate::process::Capture,
 }
 
 /// All adapters use this invocation path.
@@ -76,6 +85,7 @@ impl Provider for Configured {
         execute(request).unwrap_or_else(|error| Response {
             verdict: Err(error),
             usage: None,
+            output: None,
         })
     }
 }
@@ -209,7 +219,11 @@ fn execute(request: &Request<'_>) -> Result<Response> {
     let captured = Arc::clone(&bytes);
     let output = crate::process::run_with_input_diagnostics(
         &mut command,
-        if config.timeout_seconds == 0 { Duration::MAX } else { Duration::from_secs(config.timeout_seconds) },
+        if config.timeout_seconds == 0 {
+            Duration::MAX
+        } else {
+            Duration::from_secs(config.timeout_seconds)
+        },
         input,
         move |chunk| {
             let mut bytes = captured.lock().unwrap();
@@ -217,24 +231,47 @@ fn execute(request: &Request<'_>) -> Result<Response> {
             bytes.extend_from_slice(&chunk[..chunk.len().min(remaining)]);
         },
         |_| {},
-    ).map_err(|_| anyhow::anyhow!("Adapter process failed; check executable, PATH and stdin support; raw output is not stored"))?;
+    )
+    .map_err(|_| {
+        anyhow::anyhow!("Adapter process failed; check executable, PATH and stdin support")
+    })?;
+    let raw = std::mem::take(&mut *bytes.lock().unwrap());
+    let (verdict, usage) = match interpret(&output, &raw) {
+        Ok((json, usage)) => (Ok(json), usage),
+        Err(error) => (Err(error), None),
+    };
+    Ok(Response {
+        verdict,
+        usage,
+        output: Some(AdapterOutput {
+            exit_code: output.status.code(),
+            stdout: output.stdout,
+            stderr: output.stderr,
+        }),
+    })
+}
+
+/// Pointer shown with every adapter ERROR whose output was retained (see REQ-0131).
+const OUTPUT_HINT: &str = "inspect captured output with please status --details";
+
+fn interpret(output: &crate::process::Output, raw: &[u8]) -> Result<(String, Option<TokenUsage>)> {
     ensure!(
         !output.timed_out,
-        "Adapter review timed out; no verdict accepted"
+        "Adapter review timed out; no verdict accepted; {OUTPUT_HINT}"
     );
     ensure!(
         output.status.success(),
-        "Adapter exited unsuccessfully ({}); raw output is not stored",
+        "Adapter exited unsuccessfully ({}); {OUTPUT_HINT}",
         output.status
     );
     ensure!(
         !output.stdout.truncated,
-        "Adapter response exceeds stdout capture limit"
+        "Adapter response exceeds stdout capture limit; {OUTPUT_HINT}"
     );
-    let raw = bytes.lock().unwrap();
-    let value: serde_json::Value = serde_json::from_slice(&raw).map_err(|_| {
-        anyhow::anyhow!("Invalid adapter response; expected protocol version 1 JSON")
-    })?;
+    let invalid = || {
+        anyhow::anyhow!("Invalid adapter response; expected protocol version 1 JSON; {OUTPUT_HINT}")
+    };
+    let value: serde_json::Value = serde_json::from_slice(raw).map_err(|_| invalid())?;
     if let Some(reviews) = value.get("reviews").and_then(|v| v.as_array()) {
         for review in reviews {
             if let Some(findings) = review.get("findings").and_then(|v| v.as_array()) {
@@ -247,9 +284,7 @@ fn execute(request: &Request<'_>) -> Result<Response> {
             }
         }
     }
-    let response: AdapterResponse = serde_json::from_slice(&raw).map_err(|_| {
-        anyhow::anyhow!("Invalid adapter response; expected protocol version 1 JSON")
-    })?;
+    let response: AdapterResponse = serde_json::from_slice(raw).map_err(|_| invalid())?;
     ensure!(
         response.protocol_version == 1,
         "Unsupported adapter protocol version; expected 1"
@@ -267,14 +302,12 @@ fn execute(request: &Request<'_>) -> Result<Response> {
             "Invalid adapter usage counters"
         );
     }
-    Ok(Response {
-        verdict: Ok(serde_json::to_string(
-            &crate::review_contract::ReviewResponse {
-                reviews: response.reviews,
-            },
-        )?),
-        usage: response.usage,
-    })
+    Ok((
+        serde_json::to_string(&crate::review_contract::ReviewResponse {
+            reviews: response.reviews,
+        })?,
+        response.usage,
+    ))
 }
 
 pub use crate::review_contract::schema;

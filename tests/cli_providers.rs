@@ -69,11 +69,13 @@ assert 'manifest paths' in prompt
 reviews = request['reviews']
 assert all(r['parameters']['label'] in ['first', 'second'] for r in reviews)
 if mode == 'malformed':
-    print('{"private-prompt-secret": "never expose"}')
+    print('{"original-adapter-output": true}')
     sys.exit(0)
 if mode == 'nonzero':
-    print('private-prompt-secret', file=sys.stderr)
+    print('original-adapter-error', file=sys.stderr)
     sys.exit(7)
+if mode == 'error':
+    print('original-adapter-error', file=sys.stderr)
 if mode == 'timeout':
     time.sleep(30)
 if mode == 'oversized':
@@ -125,10 +127,11 @@ fn stdin_results_and_provider_isolation() {
     assert_eq!(report::read(root.path()).unwrap().overall, Status::Pass);
 }
 #[test]
-fn process_and_response_errors_never_pass_or_expose_raw_output() {
+fn process_and_response_errors_never_pass_and_keep_original_output() {
     for mode in [
         "malformed",
         "nonzero",
+        "error",
         "timeout",
         "unread",
         "oversized",
@@ -155,11 +158,25 @@ fn process_and_response_errors_never_pass_or_expose_raw_output() {
             result.results
         );
         assert!(start.elapsed().as_secs() < 10, "{mode}");
-        assert!(
-            !fs::read_to_string(root.path().join(".please/reports/last.json"))
-                .unwrap()
-                .contains("private-prompt-secret")
-        );
+        // REQ-0131: the original output of an ERROR is retained unmasked in the report.
+        let item = result.results.iter().find(|r| r.kind == "review").unwrap();
+        let output = |capture: &Option<please::process::Capture>| {
+            capture.as_ref().map(|c| c.text.clone()).unwrap_or_default()
+        };
+        match mode {
+            "nonzero" => {
+                assert_eq!(item.exit_code, Some(7));
+                assert!(output(&item.stderr).contains("original-adapter-error"));
+                assert!(item.reason.contains("please status --details"));
+            }
+            "error" => assert!(output(&item.stderr).contains("original-adapter-error")),
+            "malformed" => assert!(output(&item.stdout).contains("original-adapter-output")),
+            _ => {}
+        }
+        let saved = report::read(root.path()).unwrap();
+        let saved = saved.results.iter().find(|r| r.kind == "review").unwrap();
+        assert_eq!(saved.stderr.is_some(), item.stderr.is_some(), "{mode}");
+        assert_eq!(saved.stdout.is_some(), item.stdout.is_some(), "{mode}");
     }
 }
 #[test]

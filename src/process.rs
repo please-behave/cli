@@ -12,7 +12,7 @@ use std::{
 };
 
 pub use crate::limits::MAX_CAPTURE_BYTES as OUTPUT_LIMIT;
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Capture {
     pub text: String,

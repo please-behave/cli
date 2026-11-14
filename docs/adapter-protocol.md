@@ -27,8 +27,10 @@ provider requirements. See [provider imports](configuration.md#import-providers-
 
 Each invocation receives exactly one UTF-8 JSON object on stdin followed by EOF.
 Write exactly one JSON object to stdout and exit zero. All requested reviews must
-be represented exactly once. Stderr is drained but suppressed; do not depend on
-it for persisted diagnostics. Never write progress text to stdout.
+be represented exactly once. Stderr is captured within the output bounds of checks.
+When a call ends as ERROR, its stdout and stderr are retained unmasked and shown by
+`please status --details`, so write the original error text to stderr and never
+include credentials. Never write progress text to stdout.
 
 Both directions require integer `protocol_version: 1`. Unsupported versions fail
 closed; no legacy format detection or fallback occurs. Any incompatible protocol
@@ -40,7 +42,7 @@ request so adapters need not duplicate limits or hardcode current Rule IDs.
 The overall deadline includes stdin delivery; zero disables it. Timeouts terminate
 the process tree. A launch failure, nonzero exit, invalid JSON, unsupported version,
 truncated output or invalid verdict produces ERROR for the entire batch. Stdout
-is bounded to 64 KiB. Raw output and parser details are never saved. An adapter
+is bounded to 64 KiB. The output of a call that ends as ERROR is saved with its report entry. An adapter
 reports ERROR only for technical failures it detects itself, such as an
 unreachable provider, using the common result format. Blocking and nonblocking reviews follow the same
 ordinary enforcement rules regardless of which adapter is selected.

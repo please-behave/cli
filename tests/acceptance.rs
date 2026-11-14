@@ -1456,6 +1456,7 @@ fn usage_is_recorded_once_for_bundled_reviews() {
                     output_tokens: 200, reasoning_output_tokens: Some(50),
                     cache_write_input_tokens: None,
                 }),
+                output: None,
             }
         }
     }

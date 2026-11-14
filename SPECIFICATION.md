@@ -233,7 +233,7 @@ PASS/FAIL require source-appropriate evidence: existing manifest paths and valid
 line numbers for worktree reviews, or captured header evidence under HDR-001. Technical
 adapter failures may exit nonzero; no verdict is accepted on nonzero exit.
 Unsupported versions, unknown fields, malformed, incomplete, oversized or invalid
-responses produce ERROR. Raw stdout/stderr and parser details are suppressed.
+responses produce ERROR. The standard output and error output of an adapter call that ends as ERROR are retained unmasked within the capture bounds and shown by `please status --details`.
 The shared process runner bounds output, drains pipes and terminates process
 trees on timeout, including blocked stdin delivery. Nonblocking review errors
 remain visible without blocking success; checks and integrity failures retain

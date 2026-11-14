@@ -292,9 +292,11 @@ pub(crate) fn execute_prepared_observed(
                     "Working files or commit header changed, or input is incomplete; no provider call made"
                 )),
                 usage: None,
+                output: None,
             }
         };
         usages.push(response.usage);
+        let output = response.output;
         let invalid_provider = invalid_provider.or_else(|| provider_integrity().err());
         let result = if let Some(error) = &invalid_provider {
             Err(anyhow::anyhow!(
@@ -305,7 +307,7 @@ pub(crate) fn execute_prepared_observed(
             .verdict
             .and_then(|json| {
                 input.ensure_stable()?;
-                parse_with_header(project, &reviews, snapshot, &json, batch_input.commit_header.as_deref()).map_err(|_| anyhow::anyhow!("Invalid adapter review response; structured verdict and evidence requirements were not met"))
+                parse_with_header(project, &reviews, snapshot, &json, batch_input.commit_header.as_deref()).map_err(|_| anyhow::anyhow!("Invalid adapter review response; structured verdict and evidence requirements were not met; inspect captured output with please status --details"))
             })
         };
         let mut results = match result {
@@ -319,6 +321,12 @@ pub(crate) fn execute_prepared_observed(
             item.duration_ms = start.elapsed().as_millis() as u64;
             item.blocking = reviews.iter().find(|r| r.id == item.id).unwrap().blocking;
             item.configuration_error = invalid_provider.is_some();
+            // REQ-0131: an adapter ERROR keeps the call's output for diagnosis.
+            if let (Status::Error, Some(output)) = (item.status, &output) {
+                item.exit_code = output.exit_code;
+                item.stdout = Some(output.stdout.clone());
+                item.stderr = Some(output.stderr.clone());
+            }
         }
         items.extend(results);
     }
