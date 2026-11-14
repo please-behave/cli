@@ -59,10 +59,10 @@ assert not [name for name in os.environ if name.startswith("PLEASE_")]
 with open(os.environ["CONTEXT_CALLS"], "a") as log:
     log.write("review\n")
 request = json.load(sys.stdin)
-assert request['protocol_version'] == 2
+assert request['protocol_version'] == 3
 assert request['execution_point'] == os.environ["EXPECTED_EXECUTION_POINT"]
 assert os.path.isfile(request['context_file'])
-print(json.dumps({'protocol_version': 2, 'reason': 'Context delivered', 'findings': [{'message': 'Evidence inspected', 'path': 'evidence', 'line': 1}]}))
+print(json.dumps({'protocol_version': 3, 'reason': 'Context delivered', 'findings': [{'message': 'Evidence inspected', 'path': 'evidence', 'line': 1}]}))
 "#).unwrap();
     fs::set_permissions(&script, fs::Permissions::from_mode(0o755)).unwrap();
     script
@@ -84,4 +84,49 @@ pub fn command(program: impl AsRef<std::ffi::OsStr>) -> Command {
         }
     }
     command
+}
+
+/// Commit everything so that the unpushed history is a change set for reviews at pre-push.
+pub fn commit_all(root: &Path) {
+    for args in [
+        vec!["add", "-A"],
+        vec![
+            "-c",
+            "user.name=Fixture",
+            "-c",
+            "user.email=fixture@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "core.hooksPath=/dev/null",
+            "commit",
+            "-qm",
+            "fixture",
+            "--allow-empty",
+        ],
+    ] {
+        let status = command("git")
+            .current_dir(root)
+            .args(args)
+            .status()
+            .unwrap();
+        assert!(status.success());
+    }
+}
+
+/// Stage everything so that the staged changes are a change set at pre-commit and commit-msg.
+pub fn stage_all(root: &Path) {
+    let status = command("git")
+        .current_dir(root)
+        .args(["add", "-A"])
+        .status()
+        .unwrap();
+    assert!(status.success());
+}
+
+/// Make in-process runs at check compare against HEAD. The value is the same for every
+/// test of a binary, so the process-wide variable cannot make tests disagree.
+pub fn use_head_as_change_base() {
+    static ONCE: std::sync::Once = std::sync::Once::new();
+    ONCE.call_once(|| unsafe { std::env::set_var("PLEASE_CHANGE_BASE", "HEAD") });
 }

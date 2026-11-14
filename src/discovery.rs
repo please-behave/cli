@@ -89,11 +89,7 @@ pub(crate) fn snapshot_inputs(root: &Path) -> Result<BTreeSet<PathBuf>> {
             if let Some(review) = rule.review {
                 let prompt = resource(root, &dir, &review.prompt)?;
                 paths.insert(prompt.strip_prefix(root)?.to_path_buf());
-                for path in review
-                    .files
-                    .iter()
-                    .chain(review.context.iter().map(|c| &c.path))
-                {
+                for path in review.context.iter().map(|c| &c.path) {
                     argument(root, Path::new(path), &mut paths);
                 }
             }
@@ -389,7 +385,8 @@ fn load_rules(
                 loaded.reviews.push((
                     path.clone(),
                     Review {
-                        include_diff: review.include_diff,
+                        include_content: review.include_content,
+                        include_change_set: review.include_change_set,
                         trigger: review.trigger,
                         provider: review.provider,
                         adapter_parameters: review.parameters,
@@ -398,7 +395,6 @@ fn load_rules(
                         description: rule.description,
                         enabled: rule.enabled,
                         blocking: rule.blocking.unwrap_or(true),
-                        files: review.files,
                         context: review.context,
                         run_at: rule.run_at.clone(),
                         text,

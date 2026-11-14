@@ -30,6 +30,9 @@ fn validated_execution_point_overrides_inherited_context_for_checks_and_provider
         "check",
         "custom-point",
     ];
+    support::commit_all(root.path());
+    write(root.path(), "change", "changed\n");
+    support::stage_all(root.path());
     // Inputs arrive as arguments; nothing from the harness environment reaches the rule.
     support::check_args(
         root.path(),
@@ -125,6 +128,7 @@ printf '%s' "$point"
             .env("HANNES_RULE_DIRECTORY", "/nonexistent/governor")
             .env("HANNES_PARAM_LABEL", "governor-value")
             .env("EXPECTED_EXECUTION_POINT", expected)
+            .env("PLEASE_CHANGE_BASE", "HEAD")
             .env("CONTEXT_CALLS", &calls)
             .output()
             .unwrap();

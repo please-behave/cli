@@ -6,7 +6,9 @@ purpose: >-
 scope:
   - >-
     Prepares provider-neutral review input once for planning and execution,
-    including file selections, diffs and, at commit-msg, the whole commit message.
+    including the scope of each review (changed files that match its
+    triggers, with content and change set where selected) and, at commit-msg,
+    the whole commit message.
   - >-
     Collects bounded, deduplicated requirements excerpts with their original
     line numbers.
@@ -39,6 +41,7 @@ files:
   - src/review_contract.rs
 depends_on:
   - COMP-0003
+  - COMP-0006
   - COMP-0007
   - COMP-0010
   - COMP-0011

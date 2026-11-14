@@ -11,7 +11,7 @@ scope:
     effective selection.
   - >-
     Selects reviews by file-change triggers using the restricted portable glob
-    grammar.
+    grammar; the triggers also limit the scope of the review's input.
   - >-
     Builds execution plans that describe the selected rules, input and context
     without running anything, shared by preview and execution.

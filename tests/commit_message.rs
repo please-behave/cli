@@ -117,11 +117,12 @@ if lines:
 else:
     finding = {'path': 'private-source', 'line': 1, 'message': 'File evaluated'}
 status = mode if mode in ['PASS', 'FAIL', 'ERROR'] else 'PASS'
-print(json.dumps({'protocol_version': 2, 'reason': 'Message evaluated', 'findings': [] if status == 'ERROR' else [finding]}))
+print(json.dumps({'protocol_version': 3, 'reason': 'Message evaluated', 'findings': [] if status == 'ERROR' else [finding]}))
 sys.exit({'PASS': 0, 'FAIL': 1}.get(status, 2))
 "#,
         );
         ok(cli(&root, &["sync", "--yes"]));
+        support::stage_all(&root);
         Self {
             _temporary: temporary,
             root,
@@ -198,6 +199,8 @@ fn commit_message_hook_and_adapter_contract() {
         ("change", Status::Error),
     ] {
         support::write(&f.root, ".git/mode", mode);
+        support::write(&f.root, "staged-change", mode);
+        support::stage_all(&f.root);
         support::write(
             &f.root,
             ".git/COMMIT_EDITMSG",
@@ -290,7 +293,7 @@ fn empty_messages_run_and_the_whole_message_is_bounded_and_part_of_identity() {
     let rule = f.root.join(".please/reviews/message/rule.toml");
     let original = fs::read_to_string(&rule).unwrap();
     for extra in [
-        "files = ['private-source']",
+        "include_content = false",
         "context = [{path = 'private-source'}]",
     ] {
         fs::write(&rule, format!("{original}{extra}\n")).unwrap();

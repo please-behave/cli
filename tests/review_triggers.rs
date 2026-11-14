@@ -185,16 +185,16 @@ fn net_comparison_covers_commits_worktree_add_delete_rename_and_unusual_names() 
         ".please/reviews/test/rule.toml",
         ".please/reviews/test/prompt.md",
     ] {
-        assert!(paths.contains(name), "{name}");
+        assert!(paths.contains_key(name), "{name}");
     }
-    assert!(!paths.contains("ignored"));
-    assert!(!paths.contains(".please/rubric.md"));
-    assert!(!paths.contains(".please/adapters/__pycache__/adapter.pyc"));
-    assert!(!paths.contains(".please/reports/private"));
+    assert!(!paths.contains_key("ignored"));
+    assert!(!paths.contains_key(".please/rubric.md"));
+    assert!(!paths.contains_key(".please/adapters/__pycache__/adapter.pyc"));
+    assert!(!paths.contains_key(".please/reports/private"));
     let (_, head_paths) = git_snapshot::changed_paths(root.path(), "HEAD").unwrap();
-    assert!(!head_paths.contains("earlier"));
-    assert!(!head_paths.contains(".please/config.toml"));
-    assert!(!head_paths.contains(".please/provider.toml"));
+    assert!(!head_paths.contains_key("earlier"));
+    assert!(!head_paths.contains_key(".please/config.toml"));
+    assert!(!head_paths.contains_key(".please/provider.toml"));
 }
 
 #[test]
@@ -337,7 +337,7 @@ fn path_lists_above_log_limit_support_snapshots_status_and_triggers() {
     assert!(snapshot.files.contains_key(&last));
     assert!(git_snapshot::working_summary(root.path()).is_ok());
     let (_, changed) = git_snapshot::changed_paths(root.path(), "HEAD").unwrap();
-    assert!(changed.contains(&last));
+    assert!(changed.contains_key(&last));
     let p = plan(root.path(), Some("HEAD"));
     assert!(p.executable());
     assert_eq!(p.omitted.len(), 1);
@@ -346,7 +346,7 @@ fn path_lists_above_log_limit_support_snapshots_status_and_triggers() {
     commit(root.path());
     write(root.path(), &last, "changed\n");
     let (_, changed) = git_snapshot::changed_paths(root.path(), "HEAD").unwrap();
-    assert_eq!(changed, [last].into_iter().collect());
+    assert_eq!(changed.keys().cloned().collect::<Vec<_>>(), [last]);
 }
 
 #[test]
@@ -518,11 +518,19 @@ fn imported_patterns_share_validation_and_consumer_paths() {
     let trigger = review.trigger.as_ref().unwrap();
     assert!(!review_trigger::matches(
         trigger,
-        &git_snapshot::changed_paths(root.path(), "HEAD").unwrap().1
+        &git_snapshot::changed_paths(root.path(), "HEAD")
+            .unwrap()
+            .1
+            .into_keys()
+            .collect()
     ));
     write(root.path(), "evidence", "Consumer changed\n");
     assert!(review_trigger::matches(
         trigger,
-        &git_snapshot::changed_paths(root.path(), "HEAD").unwrap().1
+        &git_snapshot::changed_paths(root.path(), "HEAD")
+            .unwrap()
+            .1
+            .into_keys()
+            .collect()
     ));
 }

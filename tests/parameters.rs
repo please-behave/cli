@@ -26,6 +26,8 @@ fn project() -> TempDir {
             .success()
     );
     please::init::init(root.path()).unwrap();
+    support::commit_all(root.path());
+    support::use_head_as_change_base();
     support::configure_adapter(root.path());
     root
 }
@@ -411,7 +413,7 @@ elif parameters["label"] == "second":
     assert "file" not in parameters
 else:
     sys.exit(2)
-print(json.dumps({"protocol_version": 2, "reason": "Parameters delivered", "findings": [{"message": "Evidence read", "path": "evidence", "line": 1}], "usage": {"input_tokens": 10, "cached_input_tokens": 3, "output_tokens": 4}}))
+print(json.dumps({"protocol_version": 3, "reason": "Parameters delivered", "findings": [{"message": "Evidence read", "path": "evidence", "line": 1}], "usage": {"input_tokens": 10, "cached_input_tokens": 3, "output_tokens": 4}}))
 "#).unwrap();
     fs::set_permissions(&script, fs::Permissions::from_mode(0o755)).unwrap();
     // Use an isolated child rather than mutating this test process's environment.
@@ -423,6 +425,7 @@ print(json.dumps({"protocol_version": 2, "reason": "Parameters delivered", "find
     )
     .unwrap();
     let output = support::command(env!("CARGO_BIN_EXE_please"))
+        .env("PLEASE_CHANGE_BASE", "HEAD")
         .args(["run", "--at", "check"])
         .current_dir(root.path())
         .env("PATH", path)
@@ -476,6 +479,7 @@ fn execution_errors_fail_closed_for_explicit_points_ci_and_managed_hooks() {
     );
     for point in ["check", "ci", "pre-commit", "commit-msg", "pre-push"] {
         let result = support::command(env!("CARGO_BIN_EXE_please"))
+            .env("PLEASE_CHANGE_BASE", "HEAD")
             .args(["run", "--at", point])
             .current_dir(root.path())
             .output()

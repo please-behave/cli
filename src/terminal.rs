@@ -658,8 +658,10 @@ pub fn render_plan(plan: &crate::planner::Plan, color: bool) -> String {
             config.timeout_seconds
         ));
     }
-    text.push_str(&format!("Adapter availability not checked · Planned model calls: {}\nContext: {} / {} bytes · Diff: {} bytes\n",
-        plan.planned_model_calls, plan.context.selected_bytes, plan.context.byte_limit, plan.context.orientation_diff_bytes));
+    text.push_str(&format!(
+        "Adapter availability not checked · Planned model calls: {}\nContext: {} / {} bytes\n",
+        plan.planned_model_calls, plan.context.selected_bytes, plan.context.byte_limit
+    ));
     for rule in &plan.scheduled {
         if let Some(origin) = &rule.provider_origin {
             text.push_str(&format!(
@@ -679,14 +681,18 @@ pub fn render_plan(plan: &crate::planner::Plan, color: bool) -> String {
             ));
         }
     }
-    for path in &plan.context.entry_files {
-        text.push_str(&format!("Entry file: {}\n", clean(path)));
+    for scope in &plan.context.scopes {
+        text.push_str(&format!(
+            "Scope of {}: {} files · Content: {} bytes · Change set: {} bytes\n",
+            clean(&scope.review),
+            scope.files.len(),
+            scope.content_bytes,
+            scope.change_set_bytes
+        ));
     }
     text.push_str(&format!(
-        "Review criteria: {} / {} bytes · Orientation: at most {} manifest paths\n",
-        plan.context.instruction_bytes,
-        plan.context.instruction_byte_limit,
-        plan.context.manifest_hint_limit
+        "Review criteria: {} / {} bytes\n",
+        plan.context.instruction_bytes, plan.context.instruction_byte_limit
     ));
     for selection in &plan.context.selections {
         text.push_str(&format!(

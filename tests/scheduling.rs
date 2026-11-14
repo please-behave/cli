@@ -24,6 +24,8 @@ fn project() -> tempfile::TempDir {
             .success()
     );
     please::init::init(root.path()).unwrap();
+    support::commit_all(root.path());
+    support::use_head_as_change_base();
     support::check(root.path(), "a", &["check"], "exit 0");
     support::check(root.path(), "b", &["check"], "exit 0");
     let path = root.path().join(".please/config.toml");
@@ -120,7 +122,7 @@ fn review_history_orders_calls_and_preserves_result_order() {
     support::configure_adapter(root.path());
     support::write(root.path(), "evidence", "Evidence\n");
     for (id, diff) in [("r-a", false), ("r-b", true), ("r-c", true)] {
-        fs::write(support::review_path(root.path(), id), format!("id = '{id}'\ndescription = 'Review'\nrun_at = ['check']\n[review]\nprompt = 'prompt.md'\ninclude_diff = {diff}\n")).unwrap();
+        fs::write(support::review_path(root.path(), id), format!("id = '{id}'\ndescription = 'Review'\nrun_at = ['check']\n[review]\nprompt = 'prompt.md'\ninclude_change_set = {diff}\n")).unwrap();
     }
     let cache = root.path().join(".git/please-scheduling.json");
     let execute = || {
@@ -220,7 +222,6 @@ fn linked_worktree_history_stays_outside_governed_files_and_is_isolated() {
             .unwrap()
             .success()
     );
-    please::init::init(linked.path()).unwrap();
     support::check(linked.path(), "a", &["check"], "exit 0");
     let (report, starts) = run(linked.path());
     assert_eq!(report.overall, Status::Pass);

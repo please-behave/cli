@@ -67,7 +67,7 @@ impl Fixture {
         support::write(
             &rules,
             "rules/reviews/evidence/rule.toml",
-            "id = 'evidence'\ndescription = 'Inspect evidence'\n[review]\nprovider = 'quality'\nprompt = 'prompt.md'\ninclude_diff = false\nfiles = ['evidence']\n",
+            "id = 'evidence'\ndescription = 'Inspect evidence'\n[review]\nprovider = 'quality'\nprompt = 'prompt.md'\n",
         );
         support::write(
             &rules,
@@ -90,12 +90,14 @@ assert request['reviews'][0]['parameters']['model'] == 'offline-fixture'
 pathlib.Path('.git/provider-called').write_text('called')
 if len(sys.argv) > 2 and sys.argv[2] == 'tamper':
     pathlib.Path(__file__).write_text('# modified during invocation\n')
-print(json.dumps({'protocol_version':2, 'reason':'Evidence inspected', 'findings':[{'message':'File inspected','path':'evidence','line':1}]}))
+print(json.dumps({'protocol_version':3, 'reason':'Evidence inspected', 'findings':[{'message':'File inspected','path':'evidence','line':1}]}))
 "#,
         );
         let rules_ref = commit(&rules);
         let provider_ref = commit(&providers);
         please::init::init(&consumer).unwrap();
+        support::commit_all(&consumer);
+        support::use_head_as_change_base();
         fs::remove_dir_all(consumer.join(".please/checks")).unwrap();
         fs::remove_dir_all(consumer.join(".please/reviews")).unwrap();
         support::write(&consumer, "evidence", "Verified evidence\n");
@@ -398,7 +400,7 @@ fn imported_message_review_uses_an_independent_cached_adapter() {
         r#"import json, sys
 request = json.load(sys.stdin)
 assert request['input']['commit_message']['lines'][0] == {'number': 1, 'text': 'fix: preserve focus'}
-print(json.dumps({'protocol_version':2,'reason':'Message inspected','findings':[{'path':None,'line':3,'message':'Specific imperative summary'}]}))
+print(json.dumps({'protocol_version':3,'reason':'Message inspected','findings':[{'path':None,'line':3,'message':'Specific imperative summary'}]}))
 "#,
     );
     f.rules_ref = commit(&f.rules);
@@ -411,6 +413,8 @@ print(json.dumps({'protocol_version':2,'reason':'Message inspected','findings':[
         ".git/message",
         "fix: preserve focus\n\nUnsent body\n",
     );
+    support::write(&f.consumer, "change", "changed\n");
+    support::stage_all(&f.consumer);
     let (hook, _) = please::reconciliation::prepare(
         &project,
         Some(please::reconciliation::HookInvocation {

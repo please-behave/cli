@@ -1,4 +1,4 @@
-use anyhow::{Context, Result, ensure};
+use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
@@ -11,8 +11,8 @@ use std::{
 };
 
 use crate::limits::{
-    MAX_CONFIG_DEPTH, MAX_DIFF_BYTES, MAX_SNAPSHOT_BYTES as MAX_TOTAL,
-    MAX_SNAPSHOT_FILE_BYTES as MAX_FILE, MAX_SNAPSHOT_FILES as MAX_FILES,
+    MAX_CONFIG_DEPTH, MAX_SNAPSHOT_BYTES as MAX_TOTAL, MAX_SNAPSHOT_FILE_BYTES as MAX_FILE,
+    MAX_SNAPSHOT_FILES as MAX_FILES,
 };
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
@@ -49,7 +49,10 @@ pub(crate) fn git(root: &Path) -> Command {
 }
 // These outputs are repository data, not logs. Use the snapshot byte budget;
 // stderr and every ordinary process/provider capture retain their smaller bound.
-fn path_output(command: &mut Command, timeout: Duration) -> Result<crate::process::Output> {
+pub(crate) fn path_output(
+    command: &mut Command,
+    timeout: Duration,
+) -> Result<crate::process::Output> {
     crate::process::run_with_stdout_limit(command, timeout, MAX_TOTAL as usize)
 }
 pub fn require_root(root: &Path) -> Result<()> {
@@ -71,7 +74,7 @@ pub fn require_root(root: &Path) -> Result<()> {
     );
     Ok(())
 }
-fn excluded(path: &Path) -> bool {
+pub(crate) fn excluded(path: &Path) -> bool {
     path.starts_with(".git") || path.starts_with(crate::config::path("reports"))
 }
 fn add_config(
@@ -254,43 +257,6 @@ pub fn compare(before: &Snapshot, after: &Snapshot, limit: usize) -> Changes {
         line_counts: None,
     }
 }
-pub fn bounded_diff(root: &Path, has_head: bool) -> Result<String> {
-    bounded_diff_for_paths(root, has_head, None)
-}
-pub fn bounded_diff_for_paths(
-    root: &Path,
-    has_head: bool,
-    paths: Option<&[String]>,
-) -> Result<String> {
-    let mut cmd = git(root);
-    if let Some(paths) = paths {
-        ensure!(!paths.is_empty(), "focused diff requires entry files");
-        cmd.arg("--literal-pathspecs");
-    }
-    cmd.args(["diff", "--no-ext-diff", "--no-textconv", "--no-color"]);
-    if has_head {
-        cmd.arg("HEAD");
-    }
-    if let Some(paths) = paths {
-        cmd.arg("--").args(paths);
-    } else {
-        cmd.args(["--", "."]).arg(format!(
-            ":(exclude){}",
-            crate::config::path("reports").display()
-        ));
-    }
-    let out = crate::process::run(&mut cmd, Duration::from_secs(20)).context("Git diff failed")?;
-    ensure!(
-        out.status.success() && !out.timed_out,
-        "Git diff failed or timed out"
-    );
-    ensure!(
-        !out.stdout.truncated && out.stdout.text.len() <= MAX_DIFF_BYTES,
-        "change set exceeds {MAX_DIFF_BYTES} bytes; commit smaller changes or set include_diff = false"
-    );
-    Ok(out.stdout.text)
-}
-
 /// Git status is orientation only; never used for since-verification comparisons.
 pub fn working_summary(root: &Path) -> Result<String> {
     let output = path_output(
@@ -333,7 +299,10 @@ pub fn working_summary(root: &Path) -> Result<String> {
 }
 
 /// Explicit net comparison for triggers, separate from snapshot freshness.
-pub fn changed_paths(root: &Path, base: &str) -> Result<(String, BTreeSet<String>)> {
+pub fn changed_paths(
+    root: &Path,
+    base: &str,
+) -> Result<(String, BTreeMap<String, crate::change_set::State>)> {
     require_root(root)?;
     ensure!(
         !base.is_empty() && base.len() <= 1024 && !base.contains('\0'),
@@ -379,7 +348,7 @@ pub fn changed_paths(root: &Path, base: &str) -> Result<(String, BTreeSet<String
         .split_terminator('\0')
         .map(|entry| &entry[2..])
         .collect();
-    let mut paths = BTreeSet::new();
+    let mut paths = BTreeMap::new();
     for arguments in [
         vec![
             "diff",
@@ -387,13 +356,14 @@ pub fn changed_paths(root: &Path, base: &str) -> Result<(String, BTreeSet<String
             "--no-textconv",
             "--ignore-submodules=none",
             "--no-renames",
-            "--name-only",
+            "--name-status",
             "-z",
             &commit,
             "--",
         ],
         vec!["ls-files", "--others", "--exclude-standard", "-z"],
     ] {
+        let untracked = arguments[0] == "ls-files";
         let output = path_output(git(root).args(arguments), Duration::from_secs(30))?;
         ensure!(
             output.status.success() && !output.timed_out && !output.stdout.truncated,
@@ -404,10 +374,10 @@ pub fn changed_paths(root: &Path, base: &str) -> Result<(String, BTreeSet<String
             !text.contains('\u{fffd}') && (text.is_empty() || text.ends_with('\0')),
             "unsupported or incomplete changed filename output"
         );
-        for path in text.split_terminator('\0') {
+        for (state, path) in crate::change_set::records(&text, untracked)? {
             crate::config::relative(Path::new(path))?;
             if !excluded(Path::new(path)) {
-                paths.insert(path.to_owned());
+                paths.insert(path.to_owned(), state);
             }
             ensure!(paths.len() <= MAX_FILES, "changed path limit exceeded");
         }
@@ -422,7 +392,8 @@ pub fn changed_paths(root: &Path, base: &str) -> Result<(String, BTreeSet<String
     paths.extend(
         inputs
             .into_iter()
-            .filter(|path| !tracked.contains(path.as_str())),
+            .filter(|path| !tracked.contains(path.as_str()))
+            .map(|path| (path, crate::change_set::State::Added)),
     );
     ensure!(paths.len() <= MAX_FILES, "changed path limit exceeded");
     Ok((commit, paths))

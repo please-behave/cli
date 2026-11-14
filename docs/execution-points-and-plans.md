@@ -37,24 +37,27 @@ sets, required IDs, input identity, bounded context and declared provider settin
 Each review with an explicit provider reference also records `provider` (the named
 ID) and `provider_config` (its complete effective settings). Absent fields select
 the plan's legacy project provider. Model calls count distinct provider references
-and resolved Rule parameter environments and include_diff settings for adapters.
+and resolved Rule parameter environments for adapters.
 Local scheduling history, concurrency limits and fail-fast termination settings change execution strategy and are excluded from semantic plan
 identity. Resource declarations and canonical dependency IDs participate in check identity. No check, adapter
 request, network access or reconciliation occurs during preview.
 Incomplete snapshots or context preparation block execution. Preview does not
-certify a later source state. Reports use schema 4 and plans use schema 3. Blocking metadata distinguishes
+certify a later source state. Reports use schema 4 and plans use schema 4. Blocking metadata distinguishes
 advisory review FAIL/ERROR from blocking failures and check/integrity errors; disabled Rules are listed separately.
 
-Triggered reviews require an explicit `PLEASE_CHANGE_BASE` commit/ref, resolved to
-`change_base` in the plan. Net commit-to-worktree changes include committed and
-uncommitted work. Supply the intended PR merge-base commit in CI; no baseline is
-inferred or fetched. Missing comparison data blocks the plan. Nonmatches appear
-under `omitted` with `trigger_not_matched`, outside required IDs, results, context
-and model-call estimates. Disabled/inapplicable reviews need no baseline. See
+The changed files of a review follow the execution point: staged changes at
+pre-commit and commit-msg, pushed commits at pre-push and the net changes from an
+explicit `PLEASE_CHANGE_BASE` commit/ref at check and custom points, resolved to
+`change_base` in the plan. Supply the intended PR merge-base commit in CI; no baseline is
+inferred or fetched. Missing comparison data blocks the plan. A review without
+matching changed files appears under `omitted` with `trigger_not_matched`, or
+`no_changes` without triggers, outside required IDs, results, context
+and model-call estimates. Disabled/inapplicable reviews and checks-only runs need
+no changed files. See
 [trigger configuration and limits](configuration.md#add-a-review).
 
 Every JSON preview includes `plan_schema_version`, `status` and `blocking_reasons`.
-Configuration and selection errors use schema 3, `status: "blocked"` and nonempty
+Configuration and selection errors use schema 4, `status: "blocked"` and nonempty
 `blocking_reasons`, with exit code 2. They omit unavailable plan metadata instead
 of inventing input or selection details. A prepared plan blocked by an incomplete
 snapshot retains its full metadata. Consumers can read the common diagnostic

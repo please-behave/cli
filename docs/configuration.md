@@ -441,11 +441,11 @@ consumer through the adapter, one call per review, after deterministic checks.
 | --- | --- | --- |
 | `review.provider` | Optional; `null` (omitted in TOML) | Named provider ID; omission requires an explicit default for selected reviews. |
 | `review.parameters` | Optional; `{}` | Structured adapter settings overriding provider keys. |
-| `review.trigger` | Optional; `null` (omitted in TOML) | Select this review only for matching changed files. |
+| `review.trigger` | Optional; `null` (omitted in TOML) | Select this review only for matching changed files; the matching files are its scope. Without it any change selects the review and all changed files are in scope. |
 | `review.trigger.changed_files` | Required | 1–64 repository-relative patterns, each at most 1024 UTF-8 bytes; any match selects the review. |
-| `review.include_diff` | Optional; `true` | Include the Git orientation diff in the prompt; a change set above 32 KiB ends the review as ERROR before any adapter call instead of being truncated, so use smaller commits or `false`. Independent of file triggers and context. |
+| `review.include_content` | Optional; `true` | Include the current content of the files in scope. Binary and deleted files have none. Content above 256 KiB ends the review as ERROR before any adapter call instead of being truncated. |
+| `review.include_change_set` | Optional; `false` | Include the change set of the files in scope for the execution point. A change set above 32 KiB ends the review as ERROR before any adapter call instead of being truncated. |
 | `review.prompt` | Required | Nonblank UTF-8 `.md` filename in the review directory. |
-| `review.files` | Optional; `[]` | Up to 64 unique existing consumer-relative source files; exact paths, not globs. Starting points, not an evidence boundary. |
 | `review.context` | Optional; `[]` | Up to 32 document selections as `[[review.context]]`. |
 | `review.context.path` | Required | Existing UTF-8 consumer-relative file. |
 | `review.context.headings` | Optional; `[]` | Up to 32 nonblank exact ATX Markdown headings; empty selects the whole document. |
@@ -463,7 +463,7 @@ run_at = ["commit-msg"]
 [review]
 provider = "commit-quality"
 prompt = "prompt.md"
-include_diff = false
+include_content = false
 ```
 
 A review at `commit-msg` blocks direct `please run --at commit-msg` and offline
@@ -492,7 +492,21 @@ component, `?` matches one character, and a whole component `**` matches zero or
 more directories. Hidden files match normally. Absolute paths, empty/dot/parent
 components, backslashes, colons, controls, brackets, braces and embedded `**`
 (such as `src/**.rs`) are invalid. Exact paths need not currently exist, so deleted
-files can trigger reviews. A trigger selects execution; it does not supply context.
+files can trigger reviews. A trigger selects the review and limits its scope; it does not supply context documents.
+
+The changed files follow the execution point, and so does the change set of a review that
+includes it:
+
+| Execution point | Changed files and change set |
+| --- | --- |
+| `pre-commit`, `commit-msg` | The staged changes, as if the current index were committed. |
+| `pre-push` | The pushed commits. Without Git's reference list, as in a direct or preview run, the commits of `HEAD` that are on no remote-tracking reference of the upstream remote, else `origin`, else any remote. |
+| `check` and custom points | The net changes from `PLEASE_CHANGE_BASE` to the working tree. |
+
+Renames count as a deletion of the old path and an addition of the new one, so a trigger
+can match either. Content is read from the working files, also at `pre-commit`, so a
+partly staged file shows its working state. Untracked files appear as additions at
+`check` but have no change set. An unmerged path blocks the plan.
 
 Set `PLEASE_CHANGE_BASE` to an explicit locally available Git commit or reference:
 
@@ -505,23 +519,23 @@ Please Behave resolves the reference once and records its commit ID as `change_b
 the plan. It compares that commit directly with current working files: committed,
 staged and unstaged net changes, nonignored untracked files and declared governance
 inputs even when ignored, except reports. Unreferenced ignored artifacts are excluded.
-Renames match old and new paths. Changes reverted back to
-the baseline do not trigger a review. Locally, choose the intended starting commit;
+Changes reverted back to
+the baseline do not select a review. Locally, choose the intended starting commit;
 use `HEAD` explicitly when only uncommitted changes matter. In CI, fetch the intended
 baseline and provide its commit ID. For a multi-commit PR, the caller can compute
 and supply its merge base with the target branch; Please Behave never assumes `HEAD^` or
 infers GitHub context. It does not fetch missing refs. Shallow clones work when
 the supplied commit and tree are available locally. Index conflicts and
 assume-unchanged/skip-worktree flags (including sparse checkouts) block comparison;
-clear them before using triggers.
+clear them before using `PLEASE_CHANGE_BASE`.
 
 Missing/invalid baselines, unavailable trees, incomplete snapshots, unsupported
 filename encoding, timeouts and Git path-list output above 128 MiB block execution with ERROR,
-never a successful skip. Disabled reviews and reviews at other points need no
-baseline. Reviews without triggers keep their existing behavior.
+never a successful skip. Disabled reviews, checks-only runs and reviews at other points need no
+changed files. At most 200 files may be in the scope of one review.
 
-Nonmatches appear in preview and saved report plans under `omitted` with reason
-`trigger_not_matched`; they have no result or required ID, need no provider runtime
+Reviews without matching changed files appear in preview and saved report plans under `omitted` with reason
+`trigger_not_matched`, or `no_changes` when the review has no triggers and nothing changed; they have no result or required ID, need no provider runtime
 credentials/executables, and contribute no context or planned model calls. Scheduled
 reviews still wait for the global deterministic-check gate. Snapshot and context
 limits remain unchanged.
@@ -800,7 +814,7 @@ the managed section of a composed hook do not receive it.
 
 ### Reports and other files
 
-Reports use schema 4 and plans use schema 3. These output schema numbers describe
+Reports use schema 4 and plans use schema 4. These output schema numbers describe
 machine-readable results, not configuration variants. Results record blocking,
 status, evidence, durations and captured output. ERROR always takes precedence;
 blocking FAIL follows; fail-fast skips and cancellations prevent success. Dependency

@@ -20,6 +20,8 @@ fn project() -> TempDir {
             .success()
     );
     please::init::init(root.path()).unwrap();
+    support::commit_all(root.path());
+    support::use_head_as_change_base();
     support::configure_adapter(root.path());
     support::write(root.path(), "evidence", "Test evidence\n");
     root
@@ -92,7 +94,14 @@ fn cli_defaults_to_complete_execution_and_fail_fast_reports_unstarted_rules() {
     review(root.path(), "later", "one", false);
     for fail_fast in [false, true] {
         let mut command = support::command(env!("CARGO_BIN_EXE_please"));
-        command.args(["run", "--at", "check", "--max-parallel", "1", "--no-color"]);
+        command.env("PLEASE_CHANGE_BASE", "HEAD").args([
+            "run",
+            "--at",
+            "check",
+            "--max-parallel",
+            "1",
+            "--no-color",
+        ]);
         if fail_fast {
             command.arg("--fail-fast");
         }
@@ -249,6 +258,7 @@ fn fail_fast_has_no_persistent_configuration_or_plan_selection_effect() {
     support::check(root.path(), "b", &["check"], "exit 0");
     let output = |extra: &[&str]| {
         support::command(env!("CARGO_BIN_EXE_please"))
+            .env("PLEASE_CHANGE_BASE", "HEAD")
             .args(["run", "--at", "check", "--plan", "--json"])
             .args(extra)
             .current_dir(root.path())
@@ -418,6 +428,7 @@ fn fail_fast_terminates_groups_gracefully_and_escalates_after_the_leader_exits()
             let root = project();
             termination_fixture(&root, stubborn, stubborn_parent, failure_exit);
             let output = support::command(env!("CARGO_BIN_EXE_please"))
+                .env("PLEASE_CHANGE_BASE", "HEAD")
                 .args(["run", "--at", "check", "--fail-fast", "--no-color"])
                 .current_dir(root.path())
                 .output()

@@ -1,3 +1,4 @@
+pub mod change_set;
 pub mod check_command;
 pub mod checks;
 pub mod cli;

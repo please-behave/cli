@@ -48,6 +48,8 @@ fn project() -> TempDir {
     );
     write(d.path(), "README.md", "# My_App\n");
     support::configure_adapter(d.path());
+    support::commit_all(d.path());
+    support::use_head_as_change_base();
     d
 }
 fn check(root: &Path, id: &str, attributes: &str, implementation: &str, script: &str) {
@@ -123,7 +125,7 @@ fn fixed_discovery_and_defaults() {
     assert!(p.checks[0].enabled);
     assert_eq!(p.checks[0].timeout_seconds, 30);
     let plan = planner::build(&p, Some("check"), false).unwrap().plan;
-    assert_eq!(plan.plan_schema_version, 3);
+    assert_eq!(plan.plan_schema_version, 4);
     assert_eq!(plan.scheduled.len(), 1);
     assert!(plan.scheduled[0].blocking);
     write(

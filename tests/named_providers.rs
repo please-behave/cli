@@ -34,6 +34,8 @@ fn project() -> tempfile::TempDir {
     let root = tempfile::tempdir().unwrap();
     git(root.path(), &["init", "--quiet", "--initial-branch=main"]);
     please::init::init(root.path()).unwrap();
+    support::commit_all(root.path());
+    support::use_head_as_change_base();
     support::configure_adapter(root.path());
     fs::remove_dir_all(root.path().join(".please/checks")).unwrap();
     fs::remove_dir_all(root.path().join(".please/reviews")).unwrap();
@@ -349,7 +351,7 @@ fn imported_cli_commands_follow_existing_explicit_import_trust() {
 import json, os, sys
 request = json.load(sys.stdin)
 assert request['reviews'][0]['parameters']['label'] == 'central-model'
-print(json.dumps({'protocol_version':2,'reason':'Evidence inspected','findings':[{'message':'Evidence','path':'evidence','line':1}]}))
+print(json.dumps({'protocol_version':3,'reason':'Evidence inspected','findings':[{'message':'Evidence','path':'evidence','line':1}]}))
 "#,
     );
     fs::set_permissions(root.path().join("tool"), fs::Permissions::from_mode(0o755)).unwrap();

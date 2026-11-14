@@ -36,7 +36,7 @@ output bounds of checks. When a call ends as ERROR, its stdout and stderr are re
 unmasked and shown by `please status --details`, so write the original error text to
 stderr and never include credentials. Never write progress text to stdout.
 
-The request and the response require integer `protocol_version: 2`. Unsupported
+The request and the response require integer `protocol_version: 3`. Unsupported
 versions, including 1, fail closed; no legacy format detection or fallback occurs. Any
 incompatible protocol revision must use a new version supported explicitly by Please.
 Adapters should reject unsupported request versions and may ignore unknown request
@@ -52,18 +52,18 @@ ordinary enforcement rules regardless of which adapter is selected.
 
 ```json
 {
-  "protocol_version": 2,
+  "protocol_version": 3,
   "execution_point": "check",
-  "head": null,
   "input": {
-    "excerpts": [], "focused_paths": null, "manifest": ["README.md"],
-    "diff": ""
+    "excerpts": [],
+    "files": [{"path": "README.md", "change": "modified", "content": "# Project\n"}],
+    "change_set": "diff --git ..."
   },
   "context_file": "/path/to/context.json",
   "rule_parameters": {},
   "reviews": [{
     "id": "documentation", "criteria": "Inspect documented expectations.",
-    "entry_files": ["README.md"], "context_files": [],
+    "context_files": [],
     "parameters": {"variant": "careful", "tools": {"read": true}}
   }],
   "prompt": "The complete common review instructions and prepared evidence...",
@@ -74,12 +74,16 @@ ordinary enforcement rules regardless of which adapter is selected.
 The actual response_schema includes all response constraints and findings; the
 abbreviated schema above illustrates its position. It describes the response without
 the envelope's protocol_version or usage.
-`head` is the current commit or null for an unborn repository. Excerpts contain
-path, start_line, end_line and text with original line numbers. Manifest paths
-and diff are orientation hints, not exhaustive evidence. `focused_paths`
-is null for project-wide orientation or the selected entry/context paths.
-The prompt contains the common review instructions, criteria, excerpts and
-orientation. An adapter can use that prompt directly or construct a request from
+Excerpts contain path, start_line, end_line and text with original line numbers.
+`files` is the scope of the review: its changed files at the execution point that
+match its triggers, or all changed files without triggers, each with `change`
+(`added`, `modified` or `deleted`). `content` is the current content of a text
+file, present when the review includes content; a `binary` file is marked and has
+none. `change_set` is the change set of the scope files for the execution point and
+is present only when the review includes it. These inputs are the start of the
+review, not an exhaustive boundary: an adapter may load other repository files.
+The prompt contains the common review instructions, criteria, excerpts and the
+scope. An adapter can use that prompt directly or construct a request from
 the structured fields, preserving the review and evidence requirements.
 
 No tools, repository sandbox or safety instructions are supplied by Please;
@@ -132,7 +136,7 @@ one review in the `reviews` list; Please never combines reviews in one call.
 
 ```json
 {
-  "protocol_version": 2,
+  "protocol_version": 3,
   "reason": "Documented behavior matches",
   "explanation": "Optional longer text, which may span several lines.",
   "findings": [{"message": "Compared the documented command", "path": "README.md", "line": 1}],

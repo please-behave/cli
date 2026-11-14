@@ -26,6 +26,8 @@ fn project() -> TempDir {
             .success()
     );
     please::init::init(root.path()).unwrap();
+    support::commit_all(root.path());
+    support::use_head_as_change_base();
     support::configure_adapter(root.path());
     root
 }
@@ -157,7 +159,7 @@ fn independent_processes_overlap_and_captures_remain_attributed() {
     }
     let saved = report::read(root.path()).unwrap();
     assert_eq!(saved.schema_version, 4);
-    assert_eq!(saved.plan.plan_schema_version, 3);
+    assert_eq!(saved.plan.plan_schema_version, 4);
     assert!(please::terminal::render_details(&saved, false).contains("b stderr"));
     // A CLI override wins over a configured serial limit, and leaves it untouched.
     let config_path = root.path().join(".please/config.toml");
@@ -169,6 +171,7 @@ fn independent_processes_overlap_and_captures_remain_attributed() {
         fs::remove_file(signals.path().join(id)).unwrap();
     }
     let output = support::command(env!("CARGO_BIN_EXE_please"))
+        .env("PLEASE_CHANGE_BASE", "HEAD")
         .args(["run", "--at", "check", "--max-parallel", "2"])
         .current_dir(root.path())
         .output()
@@ -235,6 +238,7 @@ fn cli_override_controls_serial_execution() {
         &format!("test -f '{}/finished'", signals.path().display()),
     );
     let output = support::command(env!("CARGO_BIN_EXE_please"))
+        .env("PLEASE_CHANGE_BASE", "HEAD")
         .args(["run", "--at", "check", "--max-parallel", "1"])
         .current_dir(root.path())
         .output()

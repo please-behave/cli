@@ -163,7 +163,7 @@ pinned to the full commit in `.please/config.toml`. It receives
 `.please/commit-scopes.txt` through the `scopes_file` parameter. The imported
 Check validates header syntax, type and scope using the managed commit-msg argument.
 The advisory `commit-message-quality` Review evaluates only the first header line
-for specific English imperative wording, without the diff, body or repository files.
+for specific English imperative wording, without the change set, body or repository files.
 The `gemini-flash-lite` provider is independently imported from
 `providers/gemini-flash-lite` in the same repository; no adapter is copied locally.
 Export GEMINI_API_KEY in the shell running Git. Missing credentials, provider

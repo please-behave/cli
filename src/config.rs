@@ -145,7 +145,8 @@ pub struct Check {
 #[derive(Debug, Clone, Serialize)]
 pub struct Review {
     pub adapter_parameters: BTreeMap<String, serde_json::Value>,
-    pub include_diff: bool,
+    pub include_content: bool,
+    pub include_change_set: bool,
     pub trigger: Option<ReviewTrigger>,
     pub provider: Option<String>,
     pub id: String,
@@ -153,7 +154,6 @@ pub struct Review {
     pub description: String,
     pub enabled: bool,
     pub blocking: bool,
-    pub files: Vec<String>,
     pub context: Vec<ReviewContext>,
     pub run_at: Vec<String>,
     pub text: String,
@@ -210,12 +210,12 @@ pub struct ReviewDefinition {
     )]
     pub parameters: BTreeMap<String, serde_json::Value>,
     #[serde(default = "default_true")]
-    pub include_diff: bool,
+    pub include_content: bool,
+    #[serde(default)]
+    pub include_change_set: bool,
     pub trigger: Option<ReviewTrigger>,
     pub provider: Option<String>,
     pub prompt: String,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub files: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub context: Vec<ReviewContext>,
 }
@@ -502,22 +502,9 @@ pub(crate) fn validate(root: PathBuf, loaded: crate::discovery::Loaded) -> Resul
                 crate::review_trigger::validate(trigger)?;
             }
             ensure!(
-                review.files.len() <= MAX_ENTRY_FILES
-                    && review.context.len() <= MAX_CONTEXT_ENTRIES,
-                "review permits at most {MAX_ENTRY_FILES} files and {MAX_CONTEXT_ENTRIES} context entries"
+                review.context.len() <= MAX_CONTEXT_ENTRIES,
+                "review permits at most {MAX_CONTEXT_ENTRIES} context entries"
             );
-            let mut files = BTreeSet::new();
-            for file in &mut review.files {
-                let full = inside(&root, Path::new(file))?;
-                ensure!(full.is_file(), "review file must be a regular file: {file}");
-                *file = full
-                    .strip_prefix(&root)?
-                    .components()
-                    .map(|part| part.as_os_str().to_string_lossy())
-                    .collect::<Vec<_>>()
-                    .join("/");
-                ensure!(files.insert(file.clone()), "duplicate review file: {file}");
-            }
             for source in &mut review.context {
                 let full = inside(&root, Path::new(&source.path))?;
                 ensure!(
@@ -545,7 +532,8 @@ pub(crate) fn validate(root: PathBuf, loaded: crate::discovery::Loaded) -> Resul
             instruction_bytes += review.text.len();
             ensure!(
                 instruction_bytes <= MAX_TOTAL_INSTRUCTION_BYTES,
-                "total review instructions exceed {} bytes", MAX_TOTAL_INSTRUCTION_BYTES
+                "total review instructions exceed {} bytes",
+                MAX_TOTAL_INSTRUCTION_BYTES
             );
             Ok(())
         })()

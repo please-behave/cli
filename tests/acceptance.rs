@@ -35,6 +35,7 @@ fn project() -> TempDir {
     git(dir.path(), &["init", "--quiet"]);
     please::init::init(dir.path()).unwrap();
     support::configure_adapter(dir.path());
+    support::commit_all(dir.path());
     dir
 }
 fn synchronize(root: &Path) {
@@ -111,7 +112,7 @@ fn json_plan_errors_use_current_schema_and_blocking_reasons() {
         let output = cli(d.path(), args);
         assert_eq!(output.status.code(), Some(code));
         let document: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
-        assert_eq!(document["plan_schema_version"], 3);
+        assert_eq!(document["plan_schema_version"], 4);
         assert_eq!(
             document["status"],
             if code == 0 { "planned" } else { "blocked" }
@@ -179,7 +180,7 @@ fn json_plan_errors_use_current_schema_and_blocking_reasons() {
 fn human_plan_uses_english_and_preserves_layout_and_values() {
     // Fixed metadata exercises optional display sections without invoking rules or providers.
     let mut plan: please::planner::Plan = serde_json::from_value(serde_json::json!({
-        "plan_schema_version": 3,
+        "plan_schema_version": 4,
         "plan_id": "plan-123",
         "status": "planned",
         "blocking_reasons": [],
@@ -198,13 +199,12 @@ fn human_plan_uses_english_and_preserves_layout_and_values() {
         "provider_availability_checked": false,
         "planned_model_calls": 1,
         "change_base": "base-789",
-        "context": {"entry_files": ["src/lib.rs"],
+        "context": {"scopes": [{"review": "architecture", "files": ["src/lib.rs"], "content_bytes": 30, "change_set_bytes": 40}],
             "selections": [{"path": "SPECIFICATION.md", "headings": []},
                 {"path": "DESIGN.md", "headings": ["Architecture", "Boundaries"]}],
             "sections": [{"path": "SPECIFICATION.md", "start_line": 2, "end_line": 7, "bytes": 120}],
             "selected_bytes": 120, "byte_limit": 1000, "instruction_bytes": 80,
-            "instruction_byte_limit": 500, "manifest_hint_limit": 10,
-            "orientation_diff_bytes": 40}
+            "instruction_byte_limit": 500}
     }))
     .unwrap();
     let before = serde_json::to_value(&plan).unwrap();
@@ -220,10 +220,10 @@ fn human_plan_uses_english_and_preserves_layout_and_values() {
             "Omitted: review unchanged · trigger_not_matched\nRequired rules: architecture\n",
             "Default adapter: fake-adapter · Timeout: 180 s\n",
             "Adapter availability not checked · Planned model calls: 1\n",
-            "Context: 120 / 1000 bytes · Diff: 40 bytes\n",
+            "Context: 120 / 1000 bytes\n",
             "Review Architektur · Provider configuration: reviewer · Adapter: review-adapter · Timeout: 60 s\n",
-            "Entry file: src/lib.rs\n",
-            "Review criteria: 80 / 500 bytes · Orientation: at most 10 manifest paths\n",
+            "Scope of architecture: 1 files · Content: 30 bytes · Change set: 40 bytes\n",
+            "Review criteria: 80 / 500 bytes\n",
             "Requirements: SPECIFICATION.md · entire file\n",
             "Requirements: DESIGN.md · Architecture, Boundaries\n",
             "Context section: SPECIFICATION.md:2–7 · 120 bytes\n",
@@ -258,7 +258,7 @@ fn human_plan_uses_english_and_preserves_layout_and_values() {
         "Mode: Checks only · no provider calls\n",
         "No active rules selected; no rule PASS established.\n",
         "Omitted: review architecture · trigger_not_matched\n",
-        "Context: 120 / 1000 bytes · Diff: 40 bytes\n",
+        "Context: 120 / 1000 bytes\n",
         "Blocked: Input snapshot is incomplete; no verification can start\nBlocked: File exceeds snapshot limit\n",
     ] {
         assert!(text.contains(expected), "missing {expected:?} in {text}");
@@ -817,7 +817,10 @@ fn huge_file_gives_unknown_and_blocks_verification() {
 }
 #[test]
 fn no_root_detection_or_git_mutation() {
-    let d = project();
+    let d = tempdir().unwrap();
+    git(d.path(), &["init", "--quiet"]);
+    please::init::init(d.path()).unwrap();
+    support::configure_adapter(d.path());
     let head = fs::read(d.path().join(".git/HEAD")).unwrap();
     please::verify(d.path(), &Never).unwrap();
     assert_eq!(fs::read(d.path().join(".git/HEAD")).unwrap(), head);
@@ -935,9 +938,12 @@ fn prompt_has_no_safety_instructions() {
     let project = config::load(d.path()).unwrap();
     let snapshot = git_snapshot::capture(d.path()).unwrap();
     let active: Vec<_> = project.reviews.iter().collect();
+    let changes = please::change_set::ChangeSet::empty();
     let mut input =
-        please::review_input::PreparedReviewInput::prepare(&project, &active, &snapshot).unwrap();
-    input.diff = "malicious diff content".into();
+        please::review_input::PreparedReviewInput::prepare(&project, &active, &snapshot, &changes)
+            .unwrap();
+    input.scopes.get_mut(&active[0].id).unwrap().change_set =
+        Some("malicious change set content".into());
     let request = Request {
         execution_point: "pre-push",
         parameters: &Default::default(),
@@ -948,48 +954,50 @@ fn prompt_has_no_safety_instructions() {
     };
     let text = please::provider::prompt(&request).unwrap();
     assert!(!text.contains("Truncated"));
-    assert!(text.contains("<diff>"));
+    assert!(text.contains("<change-set>"));
     for forbidden in ["untrusted", "read-only", "privileged", "Do not edit"] {
         assert!(!text.contains(forbidden), "{forbidden}");
     }
     assert!(text.contains("FAIL when PASS cannot be established"));
     assert!(text.contains("product-consistency"));
-    let mut without_diff = project.reviews[0].clone();
-    without_diff.include_diff = false;
-    let active = [&without_diff];
-    let prepared =
-        please::review_input::PreparedReviewInput::prepare(&project, &active, &snapshot).unwrap();
-    assert!(prepared.diff.is_empty());
-    // Even shared preparation containing a diff must not leak it to this call.
+    // A review that is not the owner of the shared change set must not receive it.
+    let mut other = project.reviews[0].clone();
+    other.id = "other".into();
+    let active = [&other];
     let request = Request {
         reviews: &active,
         ..request
     };
     let text = please::provider::prompt(&request).unwrap();
-    assert!(!text.contains("malicious diff content"));
-    assert!(!text.contains("<diff>"));
+    assert!(!text.contains("malicious change set content"));
+    assert!(!text.contains("<change-set>"));
 }
 
 #[test]
-fn oversized_diff_ends_the_review_as_error_without_an_adapter_call() {
+fn oversized_change_set_ends_the_review_as_error_without_an_adapter_call() {
     let d = project();
     enable(d.path());
-    fs::write(d.path().join("big.txt"), "small\n").unwrap();
-    git(d.path(), &["add", "big.txt"]);
     fs::write(d.path().join("big.txt"), "x\n".repeat(20 * 1024)).unwrap();
+    git(d.path(), &["add", "big.txt"]);
     let project = config::load(d.path()).unwrap();
     let snapshot = git_snapshot::capture(d.path()).unwrap();
-    let active: Vec<_> = project.reviews.iter().collect();
-    let items = please::reviews::execute(&project, &active, &snapshot, &Never, "pre-push");
+    let changes = please::change_set::collect(d.path(), "pre-commit", None).unwrap();
+    let mut with_change_set = project.reviews[0].clone();
+    with_change_set.include_change_set = true;
+    let active = [&with_change_set];
+    let items =
+        please::reviews::execute(&project, &active, &snapshot, &changes, &Never, "pre-commit");
     assert_eq!(items.len(), active.len());
     assert!(items.iter().all(|i| i.status == Status::Error));
     assert!(items[0].reason.contains("change set exceeds"));
-    let mut without_diff = project.reviews[0].clone();
-    without_diff.include_diff = false;
-    let prepared =
-        please::review_input::PreparedReviewInput::prepare(&project, &[&without_diff], &snapshot)
-            .unwrap();
-    assert!(prepared.diff.is_empty());
+    let prepared = please::review_input::PreparedReviewInput::prepare(
+        &project,
+        &[&project.reviews[0]],
+        &snapshot,
+        &changes,
+    )
+    .unwrap();
+    assert!(prepared.scopes[&project.reviews[0].id].change_set.is_none());
 }
 
 #[test]
@@ -1728,9 +1736,8 @@ fn review_context_sections_keep_source_lines_merge_overlap_and_ignore_code_headi
     fs::write(d.path().join("Policy.md"), document).unwrap();
     let metadata = path(d.path(), "reviews/product-consistency/rule.toml");
     let original = fs::read_to_string(&metadata).unwrap();
-    fs::write(&metadata, format!("{original}\nfiles = [\"./Policy.md\"]\n[[review.context]]\npath = \"./Policy.md\"\nheadings = [\"Scope\", \"Detail\"]\n")).unwrap();
+    fs::write(&metadata, format!("{original}\n[[review.context]]\npath = \"./Policy.md\"\nheadings = [\"Scope\", \"Detail\"]\n")).unwrap();
     let p = config::load(d.path()).unwrap();
-    assert_eq!(p.reviews[0].files, ["Policy.md"]);
     let excerpts =
         please::review_context::collect(&p.root, &[&p.reviews[0], &p.reviews[0]]).unwrap();
     assert_eq!(excerpts.len(), 1);
@@ -1776,14 +1783,19 @@ fn review_context_rejects_escaping_missing_and_excessive_sources_without_a_provi
 }
 
 #[test]
-fn focused_reviews_exclude_unrelated_paths_and_diff_and_include_untracked_entry_hints() {
+fn triggers_limit_the_scope_of_content_and_change_set() {
     let d = project();
-    fs::write(d.path().join("entry[1].swift"), "old entry\n").unwrap();
+    fs::write(d.path().join("entry.swift"), "old entry\n").unwrap();
     fs::write(d.path().join("unrelated.swift"), "old unrelated\n").unwrap();
-    git(d.path(), &["add", "entry[1].swift", "unrelated.swift"]);
-    fs::write(d.path().join("entry[1].swift"), "new entry\n").unwrap();
-    fs::write(d.path().join("unrelated.swift"), "UNRELATED_DIFF_SECRET\n").unwrap();
-    fs::write(d.path().join("new.swift"), "new untracked entry\n").unwrap();
+    git(d.path(), &["add", "entry.swift", "unrelated.swift"]);
+    git(d.path(), &["commit", "--quiet", "-m", "base"]);
+    fs::write(d.path().join("entry.swift"), "new entry\n").unwrap();
+    fs::write(d.path().join("unrelated.swift"), "UNRELATED_SECRET\n").unwrap();
+    fs::write(d.path().join("new.swift"), "new staged entry\n").unwrap();
+    git(
+        d.path(),
+        &["add", "entry.swift", "unrelated.swift", "new.swift"],
+    );
     fs::write(
         d.path().join("Policy.md"),
         "# Relevant\nRelevant requirement\n# Other\nUNRELATED_POLICY_SECRET\n",
@@ -1791,24 +1803,31 @@ fn focused_reviews_exclude_unrelated_paths_and_diff_and_include_untracked_entry_
     .unwrap();
     let metadata = path(d.path(), "reviews/product-consistency/rule.toml");
     let original = fs::read_to_string(&metadata).unwrap();
-    fs::write(metadata, format!("{original}\nfiles = [\"entry[1].swift\", \"new.swift\"]\n[[review.context]]\npath = \"Policy.md\"\nheadings = [\"Relevant\"]\n")).unwrap();
+    fs::write(metadata, format!("{}\n[review.trigger]\nchanged_files = [\"entry.swift\", \"new.swift\"]\n[[review.context]]\npath = \"Policy.md\"\nheadings = [\"Relevant\"]\n", original.replace("include_change_set = false", "include_change_set = true"))).unwrap();
     let p = config::load(d.path()).unwrap();
     let snapshot = git_snapshot::capture(d.path()).unwrap();
+    let changes = please::change_set::collect(d.path(), "pre-commit", None).unwrap();
     let active = [&p.reviews[0]];
-    let input = please::review_input::PreparedReviewInput::prepare(&p, &active, &snapshot).unwrap();
+    let input =
+        please::review_input::PreparedReviewInput::prepare(&p, &active, &snapshot, &changes)
+            .unwrap();
     let request = Request {
-        execution_point: "pre-push",
+        execution_point: "pre-commit",
         parameters: &Default::default(),
         project: &p,
         reviews: &active,
         snapshot: &snapshot,
         input: &input,
     };
-    assert!(input.diff.contains("new entry") && !input.diff.contains("UNRELATED_DIFF_SECRET"));
+    let scope = &input.scopes[&p.reviews[0].id];
+    let paths: Vec<_> = scope.files.iter().map(|f| f.path.as_str()).collect();
+    assert_eq!(paths, ["entry.swift", "new.swift"]);
+    let change_set = scope.change_set.as_deref().unwrap();
+    assert!(change_set.contains("new entry") && !change_set.contains("UNRELATED_SECRET"));
     let prompt = please::provider::prompt(&request).unwrap();
-    assert!(prompt.contains("new.swift") && prompt.contains("Relevant requirement"));
+    assert!(prompt.contains("new staged entry") && prompt.contains("Relevant requirement"));
     assert!(!prompt.contains("UNRELATED_POLICY_SECRET") && !prompt.contains("unrelated.swift"));
-    assert!(prompt.contains("starting points, not an exhaustive boundary"));
+    assert!(prompt.contains("not an exhaustive boundary"));
     assert!(prompt.contains("ONCE"));
 }
 

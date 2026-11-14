@@ -210,10 +210,10 @@ outside parameters are rejected.
 
 ## PROV-002: Adapter protocol
 
-Protocol version 2 uses one UTF-8 JSON request on stdin and one JSON response on
+Protocol version 3 uses one UTF-8 JSON request on stdin and one JSON response on
 stdout. Requests contain protocol_version, execution_point, input (prepared
-excerpts, manifest, focused paths and bounded diff), head, prompt, response_schema,
-and reviews with id, criteria, entry_files, context_files and effective parameters.
+excerpts and the scope of the review: files, optional content and optional change set), prompt,
+response_schema, and reviews with id, criteria, context_files and effective parameters.
 The common prompt/schema describe the verdict and evidence contract; adapters
 translate them for their provider. Adapters own authentication, tools, models,
 response extraction and other provider-specific behavior.
@@ -228,7 +228,7 @@ Each review is one adapter call and retains its own effective adapter parameters
 The exit status is the verdict: 0 is PASS and 1 is FAIL, each valid only with a
 response that satisfies the common response contract. Any other exit status, a
 timeout, a failure to start or a missing or invalid response at exit 0 or 1 is ERROR.
-Responses require protocol_version = 2, a one-line reason, findings and an optional
+Responses require protocol_version = 3, a one-line reason, findings and an optional
 longer explanation; they carry neither a status nor a review ID. Optional usage
 contains common token counters; absent usage remains unavailable.
 Unsupported versions, unknown fields, malformed, oversized or invalid
@@ -321,9 +321,13 @@ exact components, `*` and `?` within components, and whole-component `**` for ze
 or more directories. Matching is case-sensitive; hidden files match normally.
 Empty/dot/parent components, absolute paths, backslashes, colons, control
 characters, brackets, braces and embedded `**` are rejected, including imports.
-Reviews without triggers retain ordinary selection.
+A review without triggers is selected by any change and has all changed files in scope.
 
-For enabled reviews at the requested point, `PLEASE_CHANGE_BASE` explicitly names
+The changed files follow the execution point: staged changes at pre-commit and
+commit-msg, pushed commits at pre-push (without Git's reference list, the commits of
+HEAD on no remote-tracking reference of the upstream remote, else origin, else any
+remote) and, at check and custom points, the net changes against `PLEASE_CHANGE_BASE`.
+For enabled reviews at those points, `PLEASE_CHANGE_BASE` explicitly names
 a locally available Git commit/ref. Resolve it once to a commit ID; compare that
 commit directly to current working files, including staged/unstaged changes and
 nonignored untracked files, plus declared governance inputs even when ignored
@@ -340,17 +344,17 @@ budget for path-list stdout and 30-second deadlines. Ordinary diagnostic capture
 remains 64 KiB. File-count, file-content and review-context limits remain unchanged.
 
 Apply triggers before context preparation, parameter resolution and model-call
-estimation. Nonmatches have omission reason `trigger_not_matched` in preview and
-saved report plans, no result and no required ID; they do not require provider
+estimation. Nonmatches have omission reason `trigger_not_matched` (`no_changes` without
+triggers) in preview and saved report plans, no result and no required ID; they do not require provider
 credentials/executables. Disabled and inapplicable rules need no comparison.
 Record the resolved baseline in the plan and its identity. Deterministic checks
 still gate all scheduled reviews globally.
 
 ## PREP-001: Shared review input
 
-Planning prepares bounded requirement excerpts, manifest hints and orientation
-diff once. Execution passes that same prepared input to the provider; prompt
-rendering must not reread context or recalculate the diff. Snapshot stability
+Planning prepares bounded requirement excerpts and the scope of each review
+(its changed files, their content and change set where selected) once. Execution passes that same prepared input to the provider; prompt
+rendering must not reread context or recalculate the change set. Snapshot stability
 checks still run before the call and after execution; preparation is not a cache
 or permission to run against changed files. The provider boundary owns transport
 and provider settings, not a second interpretation of evidence selection.

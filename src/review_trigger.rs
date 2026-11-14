@@ -48,27 +48,29 @@ fn component(pattern: &str, path: &str) -> bool {
     row[text.len()]
 }
 
-pub fn matches(trigger: &ReviewTrigger, paths: &std::collections::BTreeSet<String>) -> bool {
+pub fn matches_path(trigger: &ReviewTrigger, path: &str) -> bool {
     trigger.changed_files.iter().any(|pattern| {
-        paths.iter().any(|path| {
-            let parts: Vec<_> = path.split('/').collect();
-            let mut row = vec![false; parts.len() + 1];
-            row[0] = true;
-            for token in pattern.split('/') {
-                let mut next = vec![false; row.len()];
-                if token == "**" {
-                    next[0] = row[0];
-                }
-                for i in 0..parts.len() {
-                    next[i + 1] = if token == "**" {
-                        row[i + 1] || next[i]
-                    } else {
-                        row[i] && component(token, parts[i])
-                    };
-                }
-                row = next;
+        let parts: Vec<_> = path.split('/').collect();
+        let mut row = vec![false; parts.len() + 1];
+        row[0] = true;
+        for token in pattern.split('/') {
+            let mut next = vec![false; row.len()];
+            if token == "**" {
+                next[0] = row[0];
             }
-            row[parts.len()]
-        })
+            for i in 0..parts.len() {
+                next[i + 1] = if token == "**" {
+                    row[i + 1] || next[i]
+                } else {
+                    row[i] && component(token, parts[i])
+                };
+            }
+            row = next;
+        }
+        row[parts.len()]
     })
+}
+
+pub fn matches(trigger: &ReviewTrigger, paths: &std::collections::BTreeSet<String>) -> bool {
+    paths.iter().any(|path| matches_path(trigger, path))
 }

@@ -12,8 +12,11 @@ scope:
     Compares snapshots to establish CURRENT, STALE or UNKNOWN freshness with
     bounded lists of changed paths.
   - >-
-    Provides bounded diffs, path lists and working-tree summaries, and
-    requires the working directory to be the Git root.
+    Provides bounded path lists and working-tree summaries, and requires the
+    working directory to be the Git root.
+  - >-
+    Determines the changed files and bounded change set of an execution
+    point: staged, pushed commits or net changes against an explicit base.
   - >-
     Enforces the snapshot bounds and reports incomplete coverage instead of
     hiding it.
@@ -34,6 +37,8 @@ must_not:
     Invent line deltas; the baseline stores hashes, not prior content.
 files:
   - src/git_snapshot.rs
+  - src/change_set.rs
 depends_on:
   - COMP-0003
   - COMP-0008
+  - COMP-0013

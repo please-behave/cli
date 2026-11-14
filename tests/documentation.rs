@@ -120,6 +120,8 @@ fn project() -> TempDir {
             .success()
     );
     please::init::init(root.path()).unwrap();
+    support::commit_all(root.path());
+    support::use_head_as_change_base();
     root
 }
 #[test]
@@ -164,13 +166,13 @@ fn every_configuration_field_required_marker_and_default_is_documented() {
         }),
         review: Some(config::ReviewDefinition {
             parameters: Default::default(),
-            include_diff: true,
+            include_content: true,
+            include_change_set: false,
             trigger: Some(config::ReviewTrigger {
                 changed_files: vec!["docs/**".into()],
             }),
             provider: None,
             prompt: "prompt.md".into(),
-            files: vec!["README.md".into()],
             context: vec![config::ReviewContext {
                 path: "README.md".into(),
                 headings: vec![],

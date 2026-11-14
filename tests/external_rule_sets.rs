@@ -144,6 +144,8 @@ impl Fixture {
         git(&root, &["init", "--quiet", "--initial-branch=main"]);
         git(&remote, &["init", "--quiet", "--initial-branch=main"]);
         please::init::init(&root).unwrap();
+        support::commit_all(&root);
+        support::use_head_as_change_base();
         support::configure_adapter(&root);
         write(
             &root,
@@ -552,7 +554,6 @@ impl Provider for ReviewMock {
         assert_eq!(request.reviews.len(), 1);
         assert_eq!(request.reviews[0].text, "Judge consumer documentation.\n");
         assert!(request.project.root.join("README.md").is_file());
-        assert_eq!(request.reviews[0].files, ["README.md"]);
         Ok(serde_json::json!({"reviews":[{
             "id":request.reviews[0].id, "status":"PASS", "reason":"Documentation is present",
             "findings":[{"message":"Consumer README exists","path":"README.md","line":1}]
@@ -582,7 +583,6 @@ description = "Review documentation"
 enabled = true
 [review]
 prompt = "criteria.md"
-files = ["README.md"]
 context = [{ path = "README.md", headings = ["Consumer"] }]
 "#,
     );
@@ -694,7 +694,7 @@ fn cli_refresh_cached_plan_and_offline_hook_keep_existing_lifecycle() {
     let plan = cli(&f, &["run", "--at", "pre-commit", "--plan", "--json"]);
     assert_eq!(plan.status.code(), Some(2));
     let diagnostic: serde_json::Value = serde_json::from_slice(&plan.stdout).unwrap();
-    assert_eq!(diagnostic["plan_schema_version"], 3);
+    assert_eq!(diagnostic["plan_schema_version"], 4);
     assert_eq!(diagnostic["status"], "blocked");
     assert!(
         !diagnostic["blocking_reasons"]
@@ -1662,7 +1662,7 @@ fn shared_rules_are_reused_across_sets_and_points_offline() {
     write(
         &f.remote,
         "rules/reviews/shared/rule.toml",
-        "id = 'documentation'\ndescription = 'Shared review'\n[review]\nprompt = 'prompt.md'\nfiles = ['README.md']\n",
+        "id = 'documentation'\ndescription = 'Shared review'\n[review]\nprompt = 'prompt.md'\n",
     );
     write(
         &f.remote,
@@ -1889,6 +1889,7 @@ printf '%s' "$point"
     let calls = fake.path().join("calls");
     let output = support::command(env!("CARGO_BIN_EXE_please"))
         .current_dir(&f.root)
+        .env("PLEASE_CHANGE_BASE", "HEAD")
         .args(["run", "--at", "verify"])
         .env("XDG_CACHE_HOME", &f.cache)
         .env("PATH", path)
@@ -2295,7 +2296,7 @@ rules = [
     write(
         &f.remote,
         "repository/reviews/documentation/rule.toml",
-        "id = 'documentation'\ndescription = 'Documentation'\n[review]\nprompt = 'prompt.md'\nfiles = ['README.md']\n",
+        "id = 'documentation'\ndescription = 'Documentation'\n[review]\nprompt = 'prompt.md'\n",
     );
     write(
         &f.remote,

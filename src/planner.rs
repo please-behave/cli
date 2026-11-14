@@ -1,5 +1,6 @@
 //! Offline rule selection and bounded preparation, shared by preview and execution.
 use crate::{
+    change_set,
     config::Project,
     git_snapshot::{self, Snapshot},
     review_context,
@@ -9,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeSet;
 
-pub const PLAN_SCHEMA_VERSION: u32 = 3;
+pub const PLAN_SCHEMA_VERSION: u32 = 4;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -66,16 +67,22 @@ pub struct ContextSection {
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+pub struct ScopePlan {
+    pub review: String,
+    pub files: Vec<String>,
+    pub content_bytes: usize,
+    pub change_set_bytes: usize,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ContextPlan {
-    pub entry_files: Vec<String>,
+    pub scopes: Vec<ScopePlan>,
     pub selections: Vec<crate::config::ReviewContext>,
     pub sections: Vec<ContextSection>,
     pub selected_bytes: usize,
     pub byte_limit: usize,
     pub instruction_bytes: usize,
     pub instruction_byte_limit: usize,
-    pub manifest_hint_limit: usize,
-    pub orientation_diff_bytes: usize,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -190,19 +197,8 @@ pub fn build_with_context(
         complete: false,
         limitations: vec![format!("{error:#}")],
     });
-    let needs_changes = !checks_only
-        && project
-            .reviews
-            .iter()
-            .any(|r| r.enabled && selects(&r.id) && r.trigger.is_some());
-    let changes = needs_changes.then(|| -> Result<_> {
-        let base = std::env::var("PLEASE_CHANGE_BASE").map_err(|_| {
-            anyhow::anyhow!(
-                "PLEASE_CHANGE_BASE must explicitly name a baseline commit for triggered reviews"
-            )
-        })?;
-        git_snapshot::changed_paths(&project.root, &base)
-    });
+    let needs_changes = !checks_only && project.reviews.iter().any(|r| r.enabled && selects(&r.id));
+    let changes = needs_changes.then(|| change_set::collect(&project.root, name, hook));
     let mut scheduled = Vec::new();
     let mut omitted = Vec::new();
     let mut disabled_rules = Vec::new();
@@ -263,13 +259,16 @@ pub fn build_with_context(
             disabled_rules.push(rule);
             continue;
         }
-        if let (Some(trigger), Some(Ok((_, paths)))) =
-            (review.and_then(|r| r.trigger.as_ref()), &changes)
-        {
-            if !crate::review_trigger::matches(trigger, paths) {
+        if let (Some(review), Some(Ok(changed))) = (review, &changes) {
+            if crate::review_input::scope_changes(review, changed).is_empty() {
                 omitted.push(Omission {
                     rule,
-                    reason: "trigger_not_matched".into(),
+                    reason: if review.trigger.is_some() {
+                        "trigger_not_matched"
+                    } else {
+                        "no_changes"
+                    }
+                    .into(),
                 });
                 continue;
             }
@@ -296,12 +295,7 @@ pub fn build_with_context(
         .filter(|r| !checks_only && scheduled.iter().any(|p| p.id == r.id))
         .collect();
     let mut context = ContextPlan {
-        entry_files: active
-            .iter()
-            .flat_map(|r| r.files.iter().cloned())
-            .collect::<BTreeSet<_>>()
-            .into_iter()
-            .collect(),
+        scopes: vec![],
         selections: active
             .iter()
             .flat_map(|r| r.context.iter().cloned())
@@ -311,8 +305,6 @@ pub fn build_with_context(
         byte_limit: review_context::MAX_CONTEXT_BYTES,
         instruction_bytes: active.iter().map(|r| r.text.len()).sum(),
         instruction_byte_limit: crate::limits::MAX_TOTAL_INSTRUCTION_BYTES,
-        manifest_hint_limit: crate::limits::MAX_MANIFEST_HINTS,
-        orientation_diff_bytes: 0,
     };
     for section in &mut context.selections {
         section.headings.sort();
@@ -336,11 +328,16 @@ pub fn build_with_context(
         } else {
             Ok(None)
         };
-        match message_file.and_then(|file| {
+        let prepared = message_file.and_then(|file| {
+            let changed = changes
+                .as_ref()
+                .and_then(|result| result.as_ref().ok())
+                .ok_or_else(|| anyhow::anyhow!("changed files are unavailable"))?;
             crate::review_input::PreparedReviewInput::prepare_with_message(
-                project, &active, &snapshot, file,
+                project, &active, &snapshot, file, changed,
             )
-        }) {
+        });
+        match prepared {
             Ok(input) => {
                 context.selected_bytes = input.excerpts.iter().map(|e| e.text.len()).sum();
                 context.sections = input
@@ -353,7 +350,20 @@ pub fn build_with_context(
                         bytes: e.text.len(),
                     })
                     .collect();
-                context.orientation_diff_bytes = input.diff.len();
+                context.scopes = active
+                    .iter()
+                    .filter_map(|r| input.scopes.get(&r.id).map(|scope| (r, scope)))
+                    .map(|(review, scope)| ScopePlan {
+                        review: review.id.clone(),
+                        files: scope.files.iter().map(|f| f.path.clone()).collect(),
+                        content_bytes: scope
+                            .files
+                            .iter()
+                            .map(|f| f.content.as_ref().map_or(0, String::len))
+                            .sum(),
+                        change_set_bytes: scope.change_set.as_ref().map_or(0, String::len),
+                    })
+                    .collect();
                 review_input = Some(input);
             }
             Err(error) => blocking_reasons.push(format!("Cannot prepare review input: {error:#}")),
@@ -369,7 +379,7 @@ pub fn build_with_context(
         change_base: changes
             .as_ref()
             .and_then(|r| r.as_ref().ok())
-            .map(|(base, _)| base.clone()),
+            .and_then(|changed| changed.base().map(str::to_owned)),
         plan_schema_version: PLAN_SCHEMA_VERSION,
         plan_id: String::new(),
         status: if blocking_reasons.is_empty() {
@@ -427,7 +437,6 @@ pub fn build_with_context(
             trigger.changed_files.sort();
             trigger.changed_files.dedup();
         }
-        review.files.sort();
         review.run_at.sort();
         for context in &mut review.context {
             context.headings.sort();
@@ -445,12 +454,27 @@ pub fn build_with_context(
     let excerpts = review_input
         .as_ref()
         .map_or(&[][..], |input| input.excerpts.as_slice());
+    // Governance metadata is normalized above, so its formatting stays out of the scopes too.
+    let scopes: Option<std::collections::BTreeMap<_, _>> = review_input.as_ref().map(|input| {
+        input
+            .scopes
+            .iter()
+            .map(|(id, scope)| {
+                let files: Vec<_> = scope
+                    .files
+                    .iter()
+                    .filter(|file| !metadata_path(&file.path))
+                    .collect();
+                (id, (files, &scope.change_set))
+            })
+            .collect()
+    });
     let named_providers = project.providers.clone();
     let identity = serde_json::json!({
         "plan_schema_version": PLAN_SCHEMA_VERSION, "verifier_version": env!("CARGO_PKG_VERSION"),
         "project": project.config.project,
         "at": name, "checks_only": checks_only, "checks": checks, "reviews": reviews,
-        "provider": plan.provider, "named_providers": named_providers, "head": snapshot.head, "files": files, "context": excerpts,
+        "provider": plan.provider, "named_providers": named_providers, "head": snapshot.head, "files": files, "context": excerpts, "scopes": scopes,
         "commit_message": plan.input.commit_message,
         "provider_origins": project.external_providers.iter().map(|(id, source)| (id, &source.origin)).collect::<std::collections::BTreeMap<_,_>>(),
         "complete": snapshot.complete, "change_base": plan.change_base, "scheduled": plan.scheduled, "omitted": plan.omitted,

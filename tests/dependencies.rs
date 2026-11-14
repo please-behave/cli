@@ -23,6 +23,8 @@ fn project() -> TempDir {
     );
     please::init::init(root.path()).unwrap();
     support::configure_adapter(root.path());
+    support::commit_all(root.path());
+    support::use_head_as_change_base();
     support::write(root.path(), "evidence", "Evidence\n");
     root
 }

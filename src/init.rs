@@ -95,11 +95,11 @@ pub fn init(root: &Path) -> Result<usize> {
         check: None,
         review: Some(crate::config::ReviewDefinition {
             parameters: Default::default(),
-            include_diff: true,
+            include_content: true,
+            include_change_set: false,
             trigger: None,
             provider: None,
             prompt: "prompt.md".into(),
-            files: vec![],
             context: vec![],
         }),
     };

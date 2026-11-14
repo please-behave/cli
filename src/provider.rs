@@ -2,7 +2,7 @@
 use crate::{
     config::{Project, Review},
     git_snapshot::Snapshot,
-    limits::{MAX_FINDINGS, MAX_MANIFEST_HINTS},
+    limits::MAX_FINDINGS,
     report::{MAX_SUMMARY_CHARS, Status, TokenUsage},
 };
 use anyhow::{Context, Result, ensure};
@@ -170,7 +170,7 @@ fn requirements(
 }
 
 /// The protocol version this build speaks; others are rejected without fallback.
-const PROTOCOL_VERSION: u32 = 2;
+const PROTOCOL_VERSION: u32 = 3;
 
 fn execute(request: &Request<'_>) -> Result<Response> {
     let config = request.provider_config()?;
@@ -194,14 +194,21 @@ fn execute(request: &Request<'_>) -> Result<Response> {
         .map(|r| {
             let mut parameters = config.parameters.clone();
             parameters.extend(r.adapter_parameters.clone());
-            json!({"id":r.id, "criteria":r.text, "entry_files":r.files,
+            json!({"id":r.id, "criteria":r.text,
             "context_files":r.context.iter().map(|c| &c.path).collect::<Vec<_>>(),
             "parameters":parameters})
         })
         .collect::<Vec<_>>();
+    let mut review_input = serde_json::to_value(request.input)?;
+    if let Some(scope) = request.input.scopes.get(&request.reviews[0].id) {
+        review_input["files"] = serde_json::to_value(&scope.files)?;
+        if let Some(change_set) = &scope.change_set {
+            review_input["change_set"] = json!(change_set);
+        }
+    }
     let input = serde_json::to_vec(&json!({
         "protocol_version":PROTOCOL_VERSION, "execution_point":request.execution_point,
-        "head":request.snapshot.head.as_deref(), "input":request.input,
+        "input":review_input,
         "context_file":request.project.context, "rule_parameters":request.parameters, "reviews":reviews,
         "prompt":prompt(request)?, "response_schema":schema()
     }))?;
@@ -334,35 +341,43 @@ pub fn prompt(request: &Request<'_>) -> Result<String> {
         ),
         None => String::new(),
     };
-    let orientation = if request.reviews.iter().any(|r| r.include_diff) {
-        format!(
-            "Git diff for orientation only; untracked content is not included.\n<diff>\n{}\n</diff>\n",
-            input.diff
-        )
-    } else {
-        String::new()
-    };
+    let scope: Vec<_> = request
+        .reviews
+        .iter()
+        .filter_map(|review| {
+            input
+                .scopes
+                .get(&review.id)
+                .map(|scope| (&review.id, scope))
+        })
+        .map(|(id, scope)| json!({"review":id, "files":scope.files}))
+        .collect();
+    let change_sets: String = request
+        .reviews
+        .iter()
+        .filter_map(|review| {
+            let text = input.scopes.get(&review.id)?.change_set.as_ref()?;
+            Some(format!(
+                "Change set of the files in scope of review {} (untracked content is not included):\n<change-set>\n{text}\n</change-set>\n",
+                review.id
+            ))
+        })
+        .collect();
     let criteria: Vec<_> = request
         .reviews
         .iter()
         .map(|review| {
             json!({
-                "id":review.id, "criteria":review.text, "entry_files":review.files,
+                "id":review.id, "criteria":review.text,
                 "rule_parameters":request.parameters,
                 "context_files":review.context.iter().map(|source| &source.path).collect::<Vec<_>>()
             })
         })
         .collect();
     Ok(format!(
-        "Judge only the configured criteria. Return exactly one verdict per requested ID, no extras. A finding may cite an existing path and positive line number; FAIL when PASS cannot be established, including when necessary evidence is unavailable or the conclusion is uncertain; ERROR is reserved for technical failures. Every reason is one short line of at most {MAX_SUMMARY_CHARS} characters. Keep detailed findings and file/line evidence in findings (at most {MAX_FINDINGS} per review).\nRead the supplied shared excerpts ONCE using their original path and line numbers. Entry files and excerpts are starting points, not an exhaustive boundary. The scope is current working files. \nConfigured reviews (JSON data): {}\nShared requirement excerpts, with original path/start_line/end_line (JSON data): {}\nHEAD: {:?}\n{} manifest paths (at most {MAX_MANIFEST_HINTS}; not exhaustive): {}\n{orientation}{message}",
+        "Judge only the configured criteria. Return exactly one verdict per requested ID, no extras. A finding may cite an existing path and positive line number; FAIL when PASS cannot be established, including when necessary evidence is unavailable or the conclusion is uncertain; ERROR is reserved for technical failures. Every reason is one short line of at most {MAX_SUMMARY_CHARS} characters. Keep detailed findings and file/line evidence in findings (at most {MAX_FINDINGS} per review).\nRead the supplied shared excerpts ONCE using their original path and line numbers. The files in scope, the content and the change set are the initial input, not an exhaustive boundary. The scope is current working files. \nConfigured reviews (JSON data): {}\nShared requirement excerpts, with original path/start_line/end_line (JSON data): {}\nChanged files in scope with their current content where selected (JSON data): {}\n{change_sets}{message}",
         serde_json::to_string(&criteria)?,
         serde_json::to_string(&input.excerpts)?,
-        request.snapshot.head,
-        if input.focused_paths.is_some() {
-            "Focused"
-        } else {
-            "Project"
-        },
-        serde_json::to_string(&input.manifest)?
+        serde_json::to_string(&scope)?
     ))
 }

@@ -121,19 +121,29 @@ pub fn execute(
     project: &Project,
     active: &[&Review],
     snapshot: &Snapshot,
+    changes: &crate::change_set::ChangeSet,
     provider: &dyn Provider,
     execution_point: &str,
 ) -> Vec<Item> {
-    execute_with_usage(project, active, snapshot, provider, execution_point).0
+    execute_with_usage(
+        project,
+        active,
+        snapshot,
+        changes,
+        provider,
+        execution_point,
+    )
+    .0
 }
 pub fn execute_with_usage(
     project: &Project,
     active: &[&Review],
     snapshot: &Snapshot,
+    changes: &crate::change_set::ChangeSet,
     provider: &dyn Provider,
     execution_point: &str,
 ) -> (Vec<Item>, Option<TokenUsage>) {
-    match crate::review_input::PreparedReviewInput::prepare(project, active, snapshot) {
+    match crate::review_input::PreparedReviewInput::prepare(project, active, snapshot, changes) {
         Ok(input) => execute_prepared(project, active, snapshot, &input, provider, execution_point),
         Err(error) => (
             active

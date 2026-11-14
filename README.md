@@ -303,7 +303,7 @@ please run --at pre-push --plan --json
 please run --at pre-push
 ```
 
-JSON previews use schema 3 and always include `status` and `blocking_reasons`.
+JSON previews use schema 4 and always include `status` and `blocking_reasons`.
 Configuration or selection errors return `status: "blocked"`, nonempty reasons
 and exit code 2; unavailable plan details are omitted. See
 [rule sets and execution points](docs/configuration.md#group-rules-into-rule-sets) for assignments.
@@ -421,7 +421,7 @@ These limits are built in, not additional configuration fields:
 | Configuration metadata | 64 KiB per metadata file; at most 256 rules and 256 Rule Sets including imports. |
 | External Git sources | 64 KiB resolution state; cached repositories: 8 MiB/file, 128 MiB total, 100,000 entries, 128 directory levels. Fetch timeout 60 seconds, local Git operations and lock waits 30 seconds. |
 | Review criteria | 32 KiB per prompt file; 256 KiB combined, including disabled reviews. |
-| Initial AI hints | Up to 200 file-list entries; a diff above 32 KiB ends the review as ERROR instead of being truncated. Necessary evidence still needs inspection. |
+| Initial AI input | Up to 200 files in scope per review; content above 256 KiB or a change set above 32 KiB ends the review as ERROR instead of being truncated. Necessary evidence still needs inspection. |
 | Snapshot | 8 MiB per file, 128 MiB total, 100,000 paths; Git path-list output capped at 128 MiB; `.please` nesting limited to 16 levels. |
 | Snapshot coverage | Tracked and nonignored untracked files, plus declared governance inputs even if ignored. Unreferenced ignored artifacts, `.git` and `.please/reports` are excluded. Unsupported symlinks, submodules, paths or exceeded limits prevent PASS. |
 | Input stability | Working files and HEAD must match before/after execution and before every AI call. Staging and pushed commits are not separately verified. |
@@ -431,13 +431,13 @@ These limits are built in, not additional configuration fields:
 | Token usage | Available counters are summed across review calls. Optional reasoning/cache-write counters are subsets, not additions to the total. A counter that any call does not report as a positive number remains unavailable. |
 
 Declared governance inputs include local configuration documents, rule prompts and
-entrypoints, review entry/context files, and existing local files named by check
+entrypoints, review context files, and existing local files named by check
 commands, provider commands/arguments or parameter values. They remain covered even
 when ignored, including disabled definitions. Check path references retain their
 declared boundaries. Transitive script dependencies are not inferred; ignored
 caches such as `.please/adapters/__pycache__/` are excluded unless explicitly named.
 
-Not currently supported: reviews restricted to a diff, staged/index or commit input, configurable run-wide
+Not currently supported: selectable Git states independent of the execution point, configurable run-wide
 token budgets, monetary cost estimates and cached results. Adapter calls are
 not a result cache or a guaranteed prompt-cache hit. Planned work
 is listed in the [TODOs](docs/todo/README.md).

@@ -73,8 +73,9 @@ and duplicate keys, and an invalid document makes its review ERROR. Grounded ref
 Parameter declarations live in the Rule schema and the `parameters` module resolves only
 active Rules, removing inherited variables before applying values; no global environment
 mutation occurs. File-change triggers filter reviews inside the planner before input
-preparation, using a net commit-to-worktree comparison against an explicit baseline that
-enters plan identity. At commit-msg every review also receives the whole bounded commit message with line
+preparation. The changed files follow the execution point (staged, pushed commits or a
+net comparison against an explicit baseline that enters plan identity) and are the scope of
+each review's initial input. At commit-msg every review also receives the whole bounded commit message with line
 numbers, never the raw path or hook arguments.
 
 Check dependencies are canonicalized at discovery, validated against the effective
