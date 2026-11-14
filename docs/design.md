@@ -15,7 +15,7 @@ configuration loaders or execution engines.
 
 Loaded Checks hold a tokenized command, the source root and the declaring Rule
 directory; execution resolves its references anew without following symlinks. Loaded Reviews hold prompt text and consumer-relative
-context. There is no parallel metadata registry: blocking belongs to each Rule and
+context. There is no parallel metadata registry: blocking belongs to each Review and
 follows it into plans and results. Plan and report schema versions describe output
 formats, independently of configuration.
 

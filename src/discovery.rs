@@ -311,6 +311,11 @@ fn load_rules(
         match (kind.as_str(), rule.check, rule.review) {
             ("checks", Some(check), None) => {
                 ensure!(
+                    rule.blocking.is_none(),
+                    "{}: checks are always blocking and must not declare blocking",
+                    path.display()
+                );
+                ensure!(
                     check
                         .command
                         .first()
@@ -344,7 +349,6 @@ fn load_rules(
                         name,
                         description: rule.description,
                         enabled: rule.enabled,
-                        blocking: rule.blocking,
                         command: check.command,
                         source_root: root.to_path_buf(),
                         rule_directory: full,
@@ -395,7 +399,7 @@ fn load_rules(
                         name,
                         description: rule.description,
                         enabled: rule.enabled,
-                        blocking: rule.blocking,
+                        blocking: rule.blocking.unwrap_or(true),
                         files: review.files,
                         context: review.context,
                         run_at: rule.run_at.clone(),

@@ -112,7 +112,7 @@ type = 'file'
 }
 
 #[test]
-fn invalid_parameters_are_named_execution_errors_and_block_nonblocking_rules() {
+fn invalid_parameters_are_named_execution_errors() {
     for (declarations, parameter, reason) in [
         (
             "[parameters.scope]\ntype = 'string'\nrequired = true",
@@ -163,19 +163,11 @@ fn invalid_parameters_are_named_execution_errors_and_block_nonblocking_rules() {
         let root = project();
         check(root.path(), "invalid", &["check"], "exit 0");
         parameters(root.path(), "invalid", &format!("\n{declarations}\n"));
-        let path = root.path().join(".please/checks/invalid/rule.toml");
-        fs::write(
-            &path,
-            fs::read_to_string(&path)
-                .unwrap()
-                .replace("enabled = true", "enabled = true\nblocking = false"),
-        )
-        .unwrap();
         let report = run(root.path());
         assert_eq!(report.overall, Status::Error, "{declarations}");
         let item = &report.results[0];
         assert_eq!(item.status, Status::Error);
-        assert!(!item.blocking);
+        assert!(item.blocking);
         assert!(
             item.reason.contains("invalid")
                 && item.reason.contains(parameter)
@@ -320,17 +312,8 @@ fn review(root: &Path, id: &str, parameter: &str) {
     );
 }
 #[test]
-fn reviews_validate_and_batch_by_resolved_environment_and_nonblocking_fail_continues() {
+fn reviews_validate_and_batch_by_resolved_environment() {
     let root = project();
-    check(root.path(), "advisory", &["check"], "exit 1");
-    let path = root.path().join(".please/checks/advisory/rule.toml");
-    fs::write(
-        &path,
-        fs::read_to_string(&path)
-            .unwrap()
-            .replace("enabled = true", "enabled = true\nblocking = false"),
-    )
-    .unwrap();
     for (id, value) in [("a", "first"), ("b", "second"), ("c", "first")] {
         review(
             root.path(),
@@ -480,14 +463,6 @@ fn execution_errors_fail_closed_for_explicit_points_ci_and_managed_hooks() {
         "required",
         "\n[parameters.scopes_file]\ntype = 'file'\nrequired = true\n",
     );
-    let path = root.path().join(".please/checks/required/rule.toml");
-    fs::write(
-        &path,
-        fs::read_to_string(&path)
-            .unwrap()
-            .replace("enabled = true", "enabled = true\nblocking = false"),
-    )
-    .unwrap();
     let setup = support::command(env!("CARGO_BIN_EXE_please"))
         .args(["sync", "--yes"])
         .current_dir(root.path())
@@ -515,7 +490,7 @@ fn execution_errors_fail_closed_for_explicit_points_ci_and_managed_hooks() {
             report
                 .results
                 .iter()
-                .any(|i| i.id == "required" && i.status == Status::Error && !i.blocking)
+                .any(|i| i.id == "required" && i.status == Status::Error && i.blocking)
         );
         assert!(String::from_utf8_lossy(&result.stdout).contains("ERROR"));
     }

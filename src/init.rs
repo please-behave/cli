@@ -70,7 +70,7 @@ pub fn init(root: &Path) -> Result<usize> {
             name: None,
             description: description.into(),
             enabled,
-            blocking: true,
+            blocking: None,
             run_at: vec!["pre-push".into()],
             parameters: Default::default(),
             check: Some(crate::config::CheckDefinition {
@@ -89,7 +89,7 @@ pub fn init(root: &Path) -> Result<usize> {
         name: None,
         description: "Evaluate behavior against documented expectations".into(),
         enabled: false,
-        blocking: true,
+        blocking: Some(true),
         run_at: vec!["pre-push".into()],
         parameters: Default::default(),
         check: None,

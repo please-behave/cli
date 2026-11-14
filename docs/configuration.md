@@ -125,7 +125,7 @@ process groups, cancellation, grace periods and interrupted-build limitations.
 | `name` | Optional; `null` | Short display label; defaults to the original rule ID. 1–80 characters, no control characters or surrounding whitespace. |
 | `description` | Required | Nonblank explanation. |
 | `enabled` | Optional; `true` | False rules are validated but never executed or included in results. Plans list them under `disabled_rules`. |
-| `blocking` | Optional; `true` | FAIL and provider/review ERROR prevent success when true. Check, parameter and missing-prompt errors are always fatal. |
+| `blocking` | Optional; `true` | Reviews only: FAIL and provider/review ERROR prevent success when true. A check must not declare it: checks are always blocking and a declaration is a configuration error. Parameter and missing-prompt errors are always fatal. |
 | `run_at` | Optional; `[]` | Own execution points; overridden by membership in Rule Sets. Enabled rules need an effective assignment. |
 | `parameters` | Optional; `{}` | Named parameter declarations; see below. |
 | `check` | Optional; `null` | Check implementation; required for a check rule and mutually exclusive with `review`. |
@@ -158,13 +158,13 @@ checks validate dependency syntax without resolving targets. Duplicate entries
 are ignored and ordering does not matter. AI reviews cannot declare dependencies
 (even `[]`) or serve as prerequisites.
 
-Only PASS satisfies a prerequisite, including advisory checks. Dependency waits
+Only PASS satisfies a prerequisite. Dependency waits
 use no execution slots; resource exclusions remain in force. Failed, errored or
 skipped prerequisites propagate `NOT_RUN` transitively, with `blocked_by` and a
 reason identifying the immediate prerequisite and outcome. Independent checks
 continue by default. Dependency skips inherit the originating failure's aggregate
-effect: advisory failures and their skips allow reviews, while blocking failures,
-execution errors and incomplete fail-fast execution prevent reviews. Check and
+effect: check failures, execution errors and incomplete fail-fast execution
+prevent reviews. Check and
 review phases never overlap. Gated reviews report `NOT_RUN` with a check-phase reason.
 
 ### Rule parameters
@@ -210,7 +210,7 @@ identical resolved values share a call; different values use separate calls with
 same prepared context. Provider timeout applies per call.
 
 Missing required values, unsupported types, undeclared supplied names and invalid
-files produce **ERROR**, identifying the rule and parameter. Parameter errors block success even with `blocking = false`. Disabled rules do not resolve parameter values or
+files produce **ERROR**, identifying the rule and parameter. Parameter errors block success even for a review with `blocking = false`. Disabled rules do not resolve parameter values or
 require their implementations to exist.
 
 ### Add a check
@@ -333,8 +333,7 @@ produce FAIL with an explicit diagnostic. Signal termination, process-launch, ca
 and timeout failures are ERROR. Wrap external tools to translate their own exit-code
 contracts: a scanner's exit 2 may mean a violation, so map that to 1 and map actual
 execution problems to 2. Please Behave does not parse shell error messages to classify
-startup failures. A non-blocking FAIL remains visible and permits reviews and overall
-success; an ERROR remains fatal regardless of blocking.
+startup failures. A check FAIL or ERROR prevents reviews and overall success.
 
 Resource confinement is not process sandboxing. Checks execute with Please Behave's
 permissions and can access files, credentials and the network. Only import
@@ -346,9 +345,9 @@ execution prevent PASS.
 | Status | Meaning | Assigned by | Effect on success |
 | --- | --- | --- | --- |
 | `PASS` | The rule ran and its expectation holds. | Check exit 0 or review verdict | None |
-| `FAIL` | The rule ran and found a violation. | Check exit 1 or review verdict | Blocks only when the rule is blocking |
+| `FAIL` | The rule ran and found a violation. | Check exit 1 or review verdict | Always blocks for a check; blocks for a review only when the review is blocking |
 | `ERROR` | The rule could not complete or produce a trustworthy result, such as a crash, missing tool, timeout or invalid provider response. | Check exit 2 or Please Behave | A check ERROR always blocks; a review ERROR blocks only when the review is blocking |
-| `NOT_RUN` | The selected rule was not executed because of a failed prerequisite, fail-fast or check-phase gating. | Please Behave | A dependency skip inherits the originating outcome; fail-fast and gating skips follow the blocking failure |
+| `NOT_RUN` | The selected rule was not executed because of a failed prerequisite, fail-fast or check-phase gating. | Please Behave | A dependency skip inherits the originating outcome; fail-fast and gating skips follow the originating failure |
 | `CANCELLED` | A running check was interrupted by fail-fast termination. | Please Behave | Blocks success |
 
 ### Configure the AI provider
@@ -814,7 +813,7 @@ status, evidence, durations and captured output. ERROR always takes precedence;
 blocking FAIL follows; fail-fast skips and cancellations prevent success. Dependency
 skips inherit the originating outcome. Disabled rules
 are listed in plans and stay out of results. JSON records FAIL even when the
-overall outcome is PASS because that violation is non-blocking.
+overall outcome is PASS because that review is non-blocking.
 
 `reports/last.json` is replaced atomically after a run. Invalid configuration
 preserves a previous report. Keep reports and credentials local. Stdout/stderr

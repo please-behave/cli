@@ -135,7 +135,6 @@ pub struct Check {
     pub name: String,
     pub description: String,
     pub enabled: bool,
-    pub blocking: bool,
     pub command: crate::check_command::Command,
     pub source_root: PathBuf,
     pub rule_directory: PathBuf,
@@ -190,8 +189,9 @@ pub struct RuleDefinition {
     pub description: String,
     #[serde(default = "default_true")]
     pub enabled: bool,
-    #[serde(default = "default_true")]
-    pub blocking: bool,
+    /// Reviews only; defaults to true. A check must not declare it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub blocking: Option<bool>,
     #[serde(default)]
     pub run_at: Vec<String>,
     #[serde(default)]

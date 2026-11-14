@@ -27,8 +27,8 @@ before context preparation or provider requirements. Checks run before scheduled
 reviews, deduplicated and dispatched by estimated remaining dependency-path
 duration among runnable checks, with canonical ID order for ties. Reports
 retain ID order; resource waits and concurrent completion do not change selection. Every scheduled rule is required; dependency skips inherit the originating outcome.
-`run --fail-fast` may leave selected rules `NOT_RUN` after a blocking failure or
-fatal execution error. Completed work retains its results; running checks finish
+`run --fail-fast` may leave selected rules `NOT_RUN` after a check failure or error, a
+blocking review failure or error or fatal execution error. Completed work retains its results; running checks finish
 by default or become `CANCELLED` when configured termination interrupts them.
 This invocation-only option does not change plan identity or selected IDs. Checks-only execution reports every selected review as `NOT_RUN`; it needs no change base and makes no provider call.
 
@@ -43,7 +43,7 @@ identity. Resource declarations and canonical dependency IDs participate in chec
 request, network access or reconciliation occurs during preview.
 Incomplete snapshots or context preparation block execution. Preview does not
 certify a later source state. Reports use schema 4 and plans use schema 3. Blocking metadata distinguishes
-advisory FAIL/review ERROR from blocking failures and check/integrity errors; disabled Rules are listed separately.
+advisory review FAIL/ERROR from blocking failures and check/integrity errors; disabled Rules are listed separately.
 
 Triggered reviews require an explicit `PLEASE_CHANGE_BASE` commit/ref, resolved to
 `change_base` in the plan. Net commit-to-worktree changes include committed and
@@ -79,9 +79,8 @@ rules are selected. Imported bare references use their own binding namespace.
 Invalid references and cycles block preview and execution before any command runs.
 Plans record sorted, deduplicated `depends_on` IDs. Reviews neither declare nor
 satisfy dependencies. Dependency skips use NOT_RUN with `blocked_by` and the
-prerequisite outcome in the reason. They inherit the original failure's enforcement;
-non-blocking failures and their dependent skips permit reviews. Check errors,
-blocking failures, incomplete fail-fast execution and input errors prevent reviews.
+prerequisite outcome in the reason. They inherit the original failure's enforcement.
+Check failures and errors, incomplete fail-fast execution and input errors prevent reviews.
 The check phase always finishes before review invocation.
 
 Reviews may select `input = "commit-header"` instead of the default worktree

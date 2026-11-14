@@ -144,44 +144,32 @@ fn cli_defaults_to_complete_execution_and_fail_fast_reports_unstarted_rules() {
 }
 
 #[test]
-fn check_errors_stop_even_when_nonblocking_but_advisory_failures_continue() {
-    for (script, expected) in [("exit 1", Status::Pass), ("exit 2", Status::Error)] {
+fn check_failures_and_errors_stop_scheduling() {
+    for (script, expected) in [("exit 1", Status::Fail), ("exit 2", Status::Error)] {
         let root = project();
         support::check(root.path(), "a", &["check"], script);
-        let path = root.path().join(".please/checks/a/rule.toml");
-        fs::write(
-            &path,
-            fs::read_to_string(&path)
-                .unwrap()
-                .replace("enabled = true", "enabled = true\nblocking = false"),
-        )
-        .unwrap();
         support::check(root.path(), "b", &["check"], "exit 0");
         let (report, started) = run(&root, &dummy("PASS"), true);
         assert_eq!(report.overall, expected);
-        assert_eq!(
-            report.results[1].status,
-            if expected == Status::Pass {
-                Status::Pass
-            } else {
-                Status::NotRun
-            }
-        );
-        assert_eq!(started.len(), if expected == Status::Pass { 2 } else { 1 });
-        if expected == Status::Error {
-            fs::write(
-                &path,
-                fs::read_to_string(&path)
-                    .unwrap()
-                    .replace("sh @rule/entrypoint", "please-missing-test-executable"),
-            )
-            .unwrap();
-            let (report, _) = run(&root, &dummy("PASS"), true);
-            assert_eq!(report.overall, Status::Error);
-            assert_eq!(report.results[0].status, Status::Error);
-            assert_eq!(report.results[1].status, Status::NotRun);
-        }
+        assert_eq!(report.results[0].status, expected);
+        assert_eq!(report.results[1].status, Status::NotRun);
+        assert_eq!(started.len(), 1);
     }
+    let root = project();
+    support::check(root.path(), "a", &["check"], "exit 0");
+    support::check(root.path(), "b", &["check"], "exit 0");
+    let path = root.path().join(".please/checks/a/rule.toml");
+    fs::write(
+        &path,
+        fs::read_to_string(&path)
+            .unwrap()
+            .replace("sh @rule/entrypoint", "please-missing-test-executable"),
+    )
+    .unwrap();
+    let (report, _) = run(&root, &dummy("PASS"), true);
+    assert_eq!(report.overall, Status::Error);
+    assert_eq!(report.results[0].status, Status::Error);
+    assert_eq!(report.results[1].status, Status::NotRun);
 }
 
 #[test]
@@ -526,9 +514,7 @@ fn cancellation_cannot_pass_or_override_the_triggering_failure() {
     let cancelled = Item::simple("cancelled", "check", Status::Cancelled, "Fail-fast".into());
     assert_eq!(report::overall(&[cancelled]), Status::Error);
     for trigger in [Status::Fail, Status::Error] {
-        let mut cancelled =
-            Item::simple("cancelled", "check", Status::Cancelled, "Fail-fast".into());
-        cancelled.blocking = false;
+        let cancelled = Item::simple("cancelled", "check", Status::Cancelled, "Fail-fast".into());
         assert_eq!(
             report::overall(&[
                 Item::simple("trigger", "check", trigger, "triggered".into()),

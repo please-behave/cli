@@ -121,7 +121,6 @@ fn fixed_discovery_and_defaults() {
     write(d.path(), ".please/arbitrary/invalid.toml", "not TOML");
     let p = config::load(d.path()).unwrap();
     assert!(p.checks[0].enabled);
-    assert!(p.checks[0].blocking);
     assert_eq!(p.checks[0].timeout_seconds, 30);
     let plan = planner::build(&p, Some("check"), false).unwrap().plan;
     assert_eq!(plan.plan_schema_version, 3);
@@ -363,67 +362,35 @@ fn direct_and_interpreter_execution_keep_consumer_and_resources() {
 #[cfg(unix)]
 #[test]
 fn blocking_failures_errors_and_disabled_rules() {
-    for (attributes, implementation, script, expected, item_status) in [
+    for (implementation, script, expected) in [
+        ("command = 'sh @rule/index.sh'", "exit 1", Status::Fail),
+        ("command = 'sh @rule/index.sh'", "exit 2", Status::Error),
         (
-            "",
-            "command = 'sh @rule/index.sh'",
-            "exit 1",
-            Status::Fail,
-            Status::Fail,
-        ),
-        (
-            "blocking = false",
-            "command = 'sh @rule/index.sh'",
-            "exit 1",
-            Status::Pass,
-            Status::Fail,
-        ),
-        (
-            "blocking = false",
-            "command = 'sh @rule/index.sh'",
-            "exit 2",
-            Status::Error,
-            Status::Error,
-        ),
-        (
-            "blocking = false",
             "command = 'please-missing-interpreter @rule/index.sh'",
             "exit 0",
             Status::Error,
-            Status::Error,
         ),
         (
-            "blocking = false",
             "command = 'sh @rule/index.sh'\ntimeout_seconds = 1",
             "sleep 4",
             Status::Error,
-            Status::Error,
         ),
-        (
-            "blocking = false",
-            "command = '@rule/index.sh'",
-            "exit 0",
-            Status::Error,
-            Status::Error,
-        ),
+        ("command = '@rule/index.sh'", "exit 0", Status::Error),
     ] {
         let d = project();
         check(
             d.path(),
             "readme",
-            &format!("run_at = ['pre-push']\n{attributes}"),
+            "run_at = ['pre-push']",
             implementation,
             script,
         );
         let result = please::verify(d.path(), &Never).unwrap();
         assert_eq!(result.overall, expected, "{implementation} {script}");
-        assert_eq!(result.results[0].status, item_status);
+        assert_eq!(result.results[0].status, expected);
         let saved = report::read(d.path()).unwrap();
         assert_eq!(saved.schema_version, 4);
-        assert_eq!(saved.results[0].blocking, attributes.is_empty());
-        if expected == Status::Pass {
-            assert!(please::terminal::render(&saved, false).contains("Non-blocking"));
-        }
+        assert!(saved.results[0].blocking);
     }
     let d = project();
     check(
@@ -461,20 +428,35 @@ fn reviews_preserve_provider_contract_and_nonblocking_failures() {
 
 #[cfg(unix)]
 #[test]
-fn advisory_check_does_not_skip_reviews() {
+fn failed_check_prevents_reviews() {
     let d = project();
     check(
         d.path(),
         "readme",
-        "run_at = ['pre-push']\nblocking = false",
+        "run_at = ['pre-push']",
         "command = 'sh @rule/index.sh'",
         "exit 1",
     );
     review(d.path(), "run_at = ['pre-push']");
     let result = please::verify(d.path(), &Mock("PASS")).unwrap();
-    assert_eq!(result.overall, Status::Pass);
-    assert_eq!(result.results.len(), 2);
-    assert_eq!(result.results[1].status, Status::Pass);
+    assert_eq!(result.overall, Status::Fail);
+    assert_eq!(result.results[1].status, Status::NotRun);
+}
+
+#[test]
+fn checks_reject_a_blocking_property() {
+    for attribute in ["blocking = false", "blocking = true"] {
+        let d = project();
+        check(
+            d.path(),
+            "readme",
+            &format!("run_at = ['pre-push']\n{attribute}"),
+            "command = '@rule/index.sh'",
+            "exit 0",
+        );
+        let error = config::load(d.path()).unwrap_err();
+        assert!(format!("{error:#}").contains("blocking"), "{attribute}");
+    }
 }
 
 #[cfg(unix)]
@@ -823,7 +805,7 @@ fn local_rules_share_entrypoints_with_independent_results() {
                 d.path(),
                 id,
                 &format!(
-                    "run_at = ['check']\nblocking = false\n[parameters.code]\ntype = 'string'\nvalue = '{code}'"
+                    "run_at = ['check']\n[parameters.code]\ntype = 'string'\nvalue = '{code}'"
                 ),
                 &format!(
                     "command = '{interpreter}@source/scripts/shared.sh @rule/resource @param/code'"
@@ -884,7 +866,7 @@ fn local_rules_share_entrypoints_with_independent_results() {
                 assert!(result.reason.contains("scripts/missing.sh"));
             } else {
                 assert_eq!(result.stdout.as_ref().unwrap().text, id);
-                assert!(!result.blocking);
+                assert!(result.blocking);
             }
         }
     }
@@ -1144,7 +1126,7 @@ fn command_representations_execute_equivalently() {
             check(
                 d.path(),
                 "equivalent",
-                "run_at = ['check']\nblocking = false\n[parameters.label]\ntype = 'string'\nvalue = 'independent'",
+                "run_at = ['check']\n[parameters.label]\ntype = 'string'\nvalue = 'independent'",
                 &implementation,
                 "exit 2",
             );
@@ -1156,7 +1138,7 @@ fn command_representations_execute_equivalently() {
                 "{implementation}: {}",
                 result.reason
             );
-            assert!(!result.blocking);
+            assert!(result.blocking);
             assert_eq!(result.exit_code, Some(code));
             let output = (
                 result.reason,
@@ -1257,7 +1239,7 @@ fn commands_preserve_literal_arguments_and_rule_context() {
         check(
             d.path(),
             "native",
-            "run_at = ['check']\nblocking = false\n[parameters.label]\ntype = 'string'\nvalue = 'independent'",
+            "run_at = ['check']\n[parameters.label]\ntype = 'string'\nvalue = 'independent'",
             &format!("command = {command}"),
             "exit 2",
         );
@@ -1267,7 +1249,7 @@ fn commands_preserve_literal_arguments_and_rule_context() {
         assert_eq!(plan.scheduled.len(), 1);
         let result = please::checks::execute(&p, &p.checks[0]);
         assert_eq!(result.status, expected, "{}", result.reason);
-        assert!(!result.blocking);
+        assert!(result.blocking);
         assert_eq!(result.exit_code, Some(code));
         assert_eq!(
             result.stdout.unwrap().text,

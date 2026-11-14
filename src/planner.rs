@@ -217,16 +217,7 @@ pub fn build_with_context(
     for (id, display_name, kind, description, enabled, blocking) in project
         .checks
         .iter()
-        .map(|r| {
-            (
-                &r.id,
-                &r.name,
-                "check",
-                &r.description,
-                r.enabled,
-                r.blocking,
-            )
-        })
+        .map(|r| (&r.id, &r.name, "check", &r.description, r.enabled, true))
         .chain(project.reviews.iter().map(|r| {
             (
                 &r.id,

@@ -26,15 +26,11 @@ fn project() -> TempDir {
     support::write(root.path(), "evidence", "Evidence\n");
     root
 }
-fn check(root: &TempDir, id: &str, deps: &[&str], script: &str, blocking: bool) {
+fn check(root: &TempDir, id: &str, deps: &[&str], script: &str) {
     support::check(root.path(), id, &["check"], script);
     let path = root.path().join(format!(".please/checks/{id}/rule.toml"));
     let text = fs::read_to_string(&path).unwrap();
-    fs::write(
-        path,
-        format!("depends_on = {deps:?}\nblocking = {blocking}\n{text}"),
-    )
-    .unwrap();
+    fs::write(path, format!("depends_on = {deps:?}\n{text}")).unwrap();
 }
 fn review(root: &TempDir) {
     fs::write(support::review_path(root.path(), "review"), "id = 'review'\ndescription = 'Review'\nrun_at = ['check']\n[review]\nprompt = 'prompt.md'\n").unwrap();
@@ -69,8 +65,8 @@ fn invalid_dependencies_block_planning_before_execution() {
         (vec!["always-ok"], "not selected"),
     ] {
         let root = project();
-        check(&root, "a", &deps, "exit 0", true);
-        check(&root, "b", &["a"], "exit 0", true);
+        check(&root, "a", &deps, "exit 0");
+        check(&root, "b", &["a"], "exit 0");
         review(&root);
         let error = planner::build(&config::load(root.path()).unwrap(), Some("check"), false)
             .err()
@@ -112,7 +108,7 @@ fn chains_branching_and_resources_obey_pass_dependencies() {
     let signals = tempfile::tempdir().unwrap();
     let dir = signals.path().display();
     // Reverse ID order forces readiness, rather than alphabetical dispatch.
-    check(&root, "z-build", &[], &format!("touch '{dir}/build'"), true);
+    check(&root, "z-build", &[], &format!("touch '{dir}/build'"));
     for id in ["b-test", "c-test"] {
         check(
             &root,
@@ -121,7 +117,6 @@ fn chains_branching_and_resources_obey_pass_dependencies() {
             &format!(
                 "test -f '{dir}/build' || exit 1\nmkdir '{dir}/lock' || exit 1\ntouch '{dir}/{id}'\nrmdir '{dir}/lock'"
             ),
-            true,
         );
         let path = root.path().join(format!(".please/checks/{id}/rule.toml"));
         let text = fs::read_to_string(&path).unwrap();
@@ -132,7 +127,6 @@ fn chains_branching_and_resources_obey_pass_dependencies() {
         "a-smoke",
         &["c-test", "b-test"],
         &format!("test -f '{dir}/b-test' && test -f '{dir}/c-test'"),
-        true,
     );
     let provider = Mock(AtomicUsize::new(0));
     let report = verify(&root, &provider, false);
@@ -146,7 +140,6 @@ fn chains_branching_and_resources_obey_pass_dependencies() {
         "a-smoke",
         &["b-test", "c-test", "b-test"],
         &format!("test -f '{dir}/b-test' && test -f '{dir}/c-test'"),
-        true,
     );
     assert_eq!(
         planner::build(&config::load(root.path()).unwrap(), Some("check"), false)
@@ -160,23 +153,22 @@ fn chains_branching_and_resources_obey_pass_dependencies() {
 #[cfg(unix)]
 #[test]
 fn originating_outcome_gates_reviews_and_skips_propagate_without_execution() {
-    for (exit, blocking, fast, expected, calls) in [
-        (1, false, false, Status::Pass, 1),
-        (1, false, true, Status::Pass, 1),
-        (1, true, false, Status::Fail, 0),
-        (2, false, false, Status::Error, 0),
-        (1, true, true, Status::Fail, 0),
+    for (exit, fast, expected) in [
+        (1, false, Status::Fail),
+        (1, true, Status::Fail),
+        (2, false, Status::Error),
+        (2, true, Status::Error),
     ] {
         let root = project();
-        check(&root, "a", &[], &format!("exit {exit}"), blocking);
-        check(&root, "b", &["a"], "exit 99", true);
-        check(&root, "c", &["b"], "exit 99", true);
-        check(&root, "d-independent", &[], "exit 0", true);
+        check(&root, "a", &[], &format!("exit {exit}"));
+        check(&root, "b", &["a"], "exit 99");
+        check(&root, "c", &["b"], "exit 99");
+        check(&root, "d-independent", &[], "exit 0");
         review(&root);
         let provider = Mock(AtomicUsize::new(0));
         let report = verify(&root, &provider, fast);
-        assert_eq!(report.overall, expected, "{exit} {blocking} {fast}");
-        assert_eq!(provider.0.load(Ordering::SeqCst), calls);
+        assert_eq!(report.overall, expected, "{exit} {fast}");
+        assert_eq!(provider.0.load(Ordering::SeqCst), 0);
         for (id, dependency) in [("b", "a"), ("c", "b")] {
             let item = report.results.iter().find(|r| r.id == id).unwrap();
             assert_eq!(item.status, Status::NotRun);

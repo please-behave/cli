@@ -1086,7 +1086,7 @@ fn independent_mappings_resolve_inheritance_many_to_one_and_offline_execution() 
     write(
         &f.remote,
         "repository/checks/standalone/rule.toml",
-        "id = 'standalone'\ndescription = 'Standalone'\nrun_at = ['lint', 'test']\nblocking = false\n[check]\ncommand = 'sh @rule/index.sh'\n",
+        "id = 'standalone'\ndescription = 'Standalone'\nrun_at = ['lint', 'test']\n[check]\ncommand = 'sh @rule/index.sh'\n",
     );
     write(
         &f.remote,
@@ -1131,12 +1131,7 @@ fn independent_mappings_resolve_inheritance_many_to_one_and_offline_execution() 
             .len(),
         1
     );
-    assert!(
-        project
-            .checks
-            .iter()
-            .any(|r| r.id.ends_with(":standalone") && !r.blocking)
-    );
+    assert!(project.checks.iter().any(|r| r.id.ends_with(":standalone")));
     let identities = project.effective.rules.keys().cloned().collect::<Vec<_>>();
     let before = serde_json::to_value(&project.effective.rules).unwrap();
     let contents = f.contents();
@@ -1989,7 +1984,7 @@ fn shared_entrypoints_execute_each_rule_offline() {
             &f.remote,
             &format!("rules/checks/{id}/rule.toml"),
             &format!(
-                "id = '{id}'\ndescription = 'Shared check'\nenabled = {enabled}\nblocking = false\n[parameters.code]\ntype = 'string'\nrequired = true\n[check]\ncommand = 'sh @source/{entrypoint} @rule/resource @param/code'\n"
+                "id = '{id}'\ndescription = 'Shared check'\nenabled = {enabled}\n[parameters.code]\ntype = 'string'\nrequired = true\n[check]\ncommand = 'sh @source/{entrypoint} @rule/resource @param/code'\n"
             ),
         );
         write(&f.remote, &format!("rules/checks/{id}/resource"), id);
@@ -2053,7 +2048,7 @@ fn shared_entrypoints_execute_each_rule_offline() {
             .find(|r| r.stdout.as_ref().is_some_and(|s| s.text == label))
             .unwrap();
         assert_eq!(result.status, status);
-        assert!(!result.blocking);
+        assert!(result.blocking);
     }
     let missing = report.results.iter().find(|r| r.stdout.is_none()).unwrap();
     assert_eq!(missing.status, Status::Error);

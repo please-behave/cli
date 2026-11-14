@@ -82,13 +82,15 @@ fn contract<T: Serialize + DeserializeOwned>(sample: &T, text: &str, prefix: &st
                     serde_json::json!({})
                 } else if key == "depends_on" {
                     Value::Null
+                } else if key == "blocking" {
+                    Value::Bool(true)
                 } else {
                     Value::Array(vec![])
                 };
                 let default = defaults.pointer(&pointer).unwrap_or_else(|| {
                     assert!(matches!(
                         key.as_str(),
-                        "files" | "context" | "parameters" | "depends_on"
+                        "files" | "context" | "parameters" | "depends_on" | "blocking"
                     ));
                     &empty
                 });
@@ -152,7 +154,7 @@ fn every_configuration_field_required_marker_and_default_is_documented() {
         name: Some("Example".into()),
         description: "Example".into(),
         enabled: true,
-        blocking: true,
+        blocking: Some(true),
         run_at: vec!["pre-push".into()],
         parameters: Default::default(),
         check: Some(config::CheckDefinition {

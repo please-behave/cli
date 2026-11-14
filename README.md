@@ -47,7 +47,7 @@ where they can be reviewed and versioned together. Run `please run` to
 evaluate the current working files against those expectations.
 
 Please Behave validates the configuration, runs the selected checks, and then asks the
-AI to perform the selected reviews. If a check has a blocking failure or an error,
+AI to perform the selected reviews. If a check fails or errors,
 reviews are skipped to avoid
 spending tokens on a run that has already failed. All remaining checks still run.
 The terminal shows progress as each rule starts and finishes, followed by a compact
@@ -194,7 +194,7 @@ The supported commands are:
 | --- | --- | --- |
 | `--yes` | `sync` | Approve the displayed integration changes without a prompt, including in CI. Defaults to off. |
 | `--checks-only` | `run` | Run only checks; do not call an AI provider. |
-| `--fail-fast` | `run` | Stop scheduling after a blocking failure or fatal execution error; defaults to off. |
+| `--fail-fast` | `run` | Stop scheduling after a check failure or error, a blocking review failure or error or a fatal execution error; defaults to off. |
 | `--max-parallel N` | `run` | Positive maximum concurrent checks; overrides configuration (default `4`). |
 | `--at NAME` | `run` | Select a known execution point (default `pre-push`). |
 | `--progress=auto`, `--progress=plain`, `--progress=tty` | `run` | Progress display; defaults to `auto`. Terminal rows update in place; CI and redirected streams use append-only output. |
@@ -257,8 +257,8 @@ output is saved instead of flooding the terminal.
 | `NOT_RUN` | A rule was not started because a prerequisite did not pass, the check phase failed, or fail-fast stopped scheduling. The reason explains why. |
 | `CANCELLED` | A running check was interrupted after fail-fast triggered; captured partial output is retained. |
 
-A run succeeds if no blocking failure exists and its input remains stable.
-Non-blocking FAIL and provider/review ERROR remain visible and permit overall PASS.
+A run succeeds if no check and no blocking review FAIL or ERROR exists and its input remains stable.
+Non-blocking review FAIL and ERROR remain visible and permit overall PASS.
 Invalid parameters and missing review prompts still prevent success.
 Check ERROR and integrity errors always prevent success. A review's one-line explanation
 appears even when it passes. Read more without running anything again:

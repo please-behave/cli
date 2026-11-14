@@ -44,8 +44,9 @@ another root.
 ## RULE-001: Rules, Rule Sets and Execution Points
 
 Rules are implemented as Checks or Reviews. Each declares id, optional name, description,
-enabled (default true), blocking (default true), optional run_at and exactly one
-implementation table. Rule IDs are unique within a governance scope. Rule Sets
+enabled (default true), blocking (reviews only, default true), optional run_at and
+exactly one implementation table. Checks are always blocking; a Check declaring blocking
+is a configuration error. Rule IDs are unique within a governance scope. Rule Sets
 require id, description, rules and nonempty run_at; no enabled/blocking/source
 fields are accepted. Set IDs are independently unique.
 
@@ -266,7 +267,7 @@ triggers are not evaluated (no change base is needed) and no review input is pre
 scope is recorded in plans and reports. The overall result is determined by the checks alone:
 `NOT_RUN` reviews do not prevent success, so a checks-only PASS says nothing about review criteria.
 Full configuration validation still runs.
-Every selected check must execute unless dependencies or `--fail-fast` prevent scheduling; non-blocking FAIL and non-blocking provider/review ERROR are nonfatal.
+Every selected check must execute unless dependencies or `--fail-fast` prevent scheduling; FAIL and ERROR of non-blocking reviews are nonfatal; any check FAIL or ERROR is fatal and prevents reviews.
 Invalid review parameters and missing prompts remain fatal. Empty execution points succeed without proving
 any rule PASS.
 
@@ -421,7 +422,7 @@ results, durations, findings, output and available usage. Check ERROR and blocki
 review ERROR, parameter errors and missing prompts take precedence over blocking FAIL; non-blocking review ERROR stays
 visible and permits overall PASS. Fail-fast NOT_RUN and CANCELLED block success without replacing an existing blocking FAIL with ERROR.
 Dependency NOT_RUN inherits the originating outcome and does not independently block reviews or success.
-Disabled Rules stay out of results; blocking failed Checks leave selected Reviews NOT_RUN.
+Disabled Rules stay out of results; failed or errored Checks leave selected Reviews NOT_RUN.
 
 Report schema 4 records plan schema 3, required IDs, blocking and rule provenance.
 An optional per-item configuration_error flag defaults to false in older reports

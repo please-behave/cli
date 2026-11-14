@@ -27,7 +27,6 @@ pub(crate) fn execute_cancellable(
 ) -> Item {
     let start = Instant::now();
     let mut item = Item::simple(&check.id, "check", Status::Error, String::new());
-    item.blocking = check.blocking;
     let prepared = (|| -> anyhow::Result<_> {
         let parameters = check.parameters.resolve(&project.root, &check.id)?;
         let directory = crate::config::source_path(
@@ -139,7 +138,6 @@ pub(crate) fn schedule(
     }
     let error = |index: usize, reason: String, elapsed: Duration| {
         let mut item = Item::simple(&checks[index].id, "check", Status::Error, reason);
-        item.blocking = checks[index].blocking;
         item.duration_ms = elapsed.as_millis() as u64;
         item
     };
@@ -206,7 +204,6 @@ pub(crate) fn schedule(
                         status.label()
                     ),
                 );
-                item.blocking = checks[index].blocking;
                 item.blocked_by = Some(checks[dependency].id.clone());
                 pending.remove(&index);
                 progress(Event::Finished(index, &item));
@@ -214,13 +211,12 @@ pub(crate) fn schedule(
             }
             if stopped {
                 for index in std::mem::take(&mut pending) {
-                    let mut item = Item::simple(
+                    let item = Item::simple(
                         &checks[index].id,
                         "check",
                         Status::NotRun,
                         "Fail-fast triggered; no command started".into(),
                     );
-                    item.blocking = checks[index].blocking;
                     progress(Event::Finished(index, &item));
                     results[index] = Some(item);
                 }
@@ -343,7 +339,6 @@ mod tests {
             name: id.into(),
             description: id.into(),
             enabled: true,
-            blocking: true,
             resource: resource.map(str::to_owned),
             command: crate::check_command::Command::new("true").unwrap(),
             source_root: PathBuf::new(),
@@ -643,27 +638,5 @@ mod tests {
                 assert!(starts.try_recv().is_err());
             });
         }
-    }
-
-    #[test]
-    fn fail_fast_worker_error_stops_even_an_advisory_check() {
-        let mut checks = [check("a", None), check("b", None)];
-        checks[0].blocking = false;
-        let checks: Vec<_> = checks.iter().collect();
-        let results = schedule(
-            &checks,
-            1.try_into().unwrap(),
-            true,
-            None,
-            &crate::scheduling::History::default(),
-            |check| {
-                assert_ne!(check.id, "a", "simulated worker failure");
-                Item::simple(&check.id, "check", Status::Pass, String::new())
-            },
-            &mut |_| {},
-        );
-        assert_eq!(results[0].status, Status::Error);
-        assert_eq!(results[1].status, Status::NotRun);
-        assert!(!results[0].blocking);
     }
 }

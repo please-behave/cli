@@ -24,7 +24,7 @@ check and the example review are disabled. To demonstrate failure, set
 Checks and reviews are collectively called **rules**. `sync` validates all files,
 even disabled entries, and reconciles declared external state after confirmation,
 without running rules. `run` validates, executes the selected enabled checks, then the
-selected reviews if no blocking check failed. Blocking failures and execution errors
+selected reviews if no check failed or errored. Check failures and execution errors
 prevent review token spending; those reviews are `NOT_RUN`. Disabled rules never
 enter results.
 
@@ -74,8 +74,7 @@ A Check lives in `.please/checks/<name>/rule.toml`. Prefer a command string such
 `[check] command = "python3 @rule/check.py"`; quoting follows the configuration
 reference and no shell is involved. The consumer root is the working directory and
 `@rule/` references locate bundled files. Exit 0 is PASS, 1 is FAIL and 2 is
-ERROR; signals, missing scripts and launch failures are ERROR. A completed non-blocking
-FAIL permits success. Checks are trusted code without sandboxing, and changing
+ERROR; signals, missing scripts and launch failures are ERROR. A check FAIL prevents success. Checks are trusted code without sandboxing, and changing
 evaluated files during a run prevents PASS.
 
 For an optional AI review, configure an external adapter, customize the disabled
