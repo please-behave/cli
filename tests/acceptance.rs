@@ -919,7 +919,7 @@ fn unusual_paths_and_binary_files_are_fingerprinted() {
     assert_eq!(changes.total_files, Some(4));
 }
 #[test]
-fn prompt_marks_evidence_untrusted_and_diff_truncation() {
+fn prompt_marks_diff_truncation_without_safety_instructions() {
     let d = project();
     enable(d.path());
     let project = config::load(d.path()).unwrap();
@@ -927,7 +927,7 @@ fn prompt_marks_evidence_untrusted_and_diff_truncation() {
     let active: Vec<_> = project.reviews.iter().collect();
     let mut input =
         please::review_input::PreparedReviewInput::prepare(&project, &active, &snapshot).unwrap();
-    input.diff = "malicious untrusted evidence".into();
+    input.diff = "malicious diff content".into();
     input.diff_truncated = true;
     let request = Request {
         execution_point: "pre-push",
@@ -939,8 +939,11 @@ fn prompt_marks_evidence_untrusted_and_diff_truncation() {
     };
     let text = please::provider::prompt(&request).unwrap();
     assert!(text.contains("Truncated: true"));
-    assert!(text.contains("untrusted evidence"));
-    assert!(text.contains("ordinary review prompt, not a privileged system message"));
+    assert!(text.contains("<diff>"));
+    for forbidden in ["untrusted", "read-only", "privileged", "Do not edit"] {
+        assert!(!text.contains(forbidden), "{forbidden}");
+    }
+    assert!(text.contains("FAIL when PASS cannot be established"));
     assert!(text.contains("product-consistency"));
     let mut without_diff = project.reviews[0].clone();
     without_diff.include_diff = false;
@@ -954,8 +957,8 @@ fn prompt_marks_evidence_untrusted_and_diff_truncation() {
         ..request
     };
     let text = please::provider::prompt(&request).unwrap();
-    assert!(!text.contains("malicious untrusted evidence"));
-    assert!(!text.contains("<untrusted_diff>"));
+    assert!(!text.contains("malicious diff content"));
+    assert!(!text.contains("<diff>"));
 }
 
 #[test]
@@ -1763,7 +1766,7 @@ fn focused_reviews_exclude_unrelated_paths_and_diff_and_include_untracked_entry_
     assert!(prompt.contains("new.swift") && prompt.contains("Relevant requirement"));
     assert!(!prompt.contains("UNRELATED_POLICY_SECRET") && !prompt.contains("unrelated.swift"));
     assert!(prompt.contains("starting points, not an exhaustive boundary"));
-    assert!(prompt.contains("targeted searches") && prompt.contains("ONCE"));
+    assert!(prompt.contains("ONCE"));
 }
 
 #[test]

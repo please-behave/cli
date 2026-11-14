@@ -1,4 +1,4 @@
-"""Protocol demonstration only: reports uncertainty without evaluating a real policy."""
+"""Protocol demonstration only: reports ERROR because it performs no real assessment."""
 
 import json
 import sys

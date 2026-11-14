@@ -378,7 +378,9 @@ root and inherit the environment except `PLEASE_*` variables, which are removed.
 get the execution point, the Rule parameters and the context file path in the request
 JSON. Configure authentication and tool permissions in the
 adapter. Trust adapters as you trust checks: they have Please Behave's permissions.
-Please installs no adapter dependencies and provides no provider sandbox.
+Please installs no adapter dependencies and provides no provider sandbox. The
+prompt carries no safety, permission or role instructions; protecting the project
+from an adapter's actions is the responsibility of the adapter and its provider.
 
 A named configuration uses its filename stem as its ID: 1–80 ASCII letters,
 digits, hyphens or underscores, excluding the reserved `please-` prefix. Select it
@@ -428,7 +430,7 @@ Create `.please/reviews/architecture/prompt.md`:
 
 ```markdown
 Compare the implementation with the project's documented architectural boundaries.
-Report concrete contradictions as FAIL, missing essential evidence as ERROR,
+Report concrete contradictions and missing essential evidence as FAIL,
 and PASS only with supporting file paths and line numbers.
 ```
 

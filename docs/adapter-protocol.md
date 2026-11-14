@@ -40,9 +40,9 @@ request so adapters need not duplicate limits or hardcode current Rule IDs.
 The overall deadline includes stdin delivery; zero disables it. Timeouts terminate
 the process tree. A launch failure, nonzero exit, invalid JSON, unsupported version,
 truncated output or invalid verdict produces ERROR for the entire batch. Stdout
-is bounded to 64 KiB. Raw output and parser details are never saved. Completed
-review ERROR can instead describe unavailable evidence or provider failure using
-the common result format. Blocking and nonblocking reviews follow the same
+is bounded to 64 KiB. Raw output and parser details are never saved. An adapter
+reports ERROR only for technical failures it detects itself, such as an
+unreachable provider, using the common result format. Blocking and nonblocking reviews follow the same
 ordinary enforcement rules regardless of which adapter is selected.
 
 ## Request
@@ -79,9 +79,12 @@ The prompt contains the common review instructions, criteria, excerpts and
 orientation. An adapter can use that prompt directly or construct a request from
 the structured fields, preserving the review and evidence requirements.
 
-No tools or repository sandbox are supplied by Please. If the prepared evidence
-is insufficient and no further evidence is available, return ERROR. PASS and FAIL
-require grounded evidence; Please validates paths and line numbers locally and
+No tools, repository sandbox or safety instructions are supplied by Please;
+protecting the project from an adapter's actions is the responsibility of the
+adapter and its provider. A conclusion that cannot be established as PASS,
+including one resting on insufficient or uncertain evidence, is FAIL; ERROR is
+reserved for technical failures. Please cannot enforce this distinction; it is
+part of the contract. PASS and FAIL require grounded evidence; Please validates paths and line numbers locally and
 checks snapshot integrity before and after execution.
 
 ## Parameters
@@ -185,8 +188,8 @@ These counters are adapter claims, not billing or quota statements.
 The [dummy script](../examples/adapters/dummy.py) and accompanying
 [TOML configuration](../examples/adapters/dummy.toml) form a working example.
 Copy them as instructed in the TOML file and select the named provider from a
-review. The dummy returns ERROR deliberately: it performs no assessment and
-cannot supply a justified PASS. Replace its result generation with your own
+review. The dummy returns ERROR deliberately: it performs no assessment, so
+its review technically cannot take place. Replace its result generation with your own
 provider communication while preserving the protocol.
 
 This migration removes the built-in Codex implementation completely. There is no

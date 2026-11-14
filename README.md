@@ -253,7 +253,7 @@ output is saved instead of flooding the terminal.
 | --- | --- |
 | `PASS` | The check exited successfully, or the AI found the review criterion satisfied with evidence. |
 | `FAIL` | The check failed, or the AI found a concrete violation of the criterion. |
-| `ERROR` | Verification could not be completed, for example because of a timeout, missing executable, invalid AI output or missing evidence. |
+| `ERROR` | Verification could not be completed, for example because of a timeout, missing executable, or invalid AI output. A review that cannot establish PASS is a FAIL. |
 | `NOT_RUN` | A rule was not started because a prerequisite did not pass, the check phase failed, or fail-fast stopped scheduling. The reason explains why. |
 | `CANCELLED` | A running check was interrupted after fail-fast triggered; captured partial output is retained. |
 
