@@ -61,13 +61,18 @@ def main():
         review_path = root / ".please/reviews/product-consistency/rule.toml"
         review_path.write_text(review_path.read_text().replace("enabled = false", "enabled = true"))
         (root / ".please/provider.toml").write_text("command = 'missing-fake-adapter'\ntimeout_seconds = 5\n")
+        # Reviews need changes: at pre-commit the staged files are the changes of the uncommitted repository.
+        for rule_path in (check_path, review_path):
+            rule_path.write_text(rule_path.read_text().replace('run_at = ["pre-push"]', 'run_at = ["pre-commit"]'))
         # The failed check must skip the enabled review. Any provider call would fail this assertion.
-        run("run", 1)
+        run("sync --yes")
+        run("run --at pre-commit", 1)
         report = json.loads(report_path.read_text())
         assert report["overall"] == "FAIL"
         assert report["results"][-1]["status"] == "NOT_RUN"
         check_path.write_text(check_path.read_text().replace("enabled = true", "enabled = false"))
         review_path.write_text(review_path.read_text().replace("enabled = true", "enabled = false"))
+        run("sync --yes")
         run("run")
         assert "CURRENT" in run("status")
         assert not (root / ".git/index.lock").exists()
