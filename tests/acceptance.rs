@@ -511,7 +511,21 @@ fn spawn_error_writes_blocking_error_report() {
     assert_eq!(report::read(d.path()).unwrap().overall, Status::Error);
 }
 #[test]
-fn all_reviews_one_call_exact_coverage_pass_fail() {
+fn every_review_gets_its_own_call_with_exact_coverage_pass_fail() {
+    struct Answering {
+        calls: Cell<u32>,
+        status: &'static str,
+    }
+    impl Provider for Answering {
+        fn review(&self, request: &Request<'_>) -> Result<String> {
+            self.calls.set(self.calls.get() + 1);
+            assert_eq!(request.reviews.len(), 1);
+            Ok(
+                serde_json::json!({"reviews":[verdict(&request.reviews[0].id, self.status)]})
+                    .to_string(),
+            )
+        }
+    }
     for status in ["PASS", "FAIL"] {
         let d = project();
         enable(d.path());
@@ -522,12 +536,12 @@ fn all_reviews_one_call_exact_coverage_pass_fail() {
             original.replace("id = \"product-consistency\"", "id = \"second\""),
         )
         .unwrap();
-        let mock = mock(vec![
-            verdict("second", status),
-            verdict("product-consistency", status),
-        ]);
+        let mock = Answering {
+            calls: Cell::new(0),
+            status,
+        };
         let r = please::verify(d.path(), &mock).unwrap();
-        assert_eq!(mock.calls.get(), 1);
+        assert_eq!(mock.calls.get(), 2);
         assert_eq!(r.results.len(), 3);
         assert_eq!(r.overall.label(), status);
         assert_eq!(r.results[1].id, "product-consistency");
@@ -949,7 +963,7 @@ fn prompt_has_no_safety_instructions() {
     let prepared =
         please::review_input::PreparedReviewInput::prepare(&project, &active, &snapshot).unwrap();
     assert!(prepared.diff.is_empty());
-    // Even shared preparation containing a diff must not leak it to this batch.
+    // Even shared preparation containing a diff must not leak it to this call.
     let request = Request {
         reviews: &active,
         ..request
@@ -1268,7 +1282,7 @@ fn compact_report_bounds_execution_error_reasons_without_losing_saved_details() 
 }
 
 #[test]
-fn progress_numbers_only_enabled_rules_and_announces_one_shared_provider_call() {
+fn progress_numbers_only_enabled_rules_and_runs_one_review_per_call() {
     use std::cell::RefCell;
     struct Observing<'a> {
         events: &'a RefCell<Vec<String>>,
@@ -1277,11 +1291,24 @@ fn progress_numbers_only_enabled_rules_and_announces_one_shared_provider_call() 
     impl Provider for Observing<'_> {
         fn review(&self, request: &Request<'_>) -> Result<String> {
             self.calls.set(self.calls.get() + 1);
+            assert_eq!(request.reviews.len(), 1);
             let events = self.events.borrow();
             assert!(events.iter().any(|line| line.starts_with("[2/4] PASS")));
-            assert!(events.iter().any(|line| line.starts_with("[3/4] RUNNING")));
-            assert!(events.iter().any(|line| line.starts_with("[4/4] RUNNING")));
-            assert!(!events.iter().any(|line| line.starts_with("[3/4] PASS")));
+            let running = if request.reviews[0].id == "second" {
+                "[4/4]"
+            } else {
+                "[3/4]"
+            };
+            assert!(
+                events
+                    .iter()
+                    .any(|line| line.starts_with(&format!("{running} RUNNING")))
+            );
+            assert!(
+                !events
+                    .iter()
+                    .any(|line| line.starts_with(&format!("{running} PASS")))
+            );
             Ok(serde_json::json!({"reviews":request.reviews.iter().map(|review| verdict(&review.id,if review.id=="second" {"FAIL"} else {"PASS"})).collect::<Vec<_>>()} ).to_string())
         }
     }
@@ -1317,7 +1344,7 @@ fn progress_numbers_only_enabled_rules_and_announces_one_shared_provider_call() 
     )
     .unwrap();
     assert_eq!(report.overall, Status::Fail);
-    assert_eq!(provider.calls.get(), 1);
+    assert_eq!(provider.calls.get(), 2);
     let output = events.borrow().concat();
     for number in 1..=4 {
         assert!(output.contains(&format!("[{number}/4] RUNNING")));
@@ -1325,7 +1352,7 @@ fn progress_numbers_only_enabled_rules_and_announces_one_shared_provider_call() 
     assert!(output.contains("[1/4] PASS    · always-ok"));
     assert!(output.contains("[4/4] FAIL    · second"));
     assert!(output.contains("Second deterministic check"));
-    assert_eq!(output.matches("Reviews: 2 · 1 provider call").count(), 1);
+    assert!(!output.contains("provider call"));
     assert!(!output.contains("deliberately-failing"));
     assert!(output.contains("Documented expectations inspected"));
 }
@@ -1457,7 +1484,7 @@ fn progress_uses_semantic_colors_and_sanitizes_rule_descriptions() {
 }
 
 #[test]
-fn usage_is_recorded_once_for_bundled_reviews() {
+fn usage_is_summed_across_review_calls() {
     use please::{provider::Response, report::TokenUsage};
     struct Metered {
         calls: Cell<u32>,
@@ -1468,7 +1495,7 @@ fn usage_is_recorded_once_for_bundled_reviews() {
         }
         fn review_with_usage(&self, request: &Request<'_>) -> Response {
             self.calls.set(self.calls.get() + 1);
-            assert_eq!(request.reviews.len(), 2);
+            assert_eq!(request.reviews.len(), 1);
             Response {
                 verdict: Ok(serde_json::json!({"reviews": request.reviews.iter().map(|r| verdict(&r.id, "PASS")).collect::<Vec<_>>()} ).to_string()),
                 usage: Some(TokenUsage {
@@ -1493,9 +1520,9 @@ fn usage_is_recorded_once_for_bundled_reviews() {
         calls: Cell::new(0),
     };
     let r = please::verify(d.path(), &provider).unwrap();
-    assert_eq!(provider.calls.get(), 1);
+    assert_eq!(provider.calls.get(), 2);
     assert_eq!(r.overall, Status::Pass);
-    assert_eq!(r.token_usage, Some(1200));
+    assert_eq!(r.token_usage, Some(2400));
     assert_eq!(
         terminal::render(&r, false)
             .matches("Adapter tokens:")
@@ -1579,9 +1606,7 @@ fn checks_only_never_calls_provider_and_counts_only_checks_even_on_failure() {
             VerificationMode::ChecksOnly,
             &mut |event| match event {
                 Progress::Plan { total } => plan = Some(total),
-                Progress::ReviewBatch { .. } | Progress::RuleStarted { kind: "review", .. } => {
-                    review_event = true
-                }
+                Progress::RuleStarted { kind: "review", .. } => review_event = true,
                 _ => {}
             },
         )

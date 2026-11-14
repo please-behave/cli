@@ -41,7 +41,7 @@ request so adapters need not duplicate limits or hardcode current Rule IDs.
 
 The overall deadline includes stdin delivery; zero disables it. Timeouts terminate
 the process tree. A launch failure, nonzero exit, invalid JSON, unsupported version,
-truncated output or invalid verdict produces ERROR for the entire batch. Stdout
+truncated output or invalid verdict produces ERROR for the review of that call. Stdout
 is bounded to 64 KiB. The output of a call that ends as ERROR is saved with its report entry. An adapter
 reports ERROR only for technical failures it detects itself, such as an
 unreachable provider, using the common result format. Blocking and nonblocking reviews follow the same
@@ -124,9 +124,8 @@ read = false
 ```
 
 That review receives `{"variant":"careful","tools":{"read":false}}`.
-The replaced tools value contains no search key. Reviews sharing a provider
-reference, Rule parameter environment and diff selection share one invocation;
-each has independent merged adapter settings.
+The replaced tools value contains no search key. Every invocation carries exactly
+one review in the `reviews` list; Please never combines reviews in one call.
 
 ## Response
 
@@ -148,7 +147,7 @@ line, with at most 20 findings per review. Path and line must be present, althou
 both can be null. For worktree evidence, a line requires a path. Worktree
 PASS/FAIL need at least one path in the verified manifest and a positive line within that file. ERROR may have no findings.
 Wrong types, extra fields, missing/duplicate/extra review IDs and invalid evidence
-invalidate the whole batch. Provider-specific envelopes and Markdown fences are
+invalidate the response. Provider-specific envelopes and Markdown fences are
 not accepted; adapters must translate them.
 
 Commit-header reviews use the same versioned envelope, with a source-specific
@@ -157,7 +156,7 @@ is the captured first line as a JSON string. The remaining input fields contain
 empty excerpts, manifest, focused paths and diff;
 `head` is null. The prompt contains the configured criteria and header, without
 repository orientation. Adapters must not add repository or commit-body context.
-Worktree and header reviews never share a batch. Worktree review metadata uses
+Worktree review metadata uses
 `input: "worktree"` and retains its existing evidence contract.
 
 For header PASS/FAIL, provide at least one finding like:

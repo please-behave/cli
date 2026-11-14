@@ -174,7 +174,7 @@ pub fn execute_prepared(
     )
 }
 
-/// Observe each not-yet-started adapter batch and optionally stop scheduling it.
+/// Observe each not-yet-started adapter call and optionally stop scheduling it.
 pub(crate) fn execute_prepared_observed(
     project: &Project,
     active: &[&Review],
@@ -182,17 +182,9 @@ pub(crate) fn execute_prepared_observed(
     input: &crate::review_input::PreparedReviewInput,
     provider: &dyn Provider,
     execution_point: &str,
-    before_batch: &mut dyn FnMut(&[&Review], &[Item]) -> bool,
+    before_call: &mut dyn FnMut(&Review, &[Item]) -> bool,
 ) -> (Vec<Item>, Option<TokenUsage>) {
-    let mut groups = std::collections::BTreeMap::<
-        (
-            Option<String>,
-            crate::parameters::Environment,
-            bool,
-            crate::config::ReviewInput,
-        ),
-        Vec<&Review>,
-    >::new();
+    let mut calls = Vec::new();
     let mut items = Vec::new();
     for review in active {
         let resolved = review
@@ -208,15 +200,7 @@ pub(crate) fn execute_prepared_observed(
                 Ok(environment)
             });
         match resolved {
-            Ok(environment) => groups
-                .entry((
-                    review.provider.clone(),
-                    environment,
-                    review.include_diff,
-                    review.input,
-                ))
-                .or_default()
-                .push(review),
+            Ok(environment) => calls.push((*review, environment)),
             Err(error) => {
                 let mut item =
                     Item::simple(&review.id, "review", Status::Error, format!("{error:#}"));
@@ -227,62 +211,51 @@ pub(crate) fn execute_prepared_observed(
         }
     }
     let history = crate::scheduling::History::load(&project.root);
-    let mut groups: Vec<_> = groups.into_iter().collect();
-    // Stable sorting preserves the existing deterministic batch order on ties.
-    groups.sort_by_cached_key(|(_, reviews)| {
-        std::cmp::Reverse(
-            reviews
-                .iter()
-                .map(|r| history.estimate("review", &r.id))
-                .max()
-                .unwrap_or(0),
-        )
+    // Stable sorting preserves the configured order on ties.
+    calls.sort_by_cached_key(|(review, _)| {
+        std::cmp::Reverse(history.estimate("review", &review.id))
     });
     let mut usages = Vec::new();
-    for ((_, parameters, _, source), reviews) in groups {
-        if !before_batch(&reviews, &items) {
-            items.extend(reviews.iter().map(|review| {
-                let mut item = Item::simple(
-                    &review.id,
-                    "review",
-                    Status::NotRun,
-                    "Fail-fast triggered; no provider call made".into(),
-                );
-                item.blocking = review.blocking;
-                item
-            }));
+    for (review, parameters) in calls {
+        if !before_call(review, &items) {
+            let mut item = Item::simple(
+                &review.id,
+                "review",
+                Status::NotRun,
+                "Fail-fast triggered; no provider call made".into(),
+            );
+            item.blocking = review.blocking;
+            items.push(item);
             continue;
         }
-        // A snapshot check is required before every provider invocation, including
-        // later parameter batches. Never reuse prepared evidence after edits.
+        // REQ-0125: one review per adapter call.
+        let reviews = [review];
+        // A snapshot check is required before every provider invocation. Never
+        // reuse prepared evidence after edits.
         let stable = input.ensure_stable().is_ok()
             && crate::git_snapshot::capture(&project.root).is_ok_and(|current| {
                 crate::git_snapshot::compare(snapshot, &current, 0).state == "CURRENT"
             });
         let provider_integrity = || -> Result<()> {
-            if let Some((source, config)) = reviews
-                .first()
-                .and_then(|review| review.provider.as_ref())
-                .and_then(|id| {
-                    project
-                        .external_providers
-                        .get(id)
-                        .zip(project.providers.get(id))
-                })
-            {
+            if let Some((source, config)) = review.provider.as_ref().and_then(|id| {
+                project
+                    .external_providers
+                    .get(id)
+                    .zip(project.providers.get(id))
+            }) {
                 source.resolve(config, &project.root)?;
             }
             Ok(())
         };
         let invalid_provider = provider_integrity().err();
-        let batch_input = input.for_source(source);
+        let call_input = input.for_source(review.input);
         let start = Instant::now();
         let response = if stable && invalid_provider.is_none() {
             provider.review_with_usage(&Request {
                 project,
                 reviews: &reviews,
                 snapshot,
-                input: &batch_input,
+                input: &call_input,
                 parameters: &parameters,
                 execution_point,
             })
@@ -307,19 +280,21 @@ pub(crate) fn execute_prepared_observed(
             .verdict
             .and_then(|json| {
                 input.ensure_stable()?;
-                parse_with_header(project, &reviews, snapshot, &json, batch_input.commit_header.as_deref()).map_err(|_| anyhow::anyhow!("Invalid adapter review response; structured verdict and evidence requirements were not met; inspect captured output with please status --details"))
+                parse_with_header(project, &reviews, snapshot, &json, call_input.commit_header.as_deref()).map_err(|_| anyhow::anyhow!("Invalid adapter review response; structured verdict and evidence requirements were not met; inspect captured output with please status --details"))
             })
         };
         let mut results = match result {
             Ok(items) => items,
-            Err(error) => reviews
-                .iter()
-                .map(|r| Item::simple(&r.id, "review", Status::Error, format!("{error:#}")))
-                .collect(),
+            Err(error) => vec![Item::simple(
+                &review.id,
+                "review",
+                Status::Error,
+                format!("{error:#}"),
+            )],
         };
         for item in &mut results {
             item.duration_ms = start.elapsed().as_millis() as u64;
-            item.blocking = reviews.iter().find(|r| r.id == item.id).unwrap().blocking;
+            item.blocking = review.blocking;
             item.configuration_error = invalid_provider.is_some();
             // REQ-0131: an adapter ERROR keeps the call's output for diagnosis.
             if let (Status::Error, Some(output)) = (item.status, &output) {

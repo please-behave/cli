@@ -294,14 +294,6 @@ fn progress_event(
             }
             row
         }
-        Progress::ReviewBatch { count, calls, .. } => format!(
-            "Reviews: {count} · {calls} {}\n",
-            if *calls == 1 {
-                "provider call"
-            } else {
-                "provider calls"
-            }
-        ),
     }
 }
 
@@ -318,7 +310,7 @@ pub fn render_progress(event: &crate::Progress<'_>, color: bool) -> String {
     progress_event(event, color, None, number)
 }
 
-/// Stateful terminal output replaces running rows, including shared review batches.
+/// Stateful terminal output replaces running rows, one running row per review call.
 /// Plain mode is append-only and uses the same names and messages.
 struct ProgressRow {
     text: String,
@@ -387,21 +379,6 @@ impl ProgressRenderer {
                 )
             }
             Progress::Tick => (0, false, false, false),
-            Progress::ReviewBatch { .. } => {
-                // End the current board before the provider-call announcement.
-                let mut text = String::new();
-                if self.visible > 0 {
-                    text.push_str(&format!("\x1b[{}A", self.visible));
-                    for _ in 0..self.visible {
-                        text.push_str("\r\x1b[2K\n");
-                    }
-                    text.push_str(&format!("\x1b[{}A", self.visible));
-                }
-                self.visible = 0;
-                self.last_draw = None;
-                text.push_str(&render_progress(event, self.color));
-                return text;
-            }
             Progress::Phase(_) => return String::new(),
         };
         if running && !self.start_numbers.contains_key(&number) {

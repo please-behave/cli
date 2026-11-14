@@ -40,11 +40,6 @@ pub enum Progress<'a> {
         name: &'a str,
         description: &'a str,
     },
-    ReviewBatch {
-        count: usize,
-        calls: usize,
-        timeout_seconds: u64,
-    },
 }
 
 pub fn verify(root: &Path, provider: &dyn provider::Provider) -> Result<Report> {
@@ -267,8 +262,8 @@ pub fn verify_project_with_fail_fast(
                 })?,
                 provider,
                 &plan.at,
-                &mut |batch, completed| {
-                    // Publish the previous batch before starting another one so
+                &mut |review, completed| {
+                    // Publish the previous call before starting another one so
                     // the progress board does not keep completed reviews running.
                     for item in completed {
                         if reported_reviews.insert(item.id.clone()) {
@@ -285,26 +280,15 @@ pub fn verify_project_with_fail_fast(
                     if fail_fast && completed.iter().any(report::prevents_success) {
                         return false;
                     }
-                    progress(Progress::ReviewBatch {
-                        count: batch.len(),
-                        calls: 1,
-                        timeout_seconds: batch
-                            .iter()
-                            .filter_map(|r| project.review_provider(r).map(|p| p.timeout_seconds))
-                            .max()
-                            .unwrap_or(0),
+                    let offset = active.iter().position(|r| r.id == review.id).unwrap();
+                    progress(Progress::RuleStarted {
+                        number: check_count + offset + 1,
+                        total,
+                        kind: "review",
+                        id: &review.id,
+                        name: &names[&review.id],
+                        description: &review.description,
                     });
-                    for review in batch {
-                        let offset = active.iter().position(|r| r.id == review.id).unwrap();
-                        progress(Progress::RuleStarted {
-                            number: check_count + offset + 1,
-                            total,
-                            kind: "review",
-                            id: &review.id,
-                            name: &names[&review.id],
-                            description: &review.description,
-                        });
-                    }
                     true
                 },
             );

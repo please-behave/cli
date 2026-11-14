@@ -118,7 +118,7 @@ fn stdin_results_and_provider_isolation() {
             .unwrap()
             .plan
             .planned_model_calls,
-        2
+        3
     );
     let result = execute(root.path());
     assert_eq!(result.overall, Status::Pass, "{:?}", result.results);
@@ -421,7 +421,7 @@ request = json.load(sys.stdin)
 assert request['protocol_version'] == 1
 assert request['execution_point'] == 'check'
 assert request['input']['manifest']
-assert len(request['reviews']) == 2
+assert len(request['reviews']) == 1
 for review in request['reviews']:
     p = review['parameters']
     assert p['retained'] == [1, True, 'text']
@@ -436,7 +436,7 @@ print(json.dumps({'protocol_version':1, 'reviews':[{'id':r['id'],'status':'PASS'
             .unwrap()
             .plan
             .planned_model_calls,
-        1
+        2
     );
     assert_eq!(execute(root.path()).overall, Status::Pass);
     assert_eq!(

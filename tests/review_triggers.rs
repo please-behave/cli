@@ -401,7 +401,7 @@ fn matched_triggers_execute_through_adapter_boundary() {
         write(root.path(), ".please/providers/fixture.toml", &provider);
         let preview = plan(root.path(), Some("HEAD"));
         assert!(preview.executable());
-        assert_eq!(preview.planned_model_calls, 1);
+        assert_eq!(preview.planned_model_calls, 2);
         let output = support::command(env!("CARGO_BIN_EXE_please"))
             .current_dir(root.path())
             .args(["run", "--at", "check"])

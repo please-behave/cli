@@ -335,7 +335,7 @@ fn header_bounds_identity_and_selection_are_explicit() {
 }
 
 #[test]
-fn mixed_sources_use_separate_batches_and_cannot_substitute_evidence() {
+fn mixed_sources_use_separate_calls_and_cannot_substitute_evidence() {
     let f = Fixture::new();
     support::write(
         &f.root,

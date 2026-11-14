@@ -10,7 +10,7 @@ justify invalidation complexity. Provider-side prompt caching and reusing a save
 Please Behave verdict are different mechanisms; reported cached-input tokens do not mean
 Please Behave reused a result or that an entire call was free.
 
-- Start with current shared context and identical-permission batching. Keep
+- Start with the current shared prepared context. Keep
   deterministic prompt structure and stable ordering where compatible with the
   review; never omit necessary changing evidence to improve cache hits.
 - No paid benchmark calls without explicit authorization. First use existing

@@ -88,7 +88,7 @@ input. The managed `commit-msg` hook supplies the message file; direct/offline
 plans without that validated context are blocked when a header review is selected.
 Plans save the captured header in optional `input.commit_header` and identify such
 rules with `review_input: "commit-header"`. Header contents participate in plan
-identity. Separate batches prevent repository evidence reaching header adapters.
+identity. Header calls carry no repository evidence.
 The header is rechecked before/after adapter calls and at completion; source-tree
 and header stability are independent integrity gates. Reports keep schema 4 and
 plans schema 3 with additive optional fields; older reports without header fields

@@ -223,8 +223,7 @@ tables. Merge top-level keys, with each review value replacing the provider valu
 at that key; nested tables and arrays are replaced whole. Please validates only
 JSON compatibility and transports values without interpreting provider meaning.
 Rule parameters remain separate and reach adapters as `rule_parameters`.
-Batching requires equal provider references, resolved Rule parameters, input
-sources and diff selection. Each review retains its own effective adapter parameters.
+Each review is one adapter call and retains its own effective adapter parameters.
 
 Responses require protocol_version = 1 and reviews matching the common verdict
 contract. Optional usage contains common token counters; absent usage remains
@@ -437,8 +436,7 @@ controls verification progress (default auto). Auto redraws in an interactive
 stderr terminal, except CI=true/1 or TERM=dumb; otherwise it appends plain lines.
 Plain never emits cursor controls. Tty redraws rule rows, replacing their running
 state on completion; descriptions must not wrap the row. Color is independent.
-Announce shared provider calls without claiming individual model completion or
-summing shared durations. Hide internal phases and successful process-exit reasons.
+Hide internal phases and successful process-exit reasons.
 Normal execution uses English: `RUNNING`, `provider call` / `provider calls`,
 and summary labels `rules`, `failed`, `errors`, `cancelled` and `not executed`.
 Empty execution prints `No rules executed`.

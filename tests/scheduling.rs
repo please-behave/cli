@@ -108,10 +108,11 @@ fn corrupt_and_unwritable_cache_never_change_verification() {
 }
 
 #[test]
-fn review_history_orders_whole_batches_and_preserves_result_order() {
+fn review_history_orders_calls_and_preserves_result_order() {
     struct Mock;
     impl Provider for Mock {
         fn review(&self, request: &Request<'_>) -> anyhow::Result<String> {
+            assert_eq!(request.reviews.len(), 1);
             Ok(serde_json::json!({"reviews": request.reviews.iter().map(|r| serde_json::json!({"id": r.id, "status": "PASS", "reason": "Inspected", "findings": [{"message": "Evidence", "path": "evidence", "line": 1}]})).collect::<Vec<_>>()}).to_string())
         }
     }
@@ -124,7 +125,6 @@ fn review_history_orders_whole_batches_and_preserves_result_order() {
     let cache = root.path().join(".git/please-scheduling.json");
     let execute = || {
         let mut starts = Vec::new();
-        let mut batches = Vec::new();
         let mut running = std::collections::BTreeSet::new();
         let mut renderer = please::terminal::ProgressRenderer::new(false, false, 80, 24);
         let mut output = String::new();
@@ -139,15 +139,12 @@ fn review_history_orders_whole_batches_and_preserves_result_order() {
                     Progress::RuleStarted {
                         kind: "review", id, ..
                     } => {
+                        assert!(running.is_empty(), "previous call still shown as running");
                         assert!(running.insert(id.to_owned()));
                         starts.push(id.to_owned());
                     }
                     Progress::RuleFinished { item, .. } if item.kind == "review" => {
                         assert!(running.remove(&item.id));
-                    }
-                    Progress::ReviewBatch { count, .. } => {
-                        assert!(running.is_empty(), "previous batch still shown as running");
-                        batches.push(count);
                     }
                     _ => (),
                 }
@@ -177,21 +174,15 @@ fn review_history_orders_whole_batches_and_preserves_result_order() {
             );
         }
         assert!(output.contains("5/5 completed · 0 running"));
-        (starts, batches)
+        starts
     };
-    assert_eq!(
-        execute(),
-        (vec!["r-a".into(), "r-b".into(), "r-c".into()], vec![1, 2])
-    );
+    assert_eq!(execute(), ["r-a", "r-b", "r-c"]);
     fs::write(
         &cache,
         r#"{"estimates":{"review":{"r-a":1,"r-b":10000,"r-c":1}}}"#,
     )
     .unwrap();
-    assert_eq!(
-        execute(),
-        (vec!["r-b".into(), "r-c".into(), "r-a".into()], vec![2, 1])
-    );
+    assert_eq!(execute(), ["r-b", "r-a", "r-c"]);
     let history: serde_json::Value = serde_json::from_slice(&fs::read(&cache).unwrap()).unwrap();
     for id in ["r-a", "r-b", "r-c"] {
         assert!(history["estimates"]["review"][id].as_u64().is_some());

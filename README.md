@@ -280,8 +280,7 @@ Please Behave checks the working files, including uncommitted changes; this does
 prove that the staged or pushed commit contains the same content.
 
 For reviews, available input, cached-input and output token counts are recorded
-once for the shared provider call. Total tokens are input plus output; cached
-input is a subset of input. Only positive counters count as reported; a counter
+per review call. Total tokens are input plus output; cached input is a subset of input. Only positive counters count as reported; a counter
 missing from any adapter call stays unavailable and never changes a verdict. Please Behave does not
 calculate money, remaining account quota or enforce a total token budget.
 
@@ -429,7 +428,7 @@ These limits are built in, not additional configuration fields:
 | AI response | 64 KiB adapter stdout; summaries and findings have the limits described under reviews. |
 | Scheduling history | 1 MiB local cache; oversized or invalid input uses defaults, and oversized updates are not saved. |
 | Saved report input | 128 MiB maximum when reading a saved report. |
-| Token usage | Available counters are summed across review batches. Optional reasoning/cache-write counters are subsets, not additions to the total. A counter that any call does not report as a positive number remains unavailable. |
+| Token usage | Available counters are summed across review calls. Optional reasoning/cache-write counters are subsets, not additions to the total. A counter that any call does not report as a positive number remains unavailable. |
 
 Declared governance inputs include local configuration documents, rule prompts and
 entrypoints, review entry/context files, and existing local files named by check
@@ -439,8 +438,8 @@ declared boundaries. Transitive script dependencies are not inferred; ignored
 caches such as `.please/adapters/__pycache__/` are excluded unless explicitly named.
 
 Not currently supported: reviews restricted to a diff, staged/index or commit input, configurable run-wide
-token budgets, monetary cost estimates and cached results. A token-efficient
-shared call is not a result cache or a guaranteed prompt-cache hit. Planned work
+token budgets, monetary cost estimates and cached results. Adapter calls are
+not a result cache or a guaranteed prompt-cache hit. Planned work
 is listed in the [TODOs](docs/todo/README.md).
 
 ## Development

@@ -1908,7 +1908,7 @@ printf '%s' "$point"
     for check in report.results.iter().filter(|r| r.kind == "check") {
         assert_eq!(check.stdout.as_ref().unwrap().text, "verify");
     }
-    assert_eq!(fs::read_to_string(calls).unwrap(), "review\n");
+    assert_eq!(fs::read_to_string(calls).unwrap(), "review\nreview\n");
 }
 
 #[test]

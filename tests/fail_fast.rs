@@ -173,7 +173,7 @@ fn check_failures_and_errors_stop_scheduling() {
 }
 
 #[test]
-fn review_batches_finish_together_and_only_fatal_results_stop_later_calls() {
+fn only_fatal_review_results_stop_later_calls() {
     for status in ["FAIL", "ERROR", "invalid"] {
         for blocking in [false, true] {
             for fail_fast in [false, true] {
@@ -184,21 +184,18 @@ fn review_batches_finish_together_and_only_fatal_results_stop_later_calls() {
                 let provider = dummy(status);
                 let (report, started) = run(&root, &provider, fail_fast);
                 let stop = fail_fast && blocking;
+                let calls = provider.calls.lock().unwrap().clone();
                 assert_eq!(
-                    provider.calls.lock().unwrap().len(),
-                    if stop { 1 } else { 2 }
-                );
-                assert_eq!(provider.calls.lock().unwrap()[0], ["a", "b"]);
-                assert_eq!(
-                    started,
+                    calls,
                     if stop {
-                        vec!["a", "b"]
+                        vec![vec!["a"]]
                     } else {
-                        vec!["a", "b", "c"]
+                        vec![vec!["a"], vec!["b"], vec!["c"]]
                     }
                 );
+                assert_eq!(started, if stop { vec!["a"] } else { vec!["a", "b", "c"] });
                 assert_ne!(report.results[0].status, Status::NotRun);
-                assert_ne!(report.results[1].status, Status::NotRun);
+                assert_eq!(report.results[1].status == Status::NotRun, stop);
                 assert_eq!(report.results[2].status == Status::NotRun, stop);
                 assert_eq!(
                     report.overall,

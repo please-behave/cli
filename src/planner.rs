@@ -393,22 +393,8 @@ pub fn build_with_context(
         planned_model_calls: active
             .iter()
             .filter(|review| review.execution_error.is_none())
-            .filter_map(|review| {
-                review
-                    .parameters
-                    .resolve(&project.root, &review.id)
-                    .ok()
-                    .map(|environment| {
-                        (
-                            review.provider.clone(),
-                            environment,
-                            review.include_diff,
-                            review.input,
-                        )
-                    })
-            })
-            .collect::<BTreeSet<_>>()
-            .len(),
+            .filter(|review| review.parameters.resolve(&project.root, &review.id).is_ok())
+            .count(),
         context,
     };
     // Normalize metadata separately from raw file hashes so TOML formatting and

@@ -1,7 +1,7 @@
 id: REQ-0085
-name: Later Review Batches Are Not Invoked
+name: Later Review Calls Are Not Invoked
 area: reviews
 description: >-
-  No further adapter batch may be invoked after fail-fast has triggered.
+  No further adapter call may be invoked after fail-fast has triggered.
 rationale: >-
   Once fail-fast has triggered, further provider spending serves no purpose.

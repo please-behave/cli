@@ -54,23 +54,21 @@ the first bytes of each stream with full totals, runs POSIX processes in separat
 and kills descendants on timeout or fail-fast. It is not a hostile-process sandbox.
 
 Reports are written to a temporary file and renamed atomically over `last.json`. They are
-unsigned local evidence. Provider review durations reflect their batch invocation and are
-not summed; missing token counters stay unavailable and are never estimated.
+unsigned local evidence. Provider review durations are those of their own call; missing
+token counters stay unavailable and are never estimated.
 
 ## Providers
 
 The planner prepares provider-neutral review input once; execution passes that exact
-preparation to the provider, and rendering does no filesystem or Git work. Reviews that
-share a provider reference and resolved parameter environment are batched and reuse the
-prepared context. Adapters receive evidence and the common verdict schema through the
+preparation to the provider, and rendering does no filesystem or Git work. Every review
+is one adapter call and reuses the prepared context. Adapters receive evidence and the common verdict schema through the
 [versioned protocol](adapter-protocol.md); the core supervises processes and validates
 coverage, evidence paths, line ranges and input stability. No provider or default is
 supplied.
 
 The provider trait returns a raw document so tests can inject successful, failed or
 malformed responses without credentials. Serde types reject unknown fields, wrong types
-and duplicate keys, and any invalid combined document makes every review in that batch
-ERROR. Grounded references are necessary, not proof of accurate conclusions.
+and duplicate keys, and an invalid document makes its review ERROR. Grounded references are necessary, not proof of accurate conclusions.
 
 Parameter declarations live in the Rule schema and the `parameters` module resolves only
 active Rules, removing inherited variables before applying values; no global environment

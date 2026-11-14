@@ -205,9 +205,8 @@ Rule scripts, prompts and bundled assets still resolve inside the rule directory
 
 A check passes a value on explicitly with `@param/<name>`: `@param/scopes_file`
 becomes the absolute path of the file, and strings stay unchanged. Reviews receive all
-their resolved values as `rule_parameters` in the adapter request. Reviews sharing
-identical resolved values share a call; different values use separate calls with the
-same prepared context. Provider timeout applies per call.
+their resolved values as `rule_parameters` in the adapter request. Every review is
+one adapter call with the same prepared context. Provider timeout applies per call.
 
 Missing required values, unsupported types, undeclared supplied names and invalid
 files produce **ERROR**, identifying the rule and parameter. Parameter errors block success even for a review with `blocking = false`. Disabled rules do not resolve parameter values or
@@ -400,8 +399,7 @@ Adapter settings may be supplied in `[parameters]` in a provider definition and
 nested tables and arrays replace the entire value at that key. Settings are
 JSON-compatible TOML values, with no provider-specific validation in Please.
 This is separate from typed Rule parameters, which adapters receive as `rule_parameters`.
-Reviews batch only when their provider reference, resolved Rule parameter
-environment, input source and `include_diff` agree. Every review carries its own merged settings.
+Every review carries its own merged settings.
 
 Runtime requirements are checked only for selected reviews, after deterministic
 checks and immediately before invocation. Plans do not execute adapters or check
@@ -437,7 +435,7 @@ and PASS only with supporting file paths and line numbers.
 
 The Markdown contains instructions only, with no frontmatter or repeated metadata.
 Prompts resolve exclusively inside their review directory. Reviews evaluate the
-consumer through the existing shared provider call, after deterministic checks.
+consumer through the adapter, one call per review, after deterministic checks.
 
 | Field | Required / default | Meaning |
 | --- | --- | --- |
@@ -446,7 +444,7 @@ consumer through the existing shared provider call, after deterministic checks.
 | `review.parameters` | Optional; `{}` | Structured adapter settings overriding provider keys. |
 | `review.trigger` | Optional; `null` (omitted in TOML) | Select this review only for matching changed files. |
 | `review.trigger.changed_files` | Required | 1–64 repository-relative patterns, each at most 1024 UTF-8 bytes; any match selects the review. |
-| `review.include_diff` | Optional; `true` | Include the Git orientation diff in the prompt; a change set above 32 KiB ends the review as ERROR before any adapter call instead of being truncated, so use smaller commits or `false`. Independent of file triggers and context. Different settings use separate provider batches. |
+| `review.include_diff` | Optional; `true` | Include the Git orientation diff in the prompt; a change set above 32 KiB ends the review as ERROR before any adapter call instead of being truncated, so use smaller commits or `false`. Independent of file triggers and context. |
 | `review.prompt` | Required | Nonblank UTF-8 `.md` filename in the review directory. |
 | `review.files` | Optional; `[]` | Up to 64 unique existing consumer-relative source files; exact paths, not globs. Starting points, not an evidence boundary. |
 | `review.context` | Optional; `[]` | Up to 32 document selections as `[[review.context]]`. |
@@ -468,8 +466,8 @@ prompt = "prompt.md"
 
 Configure `commit-quality` as an ordinary named executable adapter. The product
 supplies no model or provider. Header reviews always omit the diff and reject
-`files`, `context` and file-change triggers. They run after deterministic checks,
-in separate adapter batches from worktree reviews. Only the first line of Git's
+`files`, `context` and file-change triggers. They run after deterministic checks.
+Only the first line of Git's
 message file is evidence: 1–4096 UTF-8 bytes excluding LF/CRLF, without control
 characters. The body, source files, file manifest and HEAD are not sent to their
 adapter. See the [adapter protocol](adapter-protocol.md) for header findings.

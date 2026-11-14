@@ -56,8 +56,8 @@ stay local.
 Progress appears on stderr: each rule shows its display name (optional `name` in
 `rule.toml`, default the rule ID), then its result and duration. `--progress=auto`
 redraws in an interactive terminal and appends plain logs in CI, with `TERM=dumb` or
-with redirected stderr; `plain` and `tty` select a mode explicitly. Reviews sharing a
-provider reference and parameter environment share one provider call. A final line
+with redirected stderr; `plain` and `tty` select a mode explicitly. Each review is one
+provider call. A final line
 summarizes status, counts and duration, for example
 `FAIL · 3 rules · 1 failed · 1 not executed · 2.0 s`. Colors follow `NO_COLOR`,
 `--no-color` and each stream's terminal state.

@@ -312,7 +312,7 @@ fn review(root: &Path, id: &str, parameter: &str) {
     );
 }
 #[test]
-fn reviews_validate_and_batch_by_resolved_environment() {
+fn reviews_validate_and_call_by_resolved_environment() {
     let root = project();
     for (id, value) in [("a", "first"), ("b", "second"), ("c", "first")] {
         review(
@@ -329,7 +329,7 @@ fn reviews_validate_and_batch_by_resolved_environment() {
             .unwrap()
             .plan
             .planned_model_calls,
-        2
+        3
     );
     let provider = Reviews {
         calls: Mutex::new(vec![]),
@@ -344,9 +344,10 @@ fn reviews_validate_and_batch_by_resolved_environment() {
     .unwrap();
     assert_eq!(report.overall, Status::Pass);
     let calls = provider.calls.lock().unwrap();
-    assert_eq!(calls.len(), 2);
+    assert_eq!(calls.len(), 3);
     assert_eq!(calls[0]["label"], "first");
     assert_eq!(calls[1]["label"], "second");
+    assert_eq!(calls[2]["label"], "first");
     assert_eq!(
         calls[0]["file"],
         root.path()
@@ -380,7 +381,7 @@ fn reviews_validate_and_batch_by_resolved_environment() {
 }
 
 #[test]
-fn provider_subprocess_receives_only_its_batch_parameters_and_clears_inherited_values() {
+fn provider_subprocess_receives_only_its_call_parameters_and_clears_inherited_values() {
     use std::os::unix::fs::PermissionsExt;
     let root = project();
     review(

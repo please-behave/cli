@@ -403,25 +403,8 @@ fn real_terminal_finishes_with_one_visible_row_per_check() {
 }
 
 #[test]
-fn large_review_batches_use_bounded_output_without_rewriting_scrollback() {
+fn large_review_runs_use_bounded_output_without_rewriting_scrollback() {
     let mut renderer = terminal::ProgressRenderer::new(true, false, 80, 10);
-    let batch = renderer.render(&Progress::ReviewBatch {
-        count: 20,
-        calls: 1,
-        timeout_seconds: 180,
-    });
-    assert_eq!(batch, "Reviews: 20 · 1 provider call\n");
-    assert_eq!(
-        terminal::render_progress(
-            &Progress::ReviewBatch {
-                count: 20,
-                calls: 2,
-                timeout_seconds: 180,
-            },
-            false,
-        ),
-        "Reviews: 20 · 2 provider calls\n"
-    );
     let row = renderer.render(&Progress::RuleStarted {
         number: 1,
         total: 20,

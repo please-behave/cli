@@ -11,8 +11,8 @@ scope:
     Collects bounded, deduplicated requirements excerpts with their original
     line numbers.
   - >-
-    Batches reviews into adapter calls and runs them through the configured
-    adapter, honoring fail-fast between batches.
+    Runs each review as its own adapter call through the configured adapter,
+    honoring fail-fast between calls.
   - >-
     Defines the review result contract and validates structured verdicts and
     their evidence.
@@ -58,6 +58,7 @@ requirements:
   - REQ-0117
   - REQ-0118
   - REQ-0121
+  - REQ-0125
   - REQ-0127
   - REQ-0128
   - REQ-0129

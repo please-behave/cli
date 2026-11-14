@@ -117,7 +117,7 @@ impl Provider for Recording {
     }
 }
 #[test]
-fn batching_and_saved_reports_keep_provider_and_parameter_boundaries() {
+fn calls_and_saved_reports_keep_provider_and_parameter_boundaries() {
     let root = project();
     provider(root.path(), ".please", "first", "first-model");
     provider(root.path(), ".please", "second", "second-model");
@@ -141,7 +141,7 @@ fn batching_and_saved_reports_keep_provider_and_parameter_boundaries() {
             .unwrap()
             .plan
             .planned_model_calls,
-        4
+        6
     );
     let provider = Recording(Mutex::new(vec![]));
     let result = please::verify_project_at(
@@ -154,13 +154,15 @@ fn batching_and_saved_reports_keep_provider_and_parameter_boundaries() {
     .unwrap();
     assert_eq!(result.overall, Status::Pass);
     let calls = provider.0.lock().unwrap();
-    assert_eq!(calls.len(), 4);
+    assert_eq!(calls.len(), 6);
+    assert!(calls.iter().all(|(_, ids)| ids.len() == 1));
     assert!(
         calls
             .iter()
-            .any(|(m, ids)| m == "first-model" && ids == &["a", "b"])
+            .any(|(m, ids)| m == "first-model" && ids == &["a"])
     );
-    assert!(calls.iter().any(|(_, ids)| ids == &["d", "e"]));
+    assert!(calls.iter().any(|(_, ids)| ids == &["d"]));
+    assert!(calls.iter().any(|(_, ids)| ids == &["e"]));
     let saved = report::read(root.path()).unwrap();
     assert_eq!(saved.plan.scheduled[2].provider.as_deref(), Some("second"));
     assert_eq!(
@@ -250,7 +252,7 @@ fn imported_providers_resolve_across_sets_offline_and_reconcile_atomically() {
         .overall,
         Status::Pass
     );
-    assert_eq!(recorder.0.lock().unwrap().len(), 1);
+    assert_eq!(recorder.0.lock().unwrap().len(), 2);
     // Same immutable definition may be imported repeatedly without a conflict.
     imports(
         root.path(),
