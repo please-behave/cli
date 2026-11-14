@@ -71,7 +71,6 @@ fn parse_with_message(
             verdict.findings.len() <= crate::limits::MAX_FINDINGS,
             "too many findings"
         );
-        let mut grounded = false;
         for finding in &verdict.findings {
             ensure!(
                 !finding.message.trim().is_empty()
@@ -93,7 +92,6 @@ fn parse_with_message(
                         (line as usize) <= text.lines().count(),
                         "evidence line beyond file: {path}:{line}"
                     );
-                    grounded = true;
                 }
             } else if let Some(line) = finding.line {
                 // Without a path, the line cites the commit message.
@@ -101,13 +99,8 @@ fn parse_with_message(
                     message_lines.is_some_and(|count| (line as usize) <= count),
                     "line requires evidence path or a commit message line"
                 );
-                grounded = true;
             }
         }
-        ensure!(
-            verdict.status == Status::Error || grounded,
-            "PASS/FAIL require at least one evidence path and line"
-        );
         let mut item = Item::simple(&verdict.id, "review", verdict.status, verdict.reason);
         item.blocking = active.iter().find(|r| r.id == verdict.id).unwrap().blocking;
         item.explanation = verdict.explanation;

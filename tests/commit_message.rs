@@ -117,7 +117,7 @@ if lines:
 else:
     finding = {'path': 'private-source', 'line': 1, 'message': 'File evaluated'}
 status = mode if mode in ['PASS', 'FAIL', 'ERROR'] else 'PASS'
-print(json.dumps({'protocol_version': 2, 'reason': 'Message evaluated', 'findings': [] if status == 'ERROR' or mode == 'ungrounded' else [finding]}))
+print(json.dumps({'protocol_version': 2, 'reason': 'Message evaluated', 'findings': [] if status == 'ERROR' else [finding]}))
 sys.exit({'PASS': 0, 'FAIL': 1}.get(status, 2))
 "#,
         );
@@ -195,7 +195,6 @@ fn commit_message_hook_and_adapter_contract() {
         ("ERROR", Status::Error),
         ("malformed", Status::Error),
         ("bad-line", Status::Error),
-        ("ungrounded", Status::Error),
         ("change", Status::Error),
     ] {
         support::write(&f.root, ".git/mode", mode);

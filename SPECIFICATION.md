@@ -231,7 +231,6 @@ timeout, a failure to start or a missing or invalid response at exit 0 or 1 is E
 Responses require protocol_version = 2, a one-line reason, findings and an optional
 longer explanation; they carry neither a status nor a review ID. Optional usage
 contains common token counters; absent usage remains unavailable.
-PASS/FAIL require evidence: an existing manifest path with a valid line number or, at commit-msg, a line of the commit message.
 Unsupported versions, unknown fields, malformed, oversized or invalid
 responses produce ERROR. The standard output and error output of an adapter call that ends as ERROR are retained unmasked within the capture bounds and shown by `please status --details`.
 The shared process runner bounds output, drains pipes and terminates process
@@ -608,7 +607,7 @@ Public documentation explains supported behavior; proposals remain in the roadma
 | CHK-001 | `tests/configuration.rs::command_representations_execute_equivalently` |
 | REV-001 | `tests/cli_providers.rs::stdin_results_and_provider_isolation` |
 | PREP-001 | `tests/configuration.rs::prepared_input_is_shared_without_rereading_resources` |
-| OUT-001 | `tests/review_contract.rs::review_contract_enforces_boundaries_and_semantic_evidence_locally` |
+| OUT-001 | `tests/review_contract.rs::review_contract_enforces_boundaries_and_cited_evidence_locally` |
 | INP-001 | `tests/acceptance.rs::changing_files_during_checks_blocks_pass` |
 | RPT-001 | `tests/configuration.rs::saved_reports_reject_inconsistent_metadata` |
 | CTX-001 | `tests/context.rs::push_updates_describe_create_update_delete_and_unpushed_heads` |

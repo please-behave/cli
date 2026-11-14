@@ -78,7 +78,7 @@ fn schema_and_wire_types_cover_the_same_fields() {
     );
 }
 #[test]
-fn review_contract_enforces_boundaries_and_semantic_evidence_locally() {
+fn review_contract_enforces_boundaries_and_cited_evidence_locally() {
     let root = tempfile::tempdir().unwrap();
     assert!(
         support::command("git")
@@ -95,6 +95,15 @@ fn review_contract_enforces_boundaries_and_semantic_evidence_locally() {
     let active = [&project.reviews[0]];
     let valid = json!({"reviews":[{"id":active[0].id, "status":"PASS", "reason":"é".repeat(MAX_SUMMARY_CHARS), "explanation":"é".repeat(MAX_EXPLANATION_BYTES / 2), "findings":[{"message":"é".repeat(MAX_FINDING_MESSAGE_BYTES / 2), "path":".please/README.md", "line":1}]}]});
     assert!(reviews::parse(&project, &active, &snapshot, &valid.to_string()).is_ok());
+    for status in ["PASS", "FAIL"] {
+        let mut bare = valid.clone();
+        bare["reviews"][0]["status"] = status.into();
+        bare["reviews"][0]["findings"] = json!([]);
+        assert!(
+            reviews::parse(&project, &active, &snapshot, &bare.to_string()).is_ok(),
+            "rejected {status} without findings"
+        );
+    }
     for case in [
         "long-summary",
         "multiline",

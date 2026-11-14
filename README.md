@@ -251,7 +251,7 @@ output is saved instead of flooding the terminal.
 
 | Rule result | Meaning |
 | --- | --- |
-| `PASS` | The check exited successfully, or the AI found the review criterion satisfied with evidence. |
+| `PASS` | The check exited successfully, or the AI found the review criterion satisfied. |
 | `FAIL` | The check failed, or the AI found a concrete violation of the criterion. |
 | `ERROR` | Verification could not be completed, for example because of a timeout, missing executable, an adapter exit status other than 0 or 1, or invalid AI output. A review that cannot establish PASS is a FAIL. |
 | `NOT_RUN` | A rule was not started because a prerequisite did not pass, the check phase failed, or fail-fast stopped scheduling. The reason explains why. |

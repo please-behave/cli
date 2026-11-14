@@ -87,7 +87,7 @@ protecting the project from an adapter's actions is the responsibility of the
 adapter and its provider. A conclusion that cannot be established as PASS,
 including one resting on insufficient or uncertain evidence, is FAIL; ERROR is
 reserved for technical failures. Please cannot enforce this distinction; it is
-part of the contract. PASS and FAIL require grounded evidence; Please validates paths and line numbers locally and
+part of the contract. Please validates cited paths and line numbers locally and
 checks snapshot integrity before and after execution.
 
 ## Parameters
@@ -146,8 +146,7 @@ and the call belongs to exactly one review. The reason is a nonempty single line
 at most 120 characters. The optional explanation is a nonblank string of at most 8000
 UTF-8 bytes that may span lines; it is shown by `please status --details`. Findings contain message (1–2000 UTF-8 bytes), path and
 line, with at most 20 findings per review. Path and line must be present, although
-both can be null. For worktree evidence, a line requires a path. Worktree
-PASS/FAIL need at least one path in the verified manifest and a positive line within that file, or at commit-msg a line of the commit message.
+both can be null. For worktree evidence, a line requires a path. A cited path must be in the verified manifest and a cited line positive and within that file; at commit-msg a line may cite the commit message. Findings are optional for PASS and FAIL.
 Wrong types, unknown fields and invalid evidence invalidate the response, which ends the call as ERROR. Provider-specific envelopes and Markdown fences are
 not accepted; adapters must translate them.
 
@@ -158,8 +157,7 @@ The prompt contains the message with the review's other input, and the review de
 which part counts.
 
 A finding with `path: null` and a `line` cites that line of the commit message. It is
-valid only when `input.commit_message` is present and contains the line, and it grounds
-PASS/FAIL like a file path and line.
+valid only when `input.commit_message` is present and contains the line.
 
 Usage is optional or null and never changes the verdict. It may contain input_tokens,
 cached_input_tokens, output_tokens, reasoning_output_tokens and cache_write_input_tokens.

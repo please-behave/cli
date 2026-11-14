@@ -527,8 +527,8 @@ reviews still wait for the global deterministic-check gate. Snapshot and context
 limits remain unchanged.
 
 The adapter's exit status is the verdict: 0 is PASS and 1 is FAIL, each only with a
-valid response. PASS/FAIL need an existing in-snapshot file and positive line
-reference for worktree reviews. At commit-msg, `path = null` with a `line` cites that
+valid response. A cited file must exist in the snapshot and a cited line be positive
+for worktree reviews. At commit-msg, `path = null` with a `line` cites that
 line of the commit message. Any other exit status, malformed JSON, invalid evidence
 and provider failures produce ERROR. Summaries are single lines up to 120 characters;
 an optional longer explanation has up to 8000 bytes; at most 20 findings per review,

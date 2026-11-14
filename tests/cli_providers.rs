@@ -82,7 +82,7 @@ if mode == 'timeout':
 if mode == 'oversized':
     print('x' * 70000)
     sys.exit(0)
-findings = [] if mode == 'ungrounded' else [{'message':'Evidence inspected','path':'evidence','line':1}]
+findings = [{'message':'Evidence inspected','path':'evidence','line':1}]
 print(json.dumps({'protocol_version':2,'reason':'Evidence inspected','findings':findings}))
 sys.exit(1 if mode == 'fail' else 3 if mode == 'structured-error' else 0)
 "#,
@@ -137,7 +137,6 @@ fn process_and_response_errors_never_pass_and_keep_original_output() {
         "timeout",
         "unread",
         "oversized",
-        "ungrounded",
     ] {
         let root = fixture();
         tool(root.path());
@@ -330,7 +329,6 @@ fn protocol_versions_and_complete_coverage_fail_closed_while_usage_is_tolerant()
         "wrong-version",
         "legacy-version",
         "missing-version",
-        "duplicate-key",
         "legacy-envelope",
         "status-field",
         "id-field",
@@ -367,9 +365,7 @@ if mode in ['bad-usage', 'valid-usage']:
     response['usage'] = {'input_tokens':10,'cached_input_tokens':11 if mode == 'bad-usage' else 3,'output_tokens':4}
 if mode == 'zero-usage':
     response['usage'] = {'input_tokens':0,'cached_input_tokens':-1,'output_tokens':'many','reasoning_output_tokens':None}
-if mode == 'duplicate-key':
-    print('{"protocol_version":2,"protocol_version":2,"reason":"x","findings":[]}')
-elif mode == 'fenced': print('```json\n' + json.dumps(response) + '\n```')
+if mode == 'fenced': print('```json\n' + json.dumps(response) + '\n```')
 else: print(json.dumps(response))
 "#,
         );

@@ -549,9 +549,7 @@ fn every_review_gets_its_own_call_with_exact_coverage_pass_fail() {
     }
 }
 #[test]
-fn malformed_missing_extra_duplicate_ungrounded_provider_outputs_fail_closed() {
-    let mut no_path = verdict("product-consistency", "PASS");
-    no_path["findings"] = serde_json::json!([]);
+fn malformed_missing_extra_duplicate_provider_outputs_fail_closed() {
     let mut invalid_line = verdict("product-consistency", "PASS");
     invalid_line["findings"][0]["line"] = serde_json::json!(999999);
     let mut invalid_path = verdict("product-consistency", "PASS");
@@ -567,7 +565,6 @@ fn malformed_missing_extra_duplicate_ungrounded_provider_outputs_fail_closed() {
         serde_json::json!({"reviews":[verdict("product-consistency", "PASS"), verdict("product-consistency", "PASS")]}).to_string(),
         serde_json::json!({"reviews":[verdict("product-consistency", "NOT_RUN")]}).to_string(),
         serde_json::json!({"reviews":[verdict("product-consistency", "PASS")],"extra":true}).to_string(),
-        serde_json::json!({"reviews":[no_path]}).to_string(),
         serde_json::json!({"reviews":[invalid_line]}).to_string(),
         serde_json::json!({"reviews":[invalid_path]}).to_string(),
         serde_json::json!({"reviews":[missing_field]}).to_string(),
