@@ -254,14 +254,14 @@ pub fn compare(before: &Snapshot, after: &Snapshot, limit: usize) -> Changes {
         line_counts: None,
     }
 }
-pub fn bounded_diff(root: &Path, has_head: bool) -> Result<(String, bool)> {
+pub fn bounded_diff(root: &Path, has_head: bool) -> Result<String> {
     bounded_diff_for_paths(root, has_head, None)
 }
 pub fn bounded_diff_for_paths(
     root: &Path,
     has_head: bool,
     paths: Option<&[String]>,
-) -> Result<(String, bool)> {
+) -> Result<String> {
     let mut cmd = git(root);
     if let Some(paths) = paths {
         ensure!(!paths.is_empty(), "focused diff requires entry files");
@@ -284,14 +284,11 @@ pub fn bounded_diff_for_paths(
         out.status.success() && !out.timed_out,
         "Git diff failed or timed out"
     );
-    let mut text = out.stdout.text;
-    let truncated = out.stdout.truncated || text.len() > MAX_DIFF_BYTES;
-    let mut end = text.len().min(MAX_DIFF_BYTES);
-    while !text.is_char_boundary(end) {
-        end -= 1;
-    }
-    text.truncate(end);
-    Ok((text, truncated))
+    ensure!(
+        !out.stdout.truncated && out.stdout.text.len() <= MAX_DIFF_BYTES,
+        "change set exceeds {MAX_DIFF_BYTES} bytes; commit smaller changes or set include_diff = false"
+    );
+    Ok(out.stdout.text)
 }
 
 /// Git status is orientation only; never used for since-verification comparisons.

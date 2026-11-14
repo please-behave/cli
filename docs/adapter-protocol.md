@@ -56,7 +56,7 @@ ordinary enforcement rules regardless of which adapter is selected.
   "head": null,
   "input": {
     "excerpts": [], "focused_paths": null, "manifest": ["README.md"],
-    "diff": "", "diff_truncated": false
+    "diff": ""
   },
   "context_file": "/path/to/context.json",
   "rule_parameters": {},
@@ -75,7 +75,7 @@ IDs; the abbreviated schema above illustrates its position. It describes the
 `reviews` document, without the adapter envelope's protocol_version or usage.
 `head` is the current commit or null for an unborn repository. Excerpts contain
 path, start_line, end_line and text with original line numbers. Manifest paths
-and diff are bounded orientation hints, not exhaustive evidence. `focused_paths`
+and diff are orientation hints, not exhaustive evidence. `focused_paths`
 is null for project-wide orientation or the selected entry/context paths.
 The prompt contains the common review instructions, criteria, excerpts and
 orientation. An adapter can use that prompt directly or construct a request from
@@ -154,7 +154,7 @@ not accepted; adapters must translate them.
 Commit-header reviews use the same versioned envelope, with a source-specific
 response schema. Each review has `input: "commit-header"`; `input.commit_header`
 is the captured first line as a JSON string. The remaining input fields contain
-empty excerpts, manifest, focused paths and diff, with `diff_truncated: false`;
+empty excerpts, manifest, focused paths and diff;
 `head` is null. The prompt contains the configured criteria and header, without
 repository orientation. Adapters must not add repository or commit-body context.
 Worktree and header reviews never share a batch. Worktree review metadata uses

@@ -686,9 +686,8 @@ pub fn render_plan(plan: &crate::planner::Plan, color: bool) -> String {
             config.timeout_seconds
         ));
     }
-    text.push_str(&format!("Adapter availability not checked · Planned model calls: {}\nContext: {} / {} bytes · Diff: {} bytes{}\n",
-        plan.planned_model_calls, plan.context.selected_bytes, plan.context.byte_limit, plan.context.orientation_diff_bytes,
-        if plan.context.orientation_diff_truncated { " (truncated; additional evidence must be read)" } else { "" }));
+    text.push_str(&format!("Adapter availability not checked · Planned model calls: {}\nContext: {} / {} bytes · Diff: {} bytes\n",
+        plan.planned_model_calls, plan.context.selected_bytes, plan.context.byte_limit, plan.context.orientation_diff_bytes));
     for rule in &plan.scheduled {
         if let Some(origin) = &rule.provider_origin {
             text.push_str(&format!(

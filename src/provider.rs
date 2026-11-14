@@ -328,8 +328,8 @@ pub fn prompt(request: &Request<'_>) -> Result<String> {
     }
     let orientation = if request.reviews.iter().any(|r| r.include_diff) {
         format!(
-            "Git diff for orientation only; untracked content is not included. Truncated: {}.\n<diff>\n{}\n</diff>\n",
-            input.diff_truncated, input.diff
+            "Git diff for orientation only; untracked content is not included.\n<diff>\n{}\n</diff>\n",
+            input.diff
         )
     } else {
         String::new()

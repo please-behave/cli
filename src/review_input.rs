@@ -22,7 +22,6 @@ pub struct PreparedReviewInput {
     pub focused_paths: Option<Vec<String>>,
     pub manifest: Vec<String>,
     pub diff: String,
-    pub diff_truncated: bool,
 }
 impl PreparedReviewInput {
     pub fn prepare(project: &Project, reviews: &[&Review], snapshot: &Snapshot) -> Result<Self> {
@@ -84,14 +83,14 @@ impl PreparedReviewInput {
             .take(MAX_MANIFEST_HINTS)
             .cloned()
             .collect();
-        let (diff, diff_truncated) = if reviews.iter().any(|r| r.include_diff) {
+        let diff = if reviews.iter().any(|r| r.include_diff) {
             git_snapshot::bounded_diff_for_paths(
                 &project.root,
                 snapshot.head.is_some(),
                 focused_paths.as_deref(),
             )?
         } else {
-            (String::new(), false)
+            String::new()
         };
         Ok(Self {
             commit_header,
@@ -100,7 +99,6 @@ impl PreparedReviewInput {
             focused_paths,
             manifest,
             diff,
-            diff_truncated,
         })
     }
 
@@ -137,7 +135,6 @@ impl PreparedReviewInput {
             } else {
                 self.diff.clone()
             },
-            diff_truncated: !header && self.diff_truncated,
         }
     }
 

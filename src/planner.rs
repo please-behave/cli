@@ -78,7 +78,6 @@ pub struct ContextPlan {
     pub instruction_byte_limit: usize,
     pub manifest_hint_limit: usize,
     pub orientation_diff_bytes: usize,
-    pub orientation_diff_truncated: bool,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -319,7 +318,6 @@ pub fn build_with_context(
         instruction_byte_limit: crate::limits::MAX_TOTAL_INSTRUCTION_BYTES,
         manifest_hint_limit: crate::limits::MAX_MANIFEST_HINTS,
         orientation_diff_bytes: 0,
-        orientation_diff_truncated: false,
     };
     for section in &mut context.selections {
         section.headings.sort();
@@ -349,7 +347,6 @@ pub fn build_with_context(
                     })
                     .collect();
                 context.orientation_diff_bytes = input.diff.len();
-                context.orientation_diff_truncated = input.diff_truncated;
                 review_input = Some(input);
             }
             Err(error) => blocking_reasons.push(format!("Cannot prepare review input: {error:#}")),

@@ -445,7 +445,7 @@ consumer through the existing shared provider call, after deterministic checks.
 | `review.parameters` | Optional; `{}` | Structured adapter settings overriding provider keys. |
 | `review.trigger` | Optional; `null` (omitted in TOML) | Select this review only for matching changed files. |
 | `review.trigger.changed_files` | Required | 1–64 repository-relative patterns, each at most 1024 UTF-8 bytes; any match selects the review. |
-| `review.include_diff` | Optional; `true` | Include the Git orientation diff in the prompt; independent of file triggers and context. Different settings use separate provider batches. |
+| `review.include_diff` | Optional; `true` | Include the Git orientation diff in the prompt; a change set above 32 KiB ends the review as ERROR before any adapter call instead of being truncated, so use smaller commits or `false`. Independent of file triggers and context. Different settings use separate provider batches. |
 | `review.prompt` | Required | Nonblank UTF-8 `.md` filename in the review directory. |
 | `review.files` | Optional; `[]` | Up to 64 unique existing consumer-relative source files; exact paths, not globs. Starting points, not an evidence boundary. |
 | `review.context` | Optional; `[]` | Up to 32 document selections as `[[review.context]]`. |

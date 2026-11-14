@@ -120,7 +120,7 @@ assert request['input']['excerpts'] == []
 assert request['input']['manifest'] == []
 assert request['input']['focused_paths'] == []
 assert request['input']['diff'] == ''
-assert request['input']['diff_truncated'] is False
+assert 'diff_truncated' not in request['input']
 assert 'SOURCE MUST NEVER REACH' not in json.dumps(request)
 assert 'BODY MUST NEVER REACH' not in json.dumps(request)
 assert len(request['reviews']) == 1

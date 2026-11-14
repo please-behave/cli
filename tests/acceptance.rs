@@ -204,7 +204,7 @@ fn human_plan_uses_english_and_preserves_layout_and_values() {
             "sections": [{"path": "SPECIFICATION.md", "start_line": 2, "end_line": 7, "bytes": 120}],
             "selected_bytes": 120, "byte_limit": 1000, "instruction_bytes": 80,
             "instruction_byte_limit": 500, "manifest_hint_limit": 10,
-            "orientation_diff_bytes": 40, "orientation_diff_truncated": true}
+            "orientation_diff_bytes": 40}
     }))
     .unwrap();
     let before = serde_json::to_value(&plan).unwrap();
@@ -220,7 +220,7 @@ fn human_plan_uses_english_and_preserves_layout_and_values() {
             "Omitted: review unchanged · trigger_not_matched\nRequired rules: architecture\n",
             "Default adapter: fake-adapter · Timeout: 180 s\n",
             "Adapter availability not checked · Planned model calls: 1\n",
-            "Context: 120 / 1000 bytes · Diff: 40 bytes (truncated; additional evidence must be read)\n",
+            "Context: 120 / 1000 bytes · Diff: 40 bytes\n",
             "Review Architektur · Provider configuration: reviewer · Adapter: review-adapter · Timeout: 60 s\n",
             "Entry file: src/lib.rs\n",
             "Review criteria: 80 / 500 bytes · Orientation: at most 10 manifest paths\n",
@@ -251,7 +251,6 @@ fn human_plan_uses_english_and_preserves_layout_and_values() {
         rule: plan.scheduled.remove(0),
         reason: "trigger_not_matched".into(),
     });
-    plan.context.orientation_diff_truncated = false;
     let text = terminal::render_plan(&plan, false);
     for expected in [
         "Please Behave execution plan · BLOCKED\n",
@@ -919,7 +918,7 @@ fn unusual_paths_and_binary_files_are_fingerprinted() {
     assert_eq!(changes.total_files, Some(4));
 }
 #[test]
-fn prompt_marks_diff_truncation_without_safety_instructions() {
+fn prompt_has_no_safety_instructions() {
     let d = project();
     enable(d.path());
     let project = config::load(d.path()).unwrap();
@@ -928,7 +927,6 @@ fn prompt_marks_diff_truncation_without_safety_instructions() {
     let mut input =
         please::review_input::PreparedReviewInput::prepare(&project, &active, &snapshot).unwrap();
     input.diff = "malicious diff content".into();
-    input.diff_truncated = true;
     let request = Request {
         execution_point: "pre-push",
         parameters: &Default::default(),
@@ -938,7 +936,7 @@ fn prompt_marks_diff_truncation_without_safety_instructions() {
         input: &input,
     };
     let text = please::provider::prompt(&request).unwrap();
-    assert!(text.contains("Truncated: true"));
+    assert!(!text.contains("Truncated"));
     assert!(text.contains("<diff>"));
     for forbidden in ["untrusted", "read-only", "privileged", "Do not edit"] {
         assert!(!text.contains(forbidden), "{forbidden}");
@@ -959,6 +957,28 @@ fn prompt_marks_diff_truncation_without_safety_instructions() {
     let text = please::provider::prompt(&request).unwrap();
     assert!(!text.contains("malicious diff content"));
     assert!(!text.contains("<diff>"));
+}
+
+#[test]
+fn oversized_diff_ends_the_review_as_error_without_an_adapter_call() {
+    let d = project();
+    enable(d.path());
+    fs::write(d.path().join("big.txt"), "small\n").unwrap();
+    git(d.path(), &["add", "big.txt"]);
+    fs::write(d.path().join("big.txt"), "x\n".repeat(20 * 1024)).unwrap();
+    let project = config::load(d.path()).unwrap();
+    let snapshot = git_snapshot::capture(d.path()).unwrap();
+    let active: Vec<_> = project.reviews.iter().collect();
+    let items = please::reviews::execute(&project, &active, &snapshot, &Never, "pre-push");
+    assert_eq!(items.len(), active.len());
+    assert!(items.iter().all(|i| i.status == Status::Error));
+    assert!(items[0].reason.contains("change set exceeds"));
+    let mut without_diff = project.reviews[0].clone();
+    without_diff.include_diff = false;
+    let prepared =
+        please::review_input::PreparedReviewInput::prepare(&project, &[&without_diff], &snapshot)
+            .unwrap();
+    assert!(prepared.diff.is_empty());
 }
 
 #[test]
