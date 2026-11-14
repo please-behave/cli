@@ -185,8 +185,8 @@ Initialization supplies no provider configuration or adapter. Configure an adapt
 before enabling reviews.
 ## HDR-001: Commit-header reviews
 
-The [requirements](knowledge/requirements/README.md) REQ-0105 to REQ-0114 specify commit-header reviews. They replace the text of
-this section. The [components](knowledge/components/README.md) name the
+The [requirements](knowledge/requirements/README.md) REQ-0099 and REQ-0130 to REQ-0132 specify what a review receives and how its verdict is reported; there is no separate commit-header mode.
+They replace the text of this section. The [components](knowledge/components/README.md) name the
 requirements they implement.
 
 
@@ -308,7 +308,7 @@ within their own directories; shared Check paths follow CHK-001.
 
 ## REV-001: Reviews and provider isolation
 
-The [requirements](knowledge/requirements/README.md) REQ-0092 to REQ-0104 specify reviews, adapter isolation and review enforcement. They replace the text of
+The [requirements](knowledge/requirements/README.md) REQ-0092 to REQ-0104 and REQ-0124 to REQ-0129 specify reviews, adapter isolation, review input and review enforcement. They replace the text of
 this section. The [components](knowledge/components/README.md) name the
 requirements they implement.
 
@@ -357,7 +357,7 @@ and provider settings, not a second interpretation of evidence selection.
 
 ## OUT-001: Structured review outcomes
 
-The [requirements](knowledge/requirements/README.md) REQ-0115 to REQ-0123 specify structured review outcomes and token usage. They replace the text of
+The [requirements](knowledge/requirements/README.md) REQ-0116 to REQ-0123 and REQ-0130 to REQ-0132 specify structured review outcomes and token usage. They replace the text of
 this section. The [components](knowledge/components/README.md) name the
 requirements they implement.
 
