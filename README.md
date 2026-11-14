@@ -281,7 +281,8 @@ prove that the staged or pushed commit contains the same content.
 
 For reviews, available input, cached-input and output token counts are recorded
 once for the shared provider call. Total tokens are input plus output; cached
-input is a subset of input. Missing usage stays unavailable. Please Behave does not
+input is a subset of input. Only positive counters count as reported; a counter
+missing from any adapter call stays unavailable and never changes a verdict. Please Behave does not
 calculate money, remaining account quota or enforce a total token budget.
 
 | Exit code | Meaning |
@@ -428,7 +429,7 @@ These limits are built in, not additional configuration fields:
 | AI response | 64 KiB adapter stdout; summaries and findings have the limits described under reviews. |
 | Scheduling history | 1 MiB local cache; oversized or invalid input uses defaults, and oversized updates are not saved. |
 | Saved report input | 128 MiB maximum when reading a saved report. |
-| Token usage | Available counters are summed across review batches. Optional reasoning/cache-write counters are subsets, not additions to the total. Missing telemetry remains unavailable. |
+| Token usage | Available counters are summed across review batches. Optional reasoning/cache-write counters are subsets, not additions to the total. A counter that any call does not report as a positive number remains unavailable. |
 
 Declared governance inputs include local configuration documents, rule prompts and
 entrypoints, review entry/context files, and existing local files named by check

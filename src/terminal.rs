@@ -821,13 +821,10 @@ pub fn render(report: &Report, color: bool) -> String {
     if let Some(usage) = report.provider_usage {
         text.push_str(&format!(
             "Adapter tokens: {} total · {} input ({} cached) · {} output\n",
-            usage
-                .total()
-                .map(|n| n.to_string())
-                .unwrap_or_else(|| "unknown".into()),
-            usage.input_tokens,
-            usage.cached_input_tokens,
-            usage.output_tokens
+            count(usage.total()),
+            count(usage.input_tokens),
+            count(usage.cached_input_tokens),
+            count(usage.output_tokens)
         ));
     } else if report
         .results
@@ -840,6 +837,9 @@ pub fn render(report: &Report, color: bool) -> String {
         text.push_str("Snapshot: UNKNOWN (details in report)\n");
     }
     text
+}
+fn count(value: Option<u64>) -> String {
+    value.map_or_else(|| "unavailable".into(), |n| n.to_string())
 }
 /// Render the saved report only; this never executes commands or invokes a provider.
 pub fn render_details(report: &Report, color: bool) -> String {
@@ -886,8 +886,8 @@ pub fn render_details(report: &Report, color: bool) -> String {
     if let Some(usage) = report.provider_usage {
         text.push_str(&format!(
             "Reasoning tokens (included in output): {} · Cache write tokens (included in input): {}\n",
-            usage.reasoning_output_tokens.map(|n| n.to_string()).unwrap_or_else(|| "unavailable".into()),
-            usage.cache_write_input_tokens.map(|n| n.to_string()).unwrap_or_else(|| "unavailable".into())
+            count(usage.reasoning_output_tokens),
+            count(usage.cache_write_input_tokens)
         ));
         text.push_str("Usage reported by adapters for the entire review call; not a billing or quota statement.\n");
     }

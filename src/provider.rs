@@ -174,7 +174,7 @@ fn requirements(
 struct AdapterResponse {
     protocol_version: u32,
     reviews: Vec<crate::review_contract::ReviewVerdict>,
-    usage: Option<TokenUsage>,
+    usage: Option<serde_json::Value>,
 }
 
 fn execute(request: &Request<'_>) -> Result<Response> {
@@ -289,25 +289,29 @@ fn interpret(output: &crate::process::Output, raw: &[u8]) -> Result<(String, Opt
         response.protocol_version == 1,
         "Unsupported adapter protocol version; expected 1"
     );
-    if let Some(usage) = response.usage {
-        ensure!(
-            usage.total().is_some()
-                && usage.cached_input_tokens <= usage.input_tokens
-                && usage
-                    .reasoning_output_tokens
-                    .is_none_or(|n| n <= usage.output_tokens)
-                && usage
-                    .cache_write_input_tokens
-                    .is_none_or(|n| n <= usage.input_tokens),
-            "Invalid adapter usage counters"
-        );
-    }
     Ok((
         serde_json::to_string(&crate::review_contract::ReviewResponse {
             reviews: response.reviews,
         })?,
-        response.usage,
+        response.usage.as_ref().map(reported_usage),
     ))
+}
+
+/// Only positive integers count as reported; anything else is not reported.
+fn reported_usage(usage: &serde_json::Value) -> TokenUsage {
+    let counter = |name: &str| {
+        usage
+            .get(name)
+            .and_then(serde_json::Value::as_u64)
+            .filter(|n| *n > 0)
+    };
+    TokenUsage {
+        input_tokens: counter("input_tokens"),
+        cached_input_tokens: counter("cached_input_tokens"),
+        output_tokens: counter("output_tokens"),
+        reasoning_output_tokens: counter("reasoning_output_tokens"),
+        cache_write_input_tokens: counter("cache_write_input_tokens"),
+    }
 }
 
 pub use crate::review_contract::schema;

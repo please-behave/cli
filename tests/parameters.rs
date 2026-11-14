@@ -440,7 +440,7 @@ print(json.dumps({"protocol_version": 1, "reviews": [{"id": identifier, "status"
     let saved = report::read(root.path()).unwrap();
     assert_eq!(saved.results.len(), 2);
     assert_eq!(saved.plan.planned_model_calls, 2);
-    assert_eq!(saved.provider_usage.unwrap().input_tokens, 20);
+    assert_eq!(saved.provider_usage.unwrap().input_tokens, Some(20));
     assert_eq!(saved.token_usage, Some(28));
 }
 

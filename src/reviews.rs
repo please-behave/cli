@@ -335,23 +335,17 @@ pub(crate) fn execute_prepared_observed(
 }
 
 fn combined_usage(usages: &[Option<TokenUsage>]) -> Option<TokenUsage> {
-    let mut total = usages.first().copied().flatten()?;
-    for usage in &usages[1..] {
-        let usage = (*usage)?;
-        total.input_tokens = total.input_tokens.checked_add(usage.input_tokens)?;
-        total.output_tokens = total.output_tokens.checked_add(usage.output_tokens)?;
-        total.cached_input_tokens = total
-            .cached_input_tokens
-            .checked_add(usage.cached_input_tokens)?;
-        total.reasoning_output_tokens = total
-            .reasoning_output_tokens
-            .zip(usage.reasoning_output_tokens)
-            .and_then(|(a, b)| a.checked_add(b));
-        total.cache_write_input_tokens = total
-            .cache_write_input_tokens
-            .zip(usage.cache_write_input_tokens)
-            .and_then(|(a, b)| a.checked_add(b));
-    }
-    total.total()?;
-    Some(total)
+    let sum = |counter: fn(&TokenUsage) -> Option<u64>| {
+        usages.iter().try_fold(0u64, |sum, usage| {
+            sum.checked_add(counter(usage.as_ref()?)?)
+        })
+    };
+    let total = TokenUsage {
+        input_tokens: sum(|u| u.input_tokens),
+        cached_input_tokens: sum(|u| u.cached_input_tokens),
+        output_tokens: sum(|u| u.output_tokens),
+        reasoning_output_tokens: sum(|u| u.reasoning_output_tokens),
+        cache_write_input_tokens: sum(|u| u.cache_write_input_tokens),
+    };
+    (!usages.is_empty() && !total.is_unavailable()).then_some(total)
 }

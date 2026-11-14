@@ -5,20 +5,28 @@ use std::{io::Write, path::Path};
 
 pub use crate::limits::MAX_SUMMARY_CHARS;
 
-/// Provider-reported counters summed across review invocations.
+/// Provider-reported counters summed across review invocations. A counter is
+/// `None` when any invocation did not report it as a positive number.
 /// Cache and reasoning counters are subsets, never added to the total again.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct TokenUsage {
-    pub input_tokens: u64,
-    pub cached_input_tokens: u64,
-    pub output_tokens: u64,
+    pub input_tokens: Option<u64>,
+    pub cached_input_tokens: Option<u64>,
+    pub output_tokens: Option<u64>,
     pub reasoning_output_tokens: Option<u64>,
     pub cache_write_input_tokens: Option<u64>,
 }
 impl TokenUsage {
     pub fn total(self) -> Option<u64> {
-        self.input_tokens.checked_add(self.output_tokens)
+        self.input_tokens?.checked_add(self.output_tokens?)
+    }
+    pub fn is_unavailable(self) -> bool {
+        self.input_tokens.is_none()
+            && self.cached_input_tokens.is_none()
+            && self.output_tokens.is_none()
+            && self.reasoning_output_tokens.is_none()
+            && self.cache_write_input_tokens.is_none()
     }
 }
 

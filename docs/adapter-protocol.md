@@ -177,12 +177,14 @@ message independently; the adapter receives no raw Git hook arguments or path.
 Older adapters may continue serving worktree reviews unchanged, but must support
 the supplied header schema before they can serve this new input kind.
 
-Usage is optional or null. It contains nonnegative integer input_tokens,
-cached_input_tokens and output_tokens plus optional nullable reasoning_output_tokens
-and cache_write_input_tokens. Cached and cache-write counters cannot exceed input;
-reasoning cannot exceed output. Subset counts are never added twice. Overflowing
-or inconsistent counters invalidate the response. Missing usage stays unavailable,
-never zero. Valid reported usage is retained even if verdict evidence is invalid.
+Usage is optional or null and never changes the verdict. It may contain input_tokens,
+cached_input_tokens, output_tokens, reasoning_output_tokens and cache_write_input_tokens.
+Only positive integers count as reported; zero, negative, null, missing or otherwise
+invalid values count as not reported. Cached, cache-write and reasoning counters are
+subsets and are never added twice, and no consistency between counters is validated.
+A summed counter is available only when every adapter call of a run reported it;
+otherwise it stays unavailable, never zero. Reported usage is retained even if verdict
+evidence is invalid.
 These counters are adapter claims, not billing or quota statements.
 
 ## Minimal adapter and migration

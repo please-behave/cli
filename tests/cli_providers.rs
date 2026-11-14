@@ -309,7 +309,7 @@ fn completed_fail_and_error_respect_review_blocking() {
 }
 
 #[test]
-fn protocol_versions_complete_coverage_and_usage_fail_closed() {
+fn protocol_versions_and_complete_coverage_fail_closed_while_usage_is_tolerant() {
     for mode in [
         "wrong-version",
         "missing-version",
@@ -318,6 +318,7 @@ fn protocol_versions_complete_coverage_and_usage_fail_closed() {
         "extra-review",
         "missing-path",
         "bad-usage",
+        "zero-usage",
         "fenced",
         "valid-usage",
     ] {
@@ -338,6 +339,8 @@ if mode == 'extra-review': response['reviews'].append(dict(r, id='unexpected'))
 if mode == 'missing-path': del r['findings'][0]['path']
 if mode in ['bad-usage', 'valid-usage']:
     response['usage'] = {'input_tokens':10,'cached_input_tokens':11 if mode == 'bad-usage' else 3,'output_tokens':4}
+if mode == 'zero-usage':
+    response['usage'] = {'input_tokens':0,'cached_input_tokens':-1,'output_tokens':'many','reasoning_output_tokens':None}
 if mode == 'duplicate-key':
     print('{"protocol_version":1,"protocol_version":1,"reviews":[]}')
 elif mode == 'fenced': print('```json\n' + json.dumps(response) + '\n```')
@@ -354,7 +357,7 @@ else: print(json.dumps(response))
         let result = execute(root.path());
         assert_eq!(
             result.overall,
-            if mode == "valid-usage" {
+            if matches!(mode, "valid-usage" | "bad-usage" | "zero-usage") {
                 Status::Pass
             } else {
                 Status::Error
@@ -362,6 +365,13 @@ else: print(json.dumps(response))
             "{mode}: {:?}",
             result.results
         );
+        if mode == "zero-usage" {
+            assert_eq!(result.token_usage, None);
+            assert_eq!(result.provider_usage, None);
+        }
+        if mode == "bad-usage" {
+            assert_eq!(result.token_usage, Some(14));
+        }
         if mode == "valid-usage" {
             assert_eq!(result.token_usage, Some(14));
             assert_eq!(
@@ -370,7 +380,7 @@ else: print(json.dumps(response))
                     .provider_usage
                     .unwrap()
                     .cached_input_tokens,
-                3
+                Some(3)
             );
         }
     }

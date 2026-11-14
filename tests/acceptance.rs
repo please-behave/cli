@@ -1472,8 +1472,8 @@ fn usage_is_recorded_once_for_bundled_reviews() {
             Response {
                 verdict: Ok(serde_json::json!({"reviews": request.reviews.iter().map(|r| verdict(&r.id, "PASS")).collect::<Vec<_>>()} ).to_string()),
                 usage: Some(TokenUsage {
-                    input_tokens: 1000, cached_input_tokens: 800,
-                    output_tokens: 200, reasoning_output_tokens: Some(50),
+                    input_tokens: Some(1000), cached_input_tokens: Some(800),
+                    output_tokens: Some(200), reasoning_output_tokens: Some(50),
                     cache_write_input_tokens: None,
                 }),
                 output: None,
@@ -1813,4 +1813,36 @@ fn yes_is_explicit_and_scoped_to_sync() {
         .render_help()
         .to_string();
     assert!(help.contains("--yes"));
+}
+
+#[test]
+fn a_counter_missing_from_any_call_stays_unavailable() {
+    use please::{provider::Response, report::TokenUsage};
+    struct Partial;
+    impl Provider for Partial {
+        fn review(&self, _: &Request<'_>) -> Result<String> {
+            panic!("the usage-aware entry point must be used")
+        }
+        fn review_with_usage(&self, request: &Request<'_>) -> Response {
+            Response {
+                verdict: Ok(serde_json::json!({"reviews": request.reviews.iter().map(|r| verdict(&r.id, "PASS")).collect::<Vec<_>>()} ).to_string()),
+                usage: Some(TokenUsage {
+                    input_tokens: Some(10), cached_input_tokens: None,
+                    output_tokens: Some(5), reasoning_output_tokens: None,
+                    cache_write_input_tokens: None,
+                }),
+                output: None,
+            }
+        }
+    }
+    let d = project();
+    enable(d.path());
+    let r = please::verify(d.path(), &Partial).unwrap();
+    assert_eq!(r.overall, Status::Pass);
+    assert_eq!(r.token_usage, Some(15));
+    let text = terminal::render(&r, false);
+    assert!(
+        text.contains("15 total · 10 input (unavailable cached) · 5 output"),
+        "{text}"
+    );
 }
