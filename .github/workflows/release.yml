@@ -17,7 +17,7 @@ jobs:
   plan:
     name: Plan
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     permissions:
       contents: write # semantic-release verifies push access even during a dry run
@@ -46,7 +46,7 @@ jobs:
     name: Release Readiness
     needs: plan
     if: needs.plan.outputs.release == 'true'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 90
     permissions:
       contents: read
@@ -149,7 +149,7 @@ jobs:
       needs.plan.outputs.release == 'true' &&
       needs.release-readiness.result == 'success' &&
       needs.release-candidate.result == 'success'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     permissions:
       contents: write
