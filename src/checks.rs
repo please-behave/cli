@@ -245,12 +245,13 @@ pub(crate) fn schedule(
                 let started = Instant::now();
                 let done = Done(sender.clone(), index);
                 let execute = &execute;
-                progress(Event::Started(index));
                 match thread::Builder::new().spawn_scoped(scope, move || {
                     let _done = done;
                     execute(checks[index])
                 }) {
                     Ok(handle) => {
+                        // Announce only once the worker exists (REQ-0043).
+                        progress(Event::Started(index));
                         if let Some(resource) = &checks[index].resource {
                             resources.insert(resource.as_str());
                         }
