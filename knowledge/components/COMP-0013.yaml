@@ -30,3 +30,6 @@ depends_on:
   - COMP-0003
   - COMP-0008
   - COMP-0015
+requirements:
+  - REQ-0106
+  - REQ-0107
