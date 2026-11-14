@@ -458,7 +458,7 @@ in reports and Git hooks need no Gemini credentials.
 This repository's deterministic quality checks run through an installed published
 Please Behave release. Run `mise install` for the configured rule tools (including
 Gitleaks, actionlint, the published governor and the Rust toolchain), then
-`mise prepare` to fetch locked dependencies. Git and a
+`mise setup` to fetch locked dependencies. Git and a
 native compiler/linker remain host prerequisites. All mise tool versions, including
 the Rust toolchain, are pinned and updated by Renovate.
 See the [setup guide](docs/self-governance.md#local-setup).
@@ -492,7 +492,7 @@ types, scopes and release effects are in [Contributing](CONTRIBUTING.md#commits)
 built-in `mise fmt` formats `mise.toml`. `mise verify` runs the deterministic `pre-push`
 checks without reviews and stops at the first blocker; hooks and CI stay complete.
 
-CI uses `mise install` through the mise Action and `mise run prepare`; preparation
+CI uses `mise install` through the mise Action and `mise run setup`; preparation
 only fetches locked dependencies. Release jobs install only their required tools.
 `mise run build --offline` builds a prepared native candidate; `mise run package`
 packages it after smoke validation. Actions owns stamping, receipts, archive checks

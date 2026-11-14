@@ -28,7 +28,7 @@ run = ["cargo fmt --all", "ruff format"]
 description = "Run the deterministic Please Behave checks and stop at the first blocker"
 run = "please run --at pre-push --checks-only --fail-fast"
 
-[tasks.prepare]
+[tasks.setup]
 description = "Fetch locked npm and Cargo dependencies for CI and offline Git hooks"
 run = ["npm ci --ignore-scripts", "cargo fetch --locked"]
 

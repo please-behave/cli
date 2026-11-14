@@ -19,7 +19,7 @@ Prepare tools and dependencies explicitly:
 ```sh
 mise trust
 mise install
-mise prepare
+mise setup
 please sync --yes
 ```
 
@@ -41,7 +41,7 @@ or copy them between repositories.
 
 `mise install` prepares the governor, tools and the Rust toolchain pinned in `mise.toml`.
 Git and a native compiler/linker remain host prerequisites. All tool versions,
-including the Rust toolchain, are exact pins that Renovate updates. `mise prepare`
+including the Rust toolchain, are exact pins that Renovate updates. `mise setup`
 fetches locked npm and Cargo dependencies online without validation.
 
 Use `mise exec -- please run --at pre-commit` or `mise exec -- please run --at pre-push`
@@ -51,7 +51,7 @@ Plain `please` and Git commands require mise shell activation or equivalent PATH
 setup; installing tools alone does not activate them. The published governor must
 still be installed separately and available on PATH. Credentials are external.
 
-Prepare dependencies online first, using `mise install` followed by `mise prepare`.
+Prepare dependencies online first, using `mise install` followed by `mise setup`.
 Cargo build, Clippy and test
 commands explicitly use --offline. The execution
 wrapper also sets Cargo/npm offline mode and disables Rustup auto-install when
@@ -235,7 +235,7 @@ the independent `release` smoke-quality gate after building. Receipt recording,
 archive checks and publication guards are direct workflow scripts.
 
 The mise Action runs `mise install` using the versions in `mise.toml`; CI then
-runs `mise run prepare` solely to fetch locked npm and Cargo dependencies.
+runs `mise run setup` solely to fetch locked npm and Cargo dependencies.
 Release jobs select only Node for planning, Python for readiness, Python/Rust/the governor for native candidates, and Python/Node for publishing.
 Mise automatic installation is disabled in workflows so tasks do not install
 unrelated tools. Native hosts already include their Rust target; no cross target

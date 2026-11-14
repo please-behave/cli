@@ -11,7 +11,7 @@ See the [README](README.md#build-locally) for tooling. With mise:
 ```sh
 mise trust
 mise install
-mise prepare
+mise setup
 please sync --yes
 ```
 

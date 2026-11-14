@@ -16,7 +16,7 @@ class GovernanceTests(unittest.TestCase):
         self.assertRegex(installation, r"uses: jdx/mise-action@[a-f0-9]{40}")
         self.assertNotIn("install_args", installation)  # Install every configured quality tool.
         self.assertLess(ci.index(installation), ci.index(execution))
-        self.assertLess(ci.index("mise run prepare"), ci.index(execution))
+        self.assertLess(ci.index("mise run setup"), ci.index(execution))
         reference = re.search(r"uses: (please-behave/action@[a-f0-9]{40})", execution)[1]
         self.assertIn("install: 'false'", execution)
         self.assertIn("sync: 'true'", execution)
