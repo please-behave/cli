@@ -198,7 +198,7 @@ fn concise_cli_keeps_diagnostics_and_avoids_duplicate_results() {
         .output()
         .unwrap();
     assert_eq!(output.status.code(), Some(2));
-    assert!(String::from_utf8_lossy(&output.stderr).contains("execution error"));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("status 2"));
     assert!(String::from_utf8_lossy(&output.stdout).starts_with("ERROR · 2 rules · 1 errors ·"));
 }
 #[test]

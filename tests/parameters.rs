@@ -237,8 +237,8 @@ fn outcomes_distinguish_violations_from_missing_processes_scripts_and_signals() 
     for (script, interpreter, status, reason) in [
         ("exit 0", "sh", Status::Pass, ""),
         ("exit 1", "sh", Status::Fail, "violation"),
-        ("echo details >&2; exit 2", "sh", Status::Error, "exit 2"),
-        ("exit 7", "sh", Status::Fail, "Unexpected"),
+        ("echo details >&2; exit 2", "sh", Status::Error, "status 2"),
+        ("exit 7", "sh", Status::Error, "status 7"),
         ("kill -TERM $$", "sh", Status::Error, "signal"),
         ("exit 0", "please-no-such-interpreter", Status::Error, ""),
         ("exit 0", ".", Status::Error, ""),

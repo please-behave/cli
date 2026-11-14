@@ -69,7 +69,7 @@ pub(crate) fn execute_cancellable(
         Ok(output) => {
             item.status = if output.cancelled {
                 Status::Cancelled
-            } else if output.timed_out || matches!(output.status.code(), None | Some(2)) {
+            } else if output.timed_out || !matches!(output.status.code(), Some(0 | 1)) {
                 Status::Error
             } else if output.status.success() {
                 Status::Pass
@@ -82,13 +82,8 @@ pub(crate) fn execute_cancellable(
                 "Command timed out".into()
             } else if output.status.code().is_none() {
                 "Check terminated by signal; execution could not complete".into()
-            } else if item.status == Status::Error {
-                "Check reported an execution error (exit 2)".into()
-            } else if !matches!(output.status.code(), Some(0 | 1)) {
-                format!(
-                    "Unexpected check exit code {}; treated as FAIL (expected 0, 1 or 2)",
-                    output.status
-                )
+            } else if let Some(code) = output.status.code().filter(|code| !matches!(code, 0 | 1)) {
+                format!("Check exited with status {code}; only 0 (PASS) and 1 (FAIL) are verdicts")
             } else {
                 if output.status.success() {
                     String::new()

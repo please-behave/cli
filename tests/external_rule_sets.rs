@@ -629,7 +629,7 @@ fn imported_check_failure_propagates_and_no_unselected_rule_executes() {
         &mut |_| {},
     )
     .unwrap();
-    assert_eq!(report.overall, Status::Fail);
+    assert_eq!(report.overall, Status::Error);
     assert_eq!(report.results[0].exit_code, Some(7));
 }
 

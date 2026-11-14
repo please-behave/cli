@@ -325,15 +325,16 @@ produce per-rule execution ERRORs; validation and offline plans do not launch co
 Checks receive no stdin and keep the consuming project's root as their working
 directory.
 
-Exit **0 = PASS**, **1 = FAIL**, **2 = ERROR**. FAIL is a verdict about the checked
-subject; a script's own technical failure must exit 2. Interpreters report an uncaught
-exception with their default code (Python traceback 1, `cargo` 101), which reads as
-FAIL, so wrap the entry point in a catch-all that exits 2. Unexpected numeric codes
-produce FAIL with an explicit diagnostic. Signal termination, process-launch, capture
-and timeout failures are ERROR. Wrap external tools to translate their own exit-code
-contracts: a scanner's exit 2 may mean a violation, so map that to 1 and map actual
-execution problems to 2. Please Behave does not parse shell error messages to classify
-startup failures. A check FAIL or ERROR prevents reviews and overall success.
+Exit **0 = PASS**, **1 = FAIL**, every other status = **ERROR**. FAIL is a verdict
+about the checked subject; a script's own technical failure must exit with any other
+status, conventionally 2. Interpreters report an uncaught exception with their default
+code (Python traceback 1), which reads as FAIL, so wrap the entry point in a catch-all
+that exits 2. The ERROR diagnostic names the exit status. Signal termination,
+process-launch, capture and timeout failures are ERROR. Wrap external tools to
+translate their own exit-code contracts: a linter that reports violations with 101 or a
+scanner that uses 2 for a violation must be mapped to 1, and its actual execution
+problems to 2. Please Behave does not parse shell error messages to classify startup
+failures. A check FAIL or ERROR prevents reviews and overall success.
 
 Resource confinement is not process sandboxing. Checks execute with Please Behave's
 permissions and can access files, credentials and the network. Only import
@@ -346,7 +347,7 @@ execution prevent PASS.
 | --- | --- | --- | --- |
 | `PASS` | The rule ran and its expectation holds. | Check exit 0 or review verdict | None |
 | `FAIL` | The rule ran and found a violation. | Check exit 1 or review verdict | Always blocks for a check; blocks for a review only when the review is blocking |
-| `ERROR` | The rule could not complete or produce a trustworthy result, such as a crash, missing tool, timeout or invalid provider response. | Check exit 2 or Please Behave | A check ERROR always blocks; a review ERROR blocks only when the review is blocking |
+| `ERROR` | The rule could not complete or produce a trustworthy result, such as a crash, missing tool, timeout or invalid provider response. | Any other check exit status or Please Behave | A check ERROR always blocks; a review ERROR blocks only when the review is blocking |
 | `NOT_RUN` | The selected rule was not executed because of a failed prerequisite, fail-fast or check-phase gating. | Please Behave | A dependency skip inherits the originating outcome; fail-fast and gating skips follow the originating failure |
 | `CANCELLED` | A running check was interrupted by fail-fast termination. | Please Behave | Blocks success |
 

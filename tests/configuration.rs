@@ -1098,7 +1098,7 @@ fn command_representations_execute_equivalently() {
         (0, Status::Pass),
         (1, Status::Fail),
         (2, Status::Error),
-        (7, Status::Fail),
+        (7, Status::Error),
     ] {
         let d = project();
         let relative = "scripts/check with spaces.sh";
@@ -1224,7 +1224,7 @@ fn commands_preserve_literal_arguments_and_rule_context() {
         (0, Status::Pass),
         (1, Status::Fail),
         (2, Status::Error),
-        (7, Status::Fail),
+        (7, Status::Error),
     ] {
         let d = project();
         let literal = "two words; $HOME $(echo expanded) *.md";
