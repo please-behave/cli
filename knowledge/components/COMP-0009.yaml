@@ -51,18 +51,13 @@ requirements:
   - REQ-0085
   - REQ-0092
   - REQ-0093
-  - REQ-0094
   - REQ-0095
   - REQ-0096
   - REQ-0097
-  - REQ-0098
-  - REQ-0108
-  - REQ-0109
-  - REQ-0111
-  - REQ-0112
-  - REQ-0115
   - REQ-0116
   - REQ-0117
   - REQ-0118
-  - REQ-0119
   - REQ-0121
+  - REQ-0127
+  - REQ-0128
+  - REQ-0129

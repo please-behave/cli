@@ -1,8 +1,11 @@
 id: REQ-0116
-name: Verdict Shape
+name: Verdict Explanation
 area: reviews
 description: >-
-  Each verdict must be exactly one of PASS, FAIL or ERROR with a one-line
-  summary and findings within the bounds of the adapter protocol.
+  A PASS or FAIL response must contain a one-line summary and findings within
+  the bounds of the adapter protocol and may contain a longer explanation.
 rationale: >-
-  Results must stay uniform and compact so tools and people can rely on them.
+  Results must stay uniform and compact so tools and people can rely on them,
+  while the depth of the explanation stays a choice that affects cost.
+decisions:
+  - DEC-0025

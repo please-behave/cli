@@ -1,9 +1,0 @@
-id: REQ-0110
-name: Header Reviews Reject File Selection
-area: reviews
-description: >-
-  A header review must reject file selections, context selections and
-  file-change triggers.
-rationale: >-
-  Selections that need repository content contradict a review that sees only
-  the header.

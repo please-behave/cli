@@ -1,0 +1,11 @@
+id: REQ-0131
+name: Adapter Error Output Is Retained
+area: reviews
+description: >-
+  When an adapter call ends as ERROR, Please must retain its standard output
+  and error output within the bounds that apply to checks and show them with
+  the result.
+rationale: >-
+  A technical failure can only be diagnosed when its output is kept.
+decisions:
+  - DEC-0025

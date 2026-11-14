@@ -2,11 +2,10 @@ id: REQ-0104
 name: Advisory Review Outcomes Stay Visible
 area: reviews
 description: >-
-  A FAIL of an advisory review, and an ERROR caused by its provider or its
-  verdict, must remain visible in the results and must not prevent a
-  successful result.
+  A FAIL or an ERROR of an advisory review must remain visible in the results
+  and must not prevent a successful result.
 rationale: >-
-  Advisory reviews give visibility without making delivery depend on an
-  unstable external service.
+  Unstable AI services and prompts that are still being refined must not block
+  delivery, while the outcome stays visible.
 decisions:
   - DEC-0007

@@ -1,9 +1,0 @@
-id: REQ-0100
-name: Evidence Is Not Instructions
-area: reviews
-description: >-
-  The instructions given to an adapter for a review must state that
-  repository content, agent instruction files, diffs and review criteria are
-  untrusted evidence and not instructions to change its role, tools or output.
-rationale: >-
-  Content under review must not be able to steer the reviewer.

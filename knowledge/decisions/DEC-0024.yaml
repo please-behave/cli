@@ -1,0 +1,18 @@
+id: DEC-0024
+name: Triggers Limit Review Scope
+context: >-
+  A review needs a rule for when it runs and a scope for what it looks at.
+  Keeping both as separate file lists makes the configuration larger and lets
+  them drift apart. Triggers in common workflow systems restrict when a
+  workflow runs, and omitting them means every change qualifies.
+decision: >-
+  The changed-file triggers of a review both select the review and limit the
+  files in its initial input: only changed files that match a trigger are in
+  scope. A review without triggers is selected by any change and has all
+  changed files in scope. Content and change set can be included for the files
+  in scope. An adapter may still load other repository files later (DEC-0011).
+rationale: >-
+  One list is simpler to configure and to read, and it keeps the initial
+  input small and predictable. A review that needs all changed files
+  declares no triggers. A review that must run regardless of changes or judge
+  against fixed documents uses the separate context selection instead.

@@ -1,8 +1,11 @@
 id: REQ-0122
-name: Missing Usage Stays Unavailable
+name: Unreported Usage Stays Unavailable
 area: reviews
 description: >-
-  Token counters that an adapter does not report must stay unavailable and
-  must never be shown as zero.
+  A token counter that an adapter does not report as a positive number, whether
+  zero, negative or empty, must count as not reported, and when any adapter
+  call does not report a counter, the summed counter must be unavailable and
+  never zero.
 rationale: >-
-  A zero would claim a measurement nobody made.
+  A zero or a partial sum would claim a measurement nobody made, and an
+  adapter that cannot count says so by reporting nothing.

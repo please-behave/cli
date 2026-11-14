@@ -1,9 +1,12 @@
 id: REQ-0101
-name: Uncertainty Is ERROR
+name: Verdict Is Binary
 area: reviews
 description: >-
-  The instructions given to an adapter for a review must direct it to report
-  ERROR and not PASS when necessary evidence is unavailable or a conclusion
-  is materially uncertain.
+  A review must assess with PASS or FAIL, and a conclusion that cannot be
+  established as PASS must be FAIL; ERROR must be reserved for technical
+  failures such as an adapter that cannot run, a timeout or an invalid
+  response.
 rationale: >-
-  A review that cannot tell must say so instead of passing.
+  ERROR means the review could not take place and FAIL means it found a
+  problem or could not justify PASS, which tells owners whether to fix the
+  project or the provider setup.

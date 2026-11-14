@@ -1,0 +1,24 @@
+id: DEC-0025
+name: Adapter Verdict Is Its Exit Status
+context: >-
+  An adapter is an external executable that can fail in ways it does not
+  control, such as an unhandled exception or a lost connection. Checks already
+  communicate their result through exit statuses. A verdict carried only inside
+  a structured response would make every crash look like a valid answer or
+  force Please to guess.
+decision: >-
+  The exit status of an adapter call is the verdict, mapped exactly as for
+  checks: 0 is PASS and 1 is FAIL, each valid only with a structured response
+  that satisfies the response contract, which carries a short and an optional long explanation and its
+  evidence. Every other outcome is ERROR: any other exit status, a timeout, a
+  failure to start, or a missing or invalid response at exit status 0 or 1. An
+  ERROR needs no structure. Its standard output and error output are retained
+  for diagnosis under the same bounds as the output of checks, without
+  masking. Optional token counters in the response never change the verdict.
+rationale: >-
+  The exit status separates the verdict from its explanation, matches the
+  contract of checks and survives adapters that crash, because a crash cannot
+  produce a valid structure and so never becomes PASS. Retaining raw output
+  makes technical failures diagnosable. It is unmasked for now because no
+  trivial solution for credentials in that output exists; masking as hosted CI
+  systems do may follow later.

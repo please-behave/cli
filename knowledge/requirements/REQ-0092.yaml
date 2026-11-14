@@ -2,9 +2,7 @@ id: REQ-0092
 name: Adapter-Only Reviews
 area: reviews
 description: >-
-  Every AI review must run through a configured executable adapter, and
-  Please must contain no provider-specific or model-specific logic and must
-  not include or implicitly select a provider or model.
+  Every AI review must run through a configured executable adapter.
 rationale: >-
   New providers and models can be used without changing or releasing Please.
 decisions:

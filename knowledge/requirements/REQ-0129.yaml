@@ -1,0 +1,9 @@
+id: REQ-0129
+name: Scope Change Set Can Be Included
+area: reviews
+description: >-
+  A review must be able to include the change set of the files in its scope
+  for its execution point in its initial input, with the default defined in
+  the configuration reference.
+rationale: >-
+  Some reviews need to see what changed and not only the new state.

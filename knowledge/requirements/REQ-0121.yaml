@@ -2,7 +2,7 @@ id: REQ-0121
 name: Token Usage Is Summed
 area: reviews
 description: >-
-  Reported token usage must be summed across all adapter calls of a run,
-  including calls whose verdict was rejected.
+  Token counters that adapters report must be summed across all adapter calls
+  of a run.
 rationale: >-
-  Owners must see what reviews consume even when their results were unusable.
+  Owners must see what reviews consume.

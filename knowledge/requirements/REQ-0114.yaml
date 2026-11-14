@@ -1,9 +1,0 @@
-id: REQ-0114
-name: Header Must Stay Unchanged
-area: reviews
-description: >-
-  A run must not succeed when the header is missing, unreadable, invalid or
-  changed at any point from capture until the result is saved.
-rationale: >-
-  A verdict about a header that is no longer the commit's header is
-  meaningless.

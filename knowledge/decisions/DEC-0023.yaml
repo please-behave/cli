@@ -1,0 +1,20 @@
+id: DEC-0023
+name: One Adapter Call Per Review
+context: >-
+  Several reviews could share one adapter call to save tokens, and an adapter
+  could cache or bundle prompts across calls. Reviews that share a call or a
+  prompt can influence each other's verdicts. Saving cost is a concern of the
+  person who defines the reviews, not of Please Behave.
+decision: >-
+  Please Behave makes one adapter call per review and never combines reviews in
+  one call. Adapters are strongly encouraged, but not forced, to answer each
+  call on its own and not to cache, bundle or merge it with other calls into
+  one prompt. A user who wants two things judged in one call defines one review
+  with a combined scope.
+rationale: >-
+  Independent calls keep reviews from influencing each other and keep every
+  verdict traceable to one review. Combining reviews to save cost is solved by
+  the review definition, so Please Behave needs no batching logic, no
+  separation rules for different settings and no per-batch verdict handling.
+  Enforcing independence inside an adapter is neither possible nor wanted,
+  because Please Behave does not control how adapters work.

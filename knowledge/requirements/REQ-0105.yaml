@@ -1,9 +1,0 @@
-id: REQ-0105
-name: Selectable Review Input
-area: reviews
-description: >-
-  A review must be able to select either the working files or only the commit
-  header as its evidence source.
-rationale: >-
-  The wording of a commit message can be judged cheaply without sending any
-  code.

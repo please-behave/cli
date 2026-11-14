@@ -1,9 +1,12 @@
 id: REQ-0118
-name: Invalid Responses Are ERROR
+name: Invalid Adapter Calls Are ERROR
 area: reviews
 description: >-
-  An adapter response that violates the response contract, including wrong
-  types, unknown or duplicate keys, missing or duplicate results,
-  inconsistent token counters or excess size, must make the whole batch ERROR.
+  An adapter call must end as ERROR when it exits with a status other than 0
+  or 1, times out, cannot be started, or at exit status 0 or 1 does not
+  produce a response that satisfies the response contract, such as wrong
+  types, unknown keys or excess size.
 rationale: >-
-  A response that cannot be trusted must never be read as PASS.
+  A result that cannot be trusted must never be read as PASS.
+decisions:
+  - DEC-0025

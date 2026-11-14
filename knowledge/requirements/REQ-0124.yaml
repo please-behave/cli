@@ -1,0 +1,11 @@
+id: REQ-0124
+name: No Built-In Provider Or Model
+area: reviews
+description: >-
+  Please must not include a provider or model and must not select one
+  implicitly.
+rationale: >-
+  Which model an organization relies on is its own decision, not the
+  product's.
+decisions:
+  - DEC-0010

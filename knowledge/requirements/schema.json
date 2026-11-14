@@ -36,7 +36,7 @@
         "reporting",
         "distribution"
       ],
-      "description": "The part of the product the requirement belongs to, exactly one.\n\nsetup: initialization, synchronization and Git hook management.\nconfiguration: configuration files, validation, parameters and limits.\nrules: rule definitions, rule sets, execution points, external rule sets, selection and plans.\nchecks: deterministic checks, concurrency, dependencies, fail-fast and scheduling.\nreviews: AI reviews, adapters, triggers, review input, commit-header reviews and review results.\nintegrity: snapshots, stability, freshness and run context.\nreporting: reports, status, progress, terminal output and exit codes.\ndistribution: release artifacts, versions and installation."
+      "description": "The part of the product the requirement belongs to, exactly one.\n\nsetup: initialization, synchronization and Git hook management.\nconfiguration: configuration files, validation, parameters and limits.\nrules: rule definitions, rule sets, execution points, external rule sets, selection and plans.\nchecks: deterministic checks, concurrency, dependencies, fail-fast and scheduling.\nreviews: AI reviews, adapters, review input and review results.\nintegrity: snapshots, stability, freshness and run context.\nreporting: reports, status, progress, terminal output and exit codes.\ndistribution: release artifacts, versions and installation."
     },
     "description": {
       "type": "string",

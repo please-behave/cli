@@ -1,10 +1,11 @@
 id: REQ-0097
-name: Context Is Never Silently Omitted
+name: Review Input Is Never Silently Reduced
 area: reviews
 description: >-
-  Review context that is missing or exceeds its bounds must be rejected as an
-  error and must not be silently omitted or truncated, including for disabled
-  reviews.
+  Review input that is missing or exceeds its bounds, namely context
+  documents, file content and the change set, must be rejected as an error
+  before any adapter call and must not be silently omitted or truncated,
+  including for context definitions of disabled reviews.
 rationale: >-
-  A review judged against less context than configured would give a verdict
-  nobody can trust.
+  A review judged against less input than declared would give a verdict
+  nobody can trust, and smaller commits or a raised limit solve the cause.

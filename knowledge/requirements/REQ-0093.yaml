@@ -2,11 +2,11 @@ id: REQ-0093
 name: Adapter Controls Execution
 area: reviews
 description: >-
-  Please must not restrict which repository content or tools an adapter uses
-  beyond the evidence it initially supplies.
+  Please must not limit an adapter to the evidence it initially supplies or
+  restrict which repository content and tools it uses.
 rationale: >-
   Adapters can range from a single request to an agentic loop that loads
   further files, which complex reviews such as architecture validation need.
 decisions:
   - DEC-0011
-  - DEC-0021
+  - DEC-0022

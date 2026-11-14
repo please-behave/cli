@@ -1,8 +1,0 @@
-id: REQ-0111
-name: Header Batches Are Separate
-area: reviews
-description: >-
-  Header reviews must never share an adapter call with worktree reviews.
-rationale: >-
-  Header-only evidence must never be mixed with repository evidence in one
-  call.

@@ -1,9 +1,0 @@
-id: REQ-0119
-name: Schema And Validation Agree
-area: reviews
-description: >-
-  The response schema given to a provider and the local validation must
-  follow the same contract and limits.
-rationale: >-
-  A provider that satisfies the schema must not be rejected by the product,
-  and vice versa.

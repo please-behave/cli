@@ -1,0 +1,11 @@
+id: REQ-0130
+name: Exit Status Is The Verdict
+area: reviews
+description: >-
+  An adapter call must be PASS for exit status 0 and FAIL for exit status 1,
+  each only when its response satisfies the response contract.
+rationale: >-
+  As with checks, a plain exit status separates the verdict from its explanation
+  and survives adapters that crash.
+decisions:
+  - DEC-0025

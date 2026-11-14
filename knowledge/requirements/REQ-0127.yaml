@@ -1,0 +1,11 @@
+id: REQ-0127
+name: Triggers Define Review Scope
+area: reviews
+description: >-
+  The initial file input of a review must be limited to the changed files that
+  match its triggers, or to all changed files when it declares no triggers.
+rationale: >-
+  The same list selects and limits what a review looks at, which keeps its
+  input small and its meaning clear.
+decisions:
+  - DEC-0024

@@ -1,0 +1,11 @@
+id: REQ-0125
+name: One Adapter Call Per Review
+area: reviews
+description: >-
+  Please must make a separate adapter call for each review and must not
+  combine several reviews in one call.
+rationale: >-
+  Reviews must not influence each other, and every verdict must belong to
+  exactly one review.
+decisions:
+  - DEC-0023

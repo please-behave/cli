@@ -1,0 +1,11 @@
+id: REQ-0132
+name: Usage Never Changes A Verdict
+area: reviews
+description: >-
+  Missing, invalid or inconsistent token counters must not change the verdict
+  of a review.
+rationale: >-
+  Token counters are optional telemetry and must not turn a verdict into an
+  error.
+decisions:
+  - DEC-0025

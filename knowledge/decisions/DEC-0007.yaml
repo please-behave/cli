@@ -1,24 +1,26 @@
 id: DEC-0007
 name: Configurable AI Review Enforcement
 context: >-
-  AI-based reviews depend on providers and models whose availability,
-  behavior, and evaluation quality may change independently of the
-  consuming project. Provider outages, usage limits, model changes,
-  and inconsistent assessments can make mandatory enforcement
-  operationally disruptive.
+  AI-based reviews depend on providers and models that are not reliably
+  available: outages, rate limits and overload errors such as HTTP 503 occur
+  regularly. Model answers are also not deterministic, and a review prompt
+  often needs a phase of refinement until it returns what the owner intends.
+  Deterministic checks differ: their result is visible at once and the tooling
+  can be adapted, and they can be tuned with limits, for example a maximum
+  number of warnings that is lowered over time.
 decision: >-
-  AI reviews support configurable blocking behavior. When blocking
-  is enabled, both negative assessments and execution errors prevent
-  successful governance execution. When blocking is disabled, neither
-  negative assessments nor execution errors prevent execution from
-  proceeding. All outcomes remain recorded regardless of blocking
-  configuration.
+  AI reviews support configurable blocking behavior. When blocking is
+  enabled, both negative assessments and execution errors prevent successful
+  governance execution. When blocking is disabled, neither a FAIL nor an
+  ERROR prevents execution from proceeding. All outcomes remain recorded and
+  visible regardless of blocking configuration. Deterministic checks have no
+  such setting.
 rationale: >-
-  Organizations must be able to balance governance requirements
-  against the operational reliability of AI-based verification.
-  Non-blocking reviews preserve visibility into compliance without
-  making software delivery dependent on potentially unstable external
-  services or changing model behavior. Review outcomes and enforcement
-  consequences remain separate so that reporting can distinguish
-  successful verification, detected violations, and unsuccessful
-  evaluations.
+  Without a non-blocking mode, teams would give up on AI reviews while the
+  backend is unstable or the prompt is still being refined, or an adapter
+  would be bent to return PASS on errors, which hides failures and contradicts
+  the purpose of the verdicts. A non-blocking review keeps visibility into
+  compliance without making delivery depend on unstable external services or
+  changing model behavior. Review outcomes and enforcement consequences stay
+  separate so that reporting can distinguish successful verification, detected
+  violations and unsuccessful evaluations.

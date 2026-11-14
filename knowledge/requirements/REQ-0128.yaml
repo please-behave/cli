@@ -1,0 +1,10 @@
+id: REQ-0128
+name: Scope File Content Can Be Included
+area: reviews
+description: >-
+  A review must be able to include the current content of the files in its
+  scope in its initial input, with the default defined in the configuration
+  reference.
+rationale: >-
+  A review of a changed document judges its new state, such as the current
+  agent instructions.

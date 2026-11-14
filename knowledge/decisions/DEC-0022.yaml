@@ -1,0 +1,21 @@
+id: DEC-0022
+name: Adapter Safety Is The Provider's Responsibility
+context: >-
+  Adapters are free in their implementation and may run an agentic loop that
+  loads further files and uses tools (DEC-0011). Such an agent could modify the
+  file system or operate Git, including committing and pushing. Please Behave
+  cannot make assumptions about the AI behind an adapter, such as which
+  permission or read-only modes a model offers, and a general protection
+  mechanism would take considerable effort that is not the current focus.
+decision: >-
+  Please Behave supplies the adapter with the review's configured prompt,
+  criteria and context as the adapter protocol defines them, and nothing more.
+  It provides no sandbox and no safety or system-prompt instructions, and it
+  does not guarantee that an adapter leaves the repository unchanged or resists
+  hostile content. Protecting a project from an adapter's actions is the
+  responsibility of the adapter and its provider.
+rationale: >-
+  Restricting adapters would limit which models and review styles can be used,
+  and no simple, provider-independent solution is known. Specialized tools may
+  solve the problem better than Please Behave could. Recording the gap keeps the
+  limitation visible so that nobody assumes a protection that does not exist.

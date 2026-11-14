@@ -1,8 +1,0 @@
-id: REQ-0120
-name: Schema Limits Are Never Weakened
-area: reviews
-description: >-
-  When a provider cannot support the response schema, the review must end as
-  ERROR and the constraints must not be silently weakened.
-rationale: >-
-  A weakened contract would let unreliable results look trustworthy.

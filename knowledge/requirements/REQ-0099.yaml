@@ -1,11 +1,13 @@
 id: REQ-0099
-name: Reviews Judge Only
+name: Review Receives Declared Input
 area: reviews
 description: >-
-  The instructions given to an adapter for a review must tell it to judge
-  only the configured criteria against the current working files and not to
-  modify the repository, commit, delegate or contact remote services.
+  For each review Please must give the adapter exactly the input the review
+  declares: its prompt and criteria, the selected context documents, the
+  content and change set of the files in its scope as selected and, at the
+  commit-msg execution point, the commit message as a whole.
 rationale: >-
-  A governance review is meant to evaluate the project and never to change it.
+  A provider serves many rules, so each rule must declare what its review
+  needs, and the provider decides how to use it.
 decisions:
-  - DEC-0021
+  - DEC-0022
