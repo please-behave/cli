@@ -173,6 +173,20 @@ fn process_and_response_errors_never_pass_and_keep_original_output() {
             }
             "error" => assert!(output(&item.stderr).contains("original-adapter-error")),
             "malformed" => assert!(output(&item.stdout).contains("original-adapter-output")),
+            "structured-error" => {
+                assert_eq!(item.exit_code, Some(3));
+                assert!(output(&item.stdout).contains("Evidence inspected"));
+            }
+            "timeout" => {
+                // The killed process leaves no exit status, but its captures are kept.
+                assert_eq!(item.exit_code, None);
+                assert!(item.stdout.is_some() && item.stderr.is_some());
+            }
+            "oversized" => {
+                let stdout = item.stdout.as_ref().unwrap();
+                assert!(stdout.truncated && stdout.total_bytes > 64 * 1024);
+                assert_eq!(stdout.text.len(), 64 * 1024);
+            }
             _ => {}
         }
         let saved = report::read(root.path()).unwrap();
