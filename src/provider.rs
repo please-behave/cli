@@ -3,7 +3,7 @@ use crate::{
     config::{Project, Review},
     git_snapshot::Snapshot,
     limits::{MAX_FINDINGS, MAX_MANIFEST_HINTS},
-    report::{MAX_SUMMARY_CHARS, TokenUsage},
+    report::{MAX_SUMMARY_CHARS, Status, TokenUsage},
 };
 use anyhow::{Context, Result, ensure};
 use serde_json::json;
@@ -169,13 +169,8 @@ fn requirements(
     Ok(())
 }
 
-#[derive(serde::Deserialize)]
-#[serde(deny_unknown_fields)]
-struct AdapterResponse {
-    protocol_version: u32,
-    reviews: Vec<crate::review_contract::ReviewVerdict>,
-    usage: Option<serde_json::Value>,
-}
+/// The protocol version this build speaks; others are rejected without fallback.
+const PROTOCOL_VERSION: u32 = 2;
 
 fn execute(request: &Request<'_>) -> Result<Response> {
     let config = request.provider_config()?;
@@ -193,11 +188,6 @@ fn execute(request: &Request<'_>) -> Result<Response> {
         .current_dir(&request.project.root);
     crate::environment::scrub(&mut command);
     requirements(&command, &request.project.root, runtime)?;
-    let ids = request
-        .reviews
-        .iter()
-        .map(|r| r.id.as_str())
-        .collect::<Vec<_>>();
     let reviews = request
         .reviews
         .iter()
@@ -210,10 +200,10 @@ fn execute(request: &Request<'_>) -> Result<Response> {
         })
         .collect::<Vec<_>>();
     let input = serde_json::to_vec(&json!({
-        "protocol_version":1, "execution_point":request.execution_point,
+        "protocol_version":PROTOCOL_VERSION, "execution_point":request.execution_point,
         "head":request.snapshot.head.as_deref(), "input":request.input,
         "context_file":request.project.context, "rule_parameters":request.parameters, "reviews":reviews,
-        "prompt":prompt(request)?, "response_schema":schema(&ids)
+        "prompt":prompt(request)?, "response_schema":schema()
     }))?;
     let bytes = Arc::new(Mutex::new(Vec::new()));
     let captured = Arc::clone(&bytes);
@@ -236,7 +226,7 @@ fn execute(request: &Request<'_>) -> Result<Response> {
         anyhow::anyhow!("Adapter process failed; check executable, PATH and stdin support")
     })?;
     let raw = std::mem::take(&mut *bytes.lock().unwrap());
-    let (verdict, usage) = match interpret(&output, &raw) {
+    let (verdict, usage) = match interpret(&output, &raw, &request.reviews[0].id) {
         Ok((json, usage)) => (Ok(json), usage),
         Err(error) => (Err(error), None),
     };
@@ -254,46 +244,65 @@ fn execute(request: &Request<'_>) -> Result<Response> {
 /// Pointer shown with every adapter ERROR whose output was retained (see REQ-0131).
 const OUTPUT_HINT: &str = "inspect captured output with please status --details";
 
-fn interpret(output: &crate::process::Output, raw: &[u8]) -> Result<(String, Option<TokenUsage>)> {
+fn interpret(
+    output: &crate::process::Output,
+    raw: &[u8],
+    review_id: &str,
+) -> Result<(String, Option<TokenUsage>)> {
     ensure!(
         !output.timed_out,
         "Adapter review timed out; no verdict accepted; {OUTPUT_HINT}"
     );
-    ensure!(
-        output.status.success(),
-        "Adapter exited unsuccessfully ({}); {OUTPUT_HINT}",
-        output.status
-    );
+    // DEC-0025: the exit status is the verdict, mapped as for checks.
+    let status = match output.status.code() {
+        Some(0) => Status::Pass,
+        Some(1) => Status::Fail,
+        _ => anyhow::bail!(
+            "Adapter exited with status {}, not 0 or 1; {OUTPUT_HINT}",
+            output.status
+        ),
+    };
     ensure!(
         !output.stdout.truncated,
         "Adapter response exceeds stdout capture limit; {OUTPUT_HINT}"
     );
     let invalid = || {
-        anyhow::anyhow!("Invalid adapter response; expected protocol version 1 JSON; {OUTPUT_HINT}")
+        anyhow::anyhow!(
+            "Invalid adapter response; expected protocol version {PROTOCOL_VERSION} JSON; {OUTPUT_HINT}"
+        )
     };
-    let value: serde_json::Value = serde_json::from_slice(raw).map_err(|_| invalid())?;
-    if let Some(reviews) = value.get("reviews").and_then(|v| v.as_array()) {
-        for review in reviews {
-            if let Some(findings) = review.get("findings").and_then(|v| v.as_array()) {
-                ensure!(
-                    findings
-                        .iter()
-                        .all(|f| f.get("path").is_some() && f.get("line").is_some()),
-                    "Invalid adapter finding; path and line are required"
-                );
-            }
-        }
-    }
-    let response: AdapterResponse = serde_json::from_slice(raw).map_err(|_| invalid())?;
+    let serde_json::Value::Object(mut document) =
+        serde_json::from_slice(raw).map_err(|_| invalid())?
+    else {
+        return Err(invalid());
+    };
     ensure!(
-        response.protocol_version == 1,
-        "Unsupported adapter protocol version; expected 1"
+        document.remove("protocol_version").and_then(|v| v.as_u64())
+            == Some(u64::from(PROTOCOL_VERSION)),
+        "Unsupported adapter protocol version; expected {PROTOCOL_VERSION}"
     );
+    let usage = document.remove("usage");
+    if let Some(findings) = document.get("findings").and_then(|v| v.as_array()) {
+        ensure!(
+            findings
+                .iter()
+                .all(|f| f.get("path").is_some() && f.get("line").is_some()),
+            "Invalid adapter finding; path and line are required"
+        );
+    }
+    let verdict: crate::review_contract::AdapterVerdict =
+        serde_json::from_value(document.into()).map_err(|_| invalid())?;
     Ok((
         serde_json::to_string(&crate::review_contract::ReviewResponse {
-            reviews: response.reviews,
+            reviews: vec![crate::review_contract::ReviewVerdict {
+                id: review_id.into(),
+                status,
+                reason: verdict.reason,
+                explanation: verdict.explanation,
+                findings: verdict.findings,
+            }],
         })?,
-        response.usage.as_ref().map(reported_usage),
+        usage.as_ref().map(reported_usage),
     ))
 }
 

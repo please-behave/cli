@@ -26,32 +26,33 @@ Distribution does not change the working directory, environment, protocol or
 provider requirements. See [provider imports](configuration.md#import-providers-from-git).
 
 Each invocation receives exactly one UTF-8 JSON object on stdin followed by EOF.
-Write exactly one JSON object to stdout and exit zero. All requested reviews must
-be represented exactly once. Stderr is captured within the output bounds of checks.
-When a call ends as ERROR, its stdout and stderr are retained unmasked and shown by
-`please status --details`, so write the original error text to stderr and never
-include credentials. Never write progress text to stdout.
+The exit status is the verdict, mapped as for checks: exit 0 is PASS and exit 1 is
+FAIL. Each is valid only with exactly one JSON object on stdout that satisfies the
+response contract below. Every other outcome is ERROR and needs no structure: another
+exit status, a timeout, a failure to start, or a missing or invalid response at exit 0
+or 1. An adapter signals a technical failure it detects itself, such as an unreachable
+provider, with any other exit status, for example 2. Stderr is captured within the
+output bounds of checks. When a call ends as ERROR, its stdout and stderr are retained
+unmasked and shown by `please status --details`, so write the original error text to
+stderr and never include credentials. Never write progress text to stdout.
 
-Both directions require integer `protocol_version: 1`. Unsupported versions fail
-closed; no legacy format detection or fallback occurs. Any incompatible protocol
-revision must use a new version supported explicitly by Please. Adapters should
-reject unsupported request versions and may ignore unknown request fields.
-Please rejects unknown response fields. The verdict schema is sent with each
-request so adapters need not duplicate limits or hardcode current Rule IDs.
+The request and the response require integer `protocol_version: 2`. Unsupported
+versions, including 1, fail closed; no legacy format detection or fallback occurs. Any
+incompatible protocol revision must use a new version supported explicitly by Please.
+Adapters should reject unsupported request versions and may ignore unknown request
+fields. Please rejects unknown response fields. The response schema is sent with each
+request so adapters need not duplicate limits.
 
 The overall deadline includes stdin delivery; zero disables it. Timeouts terminate
-the process tree. A launch failure, nonzero exit, invalid JSON, unsupported version,
-truncated output or invalid verdict produces ERROR for the review of that call. Stdout
-is bounded to 64 KiB. The output of a call that ends as ERROR is saved with its report entry. An adapter
-reports ERROR only for technical failures it detects itself, such as an
-unreachable provider, using the common result format. Blocking and nonblocking reviews follow the same
+the process tree. Stdout is bounded to 64 KiB. The output of a call that ends as ERROR
+is saved with its report entry. Blocking and nonblocking reviews follow the same
 ordinary enforcement rules regardless of which adapter is selected.
 
 ## Request
 
 ```json
 {
-  "protocol_version": 1,
+  "protocol_version": 2,
   "execution_point": "check",
   "head": null,
   "input": {
@@ -66,13 +67,13 @@ ordinary enforcement rules regardless of which adapter is selected.
     "parameters": {"variant": "careful", "tools": {"read": true}}
   }],
   "prompt": "The complete common review instructions and prepared evidence...",
-  "response_schema": {"type": "object", "required": ["reviews"]}
+  "response_schema": {"type": "object", "required": ["reason", "findings"]}
 }
 ```
 
-The actual response_schema includes all verdict constraints, findings and requested
-IDs; the abbreviated schema above illustrates its position. It describes the
-`reviews` document, without the adapter envelope's protocol_version or usage.
+The actual response_schema includes all response constraints and findings; the
+abbreviated schema above illustrates its position. It describes the response without
+the envelope's protocol_version or usage.
 `head` is the current commit or null for an unborn repository. Excerpts contain
 path, start_line, end_line and text with original line numbers. Manifest paths
 and diff are orientation hints, not exhaustive evidence. `focused_paths`
@@ -131,23 +132,23 @@ one review in the `reviews` list; Please never combines reviews in one call.
 
 ```json
 {
-  "protocol_version": 1,
-  "reviews": [{
-    "id": "documentation", "status": "PASS", "reason": "Documented behavior matches",
-    "findings": [{"message": "Compared the documented command", "path": "README.md", "line": 1}]
-  }],
+  "protocol_version": 2,
+  "reason": "Documented behavior matches",
+  "explanation": "Optional longer text, which may span several lines.",
+  "findings": [{"message": "Compared the documented command", "path": "README.md", "line": 1}],
   "usage": {"input_tokens": 100, "cached_input_tokens": 20, "output_tokens": 30,
             "reasoning_output_tokens": null, "cache_write_input_tokens": null}
 }
 ```
 
-Statuses are exactly PASS, FAIL and ERROR. Reasons are nonempty single lines of
-at most 120 characters. Findings contain message (1–2000 UTF-8 bytes), path and
+The response carries neither a status nor a review ID; the exit status is the verdict
+and the call belongs to exactly one review. The reason is a nonempty single line of
+at most 120 characters. The optional explanation is a nonblank string of at most 8000
+UTF-8 bytes that may span lines; it is shown by `please status --details`. Findings contain message (1–2000 UTF-8 bytes), path and
 line, with at most 20 findings per review. Path and line must be present, although
 both can be null. For worktree evidence, a line requires a path. Worktree
-PASS/FAIL need at least one path in the verified manifest and a positive line within that file, or at commit-msg a line of the commit message. ERROR may have no findings.
-Wrong types, extra fields, missing/duplicate/extra review IDs and invalid evidence
-invalidate the response. Provider-specific envelopes and Markdown fences are
+PASS/FAIL need at least one path in the verified manifest and a positive line within that file, or at commit-msg a line of the commit message.
+Wrong types, unknown fields and invalid evidence invalidate the response, which ends the call as ERROR. Provider-specific envelopes and Markdown fences are
 not accepted; adapters must translate them.
 
 At the `commit-msg` execution point `input.commit_message` carries the whole message as
@@ -158,7 +159,7 @@ which part counts.
 
 A finding with `path: null` and a `line` cites that line of the commit message. It is
 valid only when `input.commit_message` is present and contains the line, and it grounds
-PASS/FAIL like a file path and line. ERROR may have no findings.
+PASS/FAIL like a file path and line.
 
 Usage is optional or null and never changes the verdict. It may contain input_tokens,
 cached_input_tokens, output_tokens, reasoning_output_tokens and cache_write_input_tokens.
@@ -175,8 +176,8 @@ These counters are adapter claims, not billing or quota statements.
 The [dummy script](../examples/adapters/dummy.py) and accompanying
 [TOML configuration](../examples/adapters/dummy.toml) form a working example.
 Copy them as instructed in the TOML file and select the named provider from a
-review. The dummy returns ERROR deliberately: it performs no assessment, so
-its review technically cannot take place. Replace its result generation with your own
+review. The dummy exits with status 2 deliberately: it performs no assessment, so
+its review technically cannot take place and ends as ERROR. Replace its result generation with your own
 provider communication while preserving the protocol.
 
 This migration removes the built-in Codex implementation completely. There is no
@@ -185,8 +186,8 @@ Existing `provider = "codex-cli"` and `provider = "cli"` definitions must be
 replaced by command/args adapter definitions. Move model, review_profile and
 mcp_servers settings into parameters understood by your adapter. PLEASE_MODEL is
 no longer set or cleared by the core. Existing generic CLI wrappers must parse the
-JSON request and emit the versioned response rather than receiving a plain prompt
-and returning a bare verdict. Named selection and explicit project defaults remain.
+JSON request, emit the versioned response and signal the verdict through the exit
+status rather than receiving a plain prompt and returning a bare verdict. Named selection and explicit project defaults remain.
 Old saved provider metadata may be incompatible; rerun verification after migration.
 The repository's installed governor and its private `.please/` adapters remain
 independent of this product contract.

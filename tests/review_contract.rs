@@ -2,8 +2,8 @@ mod support;
 use please::{
     config, git_snapshot,
     limits::*,
-    report::{Finding, Status},
-    review_contract::{self, ReviewResponse, ReviewVerdict},
+    report::Finding,
+    review_contract::{self, AdapterVerdict},
     reviews,
 };
 use serde_json::{Value, json};
@@ -37,42 +37,43 @@ fn object_contract(schema: &Value, wire: &Value) {
     assert_eq!(schema["additionalProperties"], false);
 }
 #[test]
-fn schema_and_wire_types_cover_the_same_fields_and_verdicts() {
-    let schema = review_contract::schema(&["one", "two"]);
-    let wire = serde_json::to_value(ReviewResponse {
-        reviews: vec![ReviewVerdict {
-            id: "one".into(),
-            status: Status::Pass,
-            reason: "Evidence inspected".into(),
-            findings: vec![Finding {
-                message: "Found it".into(),
-                path: None,
-                line: None,
-            }],
+fn schema_and_wire_types_cover_the_same_fields() {
+    let schema = review_contract::schema();
+    let wire = serde_json::to_value(AdapterVerdict {
+        reason: "Evidence inspected".into(),
+        explanation: Some("Longer explanation".into()),
+        findings: vec![Finding {
+            message: "Found it".into(),
+            path: None,
+            line: None,
         }],
     })
     .unwrap();
-    object_contract(&schema, &wire);
-    let verdict = &schema["properties"]["reviews"]["items"];
-    object_contract(verdict, &wire["reviews"][0]);
+    // The optional explanation is present on the wire and absent from the required keys.
+    assert_eq!(
+        wire.as_object().unwrap().keys().collect::<BTreeSet<_>>(),
+        schema["properties"]
+            .as_object()
+            .unwrap()
+            .keys()
+            .collect::<BTreeSet<_>>()
+    );
+    assert_eq!(schema["required"], json!(["reason", "findings"]));
+    assert_eq!(schema["additionalProperties"], false);
     object_contract(
-        &verdict["properties"]["findings"]["items"],
-        &wire["reviews"][0]["findings"][0],
+        &schema["properties"]["findings"]["items"],
+        &wire["findings"][0],
     );
-    assert_eq!(schema["properties"]["reviews"]["minItems"], 2);
-    assert_eq!(schema["properties"]["reviews"]["maxItems"], 2);
-    assert_eq!(verdict["properties"]["id"]["enum"], json!(["one", "two"]));
+    let properties = &schema["properties"];
+    assert!(properties.get("status").is_none() && properties.get("id").is_none());
+    assert_eq!(properties["reason"]["maxLength"], MAX_SUMMARY_CHARS);
     assert_eq!(
-        verdict["properties"]["status"]["enum"],
-        json!(["PASS", "FAIL", "ERROR"])
+        properties["explanation"]["maxLength"],
+        MAX_EXPLANATION_BYTES
     );
+    assert_eq!(properties["findings"]["maxItems"], MAX_FINDINGS);
     assert_eq!(
-        verdict["properties"]["reason"]["maxLength"],
-        MAX_SUMMARY_CHARS
-    );
-    assert_eq!(verdict["properties"]["findings"]["maxItems"], MAX_FINDINGS);
-    assert_eq!(
-        verdict["properties"]["findings"]["items"]["properties"]["message"]["maxLength"],
+        properties["findings"]["items"]["properties"]["message"]["maxLength"],
         MAX_FINDING_MESSAGE_BYTES
     );
 }
@@ -92,12 +93,14 @@ fn review_contract_enforces_boundaries_and_semantic_evidence_locally() {
     let project = config::load(root.path()).unwrap();
     let snapshot = git_snapshot::capture(root.path()).unwrap();
     let active = [&project.reviews[0]];
-    let valid = json!({"reviews":[{"id":active[0].id, "status":"PASS", "reason":"é".repeat(MAX_SUMMARY_CHARS), "findings":[{"message":"é".repeat(MAX_FINDING_MESSAGE_BYTES / 2), "path":".please/README.md", "line":1}]}]});
+    let valid = json!({"reviews":[{"id":active[0].id, "status":"PASS", "reason":"é".repeat(MAX_SUMMARY_CHARS), "explanation":"é".repeat(MAX_EXPLANATION_BYTES / 2), "findings":[{"message":"é".repeat(MAX_FINDING_MESSAGE_BYTES / 2), "path":".please/README.md", "line":1}]}]});
     assert!(reviews::parse(&project, &active, &snapshot, &valid.to_string()).is_ok());
     for case in [
         "long-summary",
         "multiline",
         "blank-summary",
+        "blank-explanation",
+        "long-explanation",
         "too-many-findings",
         "long-byte-message",
         "blank-message",
@@ -114,6 +117,10 @@ fn review_contract_enforces_boundaries_and_semantic_evidence_locally() {
             "long-summary" => verdict["reason"] = "x".repeat(MAX_SUMMARY_CHARS + 1).into(),
             "multiline" => verdict["reason"] = "not\na line".into(),
             "blank-summary" => verdict["reason"] = "  ".into(),
+            "blank-explanation" => verdict["explanation"] = "  ".into(),
+            "long-explanation" => {
+                verdict["explanation"] = "é".repeat(MAX_EXPLANATION_BYTES / 2 + 1).into()
+            }
             "too-many-findings" => {
                 verdict["findings"] = vec![verdict["findings"][0].clone(); MAX_FINDINGS + 1].into()
             }

@@ -117,7 +117,8 @@ if lines:
 else:
     finding = {'path': 'private-source', 'line': 1, 'message': 'File evaluated'}
 status = mode if mode in ['PASS', 'FAIL', 'ERROR'] else 'PASS'
-print(json.dumps({'protocol_version': 1, 'reviews': [{'id': request['reviews'][0]['id'], 'status': status, 'reason': 'Message evaluated', 'findings': [] if status == 'ERROR' or mode == 'ungrounded' else [finding]}]}))
+print(json.dumps({'protocol_version': 2, 'reason': 'Message evaluated', 'findings': [] if status == 'ERROR' or mode == 'ungrounded' else [finding]}))
+sys.exit({'PASS': 0, 'FAIL': 1}.get(status, 2))
 "#,
         );
         ok(cli(&root, &["sync", "--yes"]));

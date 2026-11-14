@@ -59,10 +59,10 @@ assert not [name for name in os.environ if name.startswith("PLEASE_")]
 with open(os.environ["CONTEXT_CALLS"], "a") as log:
     log.write("review\n")
 request = json.load(sys.stdin)
-assert request['protocol_version'] == 1
+assert request['protocol_version'] == 2
 assert request['execution_point'] == os.environ["EXPECTED_EXECUTION_POINT"]
 assert os.path.isfile(request['context_file'])
-print(json.dumps({'protocol_version': 1, 'reviews': [{'id': r['id'], 'status': 'PASS', 'reason': 'Context delivered', 'findings': [{'message': 'Evidence inspected', 'path': 'evidence', 'line': 1}]} for r in request['reviews']]}))
+print(json.dumps({'protocol_version': 2, 'reason': 'Context delivered', 'findings': [{'message': 'Evidence inspected', 'path': 'evidence', 'line': 1}]}))
 "#).unwrap();
     fs::set_permissions(&script, fs::Permissions::from_mode(0o755)).unwrap();
     script

@@ -349,8 +349,7 @@ fn imported_cli_commands_follow_existing_explicit_import_trust() {
 import json, os, sys
 request = json.load(sys.stdin)
 assert request['reviews'][0]['parameters']['label'] == 'central-model'
-id = request['reviews'][0]['id']
-print(json.dumps({'protocol_version':1,'reviews':[{'id':id,'status':'PASS','reason':'Evidence inspected','findings':[{'message':'Evidence','path':'evidence','line':1}]}]}))
+print(json.dumps({'protocol_version':2,'reason':'Evidence inspected','findings':[{'message':'Evidence','path':'evidence','line':1}]}))
 "#,
     );
     fs::set_permissions(root.path().join("tool"), fs::Permissions::from_mode(0o755)).unwrap();

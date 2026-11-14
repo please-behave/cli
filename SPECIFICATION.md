@@ -210,7 +210,7 @@ outside parameters are rejected.
 
 ## PROV-002: Adapter protocol
 
-Protocol version 1 uses one UTF-8 JSON request on stdin and one JSON response on
+Protocol version 2 uses one UTF-8 JSON request on stdin and one JSON response on
 stdout. Requests contain protocol_version, execution_point, input (prepared
 excerpts, manifest, focused paths and bounded diff), head, prompt, response_schema,
 and reviews with id, criteria, entry_files, context_files and effective parameters.
@@ -225,12 +225,14 @@ JSON compatibility and transports values without interpreting provider meaning.
 Rule parameters remain separate and reach adapters as `rule_parameters`.
 Each review is one adapter call and retains its own effective adapter parameters.
 
-Responses require protocol_version = 1 and reviews matching the common verdict
-contract. Optional usage contains common token counters; absent usage remains
-unavailable. Each requested ID must occur exactly once with PASS, FAIL or ERROR.
-PASS/FAIL require evidence: an existing manifest path with a valid line number or, at commit-msg, a line of the commit message. Technical
-adapter failures may exit nonzero; no verdict is accepted on nonzero exit.
-Unsupported versions, unknown fields, malformed, incomplete, oversized or invalid
+The exit status is the verdict: 0 is PASS and 1 is FAIL, each valid only with a
+response that satisfies the common response contract. Any other exit status, a
+timeout, a failure to start or a missing or invalid response at exit 0 or 1 is ERROR.
+Responses require protocol_version = 2, a one-line reason, findings and an optional
+longer explanation; they carry neither a status nor a review ID. Optional usage
+contains common token counters; absent usage remains unavailable.
+PASS/FAIL require evidence: an existing manifest path with a valid line number or, at commit-msg, a line of the commit message.
+Unsupported versions, unknown fields, malformed, oversized or invalid
 responses produce ERROR. The standard output and error output of an adapter call that ends as ERROR are retained unmasked within the capture bounds and shown by `please status --details`.
 The shared process runner bounds output, drains pipes and terminates process
 trees on timeout, including blocked stdin delivery. Nonblocking review errors

@@ -90,7 +90,7 @@ assert request['reviews'][0]['parameters']['model'] == 'offline-fixture'
 pathlib.Path('.git/provider-called').write_text('called')
 if len(sys.argv) > 2 and sys.argv[2] == 'tamper':
     pathlib.Path(__file__).write_text('# modified during invocation\n')
-print(json.dumps({'protocol_version':1, 'reviews':[{'id':r['id'],'status':'PASS','reason':'Evidence inspected','findings':[{'message':'File inspected','path':'evidence','line':1}]} for r in request['reviews']]}))
+print(json.dumps({'protocol_version':2, 'reason':'Evidence inspected', 'findings':[{'message':'File inspected','path':'evidence','line':1}]}))
 "#,
         );
         let rules_ref = commit(&rules);
@@ -398,7 +398,7 @@ fn imported_message_review_uses_an_independent_cached_adapter() {
         r#"import json, sys
 request = json.load(sys.stdin)
 assert request['input']['commit_message']['lines'][0] == {'number': 1, 'text': 'fix: preserve focus'}
-print(json.dumps({'protocol_version':1,'reviews':[{'id':r['id'],'status':'PASS','reason':'Message inspected','findings':[{'path':None,'line':3,'message':'Specific imperative summary'}]} for r in request['reviews']]}))
+print(json.dumps({'protocol_version':2,'reason':'Message inspected','findings':[{'path':None,'line':3,'message':'Specific imperative summary'}]}))
 "#,
     );
     f.rules_ref = commit(&f.rules);

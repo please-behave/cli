@@ -59,11 +59,11 @@ assert not [name for name in os.environ if name.startswith('PLEASE_')]
 if mode == 'unread':
     time.sleep(30)
 request = json.load(sys.stdin)
-assert request['protocol_version'] == 1
+assert request['protocol_version'] == 2
 assert request['execution_point'] == 'check' and os.path.isfile(request['context_file'])
 prompt = request['prompt']
 assert 'Unique review instructions' in prompt
-assert request['response_schema']['required'] == ['reviews']
+assert request['response_schema']['required'] == ['reason', 'findings']
 assert 'positive line number' in prompt
 assert 'manifest paths' in prompt
 reviews = request['reviews']
@@ -76,14 +76,15 @@ if mode == 'nonzero':
     sys.exit(7)
 if mode == 'error':
     print('original-adapter-error', file=sys.stderr)
+    sys.exit(2)
 if mode == 'timeout':
     time.sleep(30)
 if mode == 'oversized':
     print('x' * 70000)
     sys.exit(0)
-status = 'FAIL' if mode == 'fail' else 'ERROR' if mode == 'error' else 'PASS'
 findings = [] if mode == 'ungrounded' else [{'message':'Evidence inspected','path':'evidence','line':1}]
-print(json.dumps({'protocol_version':1,'reviews':[{'id': r['id'], 'status':status, 'reason':'Evidence inspected', 'findings':findings} for r in reviews]}))
+print(json.dumps({'protocol_version':2,'reason':'Evidence inspected','findings':findings}))
+sys.exit(1 if mode == 'fail' else 3 if mode == 'structured-error' else 0)
 "#,
     );
     fs::set_permissions(root.join("tool"), fs::Permissions::from_mode(0o755)).unwrap();
@@ -132,6 +133,7 @@ fn process_and_response_errors_never_pass_and_keep_original_output() {
         "malformed",
         "nonzero",
         "error",
+        "structured-error",
         "timeout",
         "unread",
         "oversized",
@@ -312,15 +314,20 @@ fn completed_fail_and_error_respect_review_blocking() {
 fn protocol_versions_and_complete_coverage_fail_closed_while_usage_is_tolerant() {
     for mode in [
         "wrong-version",
+        "legacy-version",
         "missing-version",
         "duplicate-key",
-        "missing-review",
-        "extra-review",
+        "legacy-envelope",
+        "status-field",
+        "id-field",
+        "blank-explanation",
+        "long-explanation",
         "missing-path",
         "bad-usage",
         "zero-usage",
         "fenced",
         "valid-usage",
+        "explanation",
     ] {
         let root = fixture();
         write(
@@ -330,19 +337,24 @@ fn protocol_versions_and_complete_coverage_fail_closed_while_usage_is_tolerant()
 import json, sys
 request = json.load(sys.stdin)
 mode = sys.argv[1]
-r = {'id': request['reviews'][0]['id'], 'status':'PASS', 'reason':'Evidence inspected', 'findings':[{'message':'Evidence', 'path':'evidence', 'line':1}]}
-response = {'protocol_version':1,'reviews':[r]}
-if mode == 'wrong-version': response['protocol_version'] = 2
+r = {'reason':'Evidence inspected', 'findings':[{'message':'Evidence', 'path':'evidence', 'line':1}]}
+response = dict(r, protocol_version=2)
+if mode == 'wrong-version': response['protocol_version'] = 3
+if mode == 'legacy-version': response['protocol_version'] = 1
 if mode == 'missing-version': del response['protocol_version']
-if mode == 'missing-review': response['reviews'] = []
-if mode == 'extra-review': response['reviews'].append(dict(r, id='unexpected'))
+if mode == 'legacy-envelope': response = {'protocol_version':2, 'reviews':[dict(r, id=request['reviews'][0]['id'], status='PASS')]}
+if mode == 'status-field': response['status'] = 'PASS'
+if mode == 'id-field': response['id'] = request['reviews'][0]['id']
+if mode == 'blank-explanation': response['explanation'] = '  '
+if mode == 'long-explanation': response['explanation'] = 'x' * 8001
+if mode == 'explanation': response['explanation'] = 'First line\nSecond line'
 if mode == 'missing-path': del r['findings'][0]['path']
 if mode in ['bad-usage', 'valid-usage']:
     response['usage'] = {'input_tokens':10,'cached_input_tokens':11 if mode == 'bad-usage' else 3,'output_tokens':4}
 if mode == 'zero-usage':
     response['usage'] = {'input_tokens':0,'cached_input_tokens':-1,'output_tokens':'many','reasoning_output_tokens':None}
 if mode == 'duplicate-key':
-    print('{"protocol_version":1,"protocol_version":1,"reviews":[]}')
+    print('{"protocol_version":2,"protocol_version":2,"reason":"x","findings":[]}')
 elif mode == 'fenced': print('```json\n' + json.dumps(response) + '\n```')
 else: print(json.dumps(response))
 "#,
@@ -357,7 +369,10 @@ else: print(json.dumps(response))
         let result = execute(root.path());
         assert_eq!(
             result.overall,
-            if matches!(mode, "valid-usage" | "bad-usage" | "zero-usage") {
+            if matches!(
+                mode,
+                "valid-usage" | "bad-usage" | "zero-usage" | "explanation"
+            ) {
                 Status::Pass
             } else {
                 Status::Error
@@ -365,6 +380,10 @@ else: print(json.dumps(response))
             "{mode}: {:?}",
             result.results
         );
+        if mode == "explanation" {
+            let item = result.results.iter().find(|r| r.kind == "review").unwrap();
+            assert_eq!(item.explanation.as_deref(), Some("First line\nSecond line"));
+        }
         if mode == "zero-usage" {
             assert_eq!(result.token_usage, None);
             assert_eq!(result.provider_usage, None);
@@ -418,7 +437,7 @@ fn structured_parameters_merge_per_review_without_changing_provider_definition()
         "tool.py",
         r#"import json, sys
 request = json.load(sys.stdin)
-assert request['protocol_version'] == 1
+assert request['protocol_version'] == 2
 assert request['execution_point'] == 'check'
 assert request['input']['manifest']
 assert len(request['reviews']) == 1
@@ -427,7 +446,7 @@ for review in request['reviews']:
     assert p['retained'] == [1, True, 'text']
     assert p['variant'] == ('careful' if review['id'] == 'a' else 'quick')
     assert p['tools'] == ({'read':False} if review['id'] == 'a' else {'read':True,'search':True})
-print(json.dumps({'protocol_version':1, 'reviews':[{'id':r['id'],'status':'PASS','reason':'Parameters delivered','findings':[{'message':'Evidence','path':'evidence','line':1}]} for r in request['reviews']]}))
+print(json.dumps({'protocol_version':2, 'reason':'Parameters delivered', 'findings':[{'message':'Evidence','path':'evidence','line':1}]}))
 "#,
     );
     let project = config::load(root.path()).unwrap();
@@ -523,9 +542,12 @@ fn documented_dummy_runs_from_supporting_adapter_directory() {
     review(root.path(), "a", "dummy", "check");
     let result = execute(root.path());
     assert_eq!(result.overall, Status::Error);
-    assert_eq!(
-        result.results[0].reason,
-        "Dummy adapter performs no AI assessment"
+    assert!(result.results[0].reason.contains("not 0 or 1"));
+    assert!(
+        result.results[0]
+            .stderr
+            .as_ref()
+            .is_some_and(|c| c.text.contains("Dummy adapter performs no AI assessment"))
     );
     assert!(result.results[0].findings.is_empty());
 }

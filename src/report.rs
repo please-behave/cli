@@ -78,6 +78,9 @@ pub struct Item {
     pub blocked_by: Option<String>,
     pub duration_ms: u64,
     pub reason: String,
+    /// Optional longer explanation of an adapter verdict.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub explanation: Option<String>,
     pub findings: Vec<Finding>,
     pub exit_code: Option<i32>,
     pub stdout: Option<Capture>,
@@ -97,6 +100,7 @@ impl Item {
             blocked_by: None,
             duration_ms: 0,
             reason,
+            explanation: None,
             findings: vec![],
             exit_code: None,
             stdout: None,

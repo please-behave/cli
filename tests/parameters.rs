@@ -411,7 +411,7 @@ elif parameters["label"] == "second":
     assert "file" not in parameters
 else:
     sys.exit(2)
-print(json.dumps({"protocol_version": 1, "reviews": [{"id": identifier, "status": "PASS", "reason": "Parameters delivered", "findings": [{"message": "Evidence read", "path": "evidence", "line": 1}]}], "usage": {"input_tokens": 10, "cached_input_tokens": 3, "output_tokens": 4}}))
+print(json.dumps({"protocol_version": 2, "reason": "Parameters delivered", "findings": [{"message": "Evidence read", "path": "evidence", "line": 1}], "usage": {"input_tokens": 10, "cached_input_tokens": 3, "output_tokens": 4}}))
 "#).unwrap();
     fs::set_permissions(&script, fs::Permissions::from_mode(0o755)).unwrap();
     // Use an isolated child rather than mutating this test process's environment.

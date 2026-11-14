@@ -879,6 +879,11 @@ pub fn render_details(report: &Report, color: bool) -> String {
             status(item.status, color),
             clean(&item_reason(item))
         ));
+        if let Some(explanation) = &item.explanation {
+            // Keep the line breaks of the explanation; terminal control characters stay neutralized.
+            let lines = explanation.lines().map(clean).collect::<Vec<_>>();
+            text.push_str(&format!("{}\n", lines.join("\n")));
+        }
         for finding in &item.findings {
             let reference = match (&finding.path, finding.line) {
                 (Some(path), line) => format!(

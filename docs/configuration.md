@@ -526,11 +526,12 @@ credentials/executables, and contribute no context or planned model calls. Sched
 reviews still wait for the global deterministic-check gate. Snapshot and context
 limits remain unchanged.
 
-The provider must return exactly one PASS/FAIL/ERROR per requested ID. PASS/FAIL
-need an existing in-snapshot file and positive line reference for worktree reviews.
-At commit-msg, `path = null` with a `line` cites that line of the commit message. Malformed JSON,
-missing/duplicate verdicts, invalid evidence and provider failures produce ERROR.
-Summaries are single lines up to 120 characters; at most 20 findings per review,
+The adapter's exit status is the verdict: 0 is PASS and 1 is FAIL, each only with a
+valid response. PASS/FAIL need an existing in-snapshot file and positive line
+reference for worktree reviews. At commit-msg, `path = null` with a `line` cites that
+line of the commit message. Any other exit status, malformed JSON, invalid evidence
+and provider failures produce ERROR. Summaries are single lines up to 120 characters;
+an optional longer explanation has up to 8000 bytes; at most 20 findings per review,
 2000 bytes each. Non-blocking FAIL is visible; incomplete verification stays fatal.
 
 ### Group rules into rule sets

@@ -61,6 +61,13 @@ fn parse_with_message(
             "review reason must be one nonempty line of at most {MAX_SUMMARY_CHARS} characters"
         );
         ensure!(
+            verdict.explanation.as_ref().is_none_or(|text| {
+                !text.trim().is_empty() && text.len() <= crate::limits::MAX_EXPLANATION_BYTES
+            }),
+            "review explanation must be nonblank and at most {} bytes",
+            crate::limits::MAX_EXPLANATION_BYTES
+        );
+        ensure!(
             verdict.findings.len() <= crate::limits::MAX_FINDINGS,
             "too many findings"
         );
@@ -103,6 +110,7 @@ fn parse_with_message(
         );
         let mut item = Item::simple(&verdict.id, "review", verdict.status, verdict.reason);
         item.blocking = active.iter().find(|r| r.id == verdict.id).unwrap().blocking;
+        item.explanation = verdict.explanation;
         item.findings = verdict.findings;
         ensure!(
             mapped.insert(verdict.id.clone(), item).is_none(),

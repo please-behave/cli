@@ -33,6 +33,7 @@ pub const MAX_REPORT_BYTES: u64 = 128 * 1024 * 1024;
 pub const MAX_PROVIDER_RESPONSE_BYTES: u64 = 1024 * 1024;
 pub const MAX_CAPTURE_BYTES: usize = 64 * 1024;
 pub const MAX_SUMMARY_CHARS: usize = 120;
+pub const MAX_EXPLANATION_BYTES: usize = 8000;
 pub const MAX_FINDINGS: usize = 20;
 pub const MAX_FINDING_MESSAGE_BYTES: usize = 2000;
 
