@@ -1788,7 +1788,7 @@ fn triggers_limit_the_scope_of_content_and_change_set() {
     fs::write(d.path().join("entry.swift"), "old entry\n").unwrap();
     fs::write(d.path().join("unrelated.swift"), "old unrelated\n").unwrap();
     git(d.path(), &["add", "entry.swift", "unrelated.swift"]);
-    git(d.path(), &["commit", "--quiet", "-m", "base"]);
+    support::commit_all(d.path());
     fs::write(d.path().join("entry.swift"), "new entry\n").unwrap();
     fs::write(d.path().join("unrelated.swift"), "UNRELATED_SECRET\n").unwrap();
     fs::write(d.path().join("new.swift"), "new staged entry\n").unwrap();
