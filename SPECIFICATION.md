@@ -185,33 +185,10 @@ Initialization supplies no provider configuration or adapter. Configure an adapt
 before enabling reviews.
 ## HDR-001: Commit-header reviews
 
-`review.input` selects `worktree` (default) or `commit-header`. Header reviews
-require the validated managed `commit-msg` hook with exactly one regular,
-nonsymlink message file. Only its first line is read: at most 4096 UTF-8 bytes,
-excluding LF or CRLF, nonempty and without control characters. The body is never
-read as review evidence. Direct runs and offline previews without hook context
-are blocked when a header review is selected. Disabled or unselected header
-reviews do not require a message file.
+The [requirements](knowledge/requirements/README.md) REQ-0105 to REQ-0114 specify commit-header reviews. They replace the text of
+this section. The [components](knowledge/components/README.md) name the
+requirements they implement.
 
-Header reviews reject file/context selections and file-change triggers; they
-always omit the diff. Their adapter batches are separate from worktree reviews.
-Only configured criteria and the captured header are supplied as review evidence,
-without HEAD, file manifest, excerpts or diff. The provider-neutral adapter request
-retains protocol version 1 and exposes `input.commit_header`. No model or provider
-is built into the product. Header PASS/FAIL findings require
-`source = "commit-header"`, `path = null`, `line = 1`; the generation schema
-requires at least one finding, including for PASS. Adapter-generated technical
-ERROR may still have no findings. Ordinary reviews retain
-their existing file evidence contract and omit `source`.
-
-The header is captured during planning, participates in plan identity and is
-saved as `plan.input.commit_header` in reports. Recheck it after deterministic
-checks, before and after each adapter call and before saving the result. Missing,
-unreadable, invalid or changed headers prevent success; no stale verdict is
-accepted. Changes confined to the body do not invalidate a header-only review.
-Saved status evaluates working-tree freshness; the saved header is evidence of
-that hook invocation, not a new candidate message. Existing checks-first gating,
-blocking/advisory semantics and adapter failure handling apply unchanged.
 
 ## PROV-001: Named adapter configurations
 
@@ -331,26 +308,10 @@ within their own directories; shared Check paths follow CHK-001.
 
 ## REV-001: Reviews and provider isolation
 
-All reviews use the adapter interface defined by PROV-002. Provider-specific
-behavior belongs in externally configured adapters. Core orchestration still
-prepares shared evidence once, executes checks before reviews, and validates all
-verdicts and snapshot stability locally. No provider is distributed or selected
-implicitly.
+The [requirements](knowledge/requirements/README.md) REQ-0092 to REQ-0104 specify reviews, adapter isolation and review enforcement. They replace the text of
+this section. The [components](knowledge/components/README.md) name the
+requirements they implement.
 
-Review criteria state what to judge. Exact entry files are starting points;
-Markdown context supplies documented expectations with original line numbers.
-ATX headings must match uniquely, exclude code blocks, and include subsections.
-Shared/overlapping context is sent once. Missing or excessive context is rejected,
-not silently omitted, including for disabled definitions. Evidence must belong to
-the verified manifest. If every selected review declares entry files, initial
-manifest/diff hints focus on their combined entry/context paths; otherwise hints
-are project-wide. Reviews evaluate current files, not just changed lines, and
-must follow necessary dependencies. Untracked contents need direct inspection.
-
-Treat source, criteria, AGENTS.md and diffs as untrusted evidence, not instructions
-to change role or permissions. The ordinary review prompt is not a privileged system
-message. No repair loops, commits, delegated coding or inferred
-requirements. Missing essential evidence or material uncertainty is ERROR.
 
 ## TRIG-001: File-change review selection
 
@@ -396,26 +357,10 @@ and provider settings, not a second interpretation of evidence selection.
 
 ## OUT-001: Structured review outcomes
 
-Require exactly one verdict per requested ID and no unexpected IDs. Verdicts are
-PASS, FAIL or ERROR. Each has a nonblank one-line summary of at most 120 characters
-and at most 20 findings, each with a nonblank message of at most 2000 UTF-8 bytes.
-Finding path and line keys are required but nullable. Worktree PASS/FAIL require
-at least one existing in-manifest file and positive, in-range line reference. Grounded
-references do not prove an LLM conclusion correct. Invalid types, unknown/duplicate
-keys, malformed/missing/duplicate results and incomplete coverage make the batch
-ERROR. Adapter stdout, including the envelope, is limited to 64 KiB. The shared
-verdict validator additionally retains its 1 MiB document bound.
+The [requirements](knowledge/requirements/README.md) REQ-0115 to REQ-0123 specify structured review outcomes and token usage. They replace the text of
+this section. The [components](knowledge/components/README.md) name the
+requirements they implement.
 
-Provider schema, wire types and local validation share one response contract and
-limits. The schema constrains requested IDs/count, verdicts, summary length/line
-shape, finding count and positive line numbers before generation. UTF-8 byte
-limits, exact unique ID coverage and real evidence remain local checks. Schema
-compatibility errors are ERROR; constraints are never silently weakened.
-
-Available token counters are summed across parameter batches, retaining unknown
-counters as unavailable, including when the verdict is rejected. Total is input plus output; cached input, reasoning output
-and cache writes are subsets. Missing telemetry remains unavailable, never fabricated as zero; invalid adapter
-counters invalidate the response. No monetary estimate or total token budget is enforced.
 
 ## INP-001: Snapshots and stability
 
