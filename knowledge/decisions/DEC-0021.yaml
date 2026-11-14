@@ -1,0 +1,18 @@
+id: DEC-0021
+name: Adapter Safety Is Not Enforced Yet
+context: >-
+  Adapters are free in their implementation and may run an agentic loop that
+  loads further files and uses tools (DEC-0011). Such an agent could modify the
+  file system or operate Git, including committing and pushing. Please Behave
+  has no simple means to prevent this.
+decision: >-
+  Please Behave does not enforce that adapters leave the repository unchanged
+  or resist hostile content. It only instructs the adapter to judge without
+  changing anything and to treat reviewed content as untrusted evidence.
+  Protecting a project from an adapter's actions remains outside the current
+  scope and is left to a future decision.
+rationale: >-
+  Restricting adapters would limit which models and review styles can be used,
+  and no simple, provider-independent solution is known. Recording the gap
+  keeps the limitation visible so that the owner does not assume a protection
+  that does not exist.

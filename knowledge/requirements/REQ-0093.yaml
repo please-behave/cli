@@ -9,3 +9,4 @@ rationale: >-
   further files, which complex reviews such as architecture validation need.
 decisions:
   - DEC-0011
+  - DEC-0021

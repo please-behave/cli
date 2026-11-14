@@ -7,3 +7,5 @@ description: >-
   modify the repository, commit, delegate or contact remote services.
 rationale: >-
   A governance review is meant to evaluate the project and never to change it.
+decisions:
+  - DEC-0021
