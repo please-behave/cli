@@ -1,0 +1,10 @@
+id: REQ-0103
+name: Blocking Review Outcomes Prevent Success
+area: reviews
+description: >-
+  A FAIL or an ERROR of a blocking review must prevent a successful result.
+rationale: >-
+  A blocking review that fails or cannot complete must not let a change
+  through.
+decisions:
+  - DEC-0007

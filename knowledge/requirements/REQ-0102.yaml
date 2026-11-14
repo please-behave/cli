@@ -1,0 +1,11 @@
+id: REQ-0102
+name: Review Blocking Is Configurable
+area: reviews
+description: >-
+  A review must be configurable as blocking or advisory, with the default
+  defined in the configuration reference.
+rationale: >-
+  Teams must be able to weigh strict enforcement against the unreliability of
+  external AI services.
+decisions:
+  - DEC-0007

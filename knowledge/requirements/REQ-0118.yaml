@@ -1,0 +1,9 @@
+id: REQ-0118
+name: Invalid Responses Are ERROR
+area: reviews
+description: >-
+  An adapter response that violates the response contract, including wrong
+  types, unknown or duplicate keys, missing or duplicate results,
+  inconsistent token counters or excess size, must make the whole batch ERROR.
+rationale: >-
+  A response that cannot be trusted must never be read as PASS.

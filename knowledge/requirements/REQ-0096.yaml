@@ -1,0 +1,9 @@
+id: REQ-0096
+name: Context Keeps Source Lines
+area: reviews
+description: >-
+  Selected review context must carry the original line numbers of its source
+  document.
+rationale: >-
+  Findings can only point reviewers to the real place in a document if the
+  lines are not renumbered.

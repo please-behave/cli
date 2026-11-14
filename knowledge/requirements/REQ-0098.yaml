@@ -1,0 +1,10 @@
+id: REQ-0098
+name: Entry Files Focus Hints
+area: reviews
+description: >-
+  When every selected review declares entry files, the initial hints given to
+  the provider must focus on their combined entry and context paths, and
+  otherwise they must cover the whole project.
+rationale: >-
+  Focused hints keep reviews with a narrow purpose from paying for
+  project-wide orientation.

@@ -1,0 +1,10 @@
+id: REQ-0097
+name: Context Is Never Silently Omitted
+area: reviews
+description: >-
+  Review context that is missing or exceeds its bounds must be rejected as an
+  error and must not be silently omitted or truncated, including for disabled
+  reviews.
+rationale: >-
+  A review judged against less context than configured would give a verdict
+  nobody can trust.

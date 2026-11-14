@@ -1,0 +1,9 @@
+id: REQ-0123
+name: No Cost Estimate Or Budget
+area: reviews
+description: >-
+  Please must not estimate monetary cost or enforce a total token budget for
+  reviews.
+rationale: >-
+  Token counts are adapter claims and cannot serve as billing or quota
+  statements.

@@ -1,0 +1,8 @@
+id: REQ-0108
+name: Body Is Never Evidence
+area: reviews
+description: >-
+  The commit message body must never be read as evidence for a header review.
+rationale: >-
+  A header verdict must not depend on text it was not meant to judge, and
+  changes to the body must not invalidate it.

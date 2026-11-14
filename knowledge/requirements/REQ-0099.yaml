@@ -1,0 +1,9 @@
+id: REQ-0099
+name: Reviews Judge Only
+area: reviews
+description: >-
+  The instructions given to an adapter for a review must tell it to judge
+  only the configured criteria against the current working files and not to
+  modify the repository, commit, delegate or contact remote services.
+rationale: >-
+  A governance review is meant to evaluate the project and never to change it.

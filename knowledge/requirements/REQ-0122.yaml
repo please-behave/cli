@@ -1,0 +1,8 @@
+id: REQ-0122
+name: Missing Usage Stays Unavailable
+area: reviews
+description: >-
+  Token counters that an adapter does not report must stay unavailable and
+  must never be shown as zero.
+rationale: >-
+  A zero would claim a measurement nobody made.

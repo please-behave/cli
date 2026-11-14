@@ -1,0 +1,9 @@
+id: REQ-0101
+name: Uncertainty Is ERROR
+area: reviews
+description: >-
+  The instructions given to an adapter for a review must direct it to report
+  ERROR and not PASS when necessary evidence is unavailable or a conclusion
+  is materially uncertain.
+rationale: >-
+  A review that cannot tell must say so instead of passing.

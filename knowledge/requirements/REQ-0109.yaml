@@ -1,0 +1,9 @@
+id: REQ-0109
+name: Header Evidence Only
+area: reviews
+description: >-
+  A header review must receive only its configured criteria and the captured
+  header as evidence, without HEAD, file manifest, excerpts or diff.
+rationale: >-
+  A header review is meant to be cheap and must not leak repository content
+  to the provider.

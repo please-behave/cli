@@ -1,0 +1,8 @@
+id: REQ-0116
+name: Verdict Shape
+area: reviews
+description: >-
+  Each verdict must be exactly one of PASS, FAIL or ERROR with a one-line
+  summary and findings within the bounds of the adapter protocol.
+rationale: >-
+  Results must stay uniform and compact so tools and people can rely on them.

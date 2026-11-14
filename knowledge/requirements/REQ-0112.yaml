@@ -1,0 +1,9 @@
+id: REQ-0112
+name: Header Findings Cite The Header
+area: reviews
+description: >-
+  A PASS or FAIL of a header review must carry at least one finding that
+  cites the header, and findings that cite files must be rejected.
+rationale: >-
+  A header verdict without evidence cannot be audited, and a file citation
+  would show the reviewer judged something else.

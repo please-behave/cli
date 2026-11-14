@@ -1,0 +1,9 @@
+id: REQ-0115
+name: One Verdict Per Review
+area: reviews
+description: >-
+  The result of an adapter call must contain exactly one verdict for each
+  requested review and no verdict for any other.
+rationale: >-
+  Every requested review must be answered, and no answer may appear for
+  something nobody asked.

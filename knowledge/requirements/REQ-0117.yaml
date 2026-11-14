@@ -1,0 +1,8 @@
+id: REQ-0117
+name: Worktree Verdicts Cite Evidence
+area: reviews
+description: >-
+  A PASS or FAIL of a worktree review must cite at least one existing file of
+  the verified manifest with a positive line number within that file.
+rationale: >-
+  A verdict that points at nothing real cannot be checked by anyone.

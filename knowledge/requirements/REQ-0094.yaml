@@ -1,0 +1,8 @@
+id: REQ-0094
+name: Shared Context Sent Once
+area: reviews
+description: >-
+  Context that is shared or overlapping between reviews must be supplied once
+  and not repeated for each review.
+rationale: >-
+  Repeating the same documents for every review wastes tokens.

@@ -1,0 +1,10 @@
+id: REQ-0095
+name: Context Headings Are Exact
+area: reviews
+description: >-
+  A heading in a review context selection must match exactly one ATX heading
+  outside code blocks, and the selection must include that heading's
+  subsections.
+rationale: >-
+  A selection that silently picks the wrong section would let a review judge
+  against the wrong expectations.

@@ -1,0 +1,8 @@
+id: REQ-0113
+name: Header Is Recorded
+area: reviews
+description: >-
+  The captured header must be part of the plan identity and be saved in the
+  report as evidence of the reviewed invocation.
+rationale: >-
+  The report must show exactly which header was judged.
