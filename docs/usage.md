@@ -59,8 +59,11 @@ redraws in an interactive terminal and appends plain logs in CI, with `TERM=dumb
 with redirected stderr; `plain` and `tty` select a mode explicitly. Each review is one
 provider call. A final line
 summarizes status, counts and duration, for example
-`FAIL · 3 rules · 1 failed · 1 not executed · 2.0 s`. Colors follow `NO_COLOR`,
-`--no-color` and each stream's terminal state.
+`FAIL · 3 rules · 1 failed · 1 not executed · 2.0 s`. Unless the run passes, a short
+failure summary follows: the number of rules that prevented success and up to three
+lines of cause for the first one, from its review result or its captured error output
+(standard output as fallback), with a pointer to `please status --details`. Colors follow
+`NO_COLOR`, `--no-color` and each stream's terminal state.
 
 `please status` reads the saved report without executing anything and reports
 CURRENT, STALE or UNKNOWN by comparing the saved snapshot with the working tree.

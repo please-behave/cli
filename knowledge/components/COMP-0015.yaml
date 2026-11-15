@@ -6,7 +6,8 @@ purpose: >-
 scope:
   - >-
     Renders live progress as redrawn rows or plain lines and the closing
-    summary of a run.
+    summary of a run, including the failure summary of a run that is not
+    PASS.
   - >-
     Renders saved results, details, execution plans and freshness changes.
   - >-
@@ -33,6 +34,7 @@ depends_on:
   - COMP-0001
   - COMP-0002
   - COMP-0006
+  - COMP-0008
   - COMP-0011
   - COMP-0014
 requirements:
@@ -40,3 +42,4 @@ requirements:
   - REQ-0039
   - REQ-0042
   - REQ-0043
+  - REQ-0133

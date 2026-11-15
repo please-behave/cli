@@ -1383,9 +1383,9 @@ fn failed_checks_report_skipped_reviews_without_claiming_they_started() {
     assert!(output.contains("[2/3] FAIL    · deliberately-failing"));
     assert!(output.contains("NOT_RUN · product-consistency"));
     assert!(!output.contains("RUNNING review") && !output.contains("Adapter:"));
-    assert_eq!(
-        terminal::render_outcome(&report, 2000, false),
-        "FAIL · 3 rules · 1 failed · 1 not executed · 2.0 s\n"
+    assert!(
+        terminal::render_outcome(&report, 2000, false)
+            .starts_with("FAIL · 3 rules · 1 failed · 1 not executed · 2.0 s\n")
     );
     assert!(path(d.path(), "reports/last.json").is_file());
 }

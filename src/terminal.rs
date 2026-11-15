@@ -576,7 +576,103 @@ pub fn render_outcome(report: &Report, elapsed_ms: u64, color: bool) -> String {
             duration(elapsed_ms)
         ));
     }
+    text.push_str(&failure_summary(report, color));
     text
+}
+
+const FAILURE_DETAIL_LINES: usize = 3;
+const FAILURE_DETAIL_CHARS: usize = 200;
+
+/// One bounded detail block for the first rule that prevented success, so the
+/// cause stays visible at the end of a long log. Integrity results are already printed.
+fn failure_summary(report: &Report, color: bool) -> String {
+    let failures: Vec<_> = report
+        .results
+        .iter()
+        .filter(|item| {
+            item.kind != "integrity"
+                && matches!(item.status, Status::Fail | Status::Error)
+                && crate::report::prevents_success(item)
+        })
+        .collect();
+    let Some(first) = failures.first() else {
+        return String::new();
+    };
+    let names = report.plan.display_names();
+    let mut text = format!(
+        "\n{} prevented success · first: {} · {}\n",
+        match failures.len() {
+            1 => "1 rule".to_owned(),
+            n => format!("{n} rules"),
+        },
+        clean(names.get(&first.id).unwrap_or(&first.id)),
+        status(first.status, color)
+    );
+    for line in failure_details(first) {
+        text.push_str(&format!("  {line}\n"));
+    }
+    text.push_str("Complete output: please status --details\n");
+    text
+}
+
+/// A review verdict carries its own explanation; every other result shows its
+/// captured output, falling back to the reason when nothing was captured.
+fn failure_details(item: &crate::report::Item) -> Vec<String> {
+    let lines: Vec<String> = if item.kind == "review" && item.status == Status::Fail {
+        std::iter::once(item.reason.clone())
+            .chain(
+                item.findings
+                    .iter()
+                    .map(|finding| match (&finding.path, finding.line) {
+                        (Some(path), Some(line)) => format!("{} [{path}:{line}]", finding.message),
+                        (Some(path), None) => format!("{} [{path}]", finding.message),
+                        _ => finding.message.clone(),
+                    }),
+            )
+            .flat_map(|text| detail_lines(&text))
+            .take(FAILURE_DETAIL_LINES)
+            .collect()
+    } else {
+        let captured = |capture: &Option<crate::process::Capture>| {
+            capture
+                .as_ref()
+                .map(|capture| detail_lines(&capture.text))
+                .unwrap_or_default()
+        };
+        let mut lines = captured(&item.stderr);
+        if lines.is_empty() {
+            lines = captured(&item.stdout);
+        }
+        if lines.is_empty() {
+            lines = detail_lines(&item.reason);
+        }
+        let start = lines.len().saturating_sub(FAILURE_DETAIL_LINES);
+        lines.split_off(start)
+    };
+    lines.into_iter().map(|line| bound_detail(&line)).collect()
+}
+
+/// Non-empty sanitized lines. A leading `::` is broken up so rule output cannot
+/// inject GitHub workflow commands.
+fn detail_lines(text: &str) -> Vec<String> {
+    text.lines()
+        .map(|line| clean(line).trim().to_owned())
+        .filter(|line| !line.is_empty())
+        .map(|line| match line.strip_prefix("::") {
+            Some(rest) => format!(": :{rest}"),
+            None => line,
+        })
+        .collect()
+}
+
+fn bound_detail(line: &str) -> String {
+    if line.chars().count() <= FAILURE_DETAIL_CHARS {
+        return line.to_owned();
+    }
+    line.chars()
+        .take(FAILURE_DETAIL_CHARS - 1)
+        .chain(std::iter::once('…'))
+        .collect()
 }
 
 pub fn render_plan(plan: &crate::planner::Plan, color: bool) -> String {

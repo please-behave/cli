@@ -1,0 +1,13 @@
+id: REQ-0133
+name: Failure Summary Ends the Run
+area: reporting
+description: >-
+  When a run does not end with PASS, its output must close with the number of
+  rules that prevented success and up to three lines of at most 200 characters
+  from the first of them, taken from the rule's structured result when it has
+  one and otherwise from its captured error output, falling back to its
+  captured standard output. The summary must be plain sanitized text that
+  cannot inject workflow commands and must point to the complete output.
+rationale: >-
+  Whoever reads a long log must see the cause of a failure where the run ends,
+  without searching for it.
