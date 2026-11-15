@@ -1,0 +1,10 @@
+id: REQ-0163
+name: Typed Named Parameters
+area: rules
+description: >-
+  A rule must be able to declare named parameters of the type string or file,
+  each required or optional, and a parameter name or value that violates the
+  configuration reference must be rejected as a configuration error.
+rationale: >-
+  One rule implementation can serve many projects when each project supplies
+  its own values.

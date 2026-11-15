@@ -1,0 +1,11 @@
+id: REQ-0140
+name: Set Assignment Replaces Own Points
+area: rules
+description: >-
+  A rule that rule sets reference must run at the execution points those
+  references assign and not at its own, at the union of them when several
+  references exist, while a rule without references must run at its own
+  points.
+rationale: >-
+  The set that groups rules decides where they run, and a rule referenced
+  twice must not be limited to one of the lists.

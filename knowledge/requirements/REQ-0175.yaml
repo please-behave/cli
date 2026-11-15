@@ -1,0 +1,8 @@
+id: REQ-0175
+name: Renames Match Both Paths
+area: rules
+description: >-
+  A rename must count as the deletion of the old path and the addition of the
+  new path, so that a trigger matching either selects the review.
+rationale: >-
+  Moving a file out of or into a watched area must still trigger the review.

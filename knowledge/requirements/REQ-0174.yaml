@@ -1,0 +1,11 @@
+id: REQ-0174
+name: Net Changes Against The Base
+area: rules
+description: >-
+  The changes against the change base must be the net difference between the
+  base commit and the current working files, including staged, unstaged and
+  untracked files that are not ignored and the declared governance files even
+  when ignored, so that a change reverted to the base selects no review.
+rationale: >-
+  What counts is the result a reviewer would see, not the path a developer
+  took to get there.

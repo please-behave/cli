@@ -1,0 +1,9 @@
+id: REQ-0153
+name: Preview Selects Like Execution
+area: rules
+description: >-
+  A plan preview must select the same rules, in the same order and for the
+  same reasons, as an execution at the same execution point, and it must
+  prepare the same review input.
+rationale: >-
+  A plan is only worth reading when it announces what a run would really do.

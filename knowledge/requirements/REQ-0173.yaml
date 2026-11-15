@@ -1,0 +1,11 @@
+id: REQ-0173
+name: Change Base Is Explicit
+area: rules
+description: >-
+  At the check point and at custom execution points the changed files must be
+  determined against a change base that the caller names explicitly, and
+  Please must neither infer one, such as the previous commit or a remote
+  branch, nor fetch one.
+rationale: >-
+  Only the caller knows what a pull request is measured against, and a guess
+  would silently review the wrong changes.

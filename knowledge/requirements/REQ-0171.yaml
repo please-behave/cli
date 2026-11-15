@@ -1,0 +1,11 @@
+id: REQ-0171
+name: Trigger Pattern Grammar
+area: rules
+description: >-
+  A trigger pattern must follow the restricted portable pattern grammar of the
+  configuration reference and match case-sensitively, and any other pattern
+  must be rejected as a configuration error, also in imported and in disabled
+  reviews.
+rationale: >-
+  The same pattern must select the same files on every machine, and a broken
+  pattern must never silently select nothing.

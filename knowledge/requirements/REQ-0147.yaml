@@ -1,0 +1,8 @@
+id: REQ-0147
+name: Hooks Run Their Own Point
+area: setup
+description: >-
+  Each managed Git hook must run the execution point of the same name, and no
+  other association between hooks and execution points may be configurable.
+rationale: >-
+  Anyone can tell which rules a Git event triggers from the point names alone.

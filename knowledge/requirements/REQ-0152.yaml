@@ -1,0 +1,10 @@
+id: REQ-0152
+name: Default Point Is Pre-Push
+area: rules
+description: >-
+  When no execution point is requested, a run must use pre-push.
+rationale: >-
+  Pre-push comes before changes are shared, so the default guards what leaves
+  the machine without slowing every commit.
+decisions:
+  - DEC-0004

@@ -1,0 +1,11 @@
+id: REQ-0157
+name: Blocked Plan
+area: rules
+description: >-
+  When a plan cannot be completed, the preview must report it as blocked with
+  at least one reason, must show every detail that was determined and must not
+  invent the others, and a plan blocked by a configuration or selection error
+  must end with the exit code that the configuration reference defines for
+  errors.
+rationale: >-
+  A blocked plan must say so plainly instead of presenting guesses as a plan.

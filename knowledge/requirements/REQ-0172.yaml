@@ -1,0 +1,11 @@
+id: REQ-0172
+name: Changed Files Follow The Execution Point
+area: rules
+description: >-
+  The changed files of a review must be the changes that the execution point
+  concerns, as defined in the configuration reference.
+rationale: >-
+  A review judges what is about to be committed or pushed, not the whole
+  repository.
+decisions:
+  - DEC-0003

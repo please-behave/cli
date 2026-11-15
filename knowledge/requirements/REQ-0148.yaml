@@ -1,0 +1,11 @@
+id: REQ-0148
+name: Explicit Points Do Not Need Hooks
+area: rules
+description: >-
+  The check point and custom execution points must run only when requested
+  explicitly and must not depend on Git hooks being installed or current.
+rationale: >-
+  CI must run the same rules on a fresh checkout without hooks, and nothing
+  may run behind the user's back.
+decisions:
+  - DEC-0004

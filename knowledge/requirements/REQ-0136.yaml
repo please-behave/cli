@@ -1,0 +1,11 @@
+id: REQ-0136
+name: Rule Display Name
+area: rules
+description: >-
+  A rule may declare a display name within the bounds of the configuration
+  reference, an invalid name must be rejected as a configuration error, and a
+  rule without a name must be shown under its own ID, also when it is
+  imported.
+rationale: >-
+  People read short labels better than technical IDs, and a missing label must
+  not leave a rule without a name.

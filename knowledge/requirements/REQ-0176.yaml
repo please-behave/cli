@@ -1,0 +1,9 @@
+id: REQ-0176
+name: Undeterminable Changes Block
+area: rules
+description: >-
+  When the changed files of a review cannot be determined completely, the run
+  must be blocked with an error, and the review must never be skipped as if
+  nothing had changed.
+rationale: >-
+  A review must never disappear because the comparison failed.

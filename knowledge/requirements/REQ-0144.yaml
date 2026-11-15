@@ -1,0 +1,9 @@
+id: REQ-0144
+name: Disabled Rules Never Run
+area: rules
+description: >-
+  A disabled rule must be validated but must never run or appear among the
+  results.
+rationale: >-
+  Switching a rule off must be safe and reversible without the rule breaking
+  in the meantime.

@@ -1,0 +1,12 @@
+id: REQ-0177
+name: Unmatched Reviews Cost Nothing
+area: rules
+description: >-
+  A review whose triggers do not match must not need provider credentials or
+  executables and must cause no context preparation, parameter resolution or
+  model-call estimate.
+rationale: >-
+  A change that no review is meant to judge must pass without any provider
+  setup or cost.
+decisions:
+  - DEC-0015

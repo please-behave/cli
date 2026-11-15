@@ -1,0 +1,12 @@
+id: REQ-0146
+name: Built-In Execution Points
+area: rules
+description: >-
+  Please must provide the built-in execution points pre-commit, commit-msg,
+  pre-push and check and must reserve their names.
+rationale: >-
+  Developers get the usual Git stages and one explicit point for CI without
+  declaring anything.
+decisions:
+  - DEC-0003
+  - DEC-0004

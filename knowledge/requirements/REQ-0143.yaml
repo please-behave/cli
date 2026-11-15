@@ -1,0 +1,8 @@
+id: REQ-0143
+name: Enabled Rule Needs A Point
+area: rules
+description: >-
+  An enabled rule that has no effective execution point must be rejected as a
+  configuration error.
+rationale: >-
+  A rule that can never run must not look like a rule that is being enforced.

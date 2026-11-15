@@ -1,0 +1,11 @@
+id: REQ-0142
+name: Every Assignment Is Validated
+area: rules
+description: >-
+  Every rule reference and every execution point list must be validated,
+  including those of disabled rules, of overridden lists and of repeated
+  references, and a reference to a rule that does not exist in the same scope
+  must be rejected as a configuration error.
+rationale: >-
+  Enabling a rule or removing an override later must not reveal a broken
+  assignment for the first time.

@@ -1,0 +1,12 @@
+id: REQ-0134
+name: Rule Has One Implementation
+area: rules
+description: >-
+  A rule must declare exactly one implementation, either a check or a review,
+  and a definition that declares neither or both must be rejected as a
+  configuration error.
+rationale: >-
+  Every rule must be unambiguous about whether it runs a command or asks an
+  AI.
+decisions:
+  - DEC-0002

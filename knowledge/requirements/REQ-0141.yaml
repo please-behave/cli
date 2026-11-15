@@ -1,0 +1,10 @@
+id: REQ-0141
+name: Reference May Replace Set Points
+area: rules
+description: >-
+  A rule reference inside a rule set must inherit the set's execution points
+  when it names none of its own, and a nonempty list on the reference must
+  replace the set's list for that reference alone.
+rationale: >-
+  A set can assign points to most of its rules while one rule keeps a
+  different schedule.

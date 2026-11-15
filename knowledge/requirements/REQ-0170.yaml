@@ -1,0 +1,12 @@
+id: REQ-0170
+name: Triggers Select Reviews
+area: rules
+description: >-
+  A review that declares file-change triggers must be selected only when a
+  changed file matches one of them, and a review without triggers must be
+  selected by any change.
+rationale: >-
+  A review is run only for changes it is meant to judge, which saves model
+  calls.
+decisions:
+  - DEC-0024

@@ -1,0 +1,9 @@
+id: REQ-0178
+name: Unmatched Reviews Stay Visible
+area: rules
+description: >-
+  A review without matching changed files must be listed in the plan as
+  omitted with its reason and must have no result and no required ID.
+rationale: >-
+  A review that did not run must be visibly explained, so that silence is
+  never mistaken for a passed review.

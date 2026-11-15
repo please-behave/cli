@@ -1,0 +1,9 @@
+id: REQ-0180
+name: Reviews Use The Planned Input
+area: reviews
+description: >-
+  A review must run with exactly the input prepared during planning, without
+  rereading context or recomputing its change set.
+rationale: >-
+  What the plan showed is what the adapter receives, and files are never read
+  twice with different results.

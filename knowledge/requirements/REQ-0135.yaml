@@ -1,0 +1,8 @@
+id: REQ-0135
+name: Rule Sets Do Not Change Rule Properties
+area: rules
+description: >-
+  A rule set must not declare or change the enabled state or the blocking
+  behavior of the rules it references.
+rationale: >-
+  A rule must behave the same in every set that references it.

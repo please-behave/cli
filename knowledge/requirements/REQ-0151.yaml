@@ -1,0 +1,9 @@
+id: REQ-0151
+name: Point Selected By Name
+area: rules
+description: >-
+  A run must select the rules of the execution point requested by name and
+  must reject an unknown execution point.
+rationale: >-
+  The caller decides which stage of the lifecycle is verified, and a typo must
+  not silently verify nothing.

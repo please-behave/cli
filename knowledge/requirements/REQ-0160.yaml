@@ -1,0 +1,9 @@
+id: REQ-0160
+name: Checks-Only Result Is Limited
+area: rules
+description: >-
+  The result of a checks-only run must depend on the checks alone, and its
+  plan and its report must record that the run was limited to checks.
+rationale: >-
+  A checks-only PASS must never be read as a statement about the review
+  criteria.

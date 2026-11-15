@@ -1,0 +1,9 @@
+id: REQ-0166
+name: File Parameters Stay In The Repository
+area: rules
+description: >-
+  The value of a file parameter must be a path relative to the repository root
+  that names an existing regular file, and an absolute path, parent traversal
+  and traversal through a symlink must be rejected.
+rationale: >-
+  A parameter must not let a rule read files outside the project.

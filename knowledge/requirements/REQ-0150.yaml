@@ -1,0 +1,9 @@
+id: REQ-0150
+name: Empty Points Succeed
+area: rules
+description: >-
+  An execution point with no selected rules must succeed and must not report
+  any rule as passed.
+rationale: >-
+  A run that checked nothing must never read as proof that rules were
+  satisfied.

@@ -1,0 +1,9 @@
+id: REQ-0179
+name: Change Base In Plan Identity
+area: rules
+description: >-
+  The change base must be resolved once to a commit and recorded in the plan
+  and in its identity.
+rationale: >-
+  The plan identity then tells everyone which baseline the selection was
+  measured against.

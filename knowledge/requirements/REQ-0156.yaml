@@ -1,0 +1,9 @@
+id: REQ-0156
+name: Structured Plan
+area: rules
+description: >-
+  A plan preview must be available as structured JSON that always carries a
+  schema version, a status and the reasons that block it.
+rationale: >-
+  Tools and agents must be able to judge a plan before they interpret its
+  details.

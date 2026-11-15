@@ -1,0 +1,10 @@
+id: REQ-0158
+name: Checks-Only Skips Reviews
+area: rules
+description: >-
+  When checks-only is requested, Please must start no adapter process and make
+  no model call and must report every selected review as NOT_RUN with the
+  reason that checks-only was requested.
+rationale: >-
+  A developer must be able to run the cheap deterministic part alone and see
+  which reviews were left out.
