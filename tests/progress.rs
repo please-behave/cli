@@ -165,6 +165,7 @@ fn concise_cli_keeps_diagnostics_and_avoids_duplicate_results() {
         );
         let progress = String::from_utf8(output.stderr).unwrap();
         let summary = String::from_utf8(output.stdout).unwrap();
+        let summary = summary.strip_prefix(&version_line()).unwrap();
         assert!(!progress.contains('\u{1b}') && !progress.contains('\r'));
         assert!(
             progress.contains("RUNNING")
@@ -199,7 +200,11 @@ fn concise_cli_keeps_diagnostics_and_avoids_duplicate_results() {
         .unwrap();
     assert_eq!(output.status.code(), Some(2));
     assert!(String::from_utf8_lossy(&output.stderr).contains("status 2"));
-    assert!(String::from_utf8_lossy(&output.stdout).starts_with("ERROR · 2 rules · 1 errors ·"));
+    assert!(
+        String::from_utf8_lossy(&output.stdout)
+            .strip_prefix(&version_line())
+            .is_some_and(|summary| summary.starts_with("ERROR · 2 rules · 1 errors ·"))
+    );
 }
 #[test]
 fn terminal_rows_are_bounded_and_success_replaces_running_state() {
@@ -337,7 +342,12 @@ fn terminal_run(github_actions: bool) -> (String, String) {
     assert!(output.status.success());
     let bytes = reading.join().unwrap();
     let raw = String::from_utf8(bytes).unwrap();
-    (raw, String::from_utf8(output.stdout).unwrap())
+    let summary = String::from_utf8(output.stdout).unwrap();
+    let summary = summary.strip_prefix(&version_line()).unwrap();
+    (raw, summary.to_string())
+}
+fn version_line() -> String {
+    format!("Please Behave {}\n", env!("CARGO_PKG_VERSION"))
 }
 
 #[cfg(unix)]

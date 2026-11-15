@@ -8,6 +8,19 @@ use please::{
     terminal::{self, Tone},
 };
 use std::io::{IsTerminal, Write};
+fn version_line() -> String {
+    format!("Please Behave {}", env!("CARGO_PKG_VERSION"))
+}
+/// Announces the executing binary before any other `run` output. Stdout carries the line only when
+/// the configuration is valid and stdout is not reserved for JSON; otherwise it precedes the error.
+fn announce<T>(loaded: Result<T>, stdout: bool) -> Result<T> {
+    if stdout && loaded.is_ok() {
+        println!("{}", version_line());
+    } else {
+        eprintln!("{}", terminal::clean(&version_line()));
+    }
+    loaded
+}
 fn execute(cli: Cli) -> Result<i32> {
     let root = std::env::current_dir()?.canonicalize()?;
     let color = terminal::use_color(cli.no_color);
@@ -57,7 +70,7 @@ fn execute(cli: Cli) -> Result<i32> {
             hook_arguments,
         } => {
             if plan {
-                let prepared = config::load(&root).and_then(|project| {
+                let prepared = announce(config::load(&root), !json).and_then(|project| {
                     please::planner::build(&project, at.as_deref(), checks_only)
                 });
                 return match prepared {
@@ -96,7 +109,7 @@ fn execute(cli: Cli) -> Result<i32> {
             let mut renderer =
                 terminal::ProgressRenderer::new(redraw, progress_color, width, height);
             let started = std::time::Instant::now();
-            let mut project = config::load(&root)?;
+            let mut project = announce(config::load(&root), true)?;
             if let Some(limit) = max_parallel {
                 project.config.execution.max_parallel = limit;
             }

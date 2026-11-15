@@ -97,6 +97,45 @@ fn cli(root: &Path, args: &[&str]) -> std::process::Output {
         .output()
         .unwrap()
 }
+fn version_line() -> String {
+    format!("Please Behave {}\n", env!("CARGO_PKG_VERSION"))
+}
+#[test]
+fn run_prints_its_version_first_in_every_mode() {
+    let d = project();
+    let version = version_line();
+    let shown = String::from_utf8(cli(d.path(), &["--version"]).stdout).unwrap();
+    assert!(shown.contains(env!("CARGO_PKG_VERSION")));
+    let normal = cli(d.path(), &["run"]);
+    assert!(
+        String::from_utf8(normal.stdout)
+            .unwrap()
+            .starts_with(&version)
+    );
+    let json = cli(d.path(), &["run", "--plan", "--json"]);
+    serde_json::from_slice::<serde_json::Value>(&json.stdout).unwrap();
+    assert_eq!(String::from_utf8(json.stderr).unwrap(), version);
+    fs::write(path(d.path(), "config.toml"), "unknown_setting = 1\n").unwrap();
+    for args in [
+        &["run"][..],
+        &["run", "--plan"],
+        &["run", "--plan", "--json"],
+    ] {
+        let failed = cli(d.path(), args);
+        assert_eq!(failed.status.code(), Some(2), "{args:?}");
+        assert!(
+            String::from_utf8(failed.stderr)
+                .unwrap()
+                .starts_with(&version),
+            "{args:?}"
+        );
+        if args.contains(&"--json") {
+            serde_json::from_slice::<serde_json::Value>(&failed.stdout).unwrap();
+        } else {
+            assert!(failed.stdout.is_empty(), "{args:?}");
+        }
+    }
+}
 #[test]
 fn json_plan_errors_use_current_schema_and_blocking_reasons() {
     let d = project();
@@ -136,6 +175,7 @@ fn json_plan_errors_use_current_schema_and_blocking_reasons() {
             assert_eq!(human.status.code(), Some(code));
             assert!(human.stderr.is_empty());
             let text = String::from_utf8(human.stdout).unwrap();
+            let text = text.strip_prefix(&version_line()).unwrap();
             assert_eq!(text, terminal::render_plan(&plan, false));
             assert!(text.starts_with("Please Behave execution plan · "));
             assert!(text.ends_with(

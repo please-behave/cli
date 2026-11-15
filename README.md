@@ -245,6 +245,11 @@ The whole configuration is still validated, including disabled and omitted rules
 
 ### Read results
 
+Every `please run` starts with a `Please Behave <version>` line that names the
+executing binary, so a mismatch between pinned and resolved versions is visible.
+It goes to stdout; with invalid configuration, and with `--plan --json` to keep
+stdout valid JSON, it goes to stderr instead.
+
 Progress goes to stderr; the final result line goes to stdout. Redirecting
 `please run > report.txt` keeps progress visible in the terminal. Raw command
 output is saved instead of flooding the terminal.
