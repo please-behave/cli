@@ -1,8 +1,0 @@
-id: REQ-0168
-name: Optional Parameters Stay Absent
-area: rules
-description: >-
-  An optional parameter that has no value must stay absent, and Please must
-  not substitute a default.
-rationale: >-
-  A rule must never run with a value that nobody configured.
