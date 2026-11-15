@@ -1,0 +1,8 @@
+id: REQ-0182
+name: Repeated References Run At The Union
+area: rules
+description: >-
+  A rule that several references assign must run at the union of the
+  execution points of those references.
+rationale: >-
+  A rule referenced twice must not be limited to one of the lists.
