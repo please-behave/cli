@@ -1,5 +1,9 @@
 # Please Behave
 
+[![build](https://github.com/please-behave/cli/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/please-behave/cli/actions/workflows/ci.yml) [![release](https://img.shields.io/github/v/release/please-behave/cli?display_name=tag&sort=semver)](https://github.com/please-behave/cli/releases) [![license](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-3949ab.svg)](https://polyformproject.org/licenses/noncommercial/1.0.0/)
+
+[![tests](https://christianpflugradt.github.io/badges-and-stuff/please-behave/tests.svg)](https://christianpflugradt.github.io/badges-and-stuff/) [![coverage](https://christianpflugradt.github.io/badges-and-stuff/please-behave/coverage.svg)](https://christianpflugradt.github.io/badges-and-stuff/) [![LOC](https://christianpflugradt.github.io/badges-and-stuff/please-behave/loc.svg)](https://christianpflugradt.github.io/badges-and-stuff/)
+
 ```text
 Please Behave
 
@@ -457,7 +461,7 @@ is listed in the [TODOs](docs/todo/README.md).
 Please Behave governs its own development using a separately installed release.
 `mise.toml` pins the governor, and `.please/` defines its rules.
 `mise install` installs that exact release; builds under `target/` are candidates.
-See [repository self-integration](docs/self-governance.md) for setup and coverage.
+See [repository self-integration](docs/self-governance.md) for setup, coverage and the statistics behind the badges.
 The `rulesets/multi-point/open-source-software` Rule Set is pinned to a full Git commit and checks
 LICENSE against its permitted reference texts at `pre-push` and `check`.
 

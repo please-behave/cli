@@ -1,0 +1,67 @@
+name: Statistics
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+env:
+  MISE_AUTO_INSTALL: 'false' # Install tools explicitly before running tasks.
+
+jobs:
+  collect:
+    name: Collect statistics
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Install pinned tools
+        uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
+        with:
+          install_args: rust python aqua:boyter/scc aqua:taiki-e/cargo-llvm-cov
+      - name: Run tests and calculate coverage
+        run: |
+          mkdir -p target/statistics
+          cargo llvm-cov --locked --json --summary-only --output-path target/llvm-cov-summary.json 2>&1 | tee target/test-output.txt
+      - name: Write coverage metrics
+        run: python3 .github/scripts/write-coverage-metrics.py target/llvm-cov-summary.json target/statistics
+      - name: Write lines of code and test count metrics
+        run: |
+          scc --format json --include-ext rs src >target/scc.json
+          python3 .github/scripts/write-count-metrics.py target/scc.json target/test-output.txt target/statistics
+      - name: Upload statistics metrics
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: statistics-metrics
+          path: target/statistics
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: Publish statistics
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    needs:
+      - collect
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Download metrics
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: statistics-metrics
+          path: metrics
+      - name: Send statistics to badges-and-stuff
+        env:
+          GH_TOKEN: ${{ secrets.STATISTICS_TOKEN }}
+        run: |
+          set -euo pipefail
+          jq --slurp \
+            --arg project please-behave \
+            --arg commit "$GITHUB_SHA" \
+            --arg timestamp "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{event_type: "statistics", client_payload: {project: $project, commit: $commit, timestamp: $timestamp, metrics: .}}' \
+            metrics/*.json >payload.json
+          gh api --method POST repos/christianpflugradt/badges-and-stuff/dispatches --input payload.json

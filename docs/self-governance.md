@@ -233,6 +233,13 @@ readiness and four-platform candidate jobs must both succeed. Readiness checks
 exact-source CI directly; candidates install the published governor and invoke
 the independent `release` smoke-quality gate after building. Receipt recording,
 archive checks and publication guards are direct workflow scripts.
+The [statistics workflow](../.github/workflows/statistics.yml) runs on every push to `main`. Its `collect` job
+runs the Rust tests under `cargo llvm-cov` and derives three metrics: the number of passed tests from the
+`test result:` lines, the line coverage, and the lines of production code of `src/**/*.rs` counted by `scc`
+(inline unit tests included). The scripts in `.github/scripts/` write them as JSON files. The `publish` job,
+the only one with `STATISTICS_TOKEN`, sends them as project `please-behave` to the central
+[badges-and-stuff](https://github.com/christianpflugradt/badges-and-stuff) repository, which renders the README badges.
+The imported `statistics-workflow` rule checks the workflow structure. Release scripts, rules and tools are not counted.
 
 The mise Action runs `mise install` using the versions in `mise.toml`; CI then
 runs `mise run setup` solely to fetch locked npm and Cargo dependencies.

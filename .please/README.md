@@ -40,6 +40,8 @@ please status --details
 The exact published governor pin is recorded in mise.toml, shared by local
 hooks and GitHub Actions. The AGENTS.md review is triggered only by changes to AGENTS.md.
 Do not use a candidate built from this checkout as the governor.
+The imported `statistics-workflow` Check validates the structure of `.github/workflows/statistics.yml`, which
+sends the badge statistics.
 Agents rely on pre-commit and pre-push for final validation; targeted diagnostic
 checks remain permitted by AGENTS.md.
 Use `--fail-fast` only for targeted diagnosis when the first blocker is enough;
