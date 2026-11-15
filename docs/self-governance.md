@@ -237,7 +237,7 @@ The [statistics workflow](../.github/workflows/statistics.yml) runs on every pus
 runs the Rust tests under `cargo llvm-cov` and derives three metrics: the number of passed tests from the
 `test result:` lines, the line coverage, and the lines of production code of `src/**/*.rs` counted by `scc`
 (inline unit tests included). The scripts in `.github/scripts/` write them as JSON files. The `publish` job,
-the only one with `STATISTICS_TOKEN`, sends them as project `please-behave` to the central
+the only one with `STATISTICS_TOKEN`, sends them as project `please-behave-cli` to the central
 [badges-and-stuff](https://github.com/christianpflugradt/badges-and-stuff) repository, which renders the README badges.
 The imported `statistics-workflow` rule checks the workflow structure. Release scripts, rules and tools are not counted.
 
