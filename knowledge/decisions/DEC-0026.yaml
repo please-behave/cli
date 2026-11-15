@@ -1,0 +1,17 @@
+id: DEC-0026
+name: Versions Stay At One Before 1.0
+context: >-
+  Please Behave versions its plans, reports, run context and adapter protocol.
+  While the CLI is below 1.0.0 it changes rapidly, breaking changes are the
+  norm and it is not production ready. Raising a version number for each
+  incompatible change costs time and makes users of older saved data fail with
+  errors such as an unsupported plan schema.
+decision: >-
+  Every versioned format, including plan, report and run context schemas and
+  the adapter protocol, stays at version 1 until the CLI reaches 1.0.0. Breaking
+  changes are made in place and no document recommends raising a version. From
+  1.0.0 on, changes are less frequent and more careful and may raise versions.
+rationale: >-
+  The versions remain present so formats are identifiable and strict validation
+  stays in place, but no effort is spent on version management while there are
+  no stable consumers. Stale saved reports are replaced by running again.

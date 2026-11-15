@@ -117,7 +117,7 @@ if lines:
 else:
     finding = {'path': 'private-source', 'line': 1, 'message': 'File evaluated'}
 status = mode if mode in ['PASS', 'FAIL', 'ERROR'] else 'PASS'
-print(json.dumps({'protocol_version': 3, 'reason': 'Message evaluated', 'findings': [] if status == 'ERROR' else [finding]}))
+print(json.dumps({'protocol_version': 1, 'reason': 'Message evaluated', 'findings': [] if status == 'ERROR' else [finding]}))
 sys.exit({'PASS': 0, 'FAIL': 1}.get(status, 2))
 "#,
         );

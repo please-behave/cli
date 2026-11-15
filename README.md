@@ -6,6 +6,11 @@ Please Behave
 Enforce development rules across coding agents and workflows.
 ```
 
+> **Important:** Please Behave is in early development and not ready for
+> production use. Breaking changes are the norm: configuration, schemas and
+> protocols change without notice or migration, and all format versions stay at
+> 1 until 1.0.0. The project is expected to stabilize and mature before 2027.
+
 Please Behave is a source-available, agent-agnostic
 governance framework for software development: you define the expectations that
 development results must satisfy as version-controlled rules alongside your code.
@@ -308,7 +313,7 @@ please run --at pre-push --plan --json
 please run --at pre-push
 ```
 
-JSON previews use schema 4 and always include `status` and `blocking_reasons`.
+JSON previews use schema 1 and always include `status` and `blocking_reasons`.
 Configuration or selection errors return `status: "blocked"`, nonempty reasons
 and exit code 2; unavailable plan details are omitted. See
 [rule sets and execution points](docs/configuration.md#group-rules-into-rule-sets) for assignments.

@@ -125,7 +125,7 @@ fn fixed_discovery_and_defaults() {
     assert!(p.checks[0].enabled);
     assert_eq!(p.checks[0].timeout_seconds, 30);
     let plan = planner::build(&p, Some("check"), false).unwrap().plan;
-    assert_eq!(plan.plan_schema_version, 4);
+    assert_eq!(plan.plan_schema_version, 1);
     assert_eq!(plan.scheduled.len(), 1);
     assert!(plan.scheduled[0].blocking);
     write(
@@ -391,7 +391,7 @@ fn blocking_failures_errors_and_disabled_rules() {
         assert_eq!(result.overall, expected, "{implementation} {script}");
         assert_eq!(result.results[0].status, expected);
         let saved = report::read(d.path()).unwrap();
-        assert_eq!(saved.schema_version, 4);
+        assert_eq!(saved.schema_version, 1);
         assert!(saved.results[0].blocking);
     }
     let d = project();

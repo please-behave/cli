@@ -29,6 +29,9 @@
   once and avoid volatile facts such as current versions, counts or hashes. Keep
   prose concise, examples usable and future possibilities distinct from supported
   behavior.
+- Before 1.0.0, every schema and protocol version stays at 1 and breaking
+  changes are made in place (DEC-0026). Never introduce or recommend a version
+  bump.
 - Review the complete change for contradictions, stale references, duplication
   and unnecessary additions before finishing.
 

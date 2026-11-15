@@ -170,7 +170,7 @@ fn requirements(
 }
 
 /// The protocol version this build speaks; others are rejected without fallback.
-const PROTOCOL_VERSION: u32 = 3;
+const PROTOCOL_VERSION: u32 = 1;
 
 fn execute(request: &Request<'_>) -> Result<Response> {
     let config = request.provider_config()?;

@@ -783,8 +783,7 @@ using them without deleting the shared cache.
 Each run writes one JSON document that describes the Git state the rules judge, so rules need
 not call Git themselves. A check receives its absolute path as the `@context` argument and
 an adapter as `context_file` in its request; never hardcode the location. The format is specified by the
-[JSON Schema](schemas/context.schema.json) (`schema_version` 1); additive changes extend that
-schema and removals need a new schema version. The files live in the worktree-local Git
+[JSON Schema](schemas/context.schema.json) (`schema_version` 1); the schema stays at version 1 and changes in place while Please Behave is below 1.0.0. The files live in the worktree-local Git
 directory (`please/context/<run-id>/`), are readable by the owner only, and are not part of the
 working tree or the snapshot. Rules must treat the context as read-only. File contents are never
 included: a rule reads files from disk and uses the context to confirm that they are clean.
@@ -814,7 +813,7 @@ the managed section of a composed hook do not receive it.
 
 ### Reports and other files
 
-Reports use schema 4 and plans use schema 4. These output schema numbers describe
+Reports and plans use schema 1. Schema numbers describe
 machine-readable results, not configuration variants. Results record blocking,
 status, evidence, durations and captured output. ERROR always takes precedence;
 blocking FAIL follows; fail-fast skips and cancellations prevent success. Dependency

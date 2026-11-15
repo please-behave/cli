@@ -694,7 +694,7 @@ fn cli_refresh_cached_plan_and_offline_hook_keep_existing_lifecycle() {
     let plan = cli(&f, &["run", "--at", "pre-commit", "--plan", "--json"]);
     assert_eq!(plan.status.code(), Some(2));
     let diagnostic: serde_json::Value = serde_json::from_slice(&plan.stdout).unwrap();
-    assert_eq!(diagnostic["plan_schema_version"], 4);
+    assert_eq!(diagnostic["plan_schema_version"], 1);
     assert_eq!(diagnostic["status"], "blocked");
     assert!(
         !diagnostic["blocking_reasons"]

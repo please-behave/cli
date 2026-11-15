@@ -151,7 +151,7 @@ fn json_plan_errors_use_current_schema_and_blocking_reasons() {
         let output = cli(d.path(), args);
         assert_eq!(output.status.code(), Some(code));
         let document: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
-        assert_eq!(document["plan_schema_version"], 4);
+        assert_eq!(document["plan_schema_version"], 1);
         assert_eq!(
             document["status"],
             if code == 0 { "planned" } else { "blocked" }
@@ -220,7 +220,7 @@ fn json_plan_errors_use_current_schema_and_blocking_reasons() {
 fn human_plan_uses_english_and_preserves_layout_and_values() {
     // Fixed metadata exercises optional display sections without invoking rules or providers.
     let mut plan: please::planner::Plan = serde_json::from_value(serde_json::json!({
-        "plan_schema_version": 4,
+        "plan_schema_version": 1,
         "plan_id": "plan-123",
         "status": "planned",
         "blocking_reasons": [],

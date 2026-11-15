@@ -61,7 +61,7 @@ assert not [name for name in os.environ if name.startswith('PLEASE_')]
 if mode == 'unread':
     time.sleep(30)
 request = json.load(sys.stdin)
-assert request['protocol_version'] == 3
+assert request['protocol_version'] == 1
 assert request['execution_point'] == 'check' and os.path.isfile(request['context_file'])
 prompt = request['prompt']
 assert 'Unique review instructions' in prompt
@@ -85,7 +85,7 @@ if mode == 'oversized':
     print('x' * 70000)
     sys.exit(0)
 findings = [{'message':'Evidence inspected','path':'evidence','line':1}]
-print(json.dumps({'protocol_version':3,'reason':'Evidence inspected','findings':findings}))
+print(json.dumps({'protocol_version':1,'reason':'Evidence inspected','findings':findings}))
 sys.exit(1 if mode == 'fail' else 3 if mode == 'structured-error' else 0)
 "#,
     );
@@ -329,7 +329,6 @@ fn completed_fail_and_error_respect_review_blocking() {
 fn protocol_versions_and_complete_coverage_fail_closed_while_usage_is_tolerant() {
     for mode in [
         "wrong-version",
-        "legacy-version",
         "missing-version",
         "legacy-envelope",
         "status-field",
@@ -352,11 +351,10 @@ import json, sys
 request = json.load(sys.stdin)
 mode = sys.argv[1]
 r = {'reason':'Evidence inspected', 'findings':[{'message':'Evidence', 'path':'evidence', 'line':1}]}
-response = dict(r, protocol_version=3)
+response = dict(r, protocol_version=1)
 if mode == 'wrong-version': response['protocol_version'] = 2
-if mode == 'legacy-version': response['protocol_version'] = 1
 if mode == 'missing-version': del response['protocol_version']
-if mode == 'legacy-envelope': response = {'protocol_version':3, 'reviews':[dict(r, id=request['reviews'][0]['id'], status='PASS')]}
+if mode == 'legacy-envelope': response = {'protocol_version':1, 'reviews':[dict(r, id=request['reviews'][0]['id'], status='PASS')]}
 if mode == 'status-field': response['status'] = 'PASS'
 if mode == 'id-field': response['id'] = request['reviews'][0]['id']
 if mode == 'blank-explanation': response['explanation'] = '  '
@@ -449,7 +447,7 @@ fn structured_parameters_merge_per_review_without_changing_provider_definition()
         "tool.py",
         r#"import json, sys
 request = json.load(sys.stdin)
-assert request['protocol_version'] == 3
+assert request['protocol_version'] == 1
 assert request['execution_point'] == 'check'
 assert request['input']['files']
 assert len(request['reviews']) == 1
@@ -458,7 +456,7 @@ for review in request['reviews']:
     assert p['retained'] == [1, True, 'text']
     assert p['variant'] == ('careful' if review['id'] == 'a' else 'quick')
     assert p['tools'] == ({'read':False} if review['id'] == 'a' else {'read':True,'search':True})
-print(json.dumps({'protocol_version':3, 'reason':'Parameters delivered', 'findings':[{'message':'Evidence','path':'evidence','line':1}]}))
+print(json.dumps({'protocol_version':1, 'reason':'Parameters delivered', 'findings':[{'message':'Evidence','path':'evidence','line':1}]}))
 "#,
     );
     let project = config::load(root.path()).unwrap();

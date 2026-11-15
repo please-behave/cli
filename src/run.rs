@@ -356,7 +356,7 @@ pub fn verify_project_with_fail_fast(
         }
     }
     let report = Report {
-        schema_version: 4,
+        schema_version: report::REPORT_SCHEMA_VERSION,
         timestamp: chrono::Utc::now().to_rfc3339(),
         repository: project.root.to_string_lossy().into_owned(),
         project: project.config.project,

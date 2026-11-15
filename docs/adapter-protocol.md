@@ -36,9 +36,8 @@ output bounds of checks. When a call ends as ERROR, its stdout and stderr are re
 unmasked and shown by `please status --details`, so write the original error text to
 stderr and never include credentials. Never write progress text to stdout.
 
-The request and the response require integer `protocol_version: 3`. Unsupported
-versions, including 1, fail closed; no legacy format detection or fallback occurs. Any
-incompatible protocol revision must use a new version supported explicitly by Please.
+The request and the response require integer `protocol_version: 1`. Other
+versions fail closed. The protocol stays at version 1 and changes in place while Please Behave is below 1.0.0.
 Adapters should reject unsupported request versions and may ignore unknown request
 fields. Please rejects unknown response fields. The response schema is sent with each
 request so adapters need not duplicate limits.
@@ -52,7 +51,7 @@ ordinary enforcement rules regardless of which adapter is selected.
 
 ```json
 {
-  "protocol_version": 3,
+  "protocol_version": 1,
   "execution_point": "check",
   "input": {
     "excerpts": [],
@@ -136,7 +135,7 @@ one review in the `reviews` list; Please never combines reviews in one call.
 
 ```json
 {
-  "protocol_version": 3,
+  "protocol_version": 1,
   "reason": "Documented behavior matches",
   "explanation": "Optional longer text, which may span several lines.",
   "findings": [{"message": "Compared the documented command", "path": "README.md", "line": 1}],

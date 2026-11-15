@@ -108,6 +108,7 @@ impl Item {
         }
     }
 }
+pub const REPORT_SCHEMA_VERSION: u32 = 1;
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Report {
@@ -196,7 +197,7 @@ pub fn read(root: &Path) -> Result<Report> {
         crate::limits::MAX_REPORT_BYTES,
     )?)?;
     ensure!(
-        report.schema_version == 4,
+        report.schema_version == REPORT_SCHEMA_VERSION,
         "unsupported report schema; rerun please run"
     );
     let plan = &report.plan;

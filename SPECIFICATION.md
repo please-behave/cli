@@ -11,7 +11,7 @@ not implemented merely because they have a proposal.
 
 The [configuration reference](docs/configuration.md) defines every public
 configuration field, default and limit. The [execution-point contract](docs/execution-points-and-plans.md)
-extends this specification for plan schema 3 and report schema 4. These documents must agree; a contradiction must be resolved before work
+extends this specification for plan schema 1 and report schema 1. These documents must agree; a contradiction must be resolved before work
 proceeds, not interpreted as permission to choose either behavior.
 
 ## CLI-001: Commands and project boundaries
@@ -180,7 +180,7 @@ outside parameters are rejected.
 
 ## PROV-002: Adapter protocol
 
-Protocol version 3 uses one UTF-8 JSON request on stdin and one JSON response on
+Protocol version 1 uses one UTF-8 JSON request on stdin and one JSON response on
 stdout. Requests contain protocol_version, execution_point, input (prepared
 excerpts and the scope of the review: files, optional content and optional change set), prompt,
 response_schema, and reviews with id, criteria, context_files and effective parameters.
@@ -198,7 +198,7 @@ Each review is one adapter call and retains its own effective adapter parameters
 The exit status is the verdict: 0 is PASS and 1 is FAIL, each valid only with a
 response that satisfies the common response contract. Any other exit status, a
 timeout, a failure to start or a missing or invalid response at exit 0 or 1 is ERROR.
-Responses require protocol_version = 3, a one-line reason, findings and an optional
+Responses require protocol_version = 1, a one-line reason, findings and an optional
 longer explanation; they carry neither a status nor a review ID. Optional usage
 contains common token counters; absent usage remains unavailable.
 Unsupported versions, unknown fields, malformed, oversized or invalid
@@ -301,8 +301,8 @@ a section above `context.max_section_bytes` (default 10 MiB) is flagged truncate
 never silently cut, and paths that are not valid UTF-8 are counted instead of listed. Patches
 are separate owner-only files named in the document. The files live in the worktree-local Git
 directory, outside the snapshot, and at the start of each run only the newest
-`context.retain_runs` (default 100) completed runs are kept. Schema additions are additive;
-removals require a new `schema_version`. Pre-push reads Git's reference list from standard input;
+`context.retain_runs` (default 100) completed runs are kept. The schema stays at version 1 while
+the CLI is below 1.0.0. Pre-push reads Git's reference list from standard input;
 a failure to establish the context is a run error, never a PASS.
 
 ## RPT-001: Reporting and CLI outcomes
@@ -316,7 +316,7 @@ visible and permits overall PASS. Fail-fast NOT_RUN and CANCELLED block success 
 Dependency NOT_RUN inherits the originating outcome and does not independently block reviews or success.
 Disabled Rules stay out of results; failed or errored Checks leave selected Reviews NOT_RUN.
 
-Report schema 4 records plan schema 3, required IDs, blocking and rule provenance.
+Report schema 1 records plan schema 1, required IDs, blocking and rule provenance.
 An optional per-item configuration_error flag defaults to false in older reports
 and identifies fatal review parameter or prompt errors independently of blocking.
 Only the current report and plan schemas are accepted. Reject corrupt/inconsistent
@@ -518,6 +518,6 @@ to development governance, not the product.
 
 Rule and provider IDs reserve `please-`. Generated integrity results use
 `please-plan`, `please-snapshot`, `please-tree-stability` and
-`please-commit-message-stability`, with report schema 4
+`please-commit-message-stability`, with report schema 1
 and existing execution semantics unchanged. Public library phase callbacks use
 English messages.
