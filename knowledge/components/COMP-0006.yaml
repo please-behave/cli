@@ -61,6 +61,7 @@ requirements:
   - REQ-0143
   - REQ-0144
   - REQ-0145
+  - REQ-0146
   - REQ-0151
   - REQ-0153
   - REQ-0154
@@ -77,3 +78,4 @@ requirements:
   - REQ-0178
   - REQ-0179
   - REQ-0181
+  - REQ-0182
