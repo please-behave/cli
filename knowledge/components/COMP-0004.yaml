@@ -37,3 +37,4 @@ depends_on:
   - COMP-0011
 requirements:
   - REQ-0022
+  - REQ-0164
