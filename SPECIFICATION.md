@@ -43,39 +43,9 @@ another root.
 
 ## RULE-001: Rules, Rule Sets and Execution Points
 
-Rules are implemented as Checks or Reviews. Each declares id, optional name, description,
-enabled (default true), blocking (reviews only, default true), optional run_at and
-exactly one implementation table. Checks are always blocking; a Check declaring blocking
-is a configuration error. Rule IDs are unique within a governance scope. Rule Sets
-require id, description, rules and nonempty run_at; no enabled/blocking/source
-fields are accepted. Set IDs are independently unique.
-
-A Rule's optional name is a short display label: 1..=80 characters, without
-control characters or leading/trailing whitespace. Its default is the original
-scope-local ID, including for imported rules. Names do not change identity,
-selection, ordering, parameters or provider IDs. Duplicate display names receive
-a short origin suffix and, where needed, an occurrence number. Plans save names
-so progress, results and saved status agree; technical IDs and full provenance
-remain available in JSON and details. Reports without optional names remain readable.
-
-A present set overrides its rules' own run_at; memberships contribute their union.
-Rule references accept the existing string or a table with required id and optional
-run_at. The id is the same local ID or external directory path as the string.
-An omitted reference run_at inherits the set list; a specified nonempty list
-replaces it for that reference. Both Checks and Reviews use this contract.
-All point lists are validated, including disabled, overridden and repeated
-references. Repeated references union their effective lists without changing
-identity or executing a rule more than once per point.
-Standalone enabled rules use their own assignments. Repeated references within
-a Rule Set contribute one membership. Enabled rules need an effective
-point. Disabled rules remain validated but never run. All references must resolve
-within the same scope, including disabled and overridden assignments. A rule runs
-once per point within each binding; checks precede reviews; plans and results sort each kind by ID.
-Built-in points
-are pre-commit, commit-msg, pre-push and check. The first three use managed Git
-hooks; check is invoked explicitly and never automatically. Custom names come only
-from the consumer; release has no special behavior.
-The default is pre-push. Empty points succeed without claiming rule PASS.
+The [requirements](knowledge/requirements/README.md) REQ-0134 to REQ-0150 specify rules, rule sets, display names, execution points and their assignment. They replace the text of
+this section. The [components](knowledge/components/README.md) name the
+requirements they implement.
 
 ## EXT-001: External Git Rule Sets
 
@@ -241,40 +211,9 @@ unknown versions never silently fall back.
 
 ## SEL-001: Selection and offline plans
 
-`--at NAME` selects a known execution point, defaulting to pre-push. Selection
-uses only centrally resolved effective assignments. Execution snapshots use the
-worktree; at commit-msg the whole commit message is added to the review input (HDR-001).
-Rules run once, checks first; results retain ID order within each kind.
-
-`--plan` uses the same selection/preparation as execution. Its human-readable
-output uses English labels and explanations, preserving configured values and
-technical identifiers. It prints order, selection reasons, omissions, required
-rules, input identity, declared provider settings and bounded context sizes,
-without running checks, adapters or network
-calls, changing project/Git state or replacing the report. `--plan --json` uses
-plan schema 3 and structured diagnostics. Every JSON preview includes
-plan_schema_version, status and blocking_reasons. Configuration or selection
-errors return status blocked with nonempty blocking_reasons and exit 2; unavailable
-plan metadata is omitted. Prepared plans retain their complete metadata, including
-when blocked by an incomplete snapshot.
-A plan is neither a cache nor proof
-that a later input is identical. Provider availability is not checked offline.
-
-`--checks-only` runs the checks only, without adapter processes or model calls. Every selected review
-is reported `NOT_RUN` with the reason that checks-only was requested; it is excluded from progress,
-triggers are not evaluated (no change base is needed) and no review input is prepared. The limited
-scope is recorded in plans and reports. The overall result is determined by the checks alone:
-`NOT_RUN` reviews do not prevent success, so a checks-only PASS says nothing about review criteria.
-Full configuration validation still runs.
-Every selected check must execute unless dependencies or `--fail-fast` prevent scheduling; FAIL and ERROR of non-blocking reviews are nonfatal; any check FAIL or ERROR is fatal and prevents reviews.
-Invalid review parameters and missing prompts remain fatal. Empty execution points succeed without proving
-any rule PASS.
-
-Rule processes receive no `PLEASE_*` environment variables. Every inherited `PLEASE_*`
-variable is removed before a check or adapter starts, so the harness environment never
-reaches the code a rule runs; only a reserved internal recursion guard is set. The
-execution point from the validated plan, including custom points and mapped imported
-assignments, is part of the run context (CTX-001) and of the adapter request.
+The [requirements](knowledge/requirements/README.md) REQ-0151 to REQ-0162 specify selection of an execution point, offline plans, checks-only runs and the environment of adapters. They replace the text of
+this section. The [components](knowledge/components/README.md) name the
+requirements they implement.
 
 ## CHK-001: Deterministic checks
 
@@ -286,25 +225,9 @@ requirements they implement.
 
 ## PARAM-001: Rule parameters
 
-Rules declare named `parameters` tables with `type` (`string` or `file`),
-`required` (default false) and optional `description`. Local declarations provide
-`value` directly. Imported declarations must omit `value`; consumers supply values
-in that import's `rule_parameters.<rule-id>` table. There is no global value table.
-Names use ASCII letters, digits and underscores, starting with a letter, and are
-case-sensitive. Values must be strings without NUL.
-
-Before an enabled selected rule executes, validate required values, supported
-types and undeclared supplied names. Optional omissions stay absent. Failures
-produce rule-specific ERROR results identifying the parameter and reason, even
-for nonblocking rules. Disabled rules do not resolve parameters or dependencies.
-File values must be repository-root-relative paths to existing regular files;
-absolute paths, parent traversal and symlink traversal are rejected. A check receives a
-value only through `@param/<name>` (canonical absolute path for files, unchanged string
-otherwise); a reference to an undeclared parameter is a configuration error and a
-reference to an omitted optional parameter is an execution ERROR. Adapters receive all
-resolved values as `rule_parameters` in their request. Different review parameter values
-use separate calls; prepared context remains shared. Review prompts continue resolving
-within their own directories; shared Check paths follow CHK-001.
+The [requirements](knowledge/requirements/README.md) REQ-0163 to REQ-0169 specify rule parameters. They replace the text of
+this section. The [components](knowledge/components/README.md) name the
+requirements they implement.
 
 ## REV-001: Reviews and provider isolation
 
@@ -315,49 +238,15 @@ requirements they implement.
 
 ## TRIG-001: File-change review selection
 
-Optional `[review.trigger]` has required `changed_files` (1–64 patterns, each
-1–1024 UTF-8 bytes). Paths are consumer-repository-relative with `/` separators:
-exact components, `*` and `?` within components, and whole-component `**` for zero
-or more directories. Matching is case-sensitive; hidden files match normally.
-Empty/dot/parent components, absolute paths, backslashes, colons, control
-characters, brackets, braces and embedded `**` are rejected, including imports.
-A review without triggers is selected by any change and has all changed files in scope.
-
-The changed files follow the execution point: staged changes at pre-commit and
-commit-msg, pushed commits at pre-push (without Git's reference list, the commits of
-HEAD on no remote-tracking reference of the upstream remote, else origin, else any
-remote) and, at check and custom points, the net changes against `PLEASE_CHANGE_BASE`.
-For enabled reviews at those points, `PLEASE_CHANGE_BASE` explicitly names
-a locally available Git commit/ref. Resolve it once to a commit ID; compare that
-commit directly to current working files, including staged/unstaged changes and
-nonignored untracked files, plus declared governance inputs even when ignored
-(excluding reports). Unreferenced ignored artifacts do not trigger reviews.
-Use net differences, not per-commit history; renames match both old and new paths.
-CI supplies a fetched baseline commit, such as the PR merge base computed by its
-caller. Never infer HEAD^, a remote branch or GitHub context. Shallow repositories
-work only when the named baseline commit and tree are locally available. No fetch.
-Index conflicts and assume-unchanged/skip-worktree flags block comparison.
-Missing/invalid refs, unavailable trees, invalid filename encoding, incomplete
-snapshots, timeouts or truncated Git output block planning/execution, never skip.
-Git uses direct argument arrays, NUL filename output, the 128 MiB snapshot byte
-budget for path-list stdout and 30-second deadlines. Ordinary diagnostic capture
-remains 64 KiB. File-count, file-content and review-context limits remain unchanged.
-
-Apply triggers before context preparation, parameter resolution and model-call
-estimation. Nonmatches have omission reason `trigger_not_matched` (`no_changes` without
-triggers) in preview and saved report plans, no result and no required ID; they do not require provider
-credentials/executables. Disabled and inapplicable rules need no comparison.
-Record the resolved baseline in the plan and its identity. Deterministic checks
-still gate all scheduled reviews globally.
+The [requirements](knowledge/requirements/README.md) REQ-0170 to REQ-0179 specify file-change triggers and the change base of reviews. They replace the text of
+this section. The [components](knowledge/components/README.md) name the
+requirements they implement.
 
 ## PREP-001: Shared review input
 
-Planning prepares bounded requirement excerpts and the scope of each review
-(its changed files, their content and change set where selected) once. Execution passes that same prepared input to the provider; prompt
-rendering must not reread context or recalculate the change set. Snapshot stability
-checks still run before the call and after execution; preparation is not a cache
-or permission to run against changed files. The provider boundary owns transport
-and provider settings, not a second interpretation of evidence selection.
+The [requirements](knowledge/requirements/README.md) REQ-0180 specify the review input prepared once. They replace the text of
+this section. The [components](knowledge/components/README.md) name the
+requirements they implement.
 
 ## OUT-001: Structured review outcomes
 
