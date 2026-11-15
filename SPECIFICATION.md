@@ -43,7 +43,7 @@ another root.
 
 ## RULE-001: Rules, Rule Sets and Execution Points
 
-The [requirements](knowledge/requirements/README.md) REQ-0134 to REQ-0150 and REQ-0181 specify rules, rule sets, display names, execution points and their assignment. They replace the text of
+The [requirements](knowledge/requirements/README.md) REQ-0134 to REQ-0150, REQ-0181 and REQ-0182 specify rules, rule sets, display names, execution points and their assignment. They replace the text of
 this section. The [components](knowledge/components/README.md) name the
 requirements they implement.
 
@@ -211,7 +211,7 @@ unknown versions never silently fall back.
 
 ## SEL-001: Selection and offline plans
 
-The [requirements](knowledge/requirements/README.md) REQ-0151 to REQ-0162 specify selection of an execution point, offline plans, checks-only runs and the environment of adapters. They replace the text of
+The [requirements](knowledge/requirements/README.md) REQ-0151 to REQ-0162 and REQ-0183 specify selection of an execution point, offline plans, checks-only runs and the environment of adapters. They replace the text of
 this section. The [components](knowledge/components/README.md) name the
 requirements they implement.
 
@@ -225,7 +225,7 @@ requirements they implement.
 
 ## PARAM-001: Rule parameters
 
-The [requirements](knowledge/requirements/README.md) REQ-0163 to REQ-0169 specify rule parameters. They replace the text of
+The [requirements](knowledge/requirements/README.md) REQ-0163 to REQ-0167 and REQ-0169 specify rule parameters. They replace the text of
 this section. The [components](knowledge/components/README.md) name the
 requirements they implement.
 
