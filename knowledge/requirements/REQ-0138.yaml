@@ -3,8 +3,8 @@ name: Duplicate Display Names Are Told Apart
 area: rules
 description: >-
   When several rules would be shown under the same display name, each of them
-  must be shown with a short origin suffix and, where that is still ambiguous,
-  with an occurrence number.
+  must be shown with a suffix that names the origin of the rule and, where that
+  is still ambiguous, with an occurrence number.
 rationale: >-
   Two rules with the same label must not be mistaken for each other in
   progress and results.

@@ -2,8 +2,9 @@ id: REQ-0176
 name: Undeterminable Changes Block
 area: rules
 description: >-
-  When the changed files of a review cannot be determined completely, the run
-  must be blocked with an error, and the review must never be skipped as if
+  When the changed files of a review cannot be determined completely,
+  including because of an index conflict or a file marked assume-unchanged or
+  skip-worktree, the run must be blocked with an error, and the review must never be skipped as if
   nothing had changed.
 rationale: >-
   A review must never disappear because the comparison failed.

@@ -3,7 +3,7 @@ name: Checks Receive Parameters By Reference
 area: rules
 description: >-
   A check must receive a parameter value only through an explicit parameter
-  reference in its command, a file parameter as its absolute path and a string
+  reference in its command, a file parameter as its canonical absolute path and a string
   parameter unchanged.
 rationale: >-
   A script sees exactly what its command line shows and nothing is passed in

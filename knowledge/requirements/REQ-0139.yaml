@@ -2,9 +2,9 @@ id: REQ-0139
 name: Labels Agree Everywhere
 area: reporting
 description: >-
-  Plans must save the display name of each rule so that progress, results and
-  saved status show the same name, and the technical ID and the full
-  provenance must remain available in the structured output and in the
+  Progress, results and saved status must show the same display name for a
+  rule, even after the configuration changed, and the technical ID and the
+  full provenance must remain available in the structured output and in the
   details.
 rationale: >-
   A rule must keep one label from the live run to the saved status, even after

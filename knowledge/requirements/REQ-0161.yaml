@@ -4,7 +4,7 @@ area: rules
 description: >-
   A parameter error or a missing prompt of a selected, enabled review must
   prevent a successful result, whether or not the review is advisory, and must
-  not count as an outcome of the review.
+  not be handled like a FAIL or ERROR of an advisory review.
 rationale: >-
   Advisory reviews may be unreliable, but a broken setup is a mistake of the
   project that must be fixed.

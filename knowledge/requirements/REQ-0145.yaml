@@ -2,8 +2,8 @@ id: REQ-0145
 name: Rule Runs Once
 area: rules
 description: >-
-  A rule must run at most once per run, however often it is referenced and at
-  however many execution points it is assigned.
+  A selected rule must run exactly once per run, however often it is
+  referenced.
 rationale: >-
   A repeated reference must never run a check twice or call a model twice.
 decisions:

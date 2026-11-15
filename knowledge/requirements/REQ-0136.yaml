@@ -7,5 +7,4 @@ description: >-
   rule without a name must be shown under its own ID, also when it is
   imported.
 rationale: >-
-  People read short labels better than technical IDs, and a missing label must
-  not leave a rule without a name.
+  People read short labels better than technical IDs.

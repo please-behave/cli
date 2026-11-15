@@ -3,11 +3,10 @@ name: Parameters Checked Before Execution
 area: rules
 description: >-
   Before an enabled selected rule executes, its required values, parameter
-  types and supplied names must be validated, a failure must be reported for
-  that rule and name the parameter and the reason, and the parameters of
-  disabled or unselected rules must not be resolved.
+  types, parameter names and values must be validated against the
+  configuration reference, and a failure must be reported for that rule and
+  name the parameter and the reason.
 rationale: >-
-  A rule must fail with a clear cause before it starts, while rules that are
-  not part of the run must not be blocked by missing values.
+  A rule must fail with a clear cause before it starts.
 decisions:
   - DEC-0015

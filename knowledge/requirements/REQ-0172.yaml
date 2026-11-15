@@ -2,10 +2,9 @@ id: REQ-0172
 name: Changed Files Follow The Execution Point
 area: rules
 description: >-
-  The changed files of a review must be the changes that the execution point
-  concerns, as defined in the configuration reference.
+  The changed files of a review must be the staged changes at pre-commit and
+  commit-msg, the pushed commits at pre-push and, at the check point and at
+  custom execution points, the net changes against the change base.
 rationale: >-
   A review judges what is about to be committed or pushed, not the whole
   repository.
-decisions:
-  - DEC-0003

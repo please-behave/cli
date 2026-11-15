@@ -2,10 +2,10 @@ id: REQ-0181
 name: Rule Identities Are Unique Within A Run
 area: rules
 description: >-
-  Within the effective selection of a run, rule identities must be unique, a
-  rule reference must resolve to exactly one rule, and a duplicate identity
-  must be rejected as a configuration error even when the definitions are
-  identical.
+  Within the effective selection of a run, rule identities (the ID of a local
+  rule or the namespaced ID of an imported rule) must be unique, a rule
+  reference must resolve to exactly one rule, and a duplicate identity must be
+  rejected as a configuration error even when the definitions are identical.
 rationale: >-
   A run must never be unable to tell which rule a result, a reference or a
   report line belongs to.
