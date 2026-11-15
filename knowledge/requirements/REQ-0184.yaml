@@ -1,0 +1,11 @@
+id: REQ-0184
+name: Run Shows Its Version First
+area: reporting
+description: >-
+  The run command prints the version of the executing binary as the first line
+  of its output, also when the configuration or the rule-set definitions are
+  invalid.
+rationale: >-
+  Different environments can resolve different binaries, and a failure caused
+  by a binary older than the pinned one cannot be told apart from a real
+  configuration problem without the version.
