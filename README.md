@@ -1,6 +1,6 @@
 # Please Behave
 
-[![build](https://github.com/please-behave/cli/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/please-behave/cli/actions/workflows/ci.yml) [![release](https://img.shields.io/github/v/release/please-behave/cli?display_name=tag&sort=semver)](https://github.com/please-behave/cli/releases) [![license](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-3949ab.svg)](https://polyformproject.org/licenses/noncommercial/1.0.0/)
+[![build](https://github.com/please-behave/cli/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/please-behave/cli/actions/workflows/ci.yml) [![release](https://img.shields.io/github/v/release/please-behave/cli?display_name=tag&sort=semver&color=007ec6)](https://github.com/please-behave/cli/releases) [![license](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-3949ab.svg)](https://polyformproject.org/licenses/noncommercial/1.0.0/)
 
 [![tests](https://christianpflugradt.github.io/badges-and-stuff/please-behave-cli/tests.svg)](https://christianpflugradt.github.io/badges-and-stuff/) [![coverage](https://christianpflugradt.github.io/badges-and-stuff/please-behave-cli/coverage.svg)](https://christianpflugradt.github.io/badges-and-stuff/) [![LOC](https://christianpflugradt.github.io/badges-and-stuff/please-behave-cli/loc.svg)](https://christianpflugradt.github.io/badges-and-stuff/)
 
