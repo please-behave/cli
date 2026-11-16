@@ -3,9 +3,8 @@ name: Provider Identifiers Are Unique
 area: reviews
 description: >-
   Provider identifiers must be unique across local, rule-set-provided and
-  independently imported providers, and a collision, including a repeated
-  identical import, must be rejected as a configuration error without any
-  override.
+  independently imported providers, and a collision must be rejected as a
+  configuration error without any override.
 rationale: >-
   A review must name exactly one provider, and no import may silently replace
   another adapter.

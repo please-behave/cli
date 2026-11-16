@@ -3,6 +3,6 @@ name: Adapter Command Is Literal
 area: reviews
 description: >-
   An adapter command and its arguments must be executed without a shell and
-  without any expansion other than the reference tokens of imported providers.
+  without any expansion other than the reference tokens of independently imported providers.
 rationale: >-
   What runs must be exactly what the configuration says, on every platform.

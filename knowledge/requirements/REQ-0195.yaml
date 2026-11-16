@@ -4,8 +4,7 @@ area: rules
 description: >-
   A reference to an external rule, a rule definition and a review prompt must
   be rejected when it is an absolute path, contains parent traversal, passes a
-  symbolic link or leaves the external repository, and a review prompt must
-  stay inside the directory of its own rule.
+  symbolic link or leaves the external repository.
 rationale: >-
   A shared repository must not be able to make Please Behave read anything
   other than the content the consumer pinned.

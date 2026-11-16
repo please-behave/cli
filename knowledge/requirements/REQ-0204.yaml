@@ -5,5 +5,5 @@ description: >-
   Synchronization must not execute, install or copy code of an imported
   repository, including Git hooks, initialization scripts and submodules.
 rationale: >-
-  Refreshing an import must be safe even for a source the consumer has not
-  reviewed yet.
+  Refreshing an import must not run anything, so synchronization stays a pure
+  data operation.

@@ -3,8 +3,7 @@ name: Built-In Points Are Not Mapped
 area: rules
 description: >-
   A built-in execution point must not be the source or the target of a
-  mapping, and a mapping with an unknown source or target or an invalid name
-  must be rejected as a configuration error.
+  mapping.
 rationale: >-
   An import must not be able to redirect what runs at a Git hook or at the
   default point.

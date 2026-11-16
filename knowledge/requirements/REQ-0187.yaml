@@ -4,8 +4,8 @@ area: rules
 description: >-
   Each import must be a separate binding with its own parameter values and
   execution point mapping, even when several imports select the same source,
-  values must never merge across imports, and the rules of different imports
-  must remain distinguishable in plans and reports.
+  and the rules of different imports must remain distinguishable in plans and
+  reports.
 rationale: >-
   The same shared rules can be used for different purposes with different
   settings without the uses influencing each other.

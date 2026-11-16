@@ -3,10 +3,8 @@ name: Unknown Provider Fields Are Rejected
 area: configuration
 description: >-
   A provider definition with a field outside the set the configuration
-  reference defines must be rejected as a configuration error, and
-  provider-specific settings may only appear in its parameters.
+  reference defines must be rejected as a configuration error.
 rationale: >-
-  A mistyped setting must fail loudly, and provider-specific behavior must
-  stay behind the parameters and out of the product.
+  A mistyped setting must fail loudly instead of being ignored.
 decisions:
   - DEC-0010

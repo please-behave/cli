@@ -2,8 +2,9 @@ id: REQ-0196
 name: Imported Provenance Is Recorded
 area: rules
 description: >-
-  Plans and reports must identify every imported rule and provider by its
-  source, selected directory, configured reference and full resolved commit
+  Plans and reports must identify every imported rule and provider by an
+  identity of its source that never reveals the repository selector, and by
+  its selected directory, configured reference and full resolved commit,
   and must not contain machine-specific cache paths.
 rationale: >-
   A result is only evidence when it says exactly which version of a shared

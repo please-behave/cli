@@ -5,4 +5,4 @@ description: >-
   Every adapter request must carry the common review instructions and a
   machine-readable description of the response it requires.
 rationale: >-
-  Adapters stay small and cannot drift from the limits Please enforces.
+  Adapters stay small and cannot drift from the response contract Please validates.

@@ -2,7 +2,8 @@ id: REQ-0228
 name: Request Names The Execution Point
 area: reviews
 description: >-
-  Every adapter request must state the execution point of the run, including a
-  custom point and a point assigned by an import mapping.
+  Every adapter request must state the execution point of the consuming
+  project for the run, also when the review reached it through an import
+  mapping.
 rationale: >-
   A review can judge differently at a commit than at a release.

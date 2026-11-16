@@ -3,7 +3,8 @@ name: Authentication Belongs To The Adapter
 area: reviews
 description: >-
   Please must not authenticate with providers or store provider credentials,
-  and authentication, model selection and tool use must belong to the adapter.
+  and must offer no setting for authentication, model selection or tool use
+  outside the opaque parameters.
 rationale: >-
   Credentials and provider details stay out of the product, its configuration
   and its reports.
