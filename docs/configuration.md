@@ -404,7 +404,8 @@ Every review carries its own merged settings.
 Runtime requirements are checked only for selected reviews, after deterministic
 checks and immediately before invocation. Plans do not execute adapters or check
 availability. Missing prerequisites, nonzero exits, timeouts and invalid responses
-produce review ERROR. Raw adapter stdout/stderr are never stored as diagnostics.
+produce review ERROR. An adapter call that ends as ERROR retains its stdout/stderr unmasked
+within the output bounds of checks.
 Nonblocking review errors remain visible and follow the normal enforcement rules.
 
 See the [adapter protocol](adapter-protocol.md) for request/response formats,
