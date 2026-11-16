@@ -2,7 +2,7 @@ id: REQ-0253
 name: Report Is Saved Atomically
 area: reporting
 description: >-
-  After every run with valid configuration, including one that ends with FAIL
+  After every run that executes its rules, including one that ends with FAIL
   or ERROR, Please must save the report by replacing the previous one
   atomically.
 rationale: >-
