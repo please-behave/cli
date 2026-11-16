@@ -1,0 +1,10 @@
+id: REQ-0205
+name: Imports Are Bounded
+area: setup
+description: >-
+  Retrieving and loading imports must be bounded in time, size and number as
+  defined in the external rule sets reference, and a violation must fail the
+  synchronization.
+rationale: >-
+  A broken or hostile repository must not be able to exhaust the time, memory
+  or disk of a developer machine.

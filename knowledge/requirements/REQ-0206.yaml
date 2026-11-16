@@ -1,0 +1,10 @@
+id: REQ-0206
+name: Execution Uses Only Validated Imports
+area: rules
+description: >-
+  Execution, hooks and plans must use only imports that synchronization has
+  validated, must work without network access and must never download or
+  substitute a revision.
+rationale: >-
+  A run must be reproducible and fast offline, and a hook must never fetch
+  code on its own.

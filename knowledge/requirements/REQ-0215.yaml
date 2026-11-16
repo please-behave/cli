@@ -1,0 +1,9 @@
+id: REQ-0215
+name: Review Without Provider Is Blocked
+area: reviews
+description: >-
+  A selected, enabled review that names no provider while no default provider
+  is declared must block the run before anything is executed, and a disabled
+  or unselected review must need no provider.
+rationale: >-
+  A review must never run against a provider the owner did not choose.

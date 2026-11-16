@@ -1,0 +1,14 @@
+id: REQ-0207
+name: Damaged Imports Block Execution
+area: rules
+description: >-
+  When the resolved state or the stored content of an import is missing,
+  changed or corrupt, including at the moment an imported adapter is launched,
+  execution must fail and must not continue with other content, even when the
+  affected review is advisory.
+rationale: >-
+  A run on content that was not validated cannot be trusted, and a broken
+  setup is a mistake that must be fixed and not tolerated like an unreliable
+  model.
+decisions:
+  - DEC-0007

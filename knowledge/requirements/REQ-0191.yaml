@@ -1,0 +1,10 @@
+id: REQ-0191
+name: Mapping Leaves Imports Unchanged
+area: rules
+description: >-
+  Mapping execution points must not change the imported definitions, the
+  revision identity or the recorded provenance of an import and must work
+  without network access.
+rationale: >-
+  Changing where rules run must never change which version of a shared rule
+  was evaluated.

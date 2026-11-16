@@ -1,0 +1,10 @@
+id: REQ-0189
+name: Imports Map Custom Points
+area: rules
+description: >-
+  An import must be able to map the custom execution points used by its rule
+  sets onto custom points declared by the consuming project, the mapping must
+  apply to that import alone, and several source points may share one target.
+rationale: >-
+  Shared rule sets name their own stages, and each consumer must be able to
+  attach them to the stages it actually uses.

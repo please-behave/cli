@@ -1,0 +1,10 @@
+id: REQ-0202
+name: Sync Publishes Atomically
+area: setup
+description: >-
+  Synchronization must publish the resolved state of all imports only after
+  everything has been validated, as one atomic change, and a failed
+  synchronization must leave the previous state unchanged.
+rationale: >-
+  A failed refresh must never leave a project with half-updated or broken
+  rules.

@@ -1,0 +1,10 @@
+id: REQ-0212
+name: Provider References Are Validated
+area: reviews
+description: >-
+  An unknown token prefix, an absolute or traversing path suffix, a missing
+  resource and a symbolic link component in a provider reference must be
+  rejected as a configuration error, also for a provider that no review uses.
+rationale: >-
+  A broken provider package must be found when it is imported and not only
+  when a review first needs it.

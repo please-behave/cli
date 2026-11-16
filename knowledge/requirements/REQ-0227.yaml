@@ -1,0 +1,10 @@
+id: REQ-0227
+name: Adapter Timeout Covers The Whole Call
+area: reviews
+description: >-
+  The timeout of an adapter must cover the whole call, including the delivery
+  of the request, and on expiry Please must terminate the entire process tree
+  of the adapter.
+rationale: >-
+  A hung or blocked adapter must neither stall a run nor leave processes
+  running.

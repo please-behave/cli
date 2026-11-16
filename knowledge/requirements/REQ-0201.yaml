@@ -1,0 +1,9 @@
+id: REQ-0201
+name: Diagnostics Never Leak Secrets
+area: setup
+description: >-
+  Diagnostics of failed imports must not repeat the error output of Git or
+  repository selectors that may contain secrets.
+rationale: >-
+  Error messages end up in terminals and CI logs, where a leaked secret would
+  spread.

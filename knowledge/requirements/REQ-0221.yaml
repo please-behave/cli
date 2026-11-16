@@ -1,0 +1,12 @@
+id: REQ-0221
+name: Provider Requirements Are Checked Late
+area: reviews
+description: >-
+  The environment variables and executables that a provider declares as
+  required must be checked only for the reviews selected in a run, after the
+  deterministic checks and immediately before the adapter call.
+rationale: >-
+  A credential that exists only in CI must not stop local runs, and a review
+  that never starts must not fail because of what it would have needed.
+decisions:
+  - DEC-0015

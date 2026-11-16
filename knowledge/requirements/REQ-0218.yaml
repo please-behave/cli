@@ -1,0 +1,12 @@
+id: REQ-0218
+name: Unknown Provider Fields Are Rejected
+area: configuration
+description: >-
+  A provider definition with a field outside the set the configuration
+  reference defines must be rejected as a configuration error, and
+  provider-specific settings may only appear in its parameters.
+rationale: >-
+  A mistyped setting must fail loudly, and provider-specific behavior must
+  stay behind the parameters and out of the product.
+decisions:
+  - DEC-0010

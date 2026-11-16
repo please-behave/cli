@@ -1,0 +1,11 @@
+id: REQ-0224
+name: Authentication Belongs To The Adapter
+area: reviews
+description: >-
+  Please must not authenticate with providers or store provider credentials,
+  and authentication, model selection and tool use must belong to the adapter.
+rationale: >-
+  Credentials and provider details stay out of the product, its configuration
+  and its reports.
+decisions:
+  - DEC-0010

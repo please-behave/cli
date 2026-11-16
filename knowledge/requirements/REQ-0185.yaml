@@ -1,0 +1,10 @@
+id: REQ-0185
+name: Imports Only From The Consumer
+area: rules
+description: >-
+  Only the configuration of the consuming project must be able to import rule
+  sets, and an imported rule set must not import further sources or reference
+  other rule sets.
+rationale: >-
+  The consumer sees every source it depends on in its own configuration, and
+  no third party can pull in further ones.

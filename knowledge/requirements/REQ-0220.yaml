@@ -1,0 +1,8 @@
+id: REQ-0220
+name: Adapter Working Directory
+area: reviews
+description: >-
+  An adapter must run with the root of the consuming repository as its working
+  directory, also when it comes from an import.
+rationale: >-
+  An adapter finds the project the same way wherever it is stored.

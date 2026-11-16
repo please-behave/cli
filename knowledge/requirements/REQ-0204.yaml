@@ -1,0 +1,9 @@
+id: REQ-0204
+name: Sync Executes No Imported Code
+area: setup
+description: >-
+  Synchronization must not execute, install or copy code of an imported
+  repository, including Git hooks, initialization scripts and submodules.
+rationale: >-
+  Refreshing an import must be safe even for a source the consumer has not
+  reviewed yet.

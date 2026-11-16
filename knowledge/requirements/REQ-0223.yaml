@@ -1,0 +1,8 @@
+id: REQ-0223
+name: Request Carries The Response Contract
+area: reviews
+description: >-
+  Every adapter request must carry the common review instructions and a
+  machine-readable description of the response it requires.
+rationale: >-
+  Adapters stay small and cannot drift from the limits Please enforces.

@@ -1,0 +1,12 @@
+id: REQ-0211
+name: Provider Reference Tokens
+area: reviews
+description: >-
+  The command, the arguments and the required executables of an independently
+  imported provider must be able to use the reserved tokens `@provider/<path>`
+  for a path inside the provider directory, `@source/<path>` for a path inside
+  the imported repository and `@repo/<path>` for a path inside the consumer
+  repository, and `@@` for a literal leading at sign.
+rationale: >-
+  An adapter that ships with its provider must run without copying files and
+  wherever the revisions are stored.

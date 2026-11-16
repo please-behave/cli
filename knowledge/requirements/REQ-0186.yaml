@@ -1,0 +1,9 @@
+id: REQ-0186
+name: Import Selects One Rule Set
+area: rules
+description: >-
+  Each import must select exactly one rule set, a directory of one Git
+  repository at one reference.
+rationale: >-
+  A consumer must be able to say precisely which shared rules it adopts and at
+  which version.

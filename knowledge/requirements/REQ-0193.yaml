@@ -1,0 +1,10 @@
+id: REQ-0193
+name: Only Referenced Rules Are Loaded
+area: rules
+description: >-
+  Only the rules that the selected rule set of an import references must be
+  loaded and take part in the import, and unreferenced definitions and other
+  rule sets of the repository must have no effect.
+rationale: >-
+  A shared repository can hold many rules without a consumer being affected by
+  the ones it does not use.

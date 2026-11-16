@@ -1,0 +1,11 @@
+id: REQ-0198
+name: No Update Management
+area: setup
+description: >-
+  Please must not check for newer revisions of imports, announce available
+  updates or ask for confirmation before refreshing an import.
+rationale: >-
+  How and when shared rules are updated is the organization's own process, and
+  the product stays out of it.
+decisions:
+  - DEC-0012

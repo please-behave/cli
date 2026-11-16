@@ -1,0 +1,13 @@
+id: REQ-0188
+name: Imported Rule Definitions Are Immutable
+area: rules
+description: >-
+  A consuming project must not override any property of an imported rule, such
+  as its implementation, enabled state or blocking behavior, and may only
+  supply the integration settings the configuration reference defines.
+rationale: >-
+  Organizations that share rules need every consumer to get the same
+  requirements, so a problem with a shared rule is fixed at its source and not
+  by local exceptions.
+decisions:
+  - DEC-0008

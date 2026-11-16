@@ -1,0 +1,9 @@
+id: REQ-0199
+name: Authentication Stays With Host Git
+area: setup
+description: >-
+  Please must not prompt for credentials or store them, and authentication for
+  imports must come from the Git and SSH configuration of the host.
+rationale: >-
+  Credentials stay under the control of the user's existing tools and never
+  pass through the product.

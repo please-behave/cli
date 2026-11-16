@@ -1,0 +1,9 @@
+id: REQ-0194
+name: Referenced Rules Are Always Validated
+area: rules
+description: >-
+  Every rule that an imported rule set references must be validated, also when
+  the rule is disabled or not selected at the execution point of the run.
+rationale: >-
+  A broken shared rule must surface at once and not only when some later run
+  happens to select it.

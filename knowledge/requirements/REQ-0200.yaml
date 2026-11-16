@@ -1,0 +1,9 @@
+id: REQ-0200
+name: Credentials In URLs Are Rejected
+area: setup
+description: >-
+  An import URL that carries HTTP credentials must be rejected as a
+  configuration error.
+rationale: >-
+  Configuration is committed and shared, so a secret in a URL would leak with
+  it.

@@ -1,0 +1,10 @@
+id: REQ-0192
+name: External Rules Are Referenced By Path
+area: rules
+description: >-
+  A rule set of an external repository must reference its rules by directory
+  path relative to the root of that repository, so that several rule sets can
+  share one rule directory.
+rationale: >-
+  One shared rule can serve several rule sets of the same repository without
+  being copied.

@@ -1,0 +1,9 @@
+id: REQ-0209
+name: Provider References Are Explicit
+area: reviews
+description: >-
+  A review must refer to an imported provider by the identifier that the
+  consumer assigned in its provider import, and Please must not infer a
+  provider import from the reference of a rule.
+rationale: >-
+  The consumer alone decides which adapter code runs for its reviews.

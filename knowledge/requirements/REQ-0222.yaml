@@ -1,0 +1,11 @@
+id: REQ-0222
+name: Adapter Protocol Uses JSON
+area: reviews
+description: >-
+  Please must deliver each adapter call as one UTF-8 JSON request on standard
+  input and expect one JSON response on standard output, with the fields
+  defined in the adapter protocol.
+rationale: >-
+  Any program in any language can be an adapter without a rebuild of Please.
+decisions:
+  - DEC-0010

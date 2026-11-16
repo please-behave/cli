@@ -1,0 +1,12 @@
+id: REQ-0197
+name: Sync Resolves Exact References
+area: setup
+description: >-
+  Synchronization must resolve each import reference, whether a branch, a tag
+  or a full commit hash, exactly as named to one commit and must not fall back
+  to another reference when it cannot be resolved.
+rationale: >-
+  A consumer decides whether to pin an exact version or to follow a moving one
+  and never silently receives something other than what it named.
+decisions:
+  - DEC-0012

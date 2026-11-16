@@ -1,0 +1,10 @@
+id: REQ-0203
+name: Concurrent Syncs Are Safe
+area: setup
+description: >-
+  Concurrent synchronizations, including those of different projects that
+  share the stored revisions, must not corrupt the stored revisions or the
+  resolved state.
+rationale: >-
+  Parallel terminals, hooks and CI jobs on one machine must be able to refresh
+  imports safely.
