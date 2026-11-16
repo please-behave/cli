@@ -1,9 +1,0 @@
-id: REQ-0296
-name: Only Sync Approves Hook Changes
-area: setup
-description: >-
-  A run must never approve hook changes on its own, and the approval option
-  must belong to synchronization only.
-rationale: >-
-  Editing files that other tools share is always an explicit decision of the
-  user and never a side effect of running rules.
