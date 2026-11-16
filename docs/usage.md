@@ -89,9 +89,9 @@ and the [adapter protocol](adapter-protocol.md).
 
 | Code | Meaning |
 | --- | --- |
-| 0 | Initialization/validation/help succeeded, or all required results PASS and status CURRENT |
+| 0 | Initialization/validation/help succeeded, plan preview is executable, or all required results PASS and status CURRENT |
 | 1 | Verification FAIL, or status STALE |
-| 2 | Configuration/reconciliation/execution/provider/report ERROR, declined or unavailable confirmation, status UNKNOWN, or invalid CLI arguments |
+| 2 | Configuration/reconciliation/execution/provider/report ERROR, plan preview blocked by a configuration or selection error, declined or unavailable confirmation, status UNKNOWN, or invalid CLI arguments |
 | 3 | Status requested before any report exists |
 
 Status preserves a CURRENT report's original FAIL/ERROR exit code. UNKNOWN takes

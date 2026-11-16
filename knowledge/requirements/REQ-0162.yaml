@@ -1,9 +1,10 @@
 id: REQ-0162
-name: No Environment To Adapters
+name: No Inherited PLEASE_ Environment
 area: reviews
 description: >-
-  Every inherited PLEASE_ environment variable must be removed from the
-  process of an adapter, except for one reserved internal recursion guard.
+  Every inherited `PLEASE_` environment variable must be removed from the
+  process of a check or an adapter, except for one reserved internal recursion
+  guard.
 rationale: >-
-  An adapter must not be influenced by hidden settings of the calling
+  Checks and adapters must not be influenced by hidden settings of the calling
   environment.

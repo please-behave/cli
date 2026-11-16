@@ -2,9 +2,6 @@ id: REQ-0091
 name: Rule Inputs Only As Arguments
 area: checks
 description: >-
-  A check command must receive rule inputs only as arguments, and every
-  inherited `PLEASE_` environment variable must be removed from the process of
-  a check, except for one reserved internal recursion guard.
+  A check command must receive rule inputs only as arguments.
 rationale: >-
-  A rule's behavior must depend on what it is explicitly given, not on the
-  environment of whatever started it.
+  A check's inputs must be explicit in its command invocation.

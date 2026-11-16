@@ -1,8 +1,0 @@
-id: REQ-0183
-name: Blocked Plan Exit Code
-area: reporting
-description: >-
-  A plan preview that is blocked by a configuration or selection error must
-  end with the exit code that the configuration reference defines for errors.
-rationale: >-
-  Callers can tell a blocked plan from a usable one by the exit code alone.

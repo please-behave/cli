@@ -3,8 +3,9 @@ name: Checks-Only Needs No Review Input
 area: rules
 description: >-
   A checks-only run must not evaluate triggers or prepare review input, so it
-  needs no change base, and it must still validate the whole configuration
-  like any other run.
+  needs no change base. It must still validate the configuration structure,
+  but a review that does not run must need neither a prompt nor parameter
+  values.
 rationale: >-
   The cheap run must work anywhere without review setup, yet never hide a
   broken configuration.

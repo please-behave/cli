@@ -2,8 +2,9 @@ id: REQ-0015
 name: Literal At Sign
 area: checks
 description: >-
-  A command token that starts with `@@` must be passed on literally with
-  exactly one leading `@` removed.
+  A token in a check command or in a provider's command, arguments or required
+  executables that starts with `@@` must be passed on literally with exactly
+  one leading `@` removed.
 rationale: >-
   Authors need a way to pass a literal at sign without it being read as a
   reference.

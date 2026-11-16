@@ -74,7 +74,7 @@ the requirements they implement.
 
 ## SEL-001: Selection and offline plans
 
-The [requirements](knowledge/requirements/README.md) REQ-0151 to REQ-0162 and REQ-0183 specify selection of an execution point, offline plans, checks-only runs and the environment of adapters. They replace the text of
+The [requirements](knowledge/requirements/README.md) REQ-0151 to REQ-0162 specify selection of an execution point, offline plans, checks-only runs and the environment of adapters. They replace the text of
 this section. The [components](knowledge/components/README.md) name the
 requirements they implement.
 
@@ -94,7 +94,7 @@ requirements they implement.
 
 ## REV-001: Reviews and provider isolation
 
-The [requirements](knowledge/requirements/README.md) REQ-0092 to REQ-0104 and REQ-0124 to REQ-0129 specify reviews, adapter isolation, review input and review enforcement. They replace the text of
+The [requirements](knowledge/requirements/README.md) REQ-0026, REQ-0092 to REQ-0102, REQ-0104 and REQ-0124 to REQ-0129 specify reviews, adapter isolation, review input and review enforcement. They replace the text of
 this section. The [components](knowledge/components/README.md) name the
 requirements they implement.
 

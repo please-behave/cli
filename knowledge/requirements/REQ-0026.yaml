@@ -1,10 +1,12 @@
 id: REQ-0026
-name: Check Failures Block Success
+name: Blocking Rule Outcomes Prevent Success
 area: checks
 description: >-
-  A check that completes with FAIL or ERROR must prevent overall success.
+  A FAIL or an ERROR of a check or a blocking review must prevent overall
+  success.
 rationale: >-
-  Deterministic checks are reliable enough that a failure must never be waved
-  through.
+  A check or a blocking review that fails or cannot complete must not let a
+  change through.
 decisions:
   - DEC-0006
+  - DEC-0007

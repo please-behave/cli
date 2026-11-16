@@ -2,10 +2,12 @@ id: REQ-0097
 name: Review Input Is Never Silently Reduced
 area: reviews
 description: >-
-  Review input that is missing or exceeds its bounds, namely context
-  documents, file content and the change set, must be rejected as an error
-  before any adapter call and must not be silently omitted or truncated,
-  including for context definitions of disabled reviews.
+  Review input that exceeds its size bounds, namely context documents, file
+  content and the change set, must end that review with ERROR before its
+  adapter is called and must not be silently omitted or truncated. For an
+  advisory review, that ERROR must not prevent overall success. Missing or
+  invalid context document definitions must remain configuration errors,
+  including for disabled reviews.
 rationale: >-
   A review judged against less input than declared would give a verdict
   nobody can trust, and smaller commits or a raised limit solve the cause.
