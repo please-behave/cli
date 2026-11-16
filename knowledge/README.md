@@ -17,6 +17,8 @@ Components are the only artifact that describes the current implementation struc
 
 Requirements form the **verifiable contract between specification and implementation**. Implementation and test results are evaluated against this contract; they do not determine its validity.
 
+The [glossary](glossary.md) explains the core terms these artifacts use.
+
 ## Principles
 
 - Only agreed-upon knowledge is recorded. No drafts, proposals, roadmaps, or implementation statuses.
