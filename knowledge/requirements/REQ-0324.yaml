@@ -1,0 +1,9 @@
+id: REQ-0324
+name: Commit Message Is In The Context
+area: integrity
+description: >-
+  At the commit-msg execution point, the run context must contain the commit
+  message so that every check and review finds it there.
+rationale: >-
+  Checks and reviews need the same message and must not read it from Git hook
+  files themselves.

@@ -1,0 +1,9 @@
+id: REQ-0323
+name: Empty Commit Message Is Not An Error
+area: integrity
+description: >-
+  An empty commit message must not be an error and must still select and run
+  the reviews that the commit-msg execution point selects.
+rationale: >-
+  Whether an empty message is acceptable is a matter for the rule, and Please
+  must not hide it by skipping the review.

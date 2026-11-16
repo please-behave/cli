@@ -1,0 +1,9 @@
+id: REQ-0322
+name: Message File Must Be A Regular File
+area: integrity
+description: >-
+  At the commit-msg execution point, the commit message file must be exactly
+  one regular file and not a symbolic link, and any other kind must be rejected
+  with an error before any rule runs.
+rationale: >-
+  A link or a special file could make Please read content outside the commit.

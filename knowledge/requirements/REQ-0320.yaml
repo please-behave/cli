@@ -1,0 +1,9 @@
+id: REQ-0320
+name: Commit Message Is Captured Once
+area: integrity
+description: >-
+  At the commit-msg execution point, Please must read the commit message once
+  during planning and must include it in the identity of the plan.
+rationale: >-
+  Every verdict must refer to exactly the message that was captured, so that no
+  stale verdict is accepted.

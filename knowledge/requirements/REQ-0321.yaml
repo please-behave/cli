@@ -1,0 +1,10 @@
+id: REQ-0321
+name: Commit Message Must Stay Unchanged
+area: integrity
+description: >-
+  Please must compare the commit message with the captured one after the
+  checks, before and after each adapter call and before the result is saved,
+  and a changed or unreadable message must prevent PASS.
+rationale: >-
+  A verdict about a message that changed during the run would judge something
+  that is never committed.

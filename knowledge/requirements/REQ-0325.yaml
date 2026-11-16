@@ -1,0 +1,10 @@
+id: REQ-0325
+name: Context Names Its Git Facts
+area: integrity
+description: >-
+  The run context must state the repository, the HEAD commit and the state of
+  the working tree and, where they apply to the run, the references of a push
+  and the changes against the change base.
+rationale: >-
+  Rules and adapters can rely on these facts without querying Git themselves;
+  the field names stay in the context schema.

@@ -52,7 +52,7 @@ requirements they implement.
 
 ## HDR-001: Commit message input
 
-The [requirements](knowledge/requirements/README.md) REQ-0099 and REQ-0130 to REQ-0132 specify what a review receives and how its verdict is reported; reviews at commit-msg receive the whole commit message like any other declared input.
+The [requirements](knowledge/requirements/README.md) REQ-0099, REQ-0130 to REQ-0132 and REQ-0320 to REQ-0324 specify what a review receives, how its verdict is reported and how the commit message is captured and kept stable; reviews at commit-msg receive the whole commit message like any other declared input.
 They replace the text of this section. The [components](knowledge/components/README.md) name the
 requirements they implement.
 
