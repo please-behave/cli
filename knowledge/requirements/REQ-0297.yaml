@@ -2,8 +2,8 @@ id: REQ-0297
 name: Synchronization Is Idempotent
 area: setup
 description: >-
-  When the hooks already match the configuration, synchronization must neither
-  prompt nor write, and repeating it must change nothing.
+  When the imports and the hooks already match the configuration,
+  synchronization must neither prompt nor write.
 rationale: >-
   Running sync routinely, by habit or in scripts, never causes churn or
   needless prompts.

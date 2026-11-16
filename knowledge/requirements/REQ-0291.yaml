@@ -2,9 +2,9 @@ id: REQ-0291
 name: Sync Reports Whether It Changed Anything
 area: setup
 description: >-
-  Synchronization must say whether it changed anything, counting changes to
-  the resolved import state, the stored revisions and the Git hooks but not
-  the refresh of unchanged imports, and must end successfully in both cases.
+  When synchronization succeeds, it must say whether it changed anything,
+  counting changes to the resolved import state, the stored revisions and the
+  Git hooks but not the refresh of unchanged imports.
 rationale: >-
   People and scripts can tell a no-op from a real change, and a routine
   refresh raises no false alarm.

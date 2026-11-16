@@ -2,6 +2,7 @@ id: REQ-0318
 name: Release Checksums
 area: distribution
 description: >-
-  Each release must publish a checksum file that covers all of its archives.
+  Each release must publish a checksum file, as the release documentation defines it, that
+  covers all of its archives.
 rationale: >-
   Users can verify that what they downloaded is what was published.

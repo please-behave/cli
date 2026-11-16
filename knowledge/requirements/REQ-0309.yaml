@@ -2,9 +2,9 @@ id: REQ-0309
 name: Unsafe Hook Files Are Conflicts
 area: setup
 description: >-
-  A hook file that is reached through a symlink, is not a regular file,
-  carries malformed or duplicated ownership markers, is owned by another
-  repository or has a layout that cannot be composed safely must be reported
+  The file of a supported hook that is reached through a symlink, is not a
+  regular file, carries malformed or duplicated ownership markers, is owned by
+  another repository or is not an executable POSIX sh script must be reported
   as a conflict that stops reconciliation before anything is written, and such
   a file must never be overwritten.
 rationale: >-

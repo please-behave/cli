@@ -3,7 +3,8 @@ name: Plans Are Revalidated Before Writing
 area: setup
 description: >-
   Immediately before writing a hook, Please must check that the file still has
-  the state the plan was made for and must write nothing when it changed.
+  the state the plan was made for and must abort before writing that hook
+  when it changed.
 rationale: >-
   A hook that somebody else edited between the plan and the write is never
   overwritten on stale assumptions.

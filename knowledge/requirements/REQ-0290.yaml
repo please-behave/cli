@@ -2,8 +2,7 @@ id: REQ-0290
 name: Please Ships No Provider
 area: configuration
 description: >-
-  Please must supply no provider configuration and no adapter, so that every
-  review runs with an adapter that the project configures itself.
+  Please must supply no provider configuration and no adapter.
 rationale: >-
-  Please stays independent of any model vendor, and no provider choice is made
-  for the user.
+  Please stays independent of any model vendor, and every review runs with an
+  adapter that the project configures itself.

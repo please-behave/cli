@@ -2,8 +2,9 @@ id: REQ-0299
 name: Git-Backed Runs Reconcile First
 area: setup
 description: >-
-  A direct run of the pre-commit, commit-msg or pre-push point must reconcile
-  the Git hooks, with the same confirmation as synchronization, before it
+  A run of the pre-commit, commit-msg or pre-push point that was not started
+  from a managed hook must reconcile the Git hooks, with the same
+  confirmation as synchronization but without an approval option, before it
   executes any rule, and a run of any other point must neither prompt for
   hooks nor modify them.
 rationale: >-

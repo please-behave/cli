@@ -2,8 +2,8 @@ id: REQ-0279
 name: English Interface
 area: reporting
 description: >-
-  All user-facing output of Please, including help, diagnostics and reports,
-  must be in English.
+  All user-facing output that Please itself generates, including help,
+  diagnostics and reports, must be in English.
 rationale: >-
   One language keeps the output readable for every team and for the tools and
   agents that read it.

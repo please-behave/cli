@@ -2,8 +2,9 @@ id: REQ-0280
 name: Working-Tree Root Only
 area: setup
 description: >-
-  Please must run only from the root of a Git working tree, must reject a run
-  from a subdirectory and must never silently use another root.
+  Every command except help and the help and version options must run only
+  from the root of a Git working tree, must reject a run from a subdirectory
+  and must never silently use another root.
 rationale: >-
   A run that judged a different root than the one the user stands in would
   report on the wrong files.

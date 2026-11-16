@@ -4,7 +4,8 @@ area: setup
 description: >-
   The configuration that initialization creates must be valid and must run
   successfully without any provider: it contains an enabled passing check and,
-  disabled, a failing check and an AI review.
+  disabled, a failing check and an AI review, and the report that the
+  first run writes must be ignored by Git.
 rationale: >-
   A new user sees a first passing run and the shape of a failing check and of
   a review without installing anything or spending tokens by accident.

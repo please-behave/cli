@@ -2,8 +2,8 @@ id: REQ-0285
 name: Runtime Prerequisites Only For Selected Rules
 area: configuration
 description: >-
-  A missing check file or review prompt must be an error only for a rule that
-  is selected and enabled in the current run.
+  A missing check file or review prompt must be an error for a rule that is
+  selected and enabled in the current run and for no other rule.
 rationale: >-
   One configuration must serve local work and CI, where not every rule has
   what it needs.
