@@ -5,7 +5,7 @@ description: >-
   The snapshot must also identify the governance configuration, the prompts
   and entrypoints of rules, the context files of reviews and the local files
   that checks, adapters and parameters name, even when they are ignored and
-  even when the rule that uses them is disabled.
+  even when the rule that uses them is disabled, but no other ignored file.
 rationale: >-
   A change to anything that influences a result must not leave an old result
   looking current, including a disabled rule that is switched on later.

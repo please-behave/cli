@@ -436,8 +436,7 @@ These limits are built in, not additional configuration fields:
 | External Git sources | 64 KiB resolution state; cached repositories: 8 MiB/file, 128 MiB total, 100,000 entries, 128 directory levels. Fetch timeout 60 seconds, local Git operations and lock waits 30 seconds. |
 | Review criteria | 32 KiB per prompt file; 256 KiB combined, including disabled reviews. |
 | Initial AI input | Up to 200 files in scope per review; content above 256 KiB or a change set above 32 KiB ends the review as ERROR instead of being truncated. Necessary evidence still needs inspection. |
-| Snapshot | 8 MiB per file, 128 MiB total, 100,000 paths; Git path-list output capped at 128 MiB; `.please` nesting limited to 16 levels. |
-| Snapshot coverage | Tracked and nonignored untracked files, plus declared governance inputs even if ignored. Unreferenced ignored artifacts, `.git` and `.please/reports` are excluded. Unsupported symlinks, submodules, paths or exceeded limits prevent PASS. |
+| Snapshot | Bounded per file, in total and by path count; see [Input snapshot](docs/configuration.md#input-snapshot). |
 | Input stability | Working files and HEAD must match before/after execution and before every AI call. Staging and pushed commits are not separately verified. |
 | AI response | 64 KiB adapter stdout; summaries and findings have the limits described under reviews. |
 | Scheduling history | 1 MiB local cache; oversized or invalid input uses defaults, and oversized updates are not saved. |

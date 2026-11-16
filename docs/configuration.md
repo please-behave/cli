@@ -807,9 +807,19 @@ unknown locally, `range_available` is false and the rule must use Git itself.
 Patch objects have `file` (a name relative to the context directory, or null when there is no
 change), `bytes` and `truncated`. Paths that are not valid UTF-8 are counted in
 `unrepresentable_paths` instead of being listed. A section above `context.max_section_bytes`
-is cut, flagged `truncated` and, for lists, counted in `omitted_*`; a rule then fails or reads the
-data from Git. Pre-push reads the reference list from standard input, so commands placed after
+is flagged `truncated`; a patch above it is left out (`file` is null) and a list is counted in
+`omitted_*`. A rule then fails or reads the data from Git. Pre-push reads the reference list from standard input, so commands placed after
 the managed section of a composed hook do not receive it.
+
+### Input snapshot
+
+A snapshot records Git HEAD plus the hash, size and executable flag of tracked
+and nonignored untracked files, and of declared governance inputs even if they
+are ignored. Ignored files that no rule references, `.git` and `.please/reports`
+are excluded; script dependencies are not inferred. Limits: 8 MiB per file,
+128 MiB total, 100,000 paths, Git path-list output capped at 128 MiB and
+`.please` nesting limited to 16 levels. Unsupported symlinks, submodules, paths or
+exceeded limits make the snapshot incomplete and prevent PASS.
 
 ### Reports and other files
 
@@ -820,6 +830,9 @@ blocking FAIL follows; fail-fast skips and cancellations prevent success. Depend
 skips inherit the originating outcome. Disabled rules
 are listed in plans and stay out of results. JSON records FAIL even when the
 overall outcome is PASS because that review is non-blocking.
+
+Results that Please generates itself use the reserved IDs `please-plan`, `please-snapshot`,
+`please-tree-stability` and `please-commit-message-stability`.
 
 `reports/last.json` is replaced atomically after a run. Invalid configuration
 preserves a previous report. Keep reports and credentials local. Stdout/stderr

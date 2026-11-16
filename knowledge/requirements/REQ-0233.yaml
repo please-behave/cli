@@ -2,9 +2,9 @@ id: REQ-0233
 name: Reading Git Never Changes It
 area: integrity
 description: >-
-  Capturing and comparing snapshots and describing the run context must only
-  read from Git: they must not create commits, change the index or take
-  optional locks.
+  Capturing and comparing snapshots and describing the run context must not
+  change Git's objects, references or index, must not create commits and must
+  not take optional locks.
 rationale: >-
   Governance must not disturb the developer's work or block a Git operation
   that runs at the same time.
