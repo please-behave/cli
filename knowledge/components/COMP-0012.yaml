@@ -21,7 +21,8 @@ out_of_scope:
     owner: COMP-0009
 must_not:
   - >-
-    Include file contents; the document holds paths, states and patches only.
+    Include file contents; the document holds paths, states and the names of
+    patch files only.
   - >-
     Cut a section silently; truncated sections are flagged and counted.
   - >-

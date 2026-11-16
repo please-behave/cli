@@ -112,8 +112,7 @@ before the ordinary assignment resolver runs. Local sets still reference IDs.
 Each import remains an independent execution and parameter binding, including
 when two sets share a Rule. A set may also assign one Rule to multiple points
 through `run_at`. Removing an import stops using that set. Sets accept no project
-settings, nested imports or references to other sets. For existing external sets,
-replace directory-local IDs in `rules` with repository-relative Rule paths.
+settings, nested imports or references to other sets.
 
 Per-import `[imports.execution_points]` maps external custom names to custom names
 already declared by the consumer. The table belongs only to the preceding import.

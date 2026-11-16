@@ -23,7 +23,8 @@ must_not:
   - >-
     Ship or default to a built-in provider or model.
   - >-
-    Pass inherited PLEASE_ variables to an adapter.
+    Pass inherited PLEASE_ variables to an adapter, except the reserved
+    internal recursion guard.
 files:
   - src/provider.rs
 depends_on:

@@ -546,7 +546,8 @@ for worktree reviews. At commit-msg, `path = null` with a `line` cites that
 line of the commit message. Any other exit status, malformed JSON, invalid evidence
 and provider failures produce ERROR. Summaries are single lines up to 120 characters;
 an optional longer explanation has up to 8000 bytes; at most 20 findings per review,
-2000 bytes each. Non-blocking FAIL is visible; incomplete verification stays fatal.
+2000 bytes each. FAIL and ERROR of a non-blocking review stay visible; configuration errors and
+damaged imports still prevent success.
 
 ### Group rules into rule sets
 

@@ -3,10 +3,8 @@ name: Explicit Check Dependencies
 context: >-
   Please executes deterministic checks concurrently while respecting
   resource constraints. Some checks require successful completion of
-  other checks, such as a smoke test depending on a build. Previously,
-  users could influence execution order through configuration, but
-  ordering alone does not guarantee that prerequisites have completed
-  successfully. Automatic scheduling optimization requires these
+  other checks, such as a smoke test depending on a build. Execution order
+  alone does not guarantee that prerequisites have completed successfully. Automatic scheduling optimization requires these
   correctness constraints to be expressed explicitly.
 decision: >-
   Deterministic checks may declare dependencies on other deterministic

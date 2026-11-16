@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/please-behave/cli/docs/schemas/context.schema.json",
   "title": "Please Behave run context",
-  "description": "Git facts for one run, located through PLEASE_CONTEXT. Sections are absent when they do not apply to the execution point.",
+  "description": "Git facts for one run, handed to a check as the @context argument and to an adapter as context_file in its request. Sections are absent when they do not apply to the execution point.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema_version", "run_id", "execution_point", "repository", "head", "workspace"],

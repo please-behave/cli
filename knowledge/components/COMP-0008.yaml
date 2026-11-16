@@ -10,7 +10,8 @@ scope:
     Terminates the whole process tree on timeout or cancellation after the
     configured grace period.
   - >-
-    Removes every inherited PLEASE_ variable from rule processes.
+    Removes every inherited PLEASE_ variable from rule processes, except the
+    reserved internal recursion guard.
 out_of_scope:
   - description: Deciding what to run and how to interpret an exit status.
     owner: COMP-0007
@@ -22,7 +23,8 @@ must_not:
   - >-
     Collect output without a bound.
   - >-
-    Pass inherited PLEASE_ variables on to rule processes.
+    Pass inherited PLEASE_ variables on to rule processes, except the
+    reserved internal recursion guard.
 files:
   - src/process.rs
   - src/environment.rs
@@ -38,3 +40,4 @@ requirements:
   - REQ-0078
   - REQ-0162
   - REQ-0227
+  - REQ-0316
