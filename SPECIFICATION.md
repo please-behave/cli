@@ -164,102 +164,24 @@ requirements they implement.
 
 ## INP-001: Snapshots and stability
 
-Input is Git HEAD plus a sorted manifest of current tracked and nonignored
-untracked files, with SHA-256 hashes, sizes and executable flags. Also include
-local governance configuration documents, rule prompts and entrypoints, review
-entry/context files, and existing local files explicitly named by check commands,
-provider commands/arguments or parameter values, even when ignored. Check path
-references use their declared repository/source/rule boundaries. These inputs
-include disabled definitions so enabling them cannot reuse stale evidence.
-Do not recursively include ignored artifacts beneath `.please/`, such as Python
-bytecode, or infer transitive script dependencies. Tracked files remain included
-even when an ignore pattern matches. Always exclude `.git` and `.please/reports`.
-No temporary commits, index mutations, content backups, external diff helpers or
-optional Git locks.
+The [requirements](knowledge/requirements/README.md) REQ-0231 to REQ-0240 specify
+snapshots, stability checks and freshness. They replace the text of
+this section. The [components](knowledge/components/README.md) name the
+requirements they implement.
 
-Bound snapshots to 8 MiB/file, 128 MiB total, 100,000 paths, 128 MiB per Git path-list stdout
-capture and 16 levels of configuration nesting. Unsupported symlinks, submodules,
-special/non-UTF-8 paths, unreadable files or exceeded limits make coverage
-incomplete. Incomplete input blocks execution and PASS. Compare input before an
-active provider call and after execution; changed or unverifiable input blocks
-PASS. Snapshots are not filesystem transactions and cannot detect edits reverted
-entirely between captures.
-
-Status is CURRENT for matching complete snapshots, STALE for differences, UNKNOWN
-for incomplete/unavailable comparison. Staging alone does not change content;
-HEAD changes do. Show bounded changed paths and exact totals only when coverage
-allows. Do not invent line deltas: the baseline stores hashes, not prior content.
-A working-tree PASS does not certify staged/pushed commits or deployed artifacts.
 ## CTX-001: Structured run context
 
-Each run that executes rules writes one JSON context document, specified by
-`docs/schemas/context.schema.json` (`schema_version` 1), and supplies its absolute path to
-checks as the `@context` argument and to review adapters as `context_file` in their request. Offline plans and blocked plans (for example an incomplete snapshot) write none. The document holds
-Git facts only, never file contents: `repository`, `head` (commit, branch, message) and
-`workspace` (clean flag, staged, unstaged, untracked and conflicted paths with statuses, and
-staged and unstaged patches) are always present. `commit_message` exists at commit-msg, `push`
-(per-reference kind, new commits, changed files, patch and whether the tip is HEAD) at pre-push,
-and `changes` (net changes since the resolved `PLEASE_CHANGE_BASE`, an input of the cli that is
-consumed and never forwarded) when that variable names an available commit; an unusable value omits the section and never fails the run.
-Absent sections mean not applicable, never empty.
-
-Facts are computed once per run with read-only Git commands and described without sampling:
-a section above `context.max_section_bytes` (default 10 MiB) is flagged truncated and counted,
-never silently cut, and paths that are not valid UTF-8 are counted instead of listed. Patches
-are separate owner-only files named in the document. The files live in the worktree-local Git
-directory, outside the snapshot, and at the start of each run only the newest
-`context.retain_runs` (default 100) completed runs are kept. The schema stays at version 1 while
-the CLI is below 1.0.0. Pre-push reads Git's reference list from standard input;
-a failure to establish the context is a run error, never a PASS.
+The [requirements](knowledge/requirements/README.md) REQ-0241 to REQ-0250 specify
+the structured run context. They replace the text of
+this section. The [components](knowledge/components/README.md) name the
+requirements they implement.
 
 ## RPT-001: Reporting and CLI outcomes
 
-Reports are written atomically to `.please/reports/last.json`, including FAIL/ERROR
-when initialized input allows it. Invalid configuration preserves the prior
-report. Save UTC timestamp, repository/project, provider, input identity, rule
-results, durations, findings, output and available usage. Check ERROR and blocking
-review ERROR, parameter errors and missing prompts take precedence over blocking FAIL; non-blocking review ERROR stays
-visible and permits overall PASS. Fail-fast NOT_RUN and CANCELLED block success without replacing an existing blocking FAIL with ERROR.
-Dependency NOT_RUN inherits the originating outcome and does not independently block reviews or success.
-Disabled Rules stay out of results; failed or errored Checks leave selected Reviews NOT_RUN.
-
-Report schema 1 records plan schema 1, required IDs, blocking and rule provenance.
-An optional per-item configuration_error flag defaults to false in older reports
-and identifies fatal review parameter or prompt errors independently of blocking.
-Only the current report and plan schemas are accepted. Reject corrupt/inconsistent
-reports and mismatched repositories. Reports are local, unsigned evidence, not
-tamper-proof attestations. Status uses saved selection, not the current default.
-
-Flush progress to stderr before each rule starts and after it finishes. Display
-a short name, description, status and elapsed time. `--progress=auto|plain|tty`
-controls verification progress (default auto). Auto redraws in an interactive
-stderr terminal, except CI=true/1 or TERM=dumb; otherwise it appends plain lines.
-Plain never emits cursor controls. Tty redraws rule rows, replacing their running
-state on completion; descriptions must not wrap the row. Color is independent.
-Hide internal phases and successful process-exit reasons.
-Normal execution uses English: `RUNNING`, `provider call` / `provider calls`,
-and summary labels `rules`, `failed`, `errors`, `cancelled` and `not executed`.
-Empty execution prints `No rules executed`.
-Failures show actionable reasons and findings; raw captured output stays in details.
-Execution ends with one overall status/count/duration line, without a duplicate
-table, routine report path, timestamps or checks-only boilerplate. Integrity
-failures remain visible even when no rule failed. Empty points explicitly say no
-rules ran and do not claim rule PASS. Saved status lists results with display
-names; details retain IDs, provenance, output and usage. No rules defined prints
-`No rules defined yet.`; disabled definitions do not
-trigger that message.
-
-Saved status and `--details` use English labels and messages, including selection,
-checks-only scope, provenance and token usage. Use `Selection`, `Omitted`,
-`Required rules` and `Mode: Checks only` consistently with execution plans.
-This presentation does not change saved data, freshness, streams or exit codes.
-Respect `NO_COLOR`, `--no-color` and each stream's terminal state. Status colors
-are green PASS/CURRENT, red FAIL and amber ERROR/STALE/UNKNOWN; help uses cyan
-accents and bold headings. Sanitize untrusted terminal content.
-
-Exit codes: 0 success; 1 failed verification or STALE; 2 configuration, execution,
-provider/report error, UNKNOWN or invalid arguments; 3 absent report for status.
-An executable plan exits 0; a blocked/invalid plan exits 2.
+The [requirements](knowledge/requirements/README.md) REQ-0253 to REQ-0275 specify
+reports, progress, terminal output and exit status. They replace the text of
+this section. The [components](knowledge/components/README.md) name the
+requirements they implement.
 
 ## REL-001: Distribution and integrations
 
@@ -415,16 +337,7 @@ Public documentation explains supported behavior; proposals remain in the roadma
 
 ## Runtime namespace isolation
 
-Rules receive no `PLEASE_*` variables and every inherited one is removed. The cli reads
-the input `PLEASE_CHANGE_BASE` and keeps one reserved internal recursion-guard variable.
-Hannes variables are not aliases or fallback inputs.
-Third-party credentials and standard tool variables keep their upstream names.
-The product uses `.please/` and its own cache and managed-hook markers; it never
-loads `.hannes/`. Repository-owned adapters live under `.please/adapters/` and belong
-to development governance, not the product.
-
-Rule and provider IDs reserve `please-`. Generated integrity results use
-`please-plan`, `please-snapshot`, `please-tree-stability` and
-`please-commit-message-stability`, with report schema 1
-and existing execution semantics unchanged. Public library phase callbacks use
-English messages.
+The [requirements](knowledge/requirements/README.md) REQ-0091, REQ-0162, REQ-0251
+and REQ-0252 specify the runtime namespace. They replace the text of
+this section. The [components](knowledge/components/README.md) name the
+requirements they implement.
