@@ -29,6 +29,7 @@ fn points() -> config::ExecutionPoints {
 }
 #[test]
 fn resolution_obeys_membership_override_union_and_disabled_rules() {
+    // REQ-0140, REQ-0144: memberships override and union assignments; disabled rules remain unselected.
     let definitions = [
         assignment("a", true, &["pre-commit"]),
         assignment("b", true, &[]),

@@ -71,6 +71,7 @@ fn review(root: &Path, directory: &str, id: &str, reference: Option<&str>, param
 
 #[test]
 fn named_references_load_without_changing_legacy_defaults() {
+    // REQ-0214: explicit provider references and the optional default resolve independently.
     let root = project();
     provider(root.path(), ".please", "quality", "quality-model");
     provider(root.path(), ".please", "fast", "fast-model");

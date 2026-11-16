@@ -19,6 +19,17 @@ Requirements form the **verifiable contract between specification and implementa
 
 The [glossary](glossary.md) explains the core terms these artifacts use.
 
+## Detailed References
+
+Requirements define the binding product promises. The configuration reference,
+adapter protocol, external rule set reference and execution-point and plan
+contract define exact fields, formats and protocols that complement those
+promises. Requirements refer to these contracts by name rather than copying
+their format details.
+
+Requirements and detailed references must agree. Resolve any contradiction
+explicitly before implementation and update the affected sources together.
+
 ## Principles
 
 - Only agreed-upon knowledge is recorded. No drafts, proposals, roadmaps, or implementation statuses.

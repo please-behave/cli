@@ -50,6 +50,7 @@ fn run(root: &Path) -> report::Report {
 
 #[test]
 fn local_parameters_deliver_strings_and_consumer_files_without_changing_rule_resources() {
+    // REQ-0162, REQ-0167: explicit parameter arguments preserve values without inherited PLEASE_ inputs.
     let root = project();
     write(root.path(), "conventions/scopes.txt", "cli\n");
     support::check_args(

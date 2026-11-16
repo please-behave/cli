@@ -5,9 +5,9 @@
 - Prioritize consistency, clarity and the smallest coherent solution.
   Implement only requested behavior; avoid speculative features, abstractions,
   dependencies and boilerplate.
-- Read `docs/product-vision.md` and `SPECIFICATION.md` before changing behavior
-  or architecture. Requirements in `knowledge/requirements` replace the
-  specification section by section; `knowledge/components` assigns every compiled
+- Read `docs/product-vision.md`, `knowledge/README.md` and the relevant
+  requirements in `knowledge/requirements` before changing behavior or
+  architecture; `knowledge/components` assigns every compiled
   file to one component, so update it when a file is added, moved or removed.
   Define the contract and acceptance criteria before
   implementation; keep code, tests, configuration and documentation consistent.

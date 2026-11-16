@@ -383,6 +383,7 @@ fn remote(path: &Path) -> tempfile::TempDir {
 
 #[test]
 fn push_updates_describe_create_update_delete_and_unpushed_heads() {
+    // REQ-0325: push context identifies reference updates, commits and changed files.
     let root = project("");
     let path = root.path();
     let _bare = remote(path);

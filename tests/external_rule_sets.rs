@@ -1640,6 +1640,7 @@ fn import_parameter_values_cannot_leak_to_other_imports_or_undeclared_names() {
 
 #[test]
 fn shared_rules_are_reused_across_sets_and_points_offline() {
+    // REQ-0187, REQ-0193, REQ-0206: separate bindings, referenced definitions only, offline execution.
     let f = Fixture::new();
     fs::remove_dir_all(f.root.join(".please/checks")).unwrap();
     fs::remove_dir_all(f.root.join(".please/reviews")).unwrap();

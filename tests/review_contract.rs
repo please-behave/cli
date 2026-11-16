@@ -79,6 +79,7 @@ fn schema_and_wire_types_cover_the_same_fields() {
 }
 #[test]
 fn review_contract_enforces_boundaries_and_cited_evidence_locally() {
+    // REQ-0116, REQ-0118: explanation bounds and invalid response evidence are checked locally.
     let root = tempfile::tempdir().unwrap();
     assert!(
         support::command("git")

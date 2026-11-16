@@ -1,4 +1,4 @@
-//! CFG-001: the public reference and executable examples must follow Serde's contract.
+//! The public reference and executable examples must follow Serde's contract.
 mod support;
 use please::{
     config, planner,
@@ -126,6 +126,7 @@ fn project() -> TempDir {
 }
 #[test]
 fn every_configuration_field_required_marker_and_default_is_documented() {
+    // REQ-0327, REQ-0328: documented defaults, fields and required markers match the configuration types.
     let root = project();
     let p = config::load(root.path()).unwrap();
     contract(&p.config, section(CONFIGURATION, "Project settings"), "");
@@ -264,6 +265,7 @@ impl Provider for Never {
 }
 #[test]
 fn readme_examples_validate_and_plan_without_ai_or_check_execution() {
+    // REQ-0329: configuration examples load and produce an executable plan without a provider call.
     let root = project();
     assert_eq!(
         please::verify(root.path(), &Never).unwrap().overall,

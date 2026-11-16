@@ -1,0 +1,9 @@
+id: REQ-0329
+name: Configuration Examples Work Offline
+area: configuration
+description: >-
+  Configuration examples in the configuration reference must validate and
+  produce executable plan previews without network access.
+rationale: >-
+  A project must be able to use a documented example without discovering
+  invalid configuration or needing a network connection just to preview it.

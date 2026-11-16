@@ -199,6 +199,7 @@ fn net_comparison_covers_commits_worktree_add_delete_rename_and_unusual_names() 
 
 #[test]
 fn preview_and_execution_agree_and_nonmatches_need_no_provider_or_context() {
+    // REQ-0153, REQ-0177: preview and execution agree; nonmatching reviews need no setup.
     let root = fixture();
     review(
         root.path(),

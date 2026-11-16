@@ -103,6 +103,7 @@ fn execute(root: &Path) -> report::Report {
 }
 #[test]
 fn stdin_results_and_provider_isolation() {
+    // REQ-0125: each review has its own planned call and result, including shared providers.
     let root = fixture();
     tool(root.path());
     provider(

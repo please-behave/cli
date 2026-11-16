@@ -157,6 +157,7 @@ print(json.dumps({'protocol_version':1, 'reason':'Evidence inspected', 'findings
 
 #[test]
 fn separate_provider_and_ruleset_repositories_run_offline() {
+    // REQ-0206, REQ-0208: independently imported providers and rules execute from the offline cache.
     let f = Fixture::new();
     let project = f.load(true).unwrap();
     assert_eq!(project.providers.len(), 1);

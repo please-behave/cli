@@ -145,6 +145,7 @@ fn fixed_discovery_and_defaults() {
 
 #[test]
 fn strict_configuration_and_implementation_validation() {
+    // REQ-0284: unknown fields and invalid rule configuration are rejected during loading.
     for (attributes, implementation) in [
         ("run_at = ['unknown']", "command = '@rule/index.sh'"),
         (
@@ -695,6 +696,7 @@ fn initialization_is_one_time() {
 
 #[test]
 fn checks_only_reports_selected_reviews_as_not_run() {
+    // REQ-0158, REQ-0159, REQ-0160: checks-only skips review execution and records the restriction.
     // A blocking review, with and without a trigger: checks-only needs no change base and
     // makes no provider call; the review is NOT_RUN and the checks decide the result.
     for trigger in [false, true] {
@@ -736,6 +738,7 @@ fn checks_only_reports_selected_reviews_as_not_run() {
 
 #[test]
 fn prepared_input_is_shared_without_rereading_resources() {
+    // REQ-0180: prepared review input survives removal of the original context and prompt files.
     let d = project();
     review(d.path(), "run_at = ['pre-push']");
     let path = d.path().join(".please/reviews/design/rule.toml");
@@ -768,6 +771,7 @@ fn prepared_input_is_shared_without_rereading_resources() {
 
 #[test]
 fn saved_reports_reject_inconsistent_metadata() {
+    // REQ-0260: missing results and inconsistent plan, blocking and outcome metadata invalidate reports.
     let d = project();
     review(d.path(), "run_at = ['pre-push']\nblocking = false");
     let r = please::verify(d.path(), &Mock("FAIL")).unwrap();
@@ -1095,6 +1099,7 @@ fn string_command_arguments_reach_the_process_unchanged() {
 #[cfg(unix)]
 #[test]
 fn command_representations_execute_equivalently() {
+    // REQ-0024: direct and interpreter-based commands use the same exit-status mapping.
     use std::os::unix::fs::PermissionsExt;
     for (code, expected) in [
         (0, Status::Pass),

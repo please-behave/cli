@@ -158,6 +158,7 @@ sys.exit({'PASS': 0, 'FAIL': 1}.get(status, 2))
 
 #[test]
 fn commit_message_hook_and_adapter_contract() {
+    // REQ-0099, REQ-0130, REQ-0321: whole-message input, exit verdicts and changed-message rejection.
     let f = Fixture::new();
     ok(git(&f.root, &["add", "."]));
     ok(git(

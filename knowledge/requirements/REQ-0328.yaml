@@ -1,0 +1,9 @@
+id: REQ-0328
+name: Configuration Fields Are Documented Accurately
+area: configuration
+description: >-
+  The configuration reference must describe every supported configuration
+  field and correctly identify whether it is required or optional.
+rationale: >-
+  A project must be able to configure Please from the reference without
+  guessing which settings exist or are required.

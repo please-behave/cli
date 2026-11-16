@@ -2,7 +2,7 @@
 
 Keep changes focused. For bugs, include your OS, `please --version`, a minimal
 configuration and reproduction steps. For features, explain the problem and how
-it fits the small CLI described in [SPECIFICATION.md](SPECIFICATION.md).
+it fits the small CLI described by the [requirements](knowledge/requirements/README.md).
 
 ## Development
 

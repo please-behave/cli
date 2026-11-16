@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check local Markdown links/anchors and specification-to-test references offline."""
+"""Check local Markdown links/anchors and test references to requirements offline."""
 
 from pathlib import Path
 import re
@@ -41,14 +41,30 @@ def check_links(root, files):
 
 
 def check_requirements(root):
-    text = (root / "SPECIFICATION.md").read_text()
-    ids = re.findall(r"^## ([A-Z]+-\d+):", text, re.M)
-    rows = re.findall(r"^\| ([A-Z]+-\d+) \| `([^`]+)::(\w+)` \|$", text, re.M)
-    assert len(ids) == len(set(ids)) and set(ids) == {row[0] for row in rows}, "missing/duplicate acceptance coverage"
-    assert len(rows) == len(ids), "duplicate acceptance coverage"
-    for requirement, filename, symbol in rows:
-        source = (root / filename).read_text()
-        assert re.search(r"\b(?:fn|def) " + symbol + r"\s*\(", source), f"{requirement}: missing acceptance test {filename}::{symbol}"
+    directory = root / "knowledge/requirements"
+    definitions = sorted(directory.glob("REQ-*.yaml"))
+    assert definitions, "no requirement definitions found"
+    active = set()
+    known = set()
+    for path in definitions:
+        text = path.read_text()
+        identifier = re.search(r"^id: (REQ-\d{4})$", text, re.M)
+        assert identifier and identifier[1] == path.stem, f"{path.relative_to(root)}: invalid requirement ID"
+        known.add(identifier[1])
+        if not re.search(r"^obsolete: true$", text, re.M):
+            active.add(identifier[1])
+
+    tests = set((root / "tests").rglob("*.rs"))
+    for scope in [".please/checks", ".github/scripts", "tools"]:
+        tests.update((root / scope).rglob("test_*.py"))
+    cited = set()
+    for path in sorted(tests):
+        prefix = r"//[/!]?" if path.suffix == ".rs" else r"#"
+        comments = re.findall(rf"^\s*{prefix}\s+(.*)$", path.read_text(), re.M)
+        for identifier in re.findall(r"\bREQ-\d+\b", "\n".join(comments)):
+            assert identifier in known, f"{path.relative_to(root)}: unknown requirement {identifier}"
+            cited.add(identifier)
+    return active & cited, active - cited
 
 
 def main():
@@ -59,8 +75,13 @@ def main():
     )
     files = [ROOT / name for name in sorted(set(filter(None, tracked))) if (ROOT / name).is_file()]
     check_links(ROOT, files)
-    check_requirements(ROOT)
-    print(f"Documentation passed: {len(files)} Markdown files; local links, anchors and acceptance references.")
+    cited, missing = check_requirements(ROOT)
+    print(f"Documentation passed: {len(files)} Markdown files; local links, anchors and requirement references.")
+    print(
+        f"Requirement references: {len(cited)}/{len(cited) + len(missing)} active requirements cited by tests; representative coverage only."
+    )
+    if missing:
+        print("Verification gaps (active requirements without test citations): " + ", ".join(sorted(missing)))
 
 
 if __name__ == "__main__":

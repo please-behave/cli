@@ -1,7 +1,7 @@
 # Implementation design
 
-This document records architectural decisions. The [specification](../SPECIFICATION.md)
-defines behavior; this file explains how the code is organized to deliver it.
+This document records architectural decisions. The [requirements](../knowledge/requirements/README.md)
+define behavior; this file explains how the code is organized to deliver it.
 
 ## Modules
 

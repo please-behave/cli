@@ -1,6 +1,6 @@
 id = "docs"
 name = "Documentation links"
-description = "Documentation links and specification references resolve"
+description = "Documentation links and requirement references resolve"
 enabled = true
 run_at = ["pre-commit", "pre-push", "check"]
 

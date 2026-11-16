@@ -240,9 +240,9 @@ fn human_plan_uses_english_and_preserves_layout_and_values() {
         "planned_model_calls": 1,
         "change_base": "base-789",
         "context": {"scopes": [{"review": "architecture", "files": ["src/lib.rs"], "content_bytes": 30, "change_set_bytes": 40}],
-            "selections": [{"path": "SPECIFICATION.md", "headings": []},
+            "selections": [{"path": "knowledge/requirements/README.md", "headings": []},
                 {"path": "DESIGN.md", "headings": ["Architecture", "Boundaries"]}],
-            "sections": [{"path": "SPECIFICATION.md", "start_line": 2, "end_line": 7, "bytes": 120}],
+            "sections": [{"path": "knowledge/requirements/README.md", "start_line": 2, "end_line": 7, "bytes": 120}],
             "selected_bytes": 120, "byte_limit": 1000, "instruction_bytes": 80,
             "instruction_byte_limit": 500}
     }))
@@ -264,9 +264,9 @@ fn human_plan_uses_english_and_preserves_layout_and_values() {
             "Review Architektur · Provider configuration: reviewer · Adapter: review-adapter · Timeout: 60 s\n",
             "Scope of architecture: 1 files · Content: 30 bytes · Change set: 40 bytes\n",
             "Review criteria: 80 / 500 bytes\n",
-            "Requirements: SPECIFICATION.md · entire file\n",
+            "Requirements: knowledge/requirements/README.md · entire file\n",
             "Requirements: DESIGN.md · Architecture, Boundaries\n",
-            "Context section: SPECIFICATION.md:2–7 · 120 bytes\n",
+            "Context section: knowledge/requirements/README.md:2–7 · 120 bytes\n",
             "Preview: no rules executed, no tokens consumed, no report overwritten.\n",
         )
     );
@@ -307,6 +307,7 @@ fn human_plan_uses_english_and_preserves_layout_and_values() {
 
 #[test]
 fn all_command_paths_and_standard_help() {
+    // REQ-0276, REQ-0278: supported commands and the standard help/version options parse.
     for words in ["init", "sync", "run", "status", "help"] {
         let argv: Vec<_> = std::iter::once("please")
             .chain(words.split_whitespace())
@@ -914,6 +915,7 @@ fn timeout_output_capture_and_shell_are_explicit() {
 #[cfg(unix)]
 #[test]
 fn changing_files_during_checks_blocks_pass() {
+    // REQ-0237: a check that changes project files prevents a successful result.
     let d = project();
     enable(d.path());
     fs::write(

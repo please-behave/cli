@@ -111,8 +111,19 @@ cites a decision that does not exist. Component references to requirements must
 resolve as well.
 
 A change in behavior starts with the requirement. Update it in the same commit
-as the tests and the code. A requirement that no longer holds is marked obsolete
-or deleted, never left in place and ignored.
+as the tests, code, documentation and affected decisions. A requirement that no
+longer holds is marked obsolete or deleted, never left in place and ignored.
+
+## Test References
+
+Tests cite the REQ IDs they verify in source comments. Add a citation only
+after confirming that the assertions exercise the requirement. A citation
+records representative coverage rather than proof of every clause.
+
+The documentation check reads line comments in Rust product tests and Python
+tooling tests. It validates that cited requirement IDs exist and lists
+active requirements with no test citation as verification gaps. Missing
+citations remain visible until a suitable test is identified or added.
 
 ## What the check cannot see
 

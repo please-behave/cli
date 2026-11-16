@@ -105,15 +105,15 @@ while the rules ran. An incomplete or unstable snapshot never counts as a pass.
 
 A provider is the configured way reviews reach an AI: it names the
 [adapter](#adapter) to call and its settings. Please Behave ships no provider
-and chooses none implicitly. A project has a default provider and can define
-named ones, which a review selects by name.
+and chooses none implicitly. A project can explicitly configure a default
+provider and named providers, which a review selects by name.
 
 ## Adapter
 
 An adapter is a trusted executable that translates between Please Behave and an
-AI service. It receives one JSON request and answers with one JSON verdict,
-whether it calls a CLI, an HTTP API or a local model. This keeps Please Behave
-independent of any particular AI vendor. See the
+AI service. It receives one JSON request, returns a JSON response and signals
+the verdict through its exit status, whether it calls a CLI, an HTTP API or a
+local model. This keeps Please Behave independent of any particular AI vendor. See the
 [adapter protocol](../docs/adapter-protocol.md).
 
 ## External Source

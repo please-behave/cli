@@ -159,6 +159,7 @@ fn obsolete_hooks_are_rejected_and_provider_validation_is_preserved() {
 
 #[test]
 fn approval_updates_removals_and_idempotency() {
+    // REQ-0292, REQ-0305: changes need approval; hook presence follows effective assignments.
     let root = project(&["pre-commit"]);
     let p = config::load(root.path()).unwrap();
     let mut prompted = 0;

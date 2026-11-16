@@ -1,6 +1,6 @@
 # Usage
 
-The [specification](../SPECIFICATION.md) is the contract for behavior described here;
+The [requirements](../knowledge/requirements/README.md) are the contract for behavior described here;
 the [configuration reference](configuration.md) defines every field.
 
 ## First run
