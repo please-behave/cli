@@ -1,6 +1,6 @@
 id: REQ-0290
 name: Please Ships No Provider
-area: configuration
+area: reviews
 description: >-
   Please must supply no provider configuration and no adapter.
 rationale: >-

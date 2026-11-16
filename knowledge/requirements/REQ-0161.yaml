@@ -1,12 +1,13 @@
 id: REQ-0161
-name: Setup Errors Are Fatal
+name: Review Configuration Errors Prevent Success
 area: rules
 description: >-
-  A parameter error or a missing prompt of a selected, enabled review must
-  prevent a successful result, whether or not the review is advisory, and must
-  not be handled like a FAIL or ERROR of an advisory review.
+  A parameter error or a missing prompt of a selected, enabled review must be
+  treated as a configuration error that prevents a successful result, whether
+  or not the review is advisory, and must not be handled like a FAIL or ERROR
+  of an advisory review.
 rationale: >-
-  Advisory reviews may be unreliable, but a broken setup is a mistake of the
-  project that must be fixed.
+  Advisory reviews may be unreliable, but an invalid configuration is a
+  mistake of the project that must be fixed.
 decisions:
   - DEC-0007

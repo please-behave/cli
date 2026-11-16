@@ -1,6 +1,6 @@
 id: REQ-0276
 name: Command Set
-area: reporting
+area: cli
 description: >-
   Please must offer exactly the commands init, sync, run, status and help, and
   its help must list exactly these commands without command or option aliases.

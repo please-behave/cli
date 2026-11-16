@@ -1,10 +1,10 @@
 id: REQ-0208
 name: Providers Are Imported Independently
-area: configuration
+area: reviews
 description: >-
-  A consuming project must be able to import a named provider from a Git
-  repository independently of any rule set and at its own pinned reference,
-  and such an import must need no rules, rule sets or execution points.
+  A project must be able to import a named provider from a Git repository
+  independently of any rule set and at its own pinned reference, and such an
+  import must need no rules, rule sets or execution points.
 rationale: >-
-  Adapters and rules are maintained by different parties and must be versioned
-  separately.
+  Adapters and rules are maintained by different parties and must be
+  versioned separately.

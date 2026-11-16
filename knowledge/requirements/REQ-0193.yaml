@@ -6,5 +6,5 @@ description: >-
   loaded and take part in the import, and unreferenced definitions and other
   rule sets of the repository must have no effect.
 rationale: >-
-  A shared repository can hold many rules without a consumer being affected by
-  the ones it does not use.
+  A shared repository can hold many rules without a project being affected
+  by the ones it does not use.

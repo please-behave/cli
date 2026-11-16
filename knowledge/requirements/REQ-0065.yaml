@@ -6,7 +6,7 @@ description: >-
   FAIL or ERROR and without early termination by fail-fast, and the two phases
   must never overlap.
 rationale: >-
-  Provider calls cost money and must not be spent on a run that cannot succeed
+  Adapter calls cost money and must not be spent on a run that cannot succeed
   anyway.
 decisions:
   - DEC-0018

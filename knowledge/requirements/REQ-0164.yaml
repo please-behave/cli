@@ -1,12 +1,12 @@
 id: REQ-0164
-name: Imported Values Come From The Consumer
+name: Imported Values Come From The Project
 area: rules
 description: >-
   A local rule must carry its parameter values in its own declaration, an
-  imported rule must not, and the consumer must supply the values of an
+  imported rule must not, and the project must supply the values of an
   imported rule separately for each import.
 rationale: >-
-  The author of a shared rule cannot know the consumer's values, and each
+  The author of a shared rule cannot know the project's values, and each
   import may need different ones.
 decisions:
   - DEC-0008

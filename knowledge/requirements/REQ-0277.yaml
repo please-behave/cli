@@ -1,6 +1,6 @@
 id: REQ-0277
 name: Unknown Commands Show Help
-area: reporting
+area: cli
 description: >-
   A command that Please does not offer must show the same help as the help
   command.

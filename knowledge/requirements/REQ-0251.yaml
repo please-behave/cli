@@ -1,6 +1,6 @@
 id: REQ-0251
 name: Change Base Comes From An Environment Variable
-area: reviews
+area: rules
 description: >-
   Please must read the change base only from the environment variable
   PLEASE_CHANGE_BASE.

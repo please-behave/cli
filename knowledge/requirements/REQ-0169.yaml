@@ -5,5 +5,5 @@ description: >-
   An adapter must receive every resolved parameter value of its review, kept
   apart from the parameters of the provider.
 rationale: >-
-  A shared review needs the values its consumer configured, and provider
+  A shared review needs the values its project configured, and provider
   settings must not be confused with them.

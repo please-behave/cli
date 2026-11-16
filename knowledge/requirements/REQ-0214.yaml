@@ -1,6 +1,6 @@
 id: REQ-0214
 name: Named And Default Providers
-area: configuration
+area: reviews
 description: >-
   A project must be able to declare named provider configurations and
   optionally one explicit default provider, and a review must use the provider

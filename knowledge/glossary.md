@@ -7,16 +7,28 @@ behavior.
 
 | Term | In short |
 |---|---|
+| [Project](#project) | The repository in which Please Behave runs and whose governance it evaluates. |
 | [Rule](#rule) | A named expectation, implemented as a check or a review. |
+| [Rule ID](#rule-id) | The identifier of a rule within its source. |
+| [Rule Identity](#rule-identity) | The complete identifier of a rule within a run. |
 | [Check](#check) | A deterministic rule that runs a command. |
 | [Review](#review) | A rule that asks an AI to judge the project. |
 | [Rule Set](#rule-set) | A named group of rules with shared execution points. |
 | [Execution Point](#execution-point) | A moment at which rules run. |
+| [Plan Preview](#plan-preview) | A preview of what would run at an execution point. |
+| [Configuration Error](#configuration-error) | An invalid configuration or a missing prerequisite required for execution. |
 | [Run Context](#run-context) | The Git state of a run, supplied to rules as a file. |
 | [Input Snapshot](#input-snapshot) | A fingerprint of the files a run judged. |
 | [Provider](#provider) | The configured connection through which reviews reach an AI. |
 | [Adapter](#adapter) | The executable that talks to the AI for a provider. |
 | [External Source](#external-source) | A Git repository that supplies rule sets or providers. |
+
+## Project
+
+The project is the Git repository in which Please Behave runs and whose
+governance it evaluates. Its repository root is the base for project-relative
+paths. It can import rules and providers from [external sources](#external-source),
+whose repositories remain distinct from the project repository.
 
 ## Rule
 
@@ -24,6 +36,17 @@ A rule is one named expectation about a project, such as "the changelog is
 current" or "the implementation respects the architecture". A rule is either a
 [check](#check) or a [review](#review), never both. Rules are grouped in
 [rule sets](#rule-set) and run at [execution points](#execution-point).
+
+## Rule ID
+
+A rule ID identifies a [rule](#rule) within its source. For an imported rule,
+the ID alone does not distinguish which import supplies it.
+
+## Rule Identity
+
+A rule identity identifies a [rule](#rule) within a run. It is the rule ID for
+a local rule and the namespaced rule ID for an imported rule, so rules from
+different imports remain distinguishable in references, plans and reports.
 
 ## Check
 
@@ -49,8 +72,21 @@ Rule sets can be local or come from an [external source](#external-source).
 
 An execution point is a moment at which rules run, for example before a commit
 or before a push. Each rule is selected for the points it is assigned to.
-`please run --at <point> --plan` previews what would run at a point without
-running it.
+
+## Plan Preview
+
+A plan preview shows what would run at an [execution point](#execution-point)
+without running it. It is requested with `please run --at <point> --plan` and
+works offline. Offline availability is a property of the preview, not a
+separate kind of plan.
+
+## Configuration Error
+
+A configuration error means that the project's configuration is invalid or
+lacks a prerequisite required for execution, such as parameter values or the
+prompt of a selected, enabled review. It prevents success even for an advisory
+review. FAIL and ERROR outcomes of an advisory review remain nonblocking;
+they describe the review's result rather than a configuration error.
 
 ## Run Context
 

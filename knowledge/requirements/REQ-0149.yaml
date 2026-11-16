@@ -1,9 +1,9 @@
 id: REQ-0149
-name: Custom Points Come From The Consumer
+name: Custom Points Come From The Project
 area: rules
 description: >-
-  Custom execution points must be declared by the consuming project alone, and
-  a custom point, including release, must have no behavior beyond its name.
+  Custom execution points must be declared by the project alone, and a
+  custom point, including release, must have no behavior beyond its name.
 rationale: >-
   Projects name their own stages, and Please Behave attaches no meaning to
   names such as release.

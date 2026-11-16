@@ -1,6 +1,6 @@
 id: REQ-0278
 name: Help And Version Options
-area: reporting
+area: cli
 description: >-
   Please must print its help for -h and --help and its version for -V and
   --version.

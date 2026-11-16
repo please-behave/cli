@@ -1,6 +1,6 @@
 id: REQ-0217
 name: Provider Needs Command And Timeout
-area: configuration
+area: reviews
 description: >-
   A provider must declare an adapter command and a timeout within the bounds
   of the configuration reference, and a missing or invalid value must be

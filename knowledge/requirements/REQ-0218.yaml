@@ -1,6 +1,6 @@
 id: REQ-0218
 name: Unknown Provider Fields Are Rejected
-area: configuration
+area: reviews
 description: >-
   A provider definition with a field outside the set the configuration
   reference defines must be rejected as a configuration error.

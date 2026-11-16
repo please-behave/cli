@@ -3,11 +3,11 @@ name: Imports Map Custom Points
 area: rules
 description: >-
   An import must be able to map the custom execution points used by its rule
-  sets onto custom points declared by the consuming project, the mapping must
-  apply to that import alone, and several source points may share one target.
-  A mapping with an unknown source or target or an invalid name, and an
-  unmapped custom point of an import that the consuming project does not
-  declare, must be rejected as a configuration error.
+  sets onto custom points declared by the project, the mapping must apply to
+  that import alone, and several source points may share one target. A
+  mapping with an unknown source or target or an invalid name, and an
+  unmapped custom point of an import that the project does not declare, must
+  be rejected as a configuration error.
 rationale: >-
-  Shared rule sets name their own stages, and each consumer must be able to
+  Shared rule sets name their own stages, and each project must be able to
   attach them to the stages it actually uses.
