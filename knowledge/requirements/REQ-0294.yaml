@@ -1,0 +1,9 @@
+id: REQ-0294
+name: Declined Hook Approval Keeps Refreshed Imports
+area: setup
+description: >-
+  Synchronization must refresh the imports before it asks for approval of hook
+  changes, and declining that approval must not undo the refreshed imports.
+rationale: >-
+  Imports and hooks are independent, so refusing a hook change does not revert
+  rules that the user already chose to refresh.

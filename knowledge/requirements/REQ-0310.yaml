@@ -1,0 +1,10 @@
+id: REQ-0310
+name: Hook Sections Are Marked
+area: setup
+description: >-
+  Please must keep its hook content in explicitly marked sections that record
+  the owning repository.
+rationale: >-
+  Please can recognize what is its own and so never touches what is not.
+decisions:
+  - DEC-0020

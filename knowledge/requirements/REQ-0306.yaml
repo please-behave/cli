@@ -1,0 +1,11 @@
+id: REQ-0306
+name: Hook Failure Blocks Git
+area: setup
+description: >-
+  A failure of Please inside a hook, including Please not being found, must
+  stop the Git operation, and the check for it must come before any command of
+  an existing hook.
+rationale: >-
+  A gate that can fail silently is no gate.
+decisions:
+  - DEC-0004

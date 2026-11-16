@@ -1,0 +1,11 @@
+id: REQ-0298
+name: Sync Touches Only Managed State
+area: setup
+description: >-
+  Synchronization must create, update or remove only the integration state
+  that Please manages for the declared configuration and never a governed
+  project file.
+rationale: >-
+  Setup must never touch the files whose quality Please is meant to judge.
+decisions:
+  - DEC-0020

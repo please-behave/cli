@@ -1,0 +1,10 @@
+id: REQ-0312
+name: Hook Context Is Validated
+area: setup
+description: >-
+  When started from a hook, Please must check that the hook event, the wrapper
+  and the repository match the execution point and the installed hook, and
+  must refuse to run otherwise.
+rationale: >-
+  A copied, stale or foreign hook must not run rules as if it were a valid
+  gate.

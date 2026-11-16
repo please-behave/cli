@@ -1,0 +1,10 @@
+id: REQ-0314
+name: Nested Runs Are Rejected
+area: setup
+description: >-
+  A run or a reconciliation that is started from inside a check or an adapter
+  of the same repository must be rejected, while runs in other repositories
+  remain possible.
+rationale: >-
+  A check that runs git commit or calls please would otherwise start the whole
+  run again from inside itself, without end.

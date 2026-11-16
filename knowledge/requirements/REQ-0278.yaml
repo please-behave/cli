@@ -1,0 +1,9 @@
+id: REQ-0278
+name: Help And Version Options
+area: reporting
+description: >-
+  Please must print its help for -h and --help and its version for -V and
+  --version.
+rationale: >-
+  Users, scripts and bug reports can always find out what a binary does and
+  which version it is.

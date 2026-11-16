@@ -1,0 +1,10 @@
+id: REQ-0316
+name: Runtime Needs Only Git And Configured Tools
+area: distribution
+description: >-
+  A released executable must require no runtime other than Git and the tools
+  that the rules of the project configure, and must not need an interpreter
+  such as Python or Node.
+rationale: >-
+  Installing Please must not drag a language runtime onto every developer
+  machine and CI runner.

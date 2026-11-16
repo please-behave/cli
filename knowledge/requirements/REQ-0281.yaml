@@ -1,0 +1,9 @@
+id: REQ-0281
+name: Git State Is Not Modified
+area: setup
+description: >-
+  Please must not create commits, modify the Git index or change any Git
+  configuration.
+rationale: >-
+  Governance judges the work that developers and agents are about to commit
+  and must never alter it or change how Git behaves.

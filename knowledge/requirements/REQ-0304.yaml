@@ -1,0 +1,11 @@
+id: REQ-0304
+name: Supported Hooks
+area: setup
+description: >-
+  Please must manage Git hooks for exactly pre-commit, commit-msg and pre-
+  push.
+rationale: >-
+  These are the Git moments before work is committed or shared, where
+  governance can still intervene.
+decisions:
+  - DEC-0004

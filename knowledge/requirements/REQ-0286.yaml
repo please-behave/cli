@@ -1,0 +1,11 @@
+id: REQ-0286
+name: Prompt Files Stay In The Rule Directory
+area: configuration
+description: >-
+  A review prompt must be named by a single non-empty file name of a regular
+  file directly in the directory of its rule, and a name with a separator, an
+  absolute path, parent traversal, a symlink or a special file must be
+  rejected.
+rationale: >-
+  A review can only read the prompt it ships, so it can never pull in files
+  from elsewhere on the machine.

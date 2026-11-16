@@ -1,0 +1,10 @@
+id: REQ-0277
+name: Unknown Commands Show Help
+area: reporting
+description: >-
+  A command that Please does not offer must show the same help as the help
+  command and end with the exit status that the usage guide defines for
+  invalid usage.
+rationale: >-
+  Someone who mistypes a command is shown what exists instead of a bare error,
+  and scripts still see a failure.

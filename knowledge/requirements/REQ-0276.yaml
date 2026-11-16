@@ -1,0 +1,9 @@
+id: REQ-0276
+name: Command Set
+area: reporting
+description: >-
+  Please must offer exactly the commands init, sync, run, status and help, and
+  its help must list exactly these commands without aliases.
+rationale: >-
+  A small fixed set of five commands is easy to learn and lets hooks, CI and
+  agents rely on the same words.

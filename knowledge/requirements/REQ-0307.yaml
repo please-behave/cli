@@ -1,0 +1,9 @@
+id: REQ-0307
+name: Effective Hook Location
+area: setup
+description: >-
+  Hooks must be installed where Git resolves them for the repository,
+  including in worktrees and with a configured hooks path.
+rationale: >-
+  A hook in a directory that Git never reads would look installed and never
+  run.

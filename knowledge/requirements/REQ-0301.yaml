@@ -1,0 +1,9 @@
+id: REQ-0301
+name: Reconciliation Is Verified
+area: setup
+description: >-
+  After applying a hook plan, Please must verify that the hooks match the
+  configuration and must report an error when they do not.
+rationale: >-
+  A synchronization that reports success while the gate is not in place would
+  give a false sense of enforcement.

@@ -1,0 +1,10 @@
+id: REQ-0293
+name: Refused Reconciliation Keeps The Report
+area: setup
+description: >-
+  When hook reconciliation is declined, cannot ask for confirmation, meets a
+  conflict or fails, the command must end with the error exit status and keep
+  the previous report.
+rationale: >-
+  A setup problem must not destroy the evidence of the last run, and a missing
+  terminal must never count as approval.

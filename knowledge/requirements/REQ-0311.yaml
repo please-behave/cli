@@ -1,0 +1,11 @@
+id: REQ-0311
+name: Foreign Hook Content Is Preserved
+area: setup
+description: >-
+  Adding, updating or removing a managed hook section must leave all other
+  content and the permissions of the hook file unchanged, and a hook file may
+  be deleted only when it consists of nothing but the managed wrapper.
+rationale: >-
+  Hooks of other tools keep working next to Please.
+decisions:
+  - DEC-0020

@@ -1,0 +1,11 @@
+id: REQ-0295
+name: Sync Can Be Approved In Advance
+area: setup
+description: >-
+  When synchronization is started with the approval option, it must apply the
+  displayed hook plan without a prompt, without reading standard input and
+  without a terminal, while validation, conflict detection, recursion
+  protection, state checks, rollback and final verification still apply.
+rationale: >-
+  Unattended setup in CI and scripts needs a way to approve without weakening
+  any safety check.

@@ -1,0 +1,8 @@
+id: REQ-0315
+name: Release Platforms
+area: distribution
+description: >-
+  Please must be released as native executables for each target platform that
+  the release documentation lists.
+rationale: >-
+  Users install a single binary on their platform without a toolchain.

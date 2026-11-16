@@ -1,0 +1,9 @@
+id: REQ-0319
+name: Artifacts Match The Tested Build
+area: distribution
+description: >-
+  A published release artifact must be built from the source and carry the
+  version that was tested for that release.
+rationale: >-
+  What users download is exactly what was verified and not a rebuild that
+  nobody tested.

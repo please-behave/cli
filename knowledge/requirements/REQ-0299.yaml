@@ -1,0 +1,11 @@
+id: REQ-0299
+name: Git-Backed Runs Reconcile First
+area: setup
+description: >-
+  A direct run of the pre-commit, commit-msg or pre-push point must reconcile
+  the Git hooks, with the same confirmation as synchronization, before it
+  executes any rule, and a run of any other point must neither prompt for
+  hooks nor modify them.
+rationale: >-
+  Local use keeps the hooks current without a separate step, while CI and
+  custom points stay free of hook handling.

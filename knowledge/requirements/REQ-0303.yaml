@@ -1,0 +1,8 @@
+id: REQ-0303
+name: Failed Reconciliation Is Rolled Back
+area: setup
+description: >-
+  When writing hooks fails, Please must restore the hooks it has already
+  changed as far as it can.
+rationale: >-
+  A failure halfway must not leave some hooks edited with no way back.

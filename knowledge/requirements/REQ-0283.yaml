@@ -1,0 +1,14 @@
+id: REQ-0283
+name: Configuration Lives In Project TOML
+area: configuration
+description: >-
+  Please must read the project configuration only from TOML files below the
+  lowercase `.please` directory at the locations that the configuration
+  reference defines, and must never interpret any other file, including
+  supporting files in a rule directory, as configuration.
+rationale: >-
+  Everything that governs a project stays readable, reviewable and versioned
+  in one known place, and a stray file can never silently change what is
+  enforced.
+decisions:
+  - DEC-0005

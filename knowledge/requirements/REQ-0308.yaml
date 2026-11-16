@@ -1,0 +1,9 @@
+id: REQ-0308
+name: Hooks Path Stays In The Working Tree
+area: setup
+description: >-
+  A configured hooks path outside the working tree must be rejected as a
+  conflict.
+rationale: >-
+  Please must not write outside the project, where it could affect other
+  repositories or the user's global setup.

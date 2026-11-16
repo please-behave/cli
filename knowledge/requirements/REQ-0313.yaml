@@ -1,0 +1,10 @@
+id: REQ-0313
+name: Hooks Never Edit Hooks
+area: setup
+description: >-
+  When started from a hook, Please must not prompt and must not change any
+  hook file, and when the hooks are not in the state that the configuration
+  requires, it must fail with an instruction to run synchronization.
+rationale: >-
+  Git hooks run unattended and must never rewrite themselves, but the user
+  still learns how to repair the drift.

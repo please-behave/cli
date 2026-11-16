@@ -1,0 +1,12 @@
+id: REQ-0284
+name: Structural Errors Are Rejected
+area: configuration
+description: >-
+  When the configuration is loaded, unknown fields, duplicate keys, invalid
+  references and unsafe rule resources must be rejected, also in disabled
+  rules.
+rationale: >-
+  A mistake in a rule that is switched off today must not surface on the day
+  somebody enables it, and a mistyped setting must never be ignored silently.
+decisions:
+  - DEC-0015

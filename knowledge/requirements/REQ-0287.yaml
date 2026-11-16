@@ -1,0 +1,12 @@
+id: REQ-0287
+name: Init Only Once
+area: setup
+description: >-
+  Initialization must fail with an error exit status and without creating or
+  modifying anything when `.please` already exists, whatever kind of entry it
+  is.
+rationale: >-
+  A successful initialization means the starter configuration was really
+  created and never that something old was assumed to be fine.
+decisions:
+  - DEC-0019

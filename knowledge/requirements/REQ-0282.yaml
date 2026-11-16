@@ -1,0 +1,10 @@
+id: REQ-0282
+name: Sync Runs No Rules
+area: setup
+description: >-
+  Synchronization must validate the configuration and reconcile the declared
+  external state without executing any check or review and without calling any
+  provider.
+rationale: >-
+  Setting up a project must be safe and free of cost, because it never runs
+  project code or spends tokens.

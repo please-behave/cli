@@ -1,0 +1,7 @@
+id: REQ-0300
+name: Plan Preview Is Read-Only
+area: setup
+description: >-
+  A plan preview must be read-only and must not reconcile Git hooks.
+rationale: >-
+  Looking at what would run must never change the project.

@@ -1,0 +1,11 @@
+id: REQ-0292
+name: Hook Changes Need Confirmation
+area: setup
+description: >-
+  Before changing a Git hook, synchronization must show the planned changes
+  and apply them only after the user confirms.
+rationale: >-
+  Hook files are shared with other tools, so nothing in them changes without
+  the user having seen it.
+decisions:
+  - DEC-0020

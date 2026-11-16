@@ -1,0 +1,12 @@
+id: REQ-0305
+name: Hooks Follow Assignments
+area: setup
+description: >-
+  A hook must be installed exactly when an enabled rule is assigned to its
+  execution point, after rule set inheritance and imports, and its managed
+  content must be removed when no such assignment remains.
+rationale: >-
+  Hooks never run an empty gate and never linger after the rules that needed
+  them are gone.
+decisions:
+  - DEC-0020

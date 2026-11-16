@@ -1,0 +1,9 @@
+id: REQ-0288
+name: Init Creates Only The Project Directory
+area: setup
+description: >-
+  Initialization must create files only below `.please` and must not install
+  Git hooks.
+rationale: >-
+  Trying out Please must not change anything else in the repository, and hooks
+  are a separate step that the user confirms.
