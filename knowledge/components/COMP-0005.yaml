@@ -29,3 +29,7 @@ files:
 depends_on:
   - COMP-0003
   - COMP-0011
+requirements:
+  - REQ-0287
+  - REQ-0288
+  - REQ-0289

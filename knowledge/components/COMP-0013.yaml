@@ -32,3 +32,23 @@ depends_on:
   - COMP-0015
 requirements:
   - REQ-0147
+  - REQ-0292
+  - REQ-0293
+  - REQ-0294
+  - REQ-0297
+  - REQ-0298
+  - REQ-0299
+  - REQ-0301
+  - REQ-0302
+  - REQ-0303
+  - REQ-0304
+  - REQ-0305
+  - REQ-0306
+  - REQ-0307
+  - REQ-0308
+  - REQ-0309
+  - REQ-0310
+  - REQ-0311
+  - REQ-0312
+  - REQ-0313
+  - REQ-0314
