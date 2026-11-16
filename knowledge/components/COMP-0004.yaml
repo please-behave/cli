@@ -38,3 +38,25 @@ depends_on:
 requirements:
   - REQ-0022
   - REQ-0164
+  - REQ-0187
+  - REQ-0188
+  - REQ-0191
+  - REQ-0192
+  - REQ-0193
+  - REQ-0194
+  - REQ-0195
+  - REQ-0196
+  - REQ-0197
+  - REQ-0198
+  - REQ-0199
+  - REQ-0200
+  - REQ-0201
+  - REQ-0202
+  - REQ-0203
+  - REQ-0204
+  - REQ-0205
+  - REQ-0206
+  - REQ-0207
+  - REQ-0211
+  - REQ-0212
+  - REQ-0213
