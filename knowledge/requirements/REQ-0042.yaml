@@ -1,9 +1,10 @@
 id: REQ-0042
-name: No Cursor Control Outside Terminals
+name: No Cursor Control In Plain Output
 area: reporting
 description: >-
-  Progress must never emit cursor controls in CI, GitHub Actions or
-  non-terminal streams, not even with `--progress=tty`.
+  Progress must never emit cursor controls in CI, GitHub Actions,
+  non-terminal streams or plain mode, not even with `--progress=tty` outside
+  a terminal.
 rationale: >-
   Logs in CI must stay readable text and must not fill with control
   characters.

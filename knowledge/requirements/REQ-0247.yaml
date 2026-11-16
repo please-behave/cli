@@ -4,5 +4,5 @@ area: integrity
 description: >-
   Context files must be readable only by their owner.
 rationale: >-
-  They contain the changes of the project, which other users of the machine
-  must not be able to read.
+  Patches can contain the content of untracked or ignored files, which other
+  users of the machine must not be able to read.

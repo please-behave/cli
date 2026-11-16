@@ -3,8 +3,8 @@ name: Progress Mode Is Selectable
 area: reporting
 description: >-
   Progress must be selectable per invocation as plain lines, as redrawn
-  terminal rows or as an automatic choice, the automatic choice must be the
-  default, and plain lines must never contain cursor controls.
+  terminal rows or as an automatic choice, and the automatic choice must be
+  the default.
 rationale: >-
   Terminal users and log readers need different output, and each must be able
   to force the one they need.

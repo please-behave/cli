@@ -3,7 +3,8 @@ name: Context Holds Git Facts Only
 area: integrity
 description: >-
   The context document must contain Git facts only and never the content of
-  files; changes appear only as patch files that the document names.
+  files; the content of changes appears only in patch files that the document
+  names.
 rationale: >-
   Rules read files from disk themselves, so the context stays small and cannot
   disagree with the files.

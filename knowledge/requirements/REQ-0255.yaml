@@ -2,8 +2,7 @@ id: REQ-0255
 name: Reports Stay In The Project
 area: reporting
 description: >-
-  Running, saving and reading results must work without any central service,
-  and the report must be kept in the project.
+  The report must be kept in the project.
 rationale: >-
   Governance must stay usable on a single machine without any infrastructure.
 decisions:

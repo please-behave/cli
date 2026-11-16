@@ -2,9 +2,8 @@ id: REQ-0240
 name: Status Shows Changes Without Inventing Figures
 area: integrity
 description: >-
-  Status must list changed paths only up to the configured bound and give
-  exact totals only when the snapshot is complete, and must not present
-  figures it cannot know, such as line counts.
+  Status must list changed paths up to the configured bound and give exact
+  totals only when the snapshot is complete, and must not show line counts.
 rationale: >-
   A status that shows invented or partial numbers as exact would mislead the
   reader about how far the project moved.
