@@ -9,5 +9,3 @@ description: >-
 rationale: >-
   Advisory reviews may be unreliable, but an invalid configuration is a
   mistake of the project that must be fixed.
-decisions:
-  - DEC-0007
