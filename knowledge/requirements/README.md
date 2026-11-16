@@ -40,9 +40,9 @@ code to know what the product promises.
 - **Binding and verifiable.** A reader can say how to find out whether it holds.
   Wording such as "must" marks it as binding; vague wording such as "fast" or
   "robust" is not a requirement.
-- **Stated once.** A fact that another source already defines, such as a default,
-  a limit or an exit code in the [configuration reference](../../docs/configuration.md),
-  is referred to, not copied, so the two cannot drift apart.
+- **Stated once.** A fact that another source already defines, such as a default
+  or a limit in the [configuration reference](../../docs/configuration.md) or an
+  exit code in the [usage guide](../../docs/usage.md), is referred to, not copied, so the two cannot drift apart.
 - **Significant.** A requirement is worth keeping when it is durable, so that it
   stays true after a refactoring, visible from outside the product, and
   justified in one sentence. A statement that follows from other requirements,

@@ -298,12 +298,7 @@ per review call. Total tokens are input plus output; cached input is a subset of
 missing from any adapter call stays unavailable and never changes a verdict. Please Behave does not
 calculate money, remaining account quota or enforce a total token budget.
 
-| Exit code | Meaning |
-| --- | --- |
-| `0` | Command succeeded, verification passed, or saved results passed and are current. An executable plan also exits 0. |
-| `1` | Verification failed, or saved results are stale. |
-| `2` | Configuration, execution, provider or report error; unknown freshness; invalid arguments; blocked/invalid plan; declined, unavailable or failed reconciliation. |
-| `3` | No saved report exists for the status command. |
+Exit codes are defined in the [usage guide](docs/usage.md#exit-codes).
 
 ### Choose rules and preview a run
 
