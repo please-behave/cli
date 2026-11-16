@@ -16,30 +16,10 @@ proceeds, not interpreted as permission to choose either behavior.
 
 ## CLI-001: Commands and project boundaries
 
-Please Behave is a small native Rust executable, named `please`. It evaluates outcomes;
-it does not implement features, repair files, orchestrate coding agents, prescribe
-a development methodology or run production infrastructure. Source, configuration
-and documentation are English. The supported commands are:
-
-| Command | Contract |
-| --- | --- |
-| `please init` | Initialize a new `.please/` directory once, install no hooks and make no commits. |
-| `please sync` | Validate configuration and reconcile declared external state after confirmation, without checks or provider calls. |
-| `please run` | Validate, select rules, execute checks before reviews and save results; reconcile hooks only for Git-backed points. |
-| `please status` | Read saved results and compare input freshness, without rerunning rules. `--details` shows full findings and captured output. |
-| `please help` | Show help listing exactly the five commands. |
-
-Top-level help uses the heading `Please Behave` and the description
-`Enforce development rules across coding agents and workflows.`
-Its `help` command description is `Show help`.
-
-`-h`/`--help`, `-V`/`--version` and `--no-color` remain supported. Help must not
-present command aliases or renamed option aliases. Other
-commands show the same top-level help content as `please help` and exit 2.
-Invalid arguments and options retain normal parser diagnostics.
-Run from the Git working-tree root; subdirectory execution is rejected.
-Please Behave must not create commits, modify the Git index or silently discover
-another root.
+The [requirements](knowledge/requirements/README.md) REQ-0276 to REQ-0282 specify
+the commands, their boundaries and the project root. They replace the text of
+this section. The [components](knowledge/components/README.md) name the
+requirements they implement.
 
 ## RULE-001: Rules, Rule Sets and Execution Points
 
@@ -65,35 +45,11 @@ implement.
 
 ## CFG-001: Configuration and initialization
 
-Projects use `.please/` exclusively.
+The [requirements](knowledge/requirements/README.md) REQ-0283 to REQ-0290 specify
+the configuration files, their validation and initialization. They replace the text of
+this section. The [components](knowledge/components/README.md) name the
+requirements they implement.
 
-One unversioned configuration model uses lowercase .please/config.toml, optional
-provider.toml, providers/*.toml, checks/*/rule.toml, reviews/*/rule.toml and rule-sets/*.toml.
-There is no configuration version field. Unknown fields, duplicate keys/IDs,
-invalid references and unsafe rule resources fail, including disabled Rules.
-Missing referenced check files or review prompts are execution errors only when
-selected and enabled.
-No recursive TOML discovery is supported. External sets explicitly select Rule
-directories as defined in EXT-001; local definitions use only the paths above.
-Supporting files inside rule directories are data, never governance documents.
-
-Project settings are project, max_display_files (default 5), execution_points,
-execution, imports and provider_imports. The configuration reference defines all fields and bounds. Review prompt filenames
-must be single nonempty names directly in a Rule directory: no separators,
-absolute paths, parent traversal, symlinks or special files. Review prompts are
-UTF-8 Markdown without frontmatter requirements. Check commands follow CHK-001.
-Checks may bundle helpers.
-
-init requires `.please/` to be absent. Any existing entry, including an empty
-directory, regular file or symlink, fails with exit 2 and
-`Please Behave: ERROR: Already initialized (.please/ exists).` before any files
-or directories are created or modified. On success it prints
-`Initialized .please/ (9 files created).` to stdout, using the actual created
-file count, and exits 0. It installs no hooks.
-It scaffolds a passing enabled Check, a disabled failing Check and disabled
-product-consistency Review in self-contained directories. Reports remain local.
-Initialization supplies no provider configuration or adapter. Configure an adapter
-before enabling reviews.
 ## HDR-001: Commit message input
 
 The [requirements](knowledge/requirements/README.md) REQ-0099 and REQ-0130 to REQ-0132 specify what a review receives and how its verdict is reported; reviews at commit-msg receive the whole commit message like any other declared input.
@@ -185,103 +141,17 @@ requirements they implement.
 
 ## REL-001: Distribution and integrations
 
-Please Behave is distributed as native executables for macOS Apple Silicon, macOS
-Intel and Linux x64 and ARM64 (GNU/glibc); Windows is excluded. It builds with stable
-Rust at the declared minimum version. Git and configured external tools remain
-runtime dependencies; no Python or Node runtime is bundled.
-
-Archives are named `please-vVERSION-TARGET.tar.gz` and contain a matching directory
-with `please`, README and LICENSE. Each release also publishes `SHA256SUMS`.
-Artifacts must match the tested version and source.
-
-The public GitHub Action is maintained independently in
-[please-behave/action](https://github.com/please-behave/action), which owns its inputs,
-supported runners and tests. The Action revision and the CLI release are independent.
-
-Releases are manually dispatched on main and Semantic Release publishes only after
-artifact and source verification. During 0.x, breaking changes and features increment
-the minor version and fixes the patch version; 1.0.0 requires explicit policy
-graduation. Normal CI is read-only and actions are pinned. See the
-[release policy](docs/releasing.md).
-
-The repository is governed by an installed, previously published release, never by
-candidate builds of its own checkout; see [repository self-integration](docs/self-governance.md).
-Hosted provider authentication is not provisioned and personal tokens are not copied
-to CI. No hosted service, database, autonomous development, universal policy engine,
-result cache or additional input/provider implementation is in current scope.
+The [requirements](knowledge/requirements/README.md) REQ-0315 to REQ-0319 specify
+release artifacts and their distribution. They replace the text of
+this section. The [components](knowledge/components/README.md) name the
+requirements they implement.
 
 ## REC-001: Declarative reconciliation and Git hooks
 
-Successful `sync` prints `Synchronization completed successfully.` to stdout when
-import resolution state, cached repositories/revisions or Git hooks changed;
-otherwise it prints `Already synchronized.`. Refreshing unchanged imports alone
-does not count as a change. Both outcomes exit 0 and execute no checks or reviews.
-Hook plans use `Planned changes:` on stderr, retaining their individual operation
-descriptions and `Apply these changes? [y/N]` prompt. `--yes` skips the prompt
-without printing an auto-approval message. Import refresh still precedes hook
-approval and is not rolled back when approval is declined.
-
-Configuration validation, desired-state reconciliation and quality-check execution
-are separate responsibilities. `sync` and direct execution of Git-backed
-points through `run` use Validate -> Inspect -> Plan -> Confirm -> Apply ->
-Verify before any checks. Direct execution of `check` and custom points validates
-and resolves Rules, then executes without inspecting or reconciling Git hooks.
-Missing, outdated or unsafe hook paths do not block these explicit points; they
-never prompt for hook synchronization or modify hook files. Repository recursion
-protection still applies. Managed hooks accept only their identically named
-built-in execution point.
-No discrepancy means no prompt or write. Rejection, unavailable terminal, conflict
-or failure exits 2 and preserves the previous report. `--plan` remains read-only
-and does not reconcile. No provider is called by reconciliation.
-
-`please sync --yes` explicitly approves the displayed reconciliation
-plan without reading stdin or requiring a terminal. It is scoped to sync and
-defaults to false. Validation, conflict detection, recursion protection, apply-time
-state checks, rollback and final verification still apply. It creates, updates or
-removes only declared managed integration state, never governed project files,
-and executes no checks or reviews. Repeating it on synchronized state performs no
-writes. Without the flag, noninteractive drift still exits 2. CI can run this
-command once before Git-backed execution; explicit points such as `check` need
-no hook setup in CI. Execution itself has no auto-approval.
-Please Behave supports exactly three Git hooks: pre-commit, commit-msg and pre-push.
-Each invokes its identically named built-in execution point. This relationship is
-fixed and cannot be configured. Enabled effective assignments determine required
-hooks after Rule Set inheritance and external imports resolve. Removing those
-assignments retires the corresponding managed hook content.
-Project configuration accepts no hooks section; obsolete hook declarations fail
-as unknown fields, with the configuration path and supported fields in the error.
-check and custom execution points have no Git hook and are invoked explicitly.
-External import mappings still apply only to custom points and cannot map built-ins.
-check has no workflow discovery or CI validation; consumers choose where to invoke
-it, including multiple workflows. Please Behave generates no CI workflows.
-Git resolves the effective hook path, including worktrees and `core.hooksPath`.
-Default common-repository hooks are shared by its worktrees; custom paths must
-remain within this working tree. Symlink components, nonregular files, malformed
-or duplicate ownership markers and foreign repository ownership are conflicts.
-No Git configuration is changed. Only the three supported event files are inspected.
-
-Managed sections have explicit markers and repository ownership. New hooks use
-POSIX sh. Existing executable POSIX sh hooks can be composed by inserting a
-managed section immediately after the shebang, preserving the remaining bytes
-and checking Please Behave failure before existing commands. Other layouts require manual
-integration. Removal preserves unmanaged bytes and permissions; whole-file deletion
-requires exact ownership of the wrapper. Plans are deterministic and revalidated
-before writes. Files are staged, synced and replaced individually, with best-effort
-rollback on failure; a multi-file operation is not an atomic transaction. An
-interrupted process may leave drift; rerun `sync` and inspect the reported paths.
-
-Generated wrappers pass explicit event, wrapper path and original arguments to
-`run`. Please Behave validates this context against the repository, identically
-named execution point and hook state, verifies reconciliation read-only and never prompts or edits hooks. Drift
-instructs the user to run `please sync` manually. Nested execution from checks
-is rejected using a repository-scoped guard, including checks started by direct
-execution of Git-backed, check and custom points. The guard also blocks nested
-reconciliation in that repository.
-Hook arguments are not exported. `commit-msg` supplies the message file through CTX-001; no commit
-policy is hardcoded.
-Pre-push stdin is read by Please Behave and not forwarded to checks; its reference list is
-available through CTX-001. All execution points still verify working files,
-not the exact staged index or pushed commit.
+The [requirements](knowledge/requirements/README.md) REQ-0291 to REQ-0314 specify
+synchronization, reconciliation and Git hooks. They replace the text of
+this section. The [components](knowledge/components/README.md) name the
+requirements they implement.
 
 ## ARC-001: Shared configuration contract
 
