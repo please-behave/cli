@@ -49,79 +49,19 @@ requirements they implement.
 
 ## EXT-001: External Git Rule Sets
 
-Only the consumer's config.toml accepts [[imports]], with git/path/ref
-and optional per-import execution_points mapping and rule_parameters tables.
-Each import is a separate binding, even when it selects the same source. Values
-never merge across imports. Rule identities distinguish these bindings while
-repeated references within a binding still execute once.
-No Rule overrides or nested imports are supported. Mapping sources are custom
-points used in that import; targets must be consumer-declared custom points.
-Built-ins cannot be sources or targets. Resolve scope-local assignments first,
-then map effective points and deduplicate before merging. Unmapped names must
-still be known to the consumer. Each import has an independent mapping namespace;
-many sources may share a target. Mapping never changes cached definitions,
-revision identity or provenance and works offline without fetching.
-Each selected directory defines exactly one Rule Set in config.toml. Its rules
-are paths relative to the external repository root, such as
-rules/checks/secret-scan or rules/reviews/architecture. Each path names a Rule
-directory directly under checks/ or reviews/; it contains rule.toml and its
-resources. Multiple sets may reference the same directory. Only referenced Rules
-are loaded, repeated paths load once, and distinct directories with duplicate
-Rule IDs fail within a binding. References are resolved to IDs before ordinary
-assignment validation. Each import remains a separate execution/parameter binding.
-No nested imports or references to other sets are supported. Absolute paths,
-parent traversal, symlinks and references outside the repository fail. Local sets
-continue to reference IDs.
-Rules are namespaced only after scope-local validation; provenance retains source
-identity, selected path/ref and resolved commit.
-
-sync resolves exact branches, tags and full hashes using host Git, materializes
-shared immutable revisions and validates everything before atomic publication of
-project resolution state. Failure preserves prior state. Execution, hooks and
-plans use the validated cache offline, never substitute revisions, and fail when
-state or contents are missing/corrupt. Git-directory state, shared caches, bounded
-OS locks, integrity receipts and retrieval trust boundaries remain in effect.
-Checks run in the consumer root; `@rule/` references locate bundled resources.
-Imported code has Please Behave's permissions and must be trusted; path confinement is
-not a sandbox. Credential-bearing HTTP URLs are rejected and diagnostics never
-echo Git stderr or secret repository selectors.
+The [requirements](knowledge/requirements/README.md) REQ-0185 to REQ-0207
+specify external rule set imports, their bindings, execution point mapping, rule
+references, provenance, synchronization and offline execution. They replace the
+text of this section. The [components](knowledge/components/README.md) name the
+requirements they implement.
 
 ## EXT-002: Independent external providers
 
-Consumer config.toml accepts `[[provider_imports]]` with `id`, `git`, `path` and
-`ref`. Each selects one directory containing `provider.toml` and adapter resources
-in an independently pinned Git source. The file uses the existing provider
-configuration contract, without nested imports. Rules refer to the consumer's
-explicit `id`; no provider imports are inferred from Rule references. Rulesets
-and providers may use the same or different repositories, paths and revisions.
-All named provider IDs remain global: local/imported collisions and repeated
-IDs fail, including identical repeated imports. No overrides are inferred.
-Existing Rule Set-distributed providers remain supported unchanged.
-
-`please sync` resolves both import kinds through the shared immutable Git cache
-and atomically publishes their combined resolution state only after validation.
-Failures preserve prior state. Removal of the last import removes resolution
-state. No provider code is copied into the consumer, executed or installed during
-sync. Provider imports need no Rules, Rule Sets or execution points of their own.
-Normal execution and plans use validated cached revisions offline; missing or
-corrupt revisions block instead of downloading or substituting definitions.
-
-Only independently imported providers interpret literal tokens in command, args
-and requirements.executables: `@provider/` selects the provider directory,
-`@source/` the imported repository root and `@repo/` the consumer root. `@@` escapes
-one leading @. Unknown @ prefixes, absolute suffixes, traversal, missing resources
-and symlink components fail validation, including for unused providers. Ordinary
-tokens retain PATH/consumer-root semantics; no shell evaluation is introduced.
-Local and legacy Rule Set-distributed provider arguments retain their literal
-behavior. Runtime PATH/environment availability requirements still gate only selected
-reviews after deterministic checks.
-
-Imported provider provenance identifies repository hash, selected path/ref and
-resolved commit in plans/reports, and participates in plan identity. Cache
-integrity is rechecked before launching an imported adapter. 
-Cache resource failures remain fatal for advisory reviews.
-The product includes no provider or model by default. Imports execute trusted
-code with the user's permissions; Git credentials and dependencies remain external.
+The [requirements](knowledge/requirements/README.md) REQ-0208 to REQ-0213
+specify independent provider imports, their identifiers, reference tokens and
+provenance. They replace the text of this section. The
+[components](knowledge/components/README.md) name the requirements they
+implement.
 
 ## CFG-001: Configuration and initialization
 
@@ -163,51 +103,18 @@ requirements they implement.
 
 ## PROV-001: Named adapter configurations
 
-All AI reviews use external executable adapters. No provider implementation or
-implicit provider is supplied. Optional `.please/provider.toml` defines the project
-default; `.please/providers/<id>.toml` defines named configurations. Review provider
-references, imported definitions, conflict detection and offline resolution retain
-their existing scope rules. An enabled selected review without a named or explicit
-project default is blocked before execution. Disabled or omitted reviews need no
-default; explicit unknown references remain invalid even when disabled.
-
-Definitions require command and timeout_seconds (0 disables the deadline;
-otherwise 1..=3600), with optional literal args, requirements.env,
-requirements.executables and parameters tables. No shell expansion occurs. The
-consumer root is the working directory. Availability requirements are evaluated
-only after checks and immediately before invocation. Provider-specific fields
-outside parameters are rejected.
+The [requirements](knowledge/requirements/README.md) REQ-0214 to REQ-0221
+specify named and default provider configurations, their definitions and the
+adapter command. They replace the text of this section. The
+[components](knowledge/components/README.md) name the requirements they
+implement.
 
 ## PROV-002: Adapter protocol
 
-Protocol version 1 uses one UTF-8 JSON request on stdin and one JSON response on
-stdout. Requests contain protocol_version, execution_point, input (prepared
-excerpts and the scope of the review: files, optional content and optional change set), prompt,
-response_schema, and reviews with id, criteria, context_files and effective parameters.
-The common prompt/schema describe the verdict and evidence contract; adapters
-translate them for their provider. Adapters own authentication, tools, models,
-response extraction and other provider-specific behavior.
-
-Provider parameters and review.parameters are arbitrary JSON-compatible TOML
-tables. Merge top-level keys, with each review value replacing the provider value
-at that key; nested tables and arrays are replaced whole. Please validates only
-JSON compatibility and transports values without interpreting provider meaning.
-Rule parameters remain separate and reach adapters as `rule_parameters`.
-Each review is one adapter call and retains its own effective adapter parameters.
-
-The exit status is the verdict: 0 is PASS and 1 is FAIL, each valid only with a
-response that satisfies the common response contract. Any other exit status, a
-timeout, a failure to start or a missing or invalid response at exit 0 or 1 is ERROR.
-Responses require protocol_version = 1, a one-line reason, findings and an optional
-longer explanation; they carry neither a status nor a review ID. Optional usage
-contains common token counters; absent usage remains unavailable.
-Unsupported versions, unknown fields, malformed, oversized or invalid
-responses produce ERROR. The standard output and error output of an adapter call that ends as ERROR are retained unmasked within the capture bounds and shown by `please status --details`.
-The shared process runner bounds output, drains pipes and terminates process
-trees on timeout, including blocked stdin delivery. Nonblocking review errors
-remain visible without blocking success; checks and integrity failures retain
-their existing enforcement. Protocol changes require explicit version handling;
-unknown versions never silently fall back.
+The [requirements](knowledge/requirements/README.md) REQ-0222 to REQ-0228
+specify the adapter protocol, its request, parameters and timeout. They replace
+the text of this section. The [components](knowledge/components/README.md) name
+the requirements they implement.
 
 ## SEL-001: Selection and offline plans
 
