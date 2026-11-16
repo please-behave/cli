@@ -33,3 +33,13 @@ depends_on:
   - COMP-0008
   - COMP-0011
   - COMP-0013
+requirements:
+  - REQ-0233
+  - REQ-0241
+  - REQ-0243
+  - REQ-0244
+  - REQ-0245
+  - REQ-0246
+  - REQ-0247
+  - REQ-0248
+  - REQ-0249
