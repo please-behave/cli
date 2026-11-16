@@ -2,7 +2,10 @@ id: REQ-0219
 name: Adapter Command Is Literal
 area: reviews
 description: >-
-  An adapter command and its arguments must be executed without a shell and
-  without any expansion other than the reference tokens of independently imported providers.
+  An adapter must be invoked using only its configured command and arguments,
+  without a shell or any expansion other than the reference tokens of
+  independently imported providers. Dynamic review input must be delivered
+  through the JSON request on standard input, not added to the invocation
+  arguments.
 rationale: >-
   What runs must be exactly what the configuration says, on every platform.

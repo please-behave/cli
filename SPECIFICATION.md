@@ -23,7 +23,7 @@ requirements they implement.
 
 ## RULE-001: Rules, Rule Sets and Execution Points
 
-The [requirements](knowledge/requirements/README.md) REQ-0134 to REQ-0150, REQ-0181 and REQ-0182 specify rules, rule sets, display names, execution points and their assignment. They replace the text of
+The [requirements](knowledge/requirements/README.md) REQ-0134 to REQ-0150, REQ-0181, REQ-0182 and REQ-0326 specify rules, rule sets, display names, execution points and their assignment. They replace the text of
 this section. The [components](knowledge/components/README.md) name the
 requirements they implement.
 

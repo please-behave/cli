@@ -2,10 +2,13 @@ id: REQ-0232
 name: Snapshot Covers Governing Files
 area: integrity
 description: >-
-  The snapshot must also identify the governance configuration, the prompts
-  and entrypoints of rules, the context files of reviews and the local files
-  that checks, adapters and parameters name, even when they are ignored and
+  The snapshot must also identify the project's governance configuration,
+  rule prompts and entrypoints, review context files and local project files
+  named by checks, adapters and parameters, even when they are ignored and
   even when the rule that uses them is disabled, but no other ignored file.
+  Path references must be interpreted within their permitted repository,
+  source or rule boundaries. Files in the import cache must be protected by
+  import integrity verification instead of inclusion in this project snapshot.
 rationale: >-
   A change to anything that influences a result must not leave an old result
   looking current, including a disabled rule that is switched on later.

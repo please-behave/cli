@@ -1,0 +1,10 @@
+id: REQ-0326
+name: Rule Set IDs Are Independently Unique
+area: rules
+description: >-
+  Rule set IDs must be unique within their configuration scope, independently
+  of rule IDs, and duplicate rule set IDs must be rejected as configuration
+  errors.
+rationale: >-
+  Each rule set must be distinguishable without reserving its name against
+  the rules it groups.
