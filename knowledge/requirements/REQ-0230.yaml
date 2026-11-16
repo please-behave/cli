@@ -1,0 +1,9 @@
+id: REQ-0230
+name: Aborted Sync Leaves No Lock
+area: setup
+description: >-
+  A synchronization that crashes or is aborted must not leave anything behind
+  that blocks the next synchronization or has to be removed by hand.
+rationale: >-
+  After a failure the user must be able to simply run the synchronization
+  again without knowing where any lock is kept.

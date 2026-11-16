@@ -40,6 +40,8 @@ requirements:
   - REQ-0164
   - REQ-0187
   - REQ-0188
+  - REQ-0189
+  - REQ-0190
   - REQ-0191
   - REQ-0192
   - REQ-0193
@@ -57,6 +59,9 @@ requirements:
   - REQ-0205
   - REQ-0206
   - REQ-0207
+  - REQ-0210
   - REQ-0211
   - REQ-0212
   - REQ-0213
+  - REQ-0229
+  - REQ-0230

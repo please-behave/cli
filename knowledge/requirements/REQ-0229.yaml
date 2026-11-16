@@ -1,0 +1,9 @@
+id: REQ-0229
+name: Resolved State Belongs To The Project
+area: setup
+description: >-
+  The resolved state of imports must be kept per project and worktree, and a
+  synchronization of one project must not change the resolved state of another.
+rationale: >-
+  Each project must see exactly the imports it asked for, whatever else runs on
+  the same machine.
