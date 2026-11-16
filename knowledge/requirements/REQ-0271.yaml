@@ -1,0 +1,8 @@
+id: REQ-0271
+name: Empty Execution Is Stated
+area: reporting
+description: >-
+  A run that executed no rules must say that no rules were executed.
+rationale: >-
+  A run that checked nothing must be recognizable as such at once and not be
+  mistaken for a clean pass.

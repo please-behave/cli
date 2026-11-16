@@ -1,0 +1,10 @@
+id: REQ-0246
+name: Omissions Are Flagged
+area: integrity
+description: >-
+  Whatever the context leaves out, because a section exceeds the configured
+  size bound or a path is not valid UTF-8, must be flagged and counted and
+  never cut silently.
+rationale: >-
+  A rule that sees a partial list must know it is partial, so that it can fail
+  or read the data from Git instead of trusting a gap.

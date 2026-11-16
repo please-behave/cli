@@ -1,0 +1,9 @@
+id: REQ-0242
+name: Adapters Receive The Context Path
+area: integrity
+description: >-
+  The request to an adapter must carry the absolute path of the run context
+  file of the run.
+rationale: >-
+  Reviews must be able to use the same Git facts as checks without querying
+  Git themselves.

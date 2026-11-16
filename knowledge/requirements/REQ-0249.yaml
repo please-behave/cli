@@ -1,0 +1,8 @@
+id: REQ-0249
+name: Old Contexts Are Removed
+area: integrity
+description: >-
+  At the start of a run only the context files of the newest completed runs
+  must be kept, and the number of kept runs must be configurable.
+rationale: >-
+  Context files must not pile up without bound in the repository.

@@ -1,0 +1,9 @@
+id: REQ-0268
+name: Internal Phases Stay Hidden
+area: reporting
+description: >-
+  Progress must not show internal phases of a run or the exit reason of a rule
+  that succeeded.
+rationale: >-
+  Progress should show what the project's rules do and not how the tool works
+  inside.

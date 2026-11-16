@@ -1,0 +1,8 @@
+id: REQ-0270
+name: One Summary Line
+area: reporting
+description: >-
+  A run must report its overall status, its rule counts and its duration in
+  one line.
+rationale: >-
+  The outcome of a run must be readable at a glance.

@@ -1,0 +1,9 @@
+id: REQ-0272
+name: Missing Rules Are Stated
+area: reporting
+description: >-
+  When a project defines no rules at all, Please must say that no rules are
+  defined, and disabled rules must count as defined.
+rationale: >-
+  A project with nothing configured must be told so, and a project with only
+  disabled rules must not be told that it has none.

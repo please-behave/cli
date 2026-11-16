@@ -1,0 +1,7 @@
+id: REQ-0267
+name: Redrawn Rows Do Not Wrap
+area: reporting
+description: >-
+  A redrawn progress row must never wrap onto a second terminal line.
+rationale: >-
+  A wrapped row breaks the redraw and garbles the display.

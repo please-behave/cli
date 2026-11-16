@@ -1,0 +1,10 @@
+id: REQ-0253
+name: Report Is Saved Atomically
+area: reporting
+description: >-
+  After every run with valid configuration, including one that ends with FAIL
+  or ERROR, Please must save the report by replacing the previous one
+  atomically.
+rationale: >-
+  Status and tools must always find a complete report, and a failed run is the
+  one that most needs one.

@@ -1,0 +1,9 @@
+id: REQ-0266
+name: Automatic Mode Redraws Only Terminals
+area: reporting
+description: >-
+  In the automatic mode, progress must redraw rows only when standard error is
+  an interactive terminal that is neither a dumb terminal nor part of CI, and
+  must append plain lines otherwise.
+rationale: >-
+  The default must work in a terminal and in a log without the user choosing.

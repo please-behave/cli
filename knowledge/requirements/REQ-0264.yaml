@@ -1,0 +1,8 @@
+id: REQ-0264
+name: Progress Names Each Rule
+area: reporting
+description: >-
+  Each progress line must show the display name, the description, the status
+  and the elapsed time of the rule, in every progress mode.
+rationale: >-
+  A reader must be able to tell what a rule is without looking up its ID.

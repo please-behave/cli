@@ -1,0 +1,10 @@
+id: REQ-0274
+name: Untrusted Text Is Sanitized
+area: reporting
+description: >-
+  Text that comes from rules, adapters, configuration or Git must be sanitized
+  before it is shown on a terminal, so that it cannot inject control
+  sequences.
+rationale: >-
+  A careless or hostile rule must not be able to rewrite what the user sees or
+  to drive the terminal.

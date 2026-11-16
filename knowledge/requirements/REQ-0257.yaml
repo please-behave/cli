@@ -1,0 +1,9 @@
+id: REQ-0257
+name: Report Records Rule Results
+area: reporting
+description: >-
+  For every executed rule the report must record its result, its duration and
+  its findings.
+rationale: >-
+  Whoever reads a report must see what each rule decided, how long it took and
+  what it found.

@@ -1,0 +1,9 @@
+id: REQ-0244
+name: Inapplicable Sections Are Absent
+area: integrity
+description: >-
+  A section of the context that does not apply to the run must be absent and
+  never present but empty.
+rationale: >-
+  A rule must be able to tell that a fact does not apply from a fact that is
+  empty, such as no changes.

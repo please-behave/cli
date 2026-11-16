@@ -1,0 +1,12 @@
+id: REQ-0238
+name: Freshness Status
+area: integrity
+description: >-
+  When asked for its status, Please must compare the saved snapshot with the
+  working tree without executing any rule, and must report CURRENT when a
+  complete snapshot matches, STALE when it differs and UNKNOWN when the
+  comparison is incomplete or unavailable.
+rationale: >-
+  A developer must be able to tell whether a saved result still describes the
+  files in front of them, and a comparison that could not be made must never
+  read as current.

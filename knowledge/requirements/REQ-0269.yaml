@@ -1,0 +1,9 @@
+id: REQ-0269
+name: Failures Show Their Reason
+area: reporting
+description: >-
+  A failed rule must be shown with the reason for the failure and its
+  findings, while its raw captured output must stay in the details.
+rationale: >-
+  The reader gets the cause at a glance and can still reach the full output
+  when needed.

@@ -1,0 +1,9 @@
+id: REQ-0248
+name: Context Lives Outside The Snapshot
+area: integrity
+description: >-
+  Context files must be kept outside the working tree and therefore outside
+  the input snapshot, separately for each worktree.
+rationale: >-
+  Writing the context must not change the files a run judges, and parallel
+  worktrees must not overwrite each other's context.

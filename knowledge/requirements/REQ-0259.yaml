@@ -1,0 +1,11 @@
+id: REQ-0259
+name: Status Shows The Saved Run
+area: reporting
+description: >-
+  Status must show the selection, the omitted reviews, the required rules and
+  whether the run was limited to checks as recorded in the report, using the
+  same terms as the plan preview and never as the current configuration would
+  select them.
+rationale: >-
+  A saved result must be read against what that run was asked to do, even
+  after the configuration changed.

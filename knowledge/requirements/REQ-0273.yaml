@@ -1,0 +1,8 @@
+id: REQ-0273
+name: Color Follows The User's Choice
+area: reporting
+description: >-
+  Color must be off when NO_COLOR is set, when `--no-color` is given and on
+  every stream that is not a terminal.
+rationale: >-
+  Logs stay readable text and users keep control over color.

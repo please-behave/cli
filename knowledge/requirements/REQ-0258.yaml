@@ -1,0 +1,9 @@
+id: REQ-0258
+name: Report Records The Executed Plan
+area: reporting
+description: >-
+  The report must contain the plan the run executed, including the required
+  rule IDs and whether each rule was blocking.
+rationale: >-
+  A report must say what the run had to deliver, so that a missing result is
+  recognizable as missing.

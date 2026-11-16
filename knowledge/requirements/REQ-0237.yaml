@@ -1,0 +1,10 @@
+id: REQ-0237
+name: Input Is Compared When A Run Ends
+area: integrity
+description: >-
+  When a run ends, whether it completed or was stopped early by fail-fast or
+  cancellation, the input must be compared with the snapshot, and changed or
+  unverifiable input must prevent PASS.
+rationale: >-
+  A result is worthless when files changed while the rules ran, and a stopped
+  run must still reveal that.

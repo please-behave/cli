@@ -1,0 +1,9 @@
+id: REQ-0245
+name: Unusable Change Base Omits Its Section
+area: integrity
+description: >-
+  When the change base is not usable, creating the context must not fail, and
+  the changes section must be omitted.
+rationale: >-
+  Whether an unusable base matters is decided where the base is needed, so the
+  context itself never fails over it.

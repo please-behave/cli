@@ -1,0 +1,9 @@
+id: REQ-0235
+name: Incomplete Snapshot Blocks The Run
+area: integrity
+description: >-
+  When the snapshot is incomplete, the run must be blocked before any rule
+  starts and must never end with PASS.
+rationale: >-
+  No rule, and so no paid review, should run on input that cannot be verified,
+  and nothing may pass on it.

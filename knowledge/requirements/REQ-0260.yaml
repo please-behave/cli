@@ -1,0 +1,8 @@
+id: REQ-0260
+name: Damaged Reports Are Rejected
+area: reporting
+description: >-
+  A saved report that is corrupt, internally inconsistent or recorded for
+  another repository must be rejected and never be shown as a valid result.
+rationale: >-
+  A damaged or foreign report presented as evidence would be worse than none.

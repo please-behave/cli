@@ -1,0 +1,9 @@
+id: REQ-0263
+name: Progress Goes To Standard Error
+area: reporting
+description: >-
+  Progress must be written to standard error and flushed when a rule starts
+  and when it finishes.
+rationale: >-
+  Whoever follows a run, or finds it hanging, must see at once which rule is
+  running.

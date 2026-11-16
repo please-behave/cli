@@ -1,0 +1,9 @@
+id: REQ-0250
+name: Context Failure Is An Error
+area: integrity
+description: >-
+  When the run context cannot be established, the run must end with an error
+  and never with PASS.
+rationale: >-
+  Rules that depend on the context must not pass with Git facts that are
+  missing.

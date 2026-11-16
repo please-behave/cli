@@ -1,0 +1,8 @@
+id: REQ-0262
+name: Integrity Failures Stay Visible
+area: reporting
+description: >-
+  An integrity failure must be shown in the results of the run, even when no
+  rule failed.
+rationale: >-
+  A run must never look clean while its input could not be trusted.

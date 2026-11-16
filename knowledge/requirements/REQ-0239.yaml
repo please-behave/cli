@@ -1,0 +1,9 @@
+id: REQ-0239
+name: Staging Does Not Make Results Stale
+area: integrity
+description: >-
+  Staging files must not make a saved result stale, whereas a change of HEAD
+  must.
+rationale: >-
+  Staging does not change what the files contain, but a new commit is a
+  different state of the project.

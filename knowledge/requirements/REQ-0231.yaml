@@ -1,0 +1,10 @@
+id: REQ-0231
+name: Snapshot Covers The Project Files
+area: integrity
+description: >-
+  A run's input snapshot must identify Git HEAD and the content hash, size and
+  executable flag of every tracked file and every untracked file that is not
+  ignored, and must not include Git's internal data or the saved reports.
+rationale: >-
+  A result is only evidence when it says exactly which state of the project it
+  judged, and saving a report must never make that result stale.

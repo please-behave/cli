@@ -1,0 +1,9 @@
+id: REQ-0275
+name: Exit Status Follows The Reference
+area: reporting
+description: >-
+  Every command must end with the exit status that the exit code table in the
+  usage guide defines for its outcome.
+rationale: >-
+  Hooks, CI and tools decide by the exit status alone, so it must separate
+  success, found violations, errors and a missing report.

@@ -1,0 +1,9 @@
+id: REQ-0261
+name: Errors Outrank Failures
+area: reporting
+description: >-
+  When a run has both an ERROR that prevents success and a blocking FAIL, the
+  overall outcome must be ERROR.
+rationale: >-
+  A technical failure means that verification is incomplete, which a caller
+  must never mistake for a plain violation.

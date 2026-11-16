@@ -1,0 +1,9 @@
+id: REQ-0241
+name: One Context Per Executed Run
+area: integrity
+description: >-
+  Each run that executes rules must write one run context document that
+  follows the context schema.
+rationale: >-
+  Rules and reviews must see the same Git facts and need not query Git
+  themselves.

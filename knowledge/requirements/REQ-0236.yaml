@@ -1,0 +1,10 @@
+id: REQ-0236
+name: Input Is Compared Before Provider Calls
+area: integrity
+description: >-
+  Before a provider is called for the first time in a run, the input must be
+  compared with the snapshot, and no provider call may start when the input
+  has changed or cannot be verified.
+rationale: >-
+  Provider calls cost money and must not be spent on input that is no longer
+  the input the run was started for.
