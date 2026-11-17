@@ -1,0 +1,532 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/please-behave/cli/knowledge/contracts/plan/plan.schema.json",
+  "title": "Please Behave execution plan",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/prepared"
+    },
+    {
+      "$ref": "#/$defs/diagnostic"
+    }
+  ],
+  "$defs": {
+    "origin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository",
+        "path",
+        "reference",
+        "commit"
+      ],
+      "properties": {
+        "repository": {
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{64}$"
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reference": {
+          "type": "string",
+          "minLength": 1
+        },
+        "commit": {
+          "type": "string",
+          "pattern": "^([0-9a-fA-F]{40}|[0-9a-fA-F]{64})$"
+        }
+      }
+    },
+    "provider": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "command",
+        "timeout_seconds"
+      ],
+      "properties": {
+        "command": {
+          "type": "string",
+          "minLength": 1
+        },
+        "args": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "requirements": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [],
+          "properties": {
+            "env": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "executables": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "timeout_seconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "parameters": {
+          "type": "object"
+        }
+      }
+    },
+    "effectiveRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "execution_points",
+        "rule_sets"
+      ],
+      "properties": {
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "external": {
+          "$ref": "#/$defs/origin"
+        },
+        "execution_points": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "rule_sets": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "description",
+        "blocking",
+        "selected_by"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "check",
+            "review"
+          ]
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "blocking": {
+          "type": "boolean"
+        },
+        "selected_by": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "origin": {
+          "$ref": "#/$defs/effectiveRule"
+        },
+        "depends_on": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "provider": {
+          "type": "string",
+          "minLength": 1
+        },
+        "provider_config": {
+          "$ref": "#/$defs/provider"
+        },
+        "provider_origin": {
+          "$ref": "#/$defs/origin"
+        }
+      }
+    },
+    "omission": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rule",
+        "reason"
+      ],
+      "properties": {
+        "rule": {
+          "$ref": "#/$defs/rule"
+        },
+        "reason": {
+          "enum": [
+            "trigger_not_matched",
+            "no_changes"
+          ]
+        }
+      }
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "head",
+        "fingerprint",
+        "complete",
+        "limitations"
+      ],
+      "properties": {
+        "kind": {
+          "const": "worktree"
+        },
+        "head": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^([0-9a-fA-F]{40}|[0-9a-fA-F]{64})$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "fingerprint": {
+          "type": "string"
+        },
+        "complete": {
+          "type": "boolean"
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "commit_message": {
+          "type": "string"
+        }
+      }
+    },
+    "selection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "headings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "section": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "start_line",
+        "end_line",
+        "bytes"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "start_line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "end_line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "review",
+        "files",
+        "content_bytes",
+        "change_set_bytes"
+      ],
+      "properties": {
+        "review": {
+          "type": "string",
+          "minLength": 1
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "content_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "change_set_bytes": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scopes",
+        "selections",
+        "sections",
+        "selected_bytes",
+        "byte_limit",
+        "instruction_bytes",
+        "instruction_byte_limit"
+      ],
+      "properties": {
+        "scopes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/scope"
+          }
+        },
+        "selections": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/selection"
+          }
+        },
+        "sections": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/section"
+          }
+        },
+        "selected_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "byte_limit": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "instruction_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "instruction_byte_limit": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "diagnostic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "plan_schema_version",
+        "status",
+        "blocking_reasons"
+      ],
+      "properties": {
+        "plan_schema_version": {
+          "type": "integer",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "status": {
+          "const": "blocked"
+        },
+        "blocking_reasons": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "\\S"
+          },
+          "minItems": 1
+        }
+      }
+    },
+    "prepared": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "plan_schema_version",
+        "plan_id",
+        "status",
+        "blocking_reasons",
+        "at",
+        "input",
+        "checks_only",
+        "scheduled",
+        "omitted",
+        "required_ids",
+        "provider_availability_checked",
+        "planned_model_calls",
+        "context"
+      ],
+      "properties": {
+        "plan_schema_version": {
+          "type": "integer",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "plan_id": {
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{64}$"
+        },
+        "status": {
+          "enum": [
+            "planned",
+            "blocked"
+          ]
+        },
+        "blocking_reasons": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "\\S"
+          }
+        },
+        "at": {
+          "type": "string",
+          "minLength": 1
+        },
+        "input": {
+          "$ref": "#/$defs/input"
+        },
+        "checks_only": {
+          "type": "boolean"
+        },
+        "scheduled": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/rule"
+          }
+        },
+        "omitted": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/omission"
+          }
+        },
+        "disabled_rules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/rule"
+          }
+        },
+        "required_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "provider": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/provider"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "provider_availability_checked": {
+          "const": false
+        },
+        "planned_model_calls": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "context": {
+          "$ref": "#/$defs/context"
+        },
+        "change_base": {
+          "type": "string",
+          "pattern": "^([0-9a-fA-F]{40}|[0-9a-fA-F]{64})$"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "planned"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "blocking_reasons": {
+                "maxItems": 0
+              },
+              "input": {
+                "properties": {
+                  "complete": {
+                    "const": true
+                  }
+                }
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "blocking_reasons": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

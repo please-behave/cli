@@ -1,0 +1,50 @@
+id: API-0003
+name: Execution Plan
+version: 0
+contracts:
+  - id: CON-0006
+    name: Plan Preview and Diagnostics
+    document: preview.md
+    schema: plan.schema.json
+    requirements:
+      - REQ-0151
+      - REQ-0152
+      - REQ-0153
+      - REQ-0154
+      - REQ-0155
+      - REQ-0156
+      - REQ-0157
+      - REQ-0184
+      - REQ-0279
+      - REQ-0331
+      - REQ-0332
+  - id: CON-0007
+    name: Prepared Plan and Identity
+    document: prepared.md
+    requirements:
+      - REQ-0032
+      - REQ-0038
+      - REQ-0058
+      - REQ-0125
+      - REQ-0137
+      - REQ-0140
+      - REQ-0141
+      - REQ-0142
+      - REQ-0144
+      - REQ-0145
+      - REQ-0153
+      - REQ-0155
+      - REQ-0159
+      - REQ-0160
+      - REQ-0176
+      - REQ-0177
+      - REQ-0178
+      - REQ-0179
+      - REQ-0180
+      - REQ-0182
+      - REQ-0196
+      - REQ-0206
+      - REQ-0213
+      - REQ-0215
+      - REQ-0235
+      - REQ-0320

@@ -808,7 +808,7 @@ exceeded limits make the snapshot incomplete and prevent PASS.
 
 ### Reports and other files
 
-Reports and plans are written with experimental schema version 0. Report readers
+Reports and [plans](../knowledge/contracts/plan/api.yaml) are written with experimental schema version 0. Report readers
 accept report and embedded plan versions 0 and 1 with identical validation during
 the transition.
 Schema numbers describe machine-readable results, not configuration variants. Results record blocking,

@@ -39,6 +39,6 @@ For item 5, a documented decision to defer caching is a valid completion; writin
 an unmeasured cache implementation is not required.
 
 The [configuration reference](../configuration.md) describes current
-behavior. The [execution-point specification](../execution-points-and-plans.md) contains the
-detailed contract for item 1; later TODOs extend it without pretending those
+behavior. The [Execution Plan API](../../knowledge/contracts/plan/api.yaml) contains the
+detailed plan contracts for item 1; later TODOs extend it without pretending those
 extensions already exist.

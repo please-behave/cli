@@ -151,6 +151,10 @@ fn json_plan_errors_use_current_schema_and_blocking_reasons() {
         let output = cli(d.path(), args);
         assert_eq!(output.status.code(), Some(code));
         let document: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+        support::assert_plan_contract(&document);
+        let mut compatible = document.clone();
+        compatible["plan_schema_version"] = serde_json::json!(1);
+        support::assert_plan_contract(&compatible);
         assert_eq!(document["plan_schema_version"], 0);
         assert_eq!(
             document["status"],
@@ -213,6 +217,106 @@ fn json_plan_errors_use_current_schema_and_blocking_reasons() {
         fs::write(path(d.path(), "config.toml"), invalid).unwrap();
         let blocked = preview(&args, 2);
         assert!(blocked.get("input").is_none());
+    }
+}
+
+#[test]
+fn plan_contract_covers_review_context_and_rejects_malformed_documents() {
+    let d = project();
+    support::check(d.path(), "prerequisite", &["check"], "exit 0");
+    support::write(
+        d.path(),
+        ".please/providers/quality.toml",
+        "command = 'unavailable-adapter'\ntimeout_seconds = 30\n[parameters]\nmodel = 'synthetic'\n",
+    );
+    support::write(
+        d.path(),
+        ".please/reviews/quality/rule.toml",
+        r#"
+id = "quality"
+description = "Inspect changed evidence"
+run_at = ["check"]
+[review]
+provider = "quality"
+prompt = "prompt.md"
+include_content = true
+include_change_set = true
+context = [{path = "evidence.md"}]
+"#,
+    );
+    support::write(
+        d.path(),
+        ".please/reviews/quality/prompt.md",
+        "Inspect the evidence.",
+    );
+    support::write(d.path(), "evidence.md", "# Evidence\nChanged text.\n");
+    let output = support::command(env!("CARGO_BIN_EXE_please"))
+        .current_dir(d.path())
+        .env("PLEASE_CHANGE_BASE", "HEAD")
+        .args(["run", "--at", "check", "--plan", "--json"])
+        .output()
+        .unwrap();
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&output.stdout)
+    );
+    let plan: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    support::assert_plan_contract(&plan);
+    assert!(!plan["context"]["sections"].as_array().unwrap().is_empty());
+    assert!(!plan["context"]["scopes"].as_array().unwrap().is_empty());
+    assert_eq!(plan["scheduled"][1]["provider"], "quality");
+    assert_eq!(plan["planned_model_calls"], 1);
+    assert!(!d.path().join(".git/please/context").exists());
+
+    let schema: serde_json::Value =
+        serde_json::from_str(include_str!("../knowledge/contracts/plan/plan.schema.json")).unwrap();
+    let validator = jsonschema::validator_for(&schema).unwrap();
+    for version in [0, 1] {
+        let mut compatible = plan.clone();
+        compatible["plan_schema_version"] = serde_json::json!(version);
+        support::assert_plan_contract(&compatible);
+        // The named provider and disabled metadata remain readable by the existing consumer.
+        serde_json::from_value::<please::planner::Plan>(compatible).unwrap();
+    }
+    for (pointer, value) in [
+        ("/plan_schema_version", serde_json::json!(2)),
+        ("/plan_schema_version", serde_json::json!("0")),
+        ("/status", serde_json::json!("unknown")),
+        (
+            "/blocking_reasons",
+            serde_json::json!(["unexpected blocker"]),
+        ),
+        ("/input/complete", serde_json::json!(false)),
+        ("/context/sections/0/bytes", serde_json::json!(-1)),
+        (
+            "/scheduled/1/provider_config/timeout_seconds",
+            serde_json::json!("30"),
+        ),
+    ] {
+        let mut malformed = plan.clone();
+        *malformed.pointer_mut(pointer).unwrap() = value;
+        assert!(
+            !validator.is_valid(&malformed),
+            "accepted malformed {pointer}"
+        );
+    }
+    let mut unknown = plan.clone();
+    unknown["context"]["unexpected"] = serde_json::json!(true);
+    assert!(!validator.is_valid(&unknown));
+    let mut missing = plan.clone();
+    missing.as_object_mut().unwrap().remove("scheduled");
+    assert!(
+        !validator.is_valid(&missing),
+        "incomplete prepared plan became diagnostic"
+    );
+    for malformed in [
+        serde_json::json!({"plan_schema_version":0,"status":"blocked","blocking_reasons":[]}),
+        serde_json::json!({"plan_schema_version":0,"status":"blocked","blocking_reasons":[" "]}),
+        serde_json::json!({"plan_schema_version":0,"status":"planned","blocking_reasons":[]}),
+    ] {
+        assert!(!validator.is_valid(&malformed));
     }
 }
 

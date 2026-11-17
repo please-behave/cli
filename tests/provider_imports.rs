@@ -162,6 +162,7 @@ fn separate_provider_and_ruleset_repositories_run_offline() {
     let project = f.load(true).unwrap();
     assert_eq!(project.providers.len(), 1);
     let plan = planner::build(&project, Some("check"), false).unwrap().plan;
+    support::assert_plan_contract(&serde_json::to_value(&plan).unwrap());
     assert_eq!(
         plan.scheduled[0].provider_origin.as_ref().unwrap().commit,
         f.provider_ref

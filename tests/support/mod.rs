@@ -130,3 +130,20 @@ pub fn use_head_as_change_base() {
     static ONCE: std::sync::Once = std::sync::Once::new();
     ONCE.call_once(|| unsafe { std::env::set_var("PLEASE_CHANGE_BASE", "HEAD") });
 }
+
+/// Validate real plan output against the authoritative API schema.
+pub fn assert_plan_contract(value: &serde_json::Value) {
+    static VALIDATOR: std::sync::OnceLock<jsonschema::Validator> = std::sync::OnceLock::new();
+    let validator = VALIDATOR.get_or_init(|| {
+        let schema: serde_json::Value = serde_json::from_str(include_str!(
+            "../../knowledge/contracts/plan/plan.schema.json"
+        ))
+        .unwrap();
+        jsonschema::validator_for(&schema).unwrap()
+    });
+    let errors: Vec<_> = validator
+        .iter_errors(value)
+        .map(|error| error.to_string())
+        .collect();
+    assert!(errors.is_empty(), "{errors:#?}\n{value:#}");
+}

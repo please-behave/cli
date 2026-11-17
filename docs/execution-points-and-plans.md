@@ -1,103 +1,51 @@
 # Execution points and plans
 
-Rules are checks or reviews. Rule sets reference rule IDs and assign execution
-points. String references inherit the set's points; a reference table with
-`id` and optional `run_at` can replace that list for one reference. Each enabled
-rule uses the union of its effective reference assignments; without
-membership it uses its own run_at. An overridden own list generates a hint.
-Disabled Rules never run. Present Rule Sets always apply. Every reference is
-validated even when disabled. See the [configuration reference](configuration.md).
+Use a plan preview to inspect which Rules would run and what input they would
+receive, before executing checks or spending tokens on reviews:
 
-Use `please run --at pre-push --plan` for an offline, human-readable plan with
-English labels and explanations. Configured text and technical identifiers are
-preserved. Add `--json` for the structured plan.
-The default point is pre-push. Built-in points are pre-commit, commit-msg, pre-push and
-check. Enabled effective assignments to the first three require managed hooks;
-each hook invokes its identically named point, with no configurable association.
-`check` is invoked only explicitly with `please run --at check`, without inspecting or synchronizing Git hooks.
-Direct custom points behave the same way, including on fresh CI checkouts with
-missing or outdated hooks. `please sync` manages hook installation and updates.
-Please Behave generates no workflow and requires no CI integration. Custom points, including release, must be centrally declared.
-Empty points are valid.
+```sh
+please run --at pre-push --plan
+please run --at check --plan --json
+please run --at check --checks-only --plan
+```
 
-The loader records source paths. The domain resolver computes effective
-assignments once. Validation, CLI planning and execution share that result.
-Review file-change triggers then filter enabled reviews at the requested point,
-before context preparation or provider requirements. Checks run before scheduled
-reviews, deduplicated and dispatched by estimated remaining dependency-path
-duration among runnable checks, with canonical ID order for ties. Reports
-retain ID order; resource waits and concurrent completion do not change selection. Every scheduled rule is required; dependency skips inherit the originating outcome.
-`run --fail-fast` may leave selected rules `NOT_RUN` after a check failure or error, a
-blocking review failure or error or fatal execution error. Completed work retains its results; running checks finish
-by default or become `CANCELLED` when configured termination interrupts them.
-This invocation-only option does not change plan identity or selected IDs. Checks-only execution reports every selected review as `NOT_RUN`; it needs no change base and makes no provider call.
+The default execution point is `pre-push`. Built-in points are `pre-commit`,
+`commit-msg`, `pre-push` and `check`. Declare custom points in configuration.
+Rule Sets group Rules and assign their execution points; see the
+[configuration guide](configuration.md#group-rules-into-rule-sets).
 
-Plans include the selected point, rule sources, effective points, contributing
-sets, required IDs, input identity, bounded context and declared provider settings.
-Each review with an explicit provider reference also records `provider` (the named
-ID) and `provider_config` (its complete effective settings). Absent fields select
-the plan's legacy project provider. Model calls count distinct provider references
-and resolved Rule parameter environments for adapters.
-Local scheduling history, concurrency limits and fail-fast termination settings change execution strategy and are excluded from semantic plan
-identity. Resource declarations and canonical dependency IDs participate in check identity. No check, adapter
-request, network access or reconciliation occurs during preview.
-Incomplete snapshots or context preparation block execution. Preview does not
-certify a later source state. Reports and plans use experimental schema version 0. Blocking metadata distinguishes
-advisory review FAIL/ERROR from blocking failures and check/integrity errors; disabled Rules are listed separately.
+Preview works offline against previously synchronized imports and leaves the
+saved report untouched. Use `please sync` to refresh imports and manage Git hooks.
+Enabled assignments to the three Git execution points require their corresponding
+managed hooks. Invoke `check` and custom points directly; they work on fresh CI
+checkouts without installing or inspecting hooks. Please generates no CI workflow.
+See [external Rule Sets](external-rule-sets.md) for shared configuration.
 
-The changed files of a review follow the execution point: staged changes at
-pre-commit and commit-msg, pushed commits at pre-push and the net changes from an
-explicit `PLEASE_CHANGE_BASE` commit/ref at check and custom points, resolved to
-`change_base` in the plan. Supply the intended PR merge-base commit in CI; no baseline is
-inferred or fetched. Missing comparison data blocks the plan. A review without
-matching changed files appears under `omitted` with `trigger_not_matched`, or
-`no_changes` without triggers, outside required IDs, results, context
-and model-call estimates. Disabled/inapplicable reviews and checks-only runs need
-no changed files. See
-[trigger configuration and limits](configuration.md#add-a-review).
+For reviews at `check` or custom points, supply the intended comparison commit,
+such as the PR merge base in CI:
 
-Every JSON preview includes `plan_schema_version`, `status` and `blocking_reasons`.
-Configuration and selection errors use schema 0, `status: "blocked"` and nonempty
-`blocking_reasons`, with exit code 2. They omit unavailable plan metadata instead
-of inventing input or selection details. A prepared plan blocked by an incomplete
-snapshot retains its full metadata. Consumers can read the common diagnostic
-fields before processing plan details.
+```sh
+PLEASE_CHANGE_BASE=BASE_COMMIT please run --at check --plan --json
+```
 
-External Git rule sets select shared repository-relative Rule directories, then
-use the same resolver in independent import scopes. The
-loader maps effective points per import, then namespaces validated rules before
-combining the effective result. Mapping accepts only used custom sources and
-consumer-declared custom targets. Unmapped names retain their meaning; many-to-one
-mappings deduplicate execution. Built-ins cannot be mapped. Plans
-use previously validated cached revisions; sync refreshes sources. Origins
-retain the resolved commit. See [external sets](external-rule-sets.md).
+The comparison commit must already exist locally; preview does not fetch it.
+Checks-only preview needs no review comparison base. A `commit-msg` review needs
+the managed hook's message input, so a direct preview without it is blocked.
 
-The repository's self-integration uses the separate published Please Behave version pinned in `mise.toml`
-governor with the same unversioned Rule model. Its CI setup calls `please sync --yes` before executing the
-configured point. See [repository self-integration](self-governance.md).
+Read the status and blocking reasons first. A planned preview describes what can
+be executed; it does not certify that the Rules pass. A blocked preview exits 2
+and explains what prevents preparation. Omitted reviews have no result; disabled
+Rules are shown separately. Checks-only execution leaves selected reviews NOT_RUN.
+Inspect context sizes, declared provider settings and the call estimate before
+running the full selection. Shared providers still make a separate call per review.
 
-Checks alone may declare top-level `depends_on`. Resolve exact IDs within the
-effective enabled selection, after assignments and import mapping; no additional
-rules are selected. Imported bare references use their own binding namespace.
-Invalid references and cycles block preview and execution before any command runs.
-Plans record sorted, deduplicated `depends_on` IDs. Reviews neither declare nor
-satisfy dependencies. Dependency skips use NOT_RUN with `blocked_by` and the
-prerequisite outcome in the reason. They inherit the original failure's enforcement.
-Check failures and errors, incomplete fail-fast execution and input errors prevent reviews.
-The check phase always finishes before review invocation.
+The binding [Execution Plan API](../knowledge/contracts/plan/api.yaml) defines:
 
-At `commit-msg` every review receives the whole commit message. The managed hook supplies
-the message file; direct or offline plans without it are blocked when a review is
-selected, while an empty message file is valid. Plans save the message in optional
-`input.commit_message`, and it participates in plan identity. The message is rechecked
-before and after adapter calls and at completion; source-tree and message stability are
-independent integrity gates. The saved message belongs to that invocation; status
-continues to measure the working-tree snapshot's freshness.
+- [Preview, diagnostics and compatibility](../knowledge/contracts/plan/preview.md),
+  with the structural JSON Schema.
+- [Prepared plan and identity](../knowledge/contracts/plan/prepared.md), including
+  selection, dependencies, input, provider provenance and identity semantics.
 
-Independent provider imports use the same immutable Git cache and atomic
-resolution state as Rule Sets. They select no Rules or execution points. Named
-references resolve after all explicit sources load. Scheduled reviews retain
-optional `provider_origin` alongside raw provider configuration, and the selected
-provider revision participates in semantic plan identity. No cache paths are
-serialized as provider configuration and no provider availability calls run in
-preview. The additional provenance field is optional when reading older plans.
+For execution options and saved results, see [usage](usage.md).
+The repository's own published governor setup is described in
+[self-governance](self-governance.md).

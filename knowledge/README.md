@@ -27,9 +27,8 @@ define exact interfaces and reference the requirements they specify. Structural
 schemas and semantic contracts complement one another. User guides explain how
 to use these interfaces without redefining them.
 
-The configuration reference, external rule set reference and execution-point and
-plan contract also contain detailed interface definitions. Their definitions must
-remain consistent with Knowledge.
+The configuration and external rule set references also contain detailed interface
+definitions. Their definitions must remain consistent with Knowledge.
 
 Requirements and detailed references must agree. Resolve any contradiction
 explicitly before implementation and update the affected sources together.
