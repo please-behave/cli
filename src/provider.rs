@@ -169,7 +169,7 @@ fn requirements(
     Ok(())
 }
 
-/// The protocol version this build speaks; others are rejected without fallback.
+/// Requests retain version 1 until consumers accept version 0; no retry negotiation.
 const PROTOCOL_VERSION: u32 = 1;
 
 fn execute(request: &Request<'_>) -> Result<Response> {
@@ -275,7 +275,7 @@ fn interpret(
     );
     let invalid = || {
         anyhow::anyhow!(
-            "Invalid adapter response; expected protocol version {PROTOCOL_VERSION} JSON; {OUTPUT_HINT}"
+            "Invalid adapter response; expected protocol version 0 or 1 JSON; {OUTPUT_HINT}"
         )
     };
     let serde_json::Value::Object(mut document) =
@@ -284,9 +284,11 @@ fn interpret(
         return Err(invalid());
     };
     ensure!(
-        document.remove("protocol_version").and_then(|v| v.as_u64())
-            == Some(u64::from(PROTOCOL_VERSION)),
-        "Unsupported adapter protocol version; expected {PROTOCOL_VERSION}"
+        matches!(
+            document.remove("protocol_version").and_then(|v| v.as_u64()),
+            Some(0 | 1)
+        ),
+        "Unsupported adapter protocol version; expected 0 or 1"
     );
     let usage = document.remove("usage");
     if let Some(findings) = document.get("findings").and_then(|v| v.as_array()) {

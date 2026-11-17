@@ -197,12 +197,12 @@ pub fn read(root: &Path) -> Result<Report> {
         crate::limits::MAX_REPORT_BYTES,
     )?)?;
     ensure!(
-        report.schema_version == REPORT_SCHEMA_VERSION,
+        matches!(report.schema_version, 0 | 1),
         "unsupported report schema; rerun please run"
     );
     let plan = &report.plan;
     ensure!(
-        plan.plan_schema_version == crate::planner::PLAN_SCHEMA_VERSION
+        matches!(plan.plan_schema_version, 0 | 1)
             && !plan.at.is_empty()
             && matches!(plan.status.as_str(), "planned" | "blocked")
             && plan.executable() == plan.blocking_reasons.is_empty()

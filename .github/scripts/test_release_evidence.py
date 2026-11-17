@@ -48,6 +48,28 @@ class ReleaseContractTests(unittest.TestCase):
         for target in POLICY["targets"]:
             mod.record(POLICY, dict(ENV, RELEASE_TARGET=target), SHA)
 
+    def test_policy_and_evidence_accept_zero_and_one_without_weakening_identity(self):
+        path = Path("policy.json")
+        for version in (0, 1):
+            policy = dict(POLICY, schema_version=version)
+            path.write_text(json.dumps(policy))
+            self.assertEqual(mod.policy_from(path), policy)
+            for target in POLICY["targets"]:
+                evidence = Path(f"release-evidence/{target}.json")
+                data = json.loads(evidence.read_text())
+                data["schema_version"] = version
+                evidence.write_text(json.dumps(data))
+            mod.verify(policy, ENV, SHA)
+        evidence = Path("release-evidence/linux.json")
+        original = json.loads(evidence.read_text())
+        for version in (True, False, -1, 2, 1.0, "0", None):
+            path.write_text(json.dumps(dict(POLICY, schema_version=version)))
+            with self.subTest(policy=version), self.assertRaises(ValueError):
+                mod.policy_from(path)
+            evidence.write_text(json.dumps(dict(original, schema_version=version)))
+            with self.subTest(evidence=version), self.assertRaises(ValueError):
+                mod.verify(POLICY, ENV, SHA)
+
     def test_complete_evidence_verifies_and_binds_hashes(self):
         mod.verify(POLICY, ENV, SHA)
         data = json.loads(Path("release-evidence/linux.json").read_text())

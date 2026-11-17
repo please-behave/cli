@@ -339,7 +339,7 @@ pub(crate) fn load_with_changes(
         .context("invalid external resolution state; run please sync")?
     };
     ensure!(
-        refresh || previous.version == 1,
+        refresh || matches!(previous.version, 0 | 1),
         "unsupported external resolution state; run please sync"
     );
     let mut next = State {

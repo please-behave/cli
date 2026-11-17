@@ -825,7 +825,10 @@ exceeded limits make the snapshot incomplete and prevent PASS.
 
 ### Reports and other files
 
-Reports and plans use schema 1. Schema numbers describe
+Reports and plans are still written with schema 1; report readers accept report
+and embedded plan versions 0 and 1 with identical validation during the transition.
+The run-context schema likewise accepts versions 0 and 1; new contexts still use 1.
+Schema numbers describe
 machine-readable results, not configuration variants. Results record blocking,
 status, evidence, durations and captured output. ERROR always takes precedence;
 blocking FAIL follows; fail-fast skips and cancellations prevent success. Dependency

@@ -1,0 +1,13 @@
+id: REQ-0331
+name: Version Zero Transition Compatibility
+area: configuration
+description: >-
+  Readers of existing versioned formats must accept versions 0 and 1 with
+  the same structural and semantic validation during the transition to
+  experimental version 0, and must reject unsupported versions and invalid
+  version types without retrying or falling back to another version.
+rationale: >-
+  Consumers must be able to adopt version 0 without disrupting existing
+  version 1 producers or weakening verification.
+decisions:
+  - DEC-0026

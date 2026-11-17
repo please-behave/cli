@@ -330,6 +330,11 @@ fn completed_fail_and_error_respect_review_blocking() {
 fn protocol_versions_and_complete_coverage_fail_closed_while_usage_is_tolerant() {
     for mode in [
         "wrong-version",
+        "zero-version",
+        "boolean-version",
+        "negative-version",
+        "string-version",
+        "float-version",
         "missing-version",
         "legacy-envelope",
         "status-field",
@@ -354,6 +359,11 @@ mode = sys.argv[1]
 r = {'reason':'Evidence inspected', 'findings':[{'message':'Evidence', 'path':'evidence', 'line':1}]}
 response = dict(r, protocol_version=1)
 if mode == 'wrong-version': response['protocol_version'] = 2
+if mode == 'zero-version': response['protocol_version'] = 0
+if mode == 'boolean-version': response['protocol_version'] = True
+if mode == 'negative-version': response['protocol_version'] = -1
+if mode == 'string-version': response['protocol_version'] = '0'
+if mode == 'float-version': response['protocol_version'] = 1.0
 if mode == 'missing-version': del response['protocol_version']
 if mode == 'legacy-envelope': response = {'protocol_version':1, 'reviews':[dict(r, id=request['reviews'][0]['id'], status='PASS')]}
 if mode == 'status-field': response['status'] = 'PASS'
@@ -382,7 +392,7 @@ else: print(json.dumps(response))
             result.overall,
             if matches!(
                 mode,
-                "valid-usage" | "bad-usage" | "zero-usage" | "explanation"
+                "valid-usage" | "bad-usage" | "zero-usage" | "explanation" | "zero-version"
             ) {
                 Status::Pass
             } else {

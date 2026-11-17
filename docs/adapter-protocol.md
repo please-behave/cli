@@ -36,8 +36,11 @@ output bounds of checks. When a call ends as ERROR, its stdout and stderr are re
 unmasked and shown by `please status --details`, so write the original error text to
 stderr and never include credentials. Never write progress text to stdout.
 
-The request and the response require integer `protocol_version: 1`. Other
-versions fail closed. Experimental API contracts may change incompatibly; API versions are independent of the CLI release version (DEC-0026).
+Requests currently use integer `protocol_version: 1`. During the transition to
+experimental version 0, response readers accept integer versions `0` and `1`
+with identical validation; all other versions fail closed. Adapters preparing
+for version 0 must accept both request versions and echo the request version
+in their response. There is no retry or automatic protocol fallback. Experimental API contracts may change incompatibly; API versions are independent of the CLI release version (DEC-0026).
 Adapters should reject unsupported request versions and may ignore unknown request
 fields. Please rejects unknown response fields. The response schema is sent with each
 request so adapters need not duplicate limits.

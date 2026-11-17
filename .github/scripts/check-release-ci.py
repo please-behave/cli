@@ -96,7 +96,7 @@ def policy_from(path):
         },
         "invalid CI policy fields",
     )
-    require(type(policy["schema_version"]) is int and policy["schema_version"] == 1, "unsupported CI policy schema")
+    require(type(policy["schema_version"]) is int and policy["schema_version"] in (0, 1), "unsupported CI policy schema")
     repo = policy["repository"]
     require(
         isinstance(repo, str) and re.fullmatch(r"(?:please-behave|christianpflugradt)/[A-Za-z0-9_.-]+", repo),

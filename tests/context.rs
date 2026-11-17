@@ -197,6 +197,12 @@ fn schema_is_strict_and_requires_the_stable_sections() {
         mutation(&mut changed);
         assert!(!validator().is_valid(&changed), "{changed:#}");
     }
+    // REQ-0331: the published context contract accepts both transition versions.
+    for version in [0, 1] {
+        let mut compatible = context.clone();
+        compatible["schema_version"] = Value::from(version);
+        assert!(validator().is_valid(&compatible));
+    }
     for section in ["repository", "head", "workspace"] {
         assert!(context[section].is_object());
     }

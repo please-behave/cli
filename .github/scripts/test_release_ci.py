@@ -80,6 +80,18 @@ class ProofTests(unittest.TestCase):
     def verify(self, policy=None, env=None):
         return mod.verify(policy or POLICY, env or ENV, SHA, self.api)
 
+    def test_policy_accepts_zero_and_one_and_rejects_other_versions(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "policy.json"
+            for version in (0, 1):
+                policy = dict(POLICY, schema_version=version)
+                path.write_text(json.dumps(policy))
+                self.assertEqual(mod.policy_from(path), policy)
+            for version in (True, False, -1, 2, 1.0, "0", None):
+                path.write_text(json.dumps(dict(POLICY, schema_version=version)))
+                with self.subTest(version=version), self.assertRaises(ValueError):
+                    mod.policy_from(path)
+
     def test_success_records_exact_identity_and_jobs(self):
         proof = self.verify()
         self.assertEqual(proof["source_sha"], SHA)

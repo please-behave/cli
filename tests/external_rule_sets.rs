@@ -206,6 +206,38 @@ custom = []
     }
 }
 #[test]
+fn resolution_state_accepts_zero_and_one_without_refresh_or_fallback() {
+    // REQ-0331: existing cached imports retain strict validation under either version label.
+    let f = Fixture::new();
+    f.imports(&[("repository", "main")]);
+    f.load(true).unwrap();
+    let original: serde_json::Value = serde_json::from_slice(&f.state()).unwrap();
+    assert_eq!(original["version"], 1);
+    let path = f.root.join(".git/please/external-rule-sets.json");
+    for version in [0, 1] {
+        let mut state = original.clone();
+        state["version"] = serde_json::json!(version);
+        let bytes = serde_json::to_vec(&state).unwrap();
+        fs::write(&path, &bytes).unwrap();
+        f.load(false).unwrap();
+        assert_eq!(f.state(), bytes);
+    }
+    for version in [
+        serde_json::json!(true),
+        serde_json::json!(-1),
+        serde_json::json!(2),
+        serde_json::json!(1.0),
+        serde_json::json!("0"),
+        serde_json::Value::Null,
+    ] {
+        let mut state = original.clone();
+        state["version"] = version;
+        fs::write(&path, state.to_string()).unwrap();
+        assert!(f.load(false).is_err());
+    }
+}
+
+#[test]
 fn sync_output_tracks_import_state_and_cache_changes_without_hook_changes() {
     let f = Fixture::new();
     support::check(&f.root, "always-ok", &["check"], "exit 0");

@@ -63,7 +63,7 @@ def policy_from(path):
         },
         "Invalid artifact policy fields",
     )
-    require(type(data["schema_version"]) is int and data["schema_version"] == 1, "Unsupported artifact policy")
+    require(type(data["schema_version"]) is int and data["schema_version"] in (0, 1), "Unsupported artifact policy")
     require(
         isinstance(data["repository"], str) and re.fullmatch(r"(?:please-behave|christianpflugradt)/[A-Za-z0-9_.-]+", data["repository"]),
         "Invalid repository",
@@ -144,8 +144,13 @@ def verify(policy, env, head):
     )
     for target in policy["targets"]:
         data = read_json(directory / f"{target}.json")
-        require(isinstance(data, dict) and type(data.get("schema_version")) is int, "Invalid evidence schema")
-        expected = dict(context, target=target, artifacts=artifact_hashes(policy, target, context["version"]))
+        require(
+            isinstance(data, dict) and type(data.get("schema_version")) is int and data["schema_version"] in (0, 1),
+            "Invalid evidence schema",
+        )
+        expected = dict(
+            context, schema_version=data["schema_version"], target=target, artifacts=artifact_hashes(policy, target, context["version"])
+        )
         require(data == expected, f"Candidate identity or checksums differ: {target}")
 
 

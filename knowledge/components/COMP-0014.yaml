@@ -24,7 +24,7 @@ must_not:
   - >-
     Treat a provider failure, invalid JSON or incomplete coverage as PASS.
   - >-
-    Accept reports or plans of other schema versions or of another repository.
+    Accept reports or plans of unsupported schema versions or of another repository.
   - >-
     Present saved reports as tamper-proof attestations.
 files:
@@ -57,3 +57,4 @@ requirements:
   - REQ-0258
   - REQ-0260
   - REQ-0261
+  - REQ-0331

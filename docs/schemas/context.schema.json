@@ -7,7 +7,7 @@
   "additionalProperties": false,
   "required": ["schema_version", "run_id", "execution_point", "repository", "head", "workspace"],
   "properties": {
-    "schema_version": { "const": 1 },
+    "schema_version": { "type": "integer", "enum": [0, 1] },
     "run_id": { "type": "string", "minLength": 1 },
     "execution_point": { "type": "string", "minLength": 1 },
     "repository": {

@@ -837,6 +837,38 @@ fn no_report_corrupt_report_schema_and_no_color() {
     assert_eq!(cli(d.path(), &["status"]).status.code(), Some(2));
     let r = please::verify(d.path(), &Never).unwrap();
     let mut value = serde_json::to_value(r).unwrap();
+    // REQ-0331: both labels use the full report validation, without rewriting stored data.
+    for report_version in [0, 1] {
+        for plan_version in [0, 1] {
+            let mut compatible = value.clone();
+            compatible["schema_version"] = serde_json::json!(report_version);
+            compatible["plan"]["plan_schema_version"] = serde_json::json!(plan_version);
+            fs::write(path(d.path(), "reports/last.json"), compatible.to_string()).unwrap();
+            let saved = report::read(d.path()).unwrap();
+            assert_eq!(saved.schema_version, report_version);
+            assert_eq!(saved.plan.plan_schema_version, plan_version);
+        }
+    }
+    for field in ["schema_version", "plan_schema_version"] {
+        for version in [
+            serde_json::json!(true),
+            serde_json::json!(-1),
+            serde_json::json!(2),
+            serde_json::json!(1.0),
+            serde_json::json!("0"),
+            serde_json::Value::Null,
+        ] {
+            let mut invalid = value.clone();
+            let target = if field == "schema_version" {
+                &mut invalid
+            } else {
+                &mut invalid["plan"]
+            };
+            target[field] = version;
+            fs::write(path(d.path(), "reports/last.json"), invalid.to_string()).unwrap();
+            assert!(report::read(d.path()).is_err());
+        }
+    }
     value["schema_version"] = serde_json::json!(999);
     fs::write(path(d.path(), "reports/last.json"), value.to_string()).unwrap();
     assert_eq!(cli(d.path(), &["status"]).status.code(), Some(2));
