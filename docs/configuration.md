@@ -31,18 +31,10 @@ Use this fixed layout at the Git working-tree root:
   reports/last.json
 ```
 
-`checks/`, `reviews/` and `rule-sets/` are optional. Each immediate rule directory
-requires `rule.toml`. Only `config.toml`, `provider.toml`, `providers/*.toml`, `checks/*/rule.toml`,
-`reviews/*/rule.toml` and `rule-sets/*.toml` are governance configuration. Supporting
-files such as `checks/secrets/gitleaks.toml` are data and are never parsed by Please Behave.
-Definitions cannot be placed arbitrarily or nested in other directories.
-
-Unknown fields, duplicate keys/IDs and invalid references fail validation, even
-for disabled rules. Missing implementations become execution errors only for
-enabled selected rules. Text uses UTF-8; required text must be nonblank and contain
-no NUL. Review prompt filenames must name regular files directly inside their own rule
-directory: no empty names, separators, absolute paths, parent traversal or symlinks.
-Rule directories, definitions and configuration paths also reject symlinks.
+Start with `config.toml` and add Rule, Rule Set and provider documents as needed.
+Supporting files belong beside the Rules that use them. The binding
+[Configuration Discovery and Validation contract](../knowledge/contracts/configuration/discovery.md)
+defines the recognized locations, safe paths, document limits and validation rules.
 
 Run `please sync` after editing. Validation runs no checks or providers.
 Required Git hooks are derived from effective Rule assignments and reconciled
@@ -66,35 +58,21 @@ fail_fast_termination_grace_seconds = 5
 custom = ["release"]
 ```
 
-| Field | Required / default | Meaning |
-| --- | --- | --- |
-| `project` | Required | Nonblank display name. |
-| `max_display_files` | Optional; `5` | Integer `1..5`: changed paths shown in status. |
-| `execution` | Optional table | Check scheduling settings. |
-| `execution.max_parallel` | Optional; `4` | Positive integer: maximum running checks; `1` runs serially. |
-| `execution.fail_fast_terminate_running_instances` | Optional; `false` | Terminate running checks when invocation-level fail-fast triggers; requires Unix process groups. |
-| `execution.fail_fast_termination_grace_seconds` | Optional; `5` | Integer `1..3600`: grace period between SIGTERM and forced termination, validated even when termination is disabled. |
-| `context` | Optional table | Run context settings; see [Run context](#run-context). |
-| `context.retain_runs` | Optional; `100` | Integer `1..10000`: stored run contexts kept; older ones are removed at the start of a run. |
-| `context.max_section_bytes` | Optional; `10485760` | Integer `1024..1073741824`: byte limit for each patch file, each list and each message; larger sections are marked truncated. |
-| `execution_points` | Optional table | Additional execution contexts. |
-| `execution_points.custom` | Optional; `[]` | Unique names of 1–80 lowercase ASCII letters, digits, `-`, `_`, starting with a letter/digit. Built-in names are reserved. |
-| `imports` | Optional; `[]` | External Rule Set references, declared only here as `[[imports]]`. |
-| `provider_imports` | Optional; `[]` | Independent external named provider packages, declared as `[[provider_imports]]`. |
+The [Project Configuration contract](../knowledge/contracts/configuration/project.md)
+explains every project option. Its [schema](../knowledge/contracts/configuration/project.schema.json)
+defines fields, defaults and bounds; the TOML format has no version field.
 
-Built-in points are `pre-commit`, `commit-msg`, `pre-push` and `check`. The first
-three use Git hooks. `check` is invoked explicitly with `please run --at check`
-and never triggered automatically. It needs no declaration or CI workflow.
-Consumers decide where to invoke it, including multiple workflows; Please Behave does
-not generate workflows, discover them or validate CI integration. Declare custom
-points in the consumer, including unmapped custom points used by imports.
-`release` is an ordinary custom point. The default execution point is `pre-push`.
+Use `execution.max_parallel` to cap concurrent checks, or `--max-parallel` for one
+invocation. Set the limit to one when serial execution is useful. Enable
+`execution.fail_fast_terminate_running_instances` only when interrupted checks can
+leave their work in an acceptable state; it takes effect with `run --fail-fast`.
 
-Checks run concurrently by default. `please run --at check --max-parallel 6`
-overrides configuration for that invocation; otherwise `execution.max_parallel`
-applies, defaulting to 4. Set it to 1 for serial execution. Zero, negative,
-noninteger and overflowing limits are rejected. Concurrency does not change the
-semantic plan hash; saved snapshots still detect configuration file changes.
+Declare additional execution points under `execution_points.custom`. Invoke
+`check` and custom points explicitly, including in CI; they need no Git hooks.
+Use `context` settings to control stored run contexts and section sizes, and
+`max_display_files` to limit changed paths shown by status. Add external sources
+through [Rule Set imports](#import-rule-sets-from-git) and
+[provider imports](#import-providers-from-git).
 
 Checks sharing mutable state must declare the same `resource` inside `[check]`:
 
@@ -113,9 +91,9 @@ files remain valid, but checks relying on serial execution need resources or a
 limit of 1. Older CLI releases reject these new configuration fields; upgrade
 pinned consumers before adding them to shared rulesets.
 
-Fail-fast termination is optional under `[execution]` and takes effect only with
-`run --fail-fast`. See the [fail-fast behavior](#project-settings) for
-process groups, cancellation, grace periods and interrupted-build limitations.
+The [execution settings contract](../knowledge/contracts/configuration/project.md#execution-settings)
+defines fail-fast termination, grace periods and platform requirements. Inspect
+partial output after cancellation and clean up interrupted builds before retrying.
 
 ### Fields shared by checks and reviews
 

@@ -10,6 +10,7 @@ one compatibility version; separate documents do not imply separate versions.
 | [Run Context](run-context/api.yaml) | [Delivery and lifetime](run-context/delivery.md), [document and patches](run-context/document.md) |
 | [Execution Plan](plan/api.yaml) | [Preview and diagnostics](plan/preview.md), [prepared plan and identity](plan/prepared.md) |
 | [Verification Report](report/api.yaml) | [Document and lifecycle](report/document.md), [snapshot and freshness](report/snapshot.md) |
+| [Governance Configuration](configuration/api.yaml) | [Discovery and validation](configuration/discovery.md), [project configuration](configuration/project.md) |
 
 ## Representation
 
@@ -46,6 +47,7 @@ are handled. Recording metadata does not introduce a new wire or configuration f
 
 The `knowledge` check validates index structure, unique IDs, requirement references
 and document/schema paths. Contract tests check structural schemas against actual
-requests, responses, run-context documents, plan previews and saved reports.
-Semantic validation, byte limits and evidence checks remain explicit obligations
+requests, responses, run-context documents, plan previews, saved reports and parsed
+project configuration. Semantic validation, byte limits and evidence checks remain
+explicit obligations
 even when a structural schema cannot express them.

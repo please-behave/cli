@@ -1,0 +1,43 @@
+id: API-0005
+name: Governance Configuration
+version: 0
+contracts:
+  - id: CON-0010
+    name: Configuration Discovery and Validation
+    document: discovery.md
+    requirements:
+      - REQ-0161
+      - REQ-0181
+      - REQ-0280
+      - REQ-0281
+      - REQ-0282
+      - REQ-0283
+      - REQ-0284
+      - REQ-0285
+      - REQ-0286
+      - REQ-0326
+      - REQ-0327
+  - id: CON-0011
+    name: Project Configuration
+    document: project.md
+    schema: project.schema.json
+    requirements:
+      - REQ-0029
+      - REQ-0030
+      - REQ-0032
+      - REQ-0074
+      - REQ-0075
+      - REQ-0078
+      - REQ-0087
+      - REQ-0146
+      - REQ-0147
+      - REQ-0148
+      - REQ-0149
+      - REQ-0152
+      - REQ-0185
+      - REQ-0208
+      - REQ-0249
+      - REQ-0284
+      - REQ-0327
+      - REQ-0328
+      - REQ-0329

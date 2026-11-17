@@ -1,7 +1,8 @@
 # Usage
 
-The [requirements](../knowledge/requirements/README.md) are the contract for behavior described here;
-the [configuration reference](configuration.md) defines every field.
+[Knowledge](../knowledge/README.md) defines binding behavior and API contracts.
+The [configuration guide](configuration.md) explains setup and links to exact field
+definitions, defaults and bounds.
 
 ## First run
 

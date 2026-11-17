@@ -1,4 +1,4 @@
-//! Shared public-contract bounds. Keep README tables and boundary tests in sync.
+//! Shared public-contract bounds. Keep Knowledge, detailed references and boundary tests in sync.
 pub const DEFAULT_MAX_PARALLEL: usize = 4;
 pub const DEFAULT_FAIL_FAST_TERMINATION_GRACE_SECONDS: u64 = 5;
 pub const CONFIG_DIRECTORY: &str = ".please";

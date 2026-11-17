@@ -109,6 +109,77 @@ fn contract<T: Serialize + DeserializeOwned>(sample: &T, text: &str, prefix: &st
         }
     }
 }
+fn project_schema() -> Value {
+    serde_json::from_str(include_str!(
+        "../knowledge/contracts/configuration/project.schema.json"
+    ))
+    .unwrap()
+}
+
+fn project_contract(schema: &Value, config: &config::Config) {
+    let sample = serde_json::to_value(config).unwrap();
+    jsonschema::validator_for(schema)
+        .unwrap()
+        .validate(&sample)
+        .unwrap();
+    let mut paths = Vec::new();
+    field_paths(&sample, vec![], &mut paths);
+    // Each object has exactly the documented keys, including optional defaulted fields.
+    for path in std::iter::once(vec![]).chain(paths.iter().cloned()) {
+        let pointer = if path.is_empty() {
+            String::new()
+        } else {
+            format!("/{}", path.join("/"))
+        };
+        let value = sample.pointer(&pointer).unwrap();
+        let declaration = path
+            .iter()
+            .fold(schema, |node, key| &node["properties"][key]);
+        if let Some(object) = value.as_object() {
+            let properties = declaration["properties"].as_object().unwrap();
+            assert!(properties.keys().eq(object.keys()), "{pointer}");
+        }
+    }
+    for path in paths {
+        let key = path.last().unwrap();
+        let pointer = format!("/{}", path.join("/"));
+        let parent = if path.len() == 1 {
+            String::new()
+        } else {
+            format!("/{}", path[..path.len() - 1].join("/"))
+        };
+        let parent_schema = path[..path.len() - 1]
+            .iter()
+            .fold(schema, |node, key| &node["properties"][key]);
+        let required = parent_schema["required"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|value| value == key);
+        let declaration = &parent_schema["properties"][key];
+        let mut omitted = sample.clone();
+        omitted
+            .pointer_mut(&parent)
+            .unwrap()
+            .as_object_mut()
+            .unwrap()
+            .remove(key);
+        match serde_json::from_value::<config::Config>(omitted) {
+            Err(_) => assert!(required, "required field {pointer}"),
+            Ok(parsed) => {
+                assert!(!required, "optional field {pointer}");
+                let restored = serde_json::to_value(parsed).unwrap();
+                let actual = restored.pointer(&pointer).unwrap();
+                if actual.is_object() {
+                    assert_eq!(declaration["default"], serde_json::json!({}), "{pointer}");
+                } else {
+                    assert_eq!(&declaration["default"], actual, "default for {pointer}");
+                }
+            }
+        }
+    }
+}
+
 fn project() -> TempDir {
     let root = tempfile::tempdir().unwrap();
     assert!(
@@ -129,7 +200,7 @@ fn every_configuration_field_required_marker_and_default_is_documented() {
     // REQ-0327, REQ-0328: documented defaults, fields and required markers match the configuration types.
     let root = project();
     let p = config::load(root.path()).unwrap();
-    contract(&p.config, section(CONFIGURATION, "Project settings"), "");
+    project_contract(&project_schema(), &p.config);
     contract(
         &please::external::Import {
             git: "https://example.invalid/rules.git".into(),
@@ -226,6 +297,77 @@ fn every_configuration_field_required_marker_and_default_is_documented() {
         "",
     );
 }
+#[test]
+fn project_schema_and_loader_agree_on_types_bounds_and_unknown_fields() {
+    let root = project();
+    let schema = project_schema();
+    let validator = jsonschema::validator_for(&schema).unwrap();
+    for (text, valid) in [
+        ("project = 'Example'", true),
+        ("project = 'Example'\n[execution]\nmax_parallel = 1", true),
+        (
+            "project = 'Example'\n[execution]\nfail_fast_termination_grace_seconds = 3600",
+            true,
+        ),
+        (
+            "project = 'Example'\n[context]\nretain_runs = 1\nmax_section_bytes = 1024",
+            true,
+        ),
+        (
+            "project = 'Example'\n[execution_points]\ncustom = ['release']",
+            true,
+        ),
+        (
+            "project = 'Example'\n[execution]\n[context]\n[execution_points]",
+            true,
+        ),
+        ("project = 'Example'\nversion = 0", false),
+        ("project = 'Example'\nschema_version = 0", false),
+        ("project = 'Example'\nunknown = true", false),
+        ("project = '   '", false),
+        ("max_display_files = 5", false),
+        ("project = 'Example'\nmax_display_files = 0", false),
+        ("project = 'Example'\nmax_display_files = 6", false),
+        ("project = 'Example'\n[execution]\nmax_parallel = 0", false),
+        (
+            "project = 'Example'\n[execution]\nmax_parallel = 1.5",
+            false,
+        ),
+        ("project = 'Example'\n[execution]\nfail_fast = true", false),
+        (
+            "project = 'Example'\n[execution]\nfail_fast_termination_grace_seconds = 0",
+            false,
+        ),
+        (
+            "project = 'Example'\n[execution]\nfail_fast_termination_grace_seconds = 3601",
+            false,
+        ),
+        ("project = 'Example'\n[context]\nretain_runs = 10001", false),
+        (
+            "project = 'Example'\n[context]\nmax_section_bytes = 1023",
+            false,
+        ),
+        (
+            "project = 'Example'\n[execution_points]\ncustom = ['check']",
+            false,
+        ),
+        (
+            "project = 'Example'\n[execution_points]\ncustom = ['Release']",
+            false,
+        ),
+        (
+            "project = 'Example'\n[execution_points]\ncustom = ['release', 'release']",
+            false,
+        ),
+    ] {
+        let raw: toml::Value = toml::from_str(text).unwrap();
+        let json = serde_json::to_value(raw).unwrap();
+        assert_eq!(validator.is_valid(&json), valid, "schema: {text}");
+        support::write(root.path(), ".please/config.toml", text);
+        assert_eq!(config::load(root.path()).is_ok(), valid, "loader: {text}");
+    }
+}
+
 #[test]
 fn documentation_contract_detects_missing_fields_and_wrong_defaults() {
     let root = project();

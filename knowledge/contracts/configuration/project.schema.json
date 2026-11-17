@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/please-behave/cli/knowledge/contracts/configuration/project.schema.json",
+  "title": "Please Behave project configuration",
+  "description": "JSON-compatible representation of the parsed project config.toml. TOML parsing and semantic validation are additional obligations.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "project"
+  ],
+  "properties": {
+    "project": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S",
+      "not": {
+        "pattern": "\u0000"
+      }
+    },
+    "max_display_files": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5,
+      "default": 5
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [],
+      "properties": {
+        "max_parallel": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 4
+        },
+        "fail_fast_terminate_running_instances": {
+          "type": "boolean",
+          "default": false
+        },
+        "fail_fast_termination_grace_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3600,
+          "default": 5
+        }
+      },
+      "default": {}
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [],
+      "properties": {
+        "retain_runs": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000,
+          "default": 100
+        },
+        "max_section_bytes": {
+          "type": "integer",
+          "minimum": 1024,
+          "maximum": 1073741824,
+          "default": 10485760
+        }
+      },
+      "default": {}
+    },
+    "execution_points": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [],
+      "properties": {
+        "custom": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "pattern": "^[a-z0-9][a-z0-9_-]*$",
+            "not": {
+              "enum": [
+                "pre-commit",
+                "commit-msg",
+                "pre-push",
+                "check"
+              ]
+            }
+          },
+          "uniqueItems": true,
+          "default": []
+        }
+      },
+      "default": {}
+    },
+    "imports": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "git",
+          "path",
+          "ref"
+        ],
+        "properties": {
+          "git": {
+            "type": "string",
+            "minLength": 1
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "ref": {
+            "type": "string",
+            "minLength": 1
+          },
+          "execution_points": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "default": {}
+          },
+          "rule_parameters": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "default": {}
+          }
+        }
+      },
+      "default": []
+    },
+    "provider_imports": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "git",
+          "path",
+          "ref"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "git": {
+            "type": "string",
+            "minLength": 1
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "ref": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "default": []
+    }
+  }
+}
