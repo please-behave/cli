@@ -27,10 +27,10 @@ define exact interfaces and reference the requirements they specify. Structural
 schemas and semantic contracts complement one another. User guides explain how
 to use these interfaces without redefining them.
 
-The [configuration contracts](contracts/configuration/api.yaml) define discovery
-and project settings. The configuration and external rule set references also
-contain detailed interface definitions. Their definitions must remain consistent
-with Knowledge.
+The [configuration contracts](contracts/configuration/api.yaml) define discovery,
+project settings, shared Rule definitions and parameters. The configuration and
+external rule set references also contain detailed interface definitions. Their
+definitions must remain consistent with Knowledge.
 
 Requirements and detailed references must agree. Resolve any contradiction
 explicitly before implementation and update the affected sources together.

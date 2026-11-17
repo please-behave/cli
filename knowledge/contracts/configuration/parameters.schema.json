@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/please-behave/cli/knowledge/contracts/configuration/parameters.schema.json",
+  "title": "Rule parameter declarations",
+  "type": "object",
+  "additionalProperties": {
+    "$ref": "#/$defs/declaration"
+  },
+  "default": {},
+  "$defs": {
+    "declaration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean",
+          "default": false
+        },
+        "description": {
+          "type": "string",
+          "default": null
+        },
+        "value": {
+          "not": {
+            "type": "null"
+          },
+          "default": null,
+          "description": "Raw TOML value; string and file-value validation is deferred until resolution."
+        }
+      }
+    },
+    "activeDeclaration": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/declaration"
+        },
+        {
+          "properties": {
+            "type": {
+              "enum": [
+                "string",
+                "file"
+              ]
+            },
+            "value": {
+              "type": "string",
+              "not": {
+                "pattern": "\u0000"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "activeDeclarations": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[A-Za-z][A-Za-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/activeDeclaration"
+      }
+    }
+  }
+}

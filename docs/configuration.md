@@ -97,23 +97,10 @@ partial output after cancellation and clean up interrupted builds before retryin
 
 ### Fields shared by checks and reviews
 
-| Field | Required / default | Meaning |
-| --- | --- | --- |
-| `id` | Required | Case-sensitive ID unique across checks/reviews in its source scope; 1–80 ASCII letters, digits, `-`, `_`; `please-` is reserved. |
-| `name` | Optional; `null` | Short display label; defaults to the original rule ID. 1–80 characters, no control characters or surrounding whitespace. |
-| `description` | Required | Nonblank explanation. |
-| `enabled` | Optional; `true` | False rules are validated but never executed or included in results. Plans list them under `disabled_rules`. |
-| `blocking` | Optional; `true` | Reviews only: FAIL and provider/review ERROR prevent success when true. A check must not declare it: checks are always blocking and a declaration is a configuration error. Parameter and missing-prompt errors are always fatal. |
-| `run_at` | Optional; `[]` | Own execution points; overridden by membership in Rule Sets. Enabled rules need an effective assignment. |
-| `parameters` | Optional; `{}` | Named parameter declarations; see below. |
-| `check` | Optional; `null` | Check implementation; required for a check rule and mutually exclusive with `review`. |
-| `review` | Optional; `null` | Review implementation; required for a review rule and mutually exclusive with `check`. |
-
-Names are display labels, not references: Rule Sets, parameters and providers
-continue to use IDs. Imported names default to their source-local ID. Duplicate
-names receive a short origin suffix and an occurrence number when necessary.
-Plans and reports save labels so status remains readable after configuration changes.
-Full technical IDs and import provenance are available in JSON and details.
+The binding [Rule Definition contract](../knowledge/contracts/configuration/rule.md)
+and its schema define shared fields, identity, labels, enabled state, enforcement
+and execution-point assignment. [Rule Parameters](../knowledge/contracts/configuration/parameters.md)
+defines declared inputs and their validation and delivery.
 
 Checks can declare top-level prerequisites independently of execution points:
 
@@ -165,30 +152,9 @@ description = "Allowed commit scopes"
 value = ".commit-scopes"
 ```
 
-| Field | Required / default | Meaning |
-| --- | --- | --- |
-| `parameters.<name>.type` | Required | `"string"` for an arbitrary string or `"file"` for an existing consumer file. |
-| `parameters.<name>.required` | Optional; `false` | Whether a value must be supplied before execution. |
-| `parameters.<name>.description` | Optional; `null` | Explanation for the consumer. |
-| `parameters.<name>.value` | Optional; `null` | Local value. Imported declarations must omit this field; the consumer supplies it per import. |
-
-Parameter names use ASCII letters, digits and underscores, starting with a letter and
-are case-sensitive. Values are strings without NUL; there are no default values.
-Omitted optional parameters remain absent; referencing one is an execution ERROR.
-
-A `file` value resolves from the consuming Git repository root: `.commit-scopes`
-and `conventions/commit-scopes.txt` both work. The target must be an existing
-regular file. Absolute paths, parent traversal and symlink components are rejected.
-Rule scripts, prompts and bundled assets still resolve inside the rule directory.
-
-A check passes a value on explicitly with `@param/<name>`: `@param/scopes_file`
-becomes the absolute path of the file, and strings stay unchanged. Reviews receive all
-their resolved values as `rule_parameters` in the adapter request. Every review is
-one adapter call with the same prepared context. Provider timeout applies per call.
-
-Missing required values, unsupported types, undeclared supplied names and invalid
-files produce **ERROR**, identifying the rule and parameter. Parameter errors block success even for a review with `blocking = false`. Disabled rules do not resolve parameter values or
-require their implementations to exist.
+The [Rule Parameters contract](../knowledge/contracts/configuration/parameters.md)
+and its schema define declaration fields, local and imported binding, resolution
+and delivery. This is separate from provider/review adapter settings.
 
 ### Add a check
 

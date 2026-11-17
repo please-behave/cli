@@ -41,3 +41,46 @@ contracts:
       - REQ-0327
       - REQ-0328
       - REQ-0329
+  - id: CON-0012
+    name: Rule Definition
+    document: rule.md
+    schema: rule.schema.json
+    requirements:
+      - REQ-0001
+      - REQ-0027
+      - REQ-0134
+      - REQ-0135
+      - REQ-0136
+      - REQ-0137
+      - REQ-0138
+      - REQ-0139
+      - REQ-0140
+      - REQ-0141
+      - REQ-0142
+      - REQ-0143
+      - REQ-0144
+      - REQ-0145
+      - REQ-0181
+      - REQ-0252
+      - REQ-0284
+      - REQ-0285
+      - REQ-0327
+      - REQ-0328
+  - id: CON-0013
+    name: Rule Parameters
+    document: parameters.md
+    schema: parameters.schema.json
+    requirements:
+      - REQ-0012
+      - REQ-0014
+      - REQ-0161
+      - REQ-0162
+      - REQ-0163
+      - REQ-0164
+      - REQ-0165
+      - REQ-0166
+      - REQ-0167
+      - REQ-0169
+      - REQ-0285
+      - REQ-0327
+      - REQ-0328

@@ -30,6 +30,21 @@ fn rows(text: &str) -> BTreeMap<String, String> {
         })
         .collect()
 }
+// Feed schema metadata into the existing required/default comparison with Serde.
+fn schema_rows(schema: &Value, prefix: &str) -> String {
+    let required = schema["required"].as_array().unwrap();
+    let mut text = String::from("| Field | Required / default |\n| --- | --- |\n");
+    for (name, declaration) in schema["properties"].as_object().unwrap() {
+        let marker = if required.iter().any(|key| key == name) {
+            "Required".to_owned()
+        } else {
+            format!("Optional; `{}`", declaration["default"])
+        };
+        text.push_str(&format!("| `{prefix}{name}` | {marker} |\n"));
+    }
+    text
+}
+
 fn field_paths(value: &Value, parent: Vec<String>, paths: &mut Vec<Vec<String>>) {
     for (key, child) in value.as_object().unwrap() {
         let mut path = parent.clone();
@@ -200,6 +215,15 @@ fn every_configuration_field_required_marker_and_default_is_documented() {
     // REQ-0327, REQ-0328: documented defaults, fields and required markers match the configuration types.
     let root = project();
     let p = config::load(root.path()).unwrap();
+    for rule in [
+        "checks/always-ok/rule.toml",
+        "checks/deliberately-failing/rule.toml",
+        "reviews/product-consistency/rule.toml",
+    ] {
+        support::assert_rule_contract(
+            &fs::read_to_string(root.path().join(".please").join(rule)).unwrap(),
+        );
+    }
     project_contract(&project_schema(), &p.config);
     contract(
         &please::external::Import {
@@ -222,6 +246,7 @@ fn every_configuration_field_required_marker_and_default_is_documented() {
         section(CONFIGURATION, "Import providers from Git"),
         "",
     );
+    // Enumerate both implementation tables for field/default comparison; raw documents are validated separately.
     let rule = config::RuleDefinition {
         id: "example".into(),
         depends_on: Some(vec![]),
@@ -253,7 +278,13 @@ fn every_configuration_field_required_marker_and_default_is_documented() {
     };
     let shared = format!(
         "{}\n{}\n{}",
-        section(CONFIGURATION, "Fields shared by checks and reviews"),
+        schema_rows(
+            &serde_json::from_str::<Value>(include_str!(
+                "../knowledge/contracts/configuration/rule.schema.json"
+            ))
+            .unwrap(),
+            ""
+        ),
         section(CONFIGURATION, "Add a check"),
         section(CONFIGURATION, "Add a review")
     );
@@ -265,7 +296,13 @@ fn every_configuration_field_required_marker_and_default_is_documented() {
             description: Some("Allowed scopes".into()),
             value: Some(toml::Value::String(".commit-scopes".into())),
         },
-        section(CONFIGURATION, "Rule parameters"),
+        &schema_rows(
+            &serde_json::from_str::<Value>(include_str!(
+                "../knowledge/contracts/configuration/parameters.schema.json"
+            ))
+            .unwrap()["$defs"]["declaration"],
+            "parameters.<name>.",
+        ),
         "parameters.<name>.",
     );
     let adapter: config::ProviderConfig = toml::from_str(block(
@@ -365,6 +402,125 @@ fn project_schema_and_loader_agree_on_types_bounds_and_unknown_fields() {
         assert_eq!(validator.is_valid(&json), valid, "schema: {text}");
         support::write(root.path(), ".please/config.toml", text);
         assert_eq!(config::load(root.path()).is_ok(), valid, "loader: {text}");
+    }
+}
+
+#[test]
+fn rule_schema_preserves_common_structure_and_implementation_exclusivity() {
+    let root = project();
+    for (text, schema_valid, loader_valid) in [
+        (
+            "id='contract'\ndescription='Check'\nrun_at=['check']\n[check]\ncommand='true'",
+            true,
+            true,
+        ),
+        (
+            "id='contract'\nname='A readable label'\ndescription='Check'\nenabled=false\n[check]\ncommand='true'",
+            true,
+            true,
+        ),
+        ("id='contract'\ndescription='Check'", false, false),
+        (
+            "id='contract'\ndescription='Check'\nenabled=false\n[check]",
+            false,
+            false,
+        ),
+        (
+            "id='contract'\ndescription='Check'\nrun_at=['check']\nblocking=true\n[check]\ncommand='true'",
+            false,
+            false,
+        ),
+        (
+            "id='contract'\ndescription='Check'\nrun_at=['check']\n[check]\ncommand='true'\n[review]\nprompt='absent.md'",
+            false,
+            false,
+        ),
+        (
+            "id='contract'\ndescription='Check'\nrun_at=['check']\nunknown=true\n[check]\ncommand='true'",
+            false,
+            false,
+        ),
+        (
+            "id='please-reserved'\ndescription='Check'\nrun_at=['check']\n[check]\ncommand='true'",
+            false,
+            false,
+        ),
+        (
+            "id='contract'\nname=' padded '\ndescription='Check'\nrun_at=['check']\n[check]\ncommand='true'",
+            false,
+            false,
+        ),
+        (
+            "id='contract'\ndescription='Check'\nrun_at=['check','check']\n[check]\ncommand='true'",
+            false,
+            false,
+        ),
+        // A known-point lookup needs the consuming configuration, beyond the structure schema.
+        (
+            "id='contract'\ndescription='Check'\nrun_at=['unknown']\n[check]\ncommand='true'",
+            true,
+            false,
+        ),
+    ] {
+        let parsed: toml::Value = toml::from_str(text).unwrap();
+        let value = serde_json::to_value(parsed).unwrap();
+        assert_eq!(
+            support::rule_contract_validator().is_valid(&value),
+            schema_valid,
+            "{text}"
+        );
+        support::write(root.path(), ".please/checks/contract/rule.toml", text);
+        assert_eq!(config::load(root.path()).is_ok(), loader_valid, "{text}");
+    }
+    fs::remove_dir_all(root.path().join(".please/checks/contract")).unwrap();
+    let text = "id='contract'\ndescription='Review'\nrun_at=['check']\ndepends_on=[]\n[review]\nprompt='absent.md'";
+    let value: toml::Value = toml::from_str(text).unwrap();
+    assert!(!support::rule_contract_validator().is_valid(&serde_json::to_value(value).unwrap()));
+    support::write(root.path(), ".please/reviews/contract/rule.toml", text);
+    assert!(config::load(root.path()).is_err());
+}
+
+#[test]
+fn parameter_schema_keeps_declaration_loading_and_resolution_separate() {
+    let root = project();
+    support::write(root.path(), "scopes.txt", "cli\n");
+    let mut active: Value = serde_json::from_str(include_str!(
+        "../knowledge/contracts/configuration/parameters.schema.json"
+    ))
+    .unwrap();
+    active["$ref"] = serde_json::json!("#/$defs/activeDeclarations");
+    let validator = jsonschema::validator_for(&active).unwrap();
+    for (declaration, valid) in [
+        ("[scope]\ntype='string'\nvalue='text with spaces'", true),
+        ("[scope]\ntype='file'\nvalue='scopes.txt'", true),
+        ("[scope]\ntype='string'", true),
+        ("[scope]\ntype='number'", false),
+        ("['bad-name']\ntype='string'", false),
+        ("[scope]\ntype='string'\nvalue=3", false),
+    ] {
+        let values: toml::Value = toml::from_str(declaration).unwrap();
+        assert_eq!(
+            validator.is_valid(&serde_json::to_value(values).unwrap()),
+            valid,
+            "{declaration}"
+        );
+        let rule = format!(
+            "id='contract'\ndescription='Parameters'\nrun_at=['check']\n[check]\ncommand='true'\n{}",
+            declaration.replace('[', "[parameters.")
+        );
+        support::assert_rule_contract(&rule);
+        support::write(root.path(), ".please/checks/contract/rule.toml", &rule);
+        let project = config::load(root.path()).unwrap();
+        let check = project
+            .checks
+            .iter()
+            .find(|rule| rule.id == "contract")
+            .unwrap();
+        assert_eq!(
+            check.parameters.resolve(&project.root, &check.id).is_ok(),
+            valid,
+            "{declaration}"
+        );
     }
 }
 

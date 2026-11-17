@@ -166,6 +166,9 @@ fn invalid_parameters_are_named_execution_errors() {
         let root = project();
         check(root.path(), "invalid", &["check"], "exit 0");
         parameters(root.path(), "invalid", &format!("\n{declarations}\n"));
+        support::assert_rule_contract(
+            &fs::read_to_string(root.path().join(".please/checks/invalid/rule.toml")).unwrap(),
+        );
         let report = run(root.path());
         assert_eq!(report.overall, Status::Error, "{declarations}");
         let item = &report.results[0];

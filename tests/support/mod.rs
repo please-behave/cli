@@ -179,3 +179,37 @@ pub fn assert_report_contract(value: &serde_json::Value) {
         .collect();
     assert!(errors.is_empty(), "{errors:#?}\n{value:#}");
 }
+
+/// Validate raw Rule TOML against its configuration schema without resolving inputs.
+pub fn rule_contract_validator() -> &'static jsonschema::Validator {
+    static VALIDATOR: std::sync::OnceLock<jsonschema::Validator> = std::sync::OnceLock::new();
+    VALIDATOR.get_or_init(|| {
+        let schema: serde_json::Value = serde_json::from_str(include_str!(
+            "../../knowledge/contracts/configuration/rule.schema.json"
+        ))
+        .unwrap();
+        let parameters: serde_json::Value = serde_json::from_str(include_str!(
+            "../../knowledge/contracts/configuration/parameters.schema.json"
+        ))
+        .unwrap();
+        let registry = jsonschema::Registry::new()
+            .add(parameters["$id"].as_str().unwrap(), parameters.clone())
+            .unwrap()
+            .prepare()
+            .unwrap();
+        jsonschema::options()
+            .with_registry(&registry)
+            .build(&schema)
+            .unwrap()
+    })
+}
+
+pub fn assert_rule_contract(text: &str) {
+    let parsed: toml::Value = toml::from_str(text).unwrap();
+    let value = serde_json::to_value(parsed).unwrap();
+    let errors: Vec<_> = rule_contract_validator()
+        .iter_errors(&value)
+        .map(|error| error.to_string())
+        .collect();
+    assert!(errors.is_empty(), "{errors:#?}\n{text}");
+}
