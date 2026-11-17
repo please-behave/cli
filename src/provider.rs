@@ -169,8 +169,8 @@ fn requirements(
     Ok(())
 }
 
-/// Requests retain version 1 until consumers accept version 0; no retry negotiation.
-const PROTOCOL_VERSION: u32 = 1;
+/// Experimental requests use version 0; compatible version 1 responses remain readable.
+const PROTOCOL_VERSION: u32 = 0;
 
 fn execute(request: &Request<'_>) -> Result<Response> {
     let config = request.provider_config()?;

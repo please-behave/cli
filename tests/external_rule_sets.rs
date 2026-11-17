@@ -212,7 +212,7 @@ fn resolution_state_accepts_zero_and_one_without_refresh_or_fallback() {
     f.imports(&[("repository", "main")]);
     f.load(true).unwrap();
     let original: serde_json::Value = serde_json::from_slice(&f.state()).unwrap();
-    assert_eq!(original["version"], 1);
+    assert_eq!(original["version"], 0);
     let path = f.root.join(".git/please/external-rule-sets.json");
     for version in [0, 1] {
         let mut state = original.clone();
@@ -726,7 +726,7 @@ fn cli_refresh_cached_plan_and_offline_hook_keep_existing_lifecycle() {
     let plan = cli(&f, &["run", "--at", "pre-commit", "--plan", "--json"]);
     assert_eq!(plan.status.code(), Some(2));
     let diagnostic: serde_json::Value = serde_json::from_slice(&plan.stdout).unwrap();
-    assert_eq!(diagnostic["plan_schema_version"], 1);
+    assert_eq!(diagnostic["plan_schema_version"], 0);
     assert_eq!(diagnostic["status"], "blocked");
     assert!(
         !diagnostic["blocking_reasons"]

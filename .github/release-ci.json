@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 0,
   "repository": "please-behave/cli",
   "workflow": ".github/workflows/ci.yml",
   "event": "push",

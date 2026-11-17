@@ -179,6 +179,8 @@ fn find<'a>(entries: &'a Value, path: &str) -> &'a Value {
 fn schema_is_strict_and_requires_the_stable_sections() {
     let root = project("");
     let (_, context) = run_check(root.path());
+    // REQ-0332: newly produced contexts identify the experimental contract as version zero.
+    assert_eq!(context["schema_version"], 0);
     for mutation in [
         |value: &mut Value| {
             value.as_object_mut().unwrap().remove("run_id");

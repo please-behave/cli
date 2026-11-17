@@ -241,5 +241,4 @@ pinned implementation as workflow tooling, outside Please Behave.
 The local `.github/scripts/release-guard.mjs` verifies source and version before tagging.
 
 Release policy and candidate-evidence readers accept schema versions `0` and `1`.
-Policies and newly recorded evidence continue to use `1` during the reader-first
-transition. Version compatibility does not relax source, run, attempt or hash checks.
+Policies and newly recorded evidence use experimental schema version `0`. Version compatibility does not relax source, run, attempt or hash checks.

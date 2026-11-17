@@ -101,7 +101,7 @@ def identity(policy, env, head):
     run, attempt = env.get("GITHUB_RUN_ID", ""), env.get("GITHUB_RUN_ATTEMPT", "")
     require(re.fullmatch(r"[1-9][0-9]*", run) and re.fullmatch(r"[1-9][0-9]*", attempt), "Invalid run or attempt")
     return dict(
-        schema_version=1,
+        schema_version=0,
         repository=policy["repository"],
         workflow=policy["workflow"],
         source_sha=head,

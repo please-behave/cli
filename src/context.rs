@@ -13,7 +13,7 @@ use std::{
     time::Duration,
 };
 
-pub const SCHEMA_VERSION: u32 = 1;
+pub const SCHEMA_VERSION: u32 = 0;
 const TIMEOUT: Duration = Duration::from_secs(30);
 static COUNTER: AtomicU64 = AtomicU64::new(0);
 

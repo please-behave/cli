@@ -75,6 +75,7 @@ class ReleaseContractTests(unittest.TestCase):
         data = json.loads(Path("release-evidence/linux.json").read_text())
         self.assertEqual(data["artifacts"], {"app-1.2.3": mod.digest(Path("dist/app-1.2.3"))})
         self.assertEqual(data["run_attempt"], "2")
+        self.assertEqual(data["schema_version"], 0)
 
     def test_workflow_verification_runs_directly_without_governor_context(self):
         with (

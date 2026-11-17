@@ -42,7 +42,7 @@ Local scheduling history, concurrency limits and fail-fast termination settings 
 identity. Resource declarations and canonical dependency IDs participate in check identity. No check, adapter
 request, network access or reconciliation occurs during preview.
 Incomplete snapshots or context preparation block execution. Preview does not
-certify a later source state. Reports and plans use schema 1. Blocking metadata distinguishes
+certify a later source state. Reports and plans use experimental schema version 0. Blocking metadata distinguishes
 advisory review FAIL/ERROR from blocking failures and check/integrity errors; disabled Rules are listed separately.
 
 The changed files of a review follow the execution point: staged changes at
@@ -57,7 +57,7 @@ no changed files. See
 [trigger configuration and limits](configuration.md#add-a-review).
 
 Every JSON preview includes `plan_schema_version`, `status` and `blocking_reasons`.
-Configuration and selection errors use schema 1, `status: "blocked"` and nonempty
+Configuration and selection errors use schema 0, `status: "blocked"` and nonempty
 `blocking_reasons`, with exit code 2. They omit unavailable plan metadata instead
 of inventing input or selection details. A prepared plan blocked by an incomplete
 snapshot retains its full metadata. Consumers can read the common diagnostic

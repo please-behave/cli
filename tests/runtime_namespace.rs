@@ -106,7 +106,7 @@ fn library_phases_and_saved_integrity_results_use_product_namespace() {
         &mut |_| {},
     )
     .unwrap();
-    assert_eq!(report.schema_version, 1);
+    assert_eq!(report.schema_version, 0);
     assert_eq!(report.overall, Status::Error);
     assert!(
         report

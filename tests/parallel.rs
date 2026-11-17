@@ -158,8 +158,8 @@ fn independent_processes_overlap_and_captures_remain_attributed() {
         );
     }
     let saved = report::read(root.path()).unwrap();
-    assert_eq!(saved.schema_version, 1);
-    assert_eq!(saved.plan.plan_schema_version, 1);
+    assert_eq!(saved.schema_version, 0);
+    assert_eq!(saved.plan.plan_schema_version, 0);
     assert!(please::terminal::render_details(&saved, false).contains("b stderr"));
     // A CLI override wins over a configured serial limit, and leaves it untouched.
     let config_path = root.path().join(".please/config.toml");

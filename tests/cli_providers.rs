@@ -61,7 +61,7 @@ assert not [name for name in os.environ if name.startswith('PLEASE_')]
 if mode == 'unread':
     time.sleep(30)
 request = json.load(sys.stdin)
-assert request['protocol_version'] == 1
+assert request['protocol_version'] == 0
 assert request['execution_point'] == 'check' and os.path.isfile(request['context_file'])
 prompt = request['prompt']
 assert 'Unique review instructions' in prompt
@@ -85,7 +85,7 @@ if mode == 'oversized':
     print('x' * 70000)
     sys.exit(0)
 findings = [{'message':'Evidence inspected','path':'evidence','line':1}]
-print(json.dumps({'protocol_version':1,'reason':'Evidence inspected','findings':findings}))
+print(json.dumps({'protocol_version':request['protocol_version'],'reason':'Evidence inspected','findings':findings}))
 sys.exit(1 if mode == 'fail' else 3 if mode == 'structured-error' else 0)
 "#,
     );
@@ -458,7 +458,7 @@ fn structured_parameters_merge_per_review_without_changing_provider_definition()
         "tool.py",
         r#"import json, sys
 request = json.load(sys.stdin)
-assert request['protocol_version'] == 1
+assert request['protocol_version'] == 0
 assert request['execution_point'] == 'check'
 assert request['input']['files']
 assert len(request['reviews']) == 1

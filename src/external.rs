@@ -343,7 +343,7 @@ pub(crate) fn load_with_changes(
         "unsupported external resolution state; run please sync"
     );
     let mut next = State {
-        version: 1,
+        version: 0,
         resolutions: BTreeMap::new(),
     };
     let mut resolved: BTreeMap<(String, String), String> = BTreeMap::new();

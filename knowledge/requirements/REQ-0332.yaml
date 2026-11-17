@@ -1,0 +1,11 @@
+id: REQ-0332
+name: Experimental Formats Use Version Zero
+area: configuration
+description: >-
+  When Please emits a versioned format whose API contract has not been
+  explicitly declared stable, it must identify that format with version 0.
+rationale: >-
+  The declared version must make the absence of a compatibility promise
+  visible to consumers.
+decisions:
+  - DEC-0026

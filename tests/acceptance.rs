@@ -151,7 +151,7 @@ fn json_plan_errors_use_current_schema_and_blocking_reasons() {
         let output = cli(d.path(), args);
         assert_eq!(output.status.code(), Some(code));
         let document: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
-        assert_eq!(document["plan_schema_version"], 1);
+        assert_eq!(document["plan_schema_version"], 0);
         assert_eq!(
             document["status"],
             if code == 0 { "planned" } else { "blocked" }
@@ -837,6 +837,9 @@ fn no_report_corrupt_report_schema_and_no_color() {
     assert_eq!(cli(d.path(), &["status"]).status.code(), Some(2));
     let r = please::verify(d.path(), &Never).unwrap();
     let mut value = serde_json::to_value(r).unwrap();
+    // REQ-0332: the new report and its embedded plan both use version zero.
+    assert_eq!(value["schema_version"], 0);
+    assert_eq!(value["plan"]["plan_schema_version"], 0);
     // REQ-0331: both labels use the full report validation, without rewriting stored data.
     for report_version in [0, 1] {
         for plan_version in [0, 1] {

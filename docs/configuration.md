@@ -785,7 +785,7 @@ using them without deleting the shared cache.
 Each run writes one JSON document that describes the Git state the rules judge, so rules need
 not call Git themselves. A check receives its absolute path as the `@context` argument and
 an adapter as `context_file` in its request; never hardcode the location. The format is specified by the
-[JSON Schema](schemas/context.schema.json) (`schema_version` 1); API versions are independent of the CLI release version (DEC-0026). The files live in the worktree-local Git
+[JSON Schema](schemas/context.schema.json) (`schema_version` 0); API versions are independent of the CLI release version (DEC-0026). The files live in the worktree-local Git
 directory (`please/context/<run-id>/`), are readable by the owner only, and are not part of the
 working tree or the snapshot. Rules must treat the context as read-only. File contents are never
 included: a rule reads files from disk and uses the context to confirm that they are clean.
@@ -825,11 +825,11 @@ exceeded limits make the snapshot incomplete and prevent PASS.
 
 ### Reports and other files
 
-Reports and plans are still written with schema 1; report readers accept report
-and embedded plan versions 0 and 1 with identical validation during the transition.
-The run-context schema likewise accepts versions 0 and 1; new contexts still use 1.
-Schema numbers describe
-machine-readable results, not configuration variants. Results record blocking,
+Reports and plans are written with experimental schema version 0. Report readers
+accept report and embedded plan versions 0 and 1 with identical validation during
+the transition.
+The run-context schema likewise accepts versions 0 and 1; new contexts use 0.
+Schema numbers describe machine-readable results, not configuration variants. Results record blocking,
 status, evidence, durations and captured output. ERROR always takes precedence;
 blocking FAIL follows; fail-fast skips and cancellations prevent success. Dependency
 skips inherit the originating outcome. Disabled rules
