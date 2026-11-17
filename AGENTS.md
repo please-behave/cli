@@ -79,12 +79,16 @@ two separately agreed stages with a release boundary:
   providers. No live reviews, network services or paid APIs. Dependency
   downloads require explicitly authorized preparation. Keep dependencies
   lean and `Cargo.lock` current.
+- Keep product tests in `tests/*.rs` and tooling tests beside their scripts.
+  Rust tests launch processes through `support::command` to isolate the harness
+  environment. Tests must not change developer or global Git configuration.
 
 ## Git and completion
 
 - Work on `main`. Automatically commit and push each coherent change,
-  including documentation, within the agreed stages. Follow
-  `CONTRIBUTING.md` and `docs/releasing.md`.
+  including documentation, within the agreed stages. Follow `docs/releasing.md`.
+- Use Conventional Commits with a specific English imperative summary and
+  optional scopes from `.please/commit-scopes.txt`.
 - Stage only task-related files and preserve unrelated edits. Never
   force-push or rewrite another person's work. Amend only your own
   unpublished commits when appropriate.
