@@ -7,6 +7,7 @@ one compatibility version; separate documents do not imply separate versions.
 | API | Contracts |
 | --- | --- |
 | [Adapter Protocol](adapter/api.yaml) | [Invocation](adapter/invocation.md), [request](adapter/request.md), [response](adapter/response.md) |
+| [Run Context](run-context/api.yaml) | [Delivery and lifetime](run-context/delivery.md), [document and patches](run-context/document.md) |
 
 ## Representation
 
@@ -43,5 +44,5 @@ are handled. Recording metadata does not introduce a new wire or configuration f
 
 The `knowledge` check validates index structure, unique IDs, requirement references
 and document/schema paths. Contract tests check structural schemas against actual
-requests and responses. Semantic validation, byte limits and evidence checks
+requests, responses and run-context documents. Semantic validation, byte limits and evidence checks
 remain explicit obligations even when a structural schema cannot express them.

@@ -16,8 +16,10 @@ const ZERO: &str = "0000000000000000000000000000000000000000";
 fn validator() -> &'static jsonschema::Validator {
     static VALIDATOR: OnceLock<jsonschema::Validator> = OnceLock::new();
     VALIDATOR.get_or_init(|| {
-        let schema: Value =
-            serde_json::from_str(include_str!("../docs/schemas/context.schema.json")).unwrap();
+        let schema: Value = serde_json::from_str(include_str!(
+            "../knowledge/contracts/run-context/context.schema.json"
+        ))
+        .unwrap();
         jsonschema::validator_for(&schema).unwrap()
     })
 }

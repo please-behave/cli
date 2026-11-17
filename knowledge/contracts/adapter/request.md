@@ -35,7 +35,9 @@ one-based line numbers; an empty message has no lines. It is absent at other
 points. The prompt determines which parts matter. There is no message-file
 argument in the adapter invocation or top-level request.
 
-`context_file` is the absolute native path to this run's read-only Git context.
+`context_file` is the absolute native path to this run's read-only
+[Git context](../run-context/document.md), with
+[delivery and lifetime](../run-context/delivery.md) defined by the Run Context API.
 It is a separate document, not the snapshot or the adapter request itself.
 `prompt` contains the common review instructions, criteria and prepared evidence.
 An adapter may use it directly or construct its own provider input while preserving

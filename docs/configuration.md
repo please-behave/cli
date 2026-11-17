@@ -782,35 +782,18 @@ using them without deleting the shared cache.
 
 ### Run context
 
-Each run writes one JSON document that describes the Git state the rules judge, so rules need
-not call Git themselves. A check receives its absolute path as the `@context` argument and
-an adapter as `context_file` in its request; never hardcode the location. The format is specified by the
-[JSON Schema](schemas/context.schema.json) (`schema_version` 0); API versions are independent of the CLI release version (DEC-0026). The files live in the worktree-local Git
-directory (`please/context/<run-id>/`), are readable by the owner only, and are not part of the
-working tree or the snapshot. Rules must treat the context as read-only. File contents are never
-included: a rule reads files from disk and uses the context to confirm that they are clean.
+Each executed run supplies Git facts to checks through the `@context` argument
+and to adapters through `context_file` in the request. Use that supplied absolute
+path and treat the context and its patch files as read-only.
 
-| Section | Present | Content |
-| --- | --- | --- |
-| `repository` | Always | Git directory, common directory, `linked_worktree` and `shallow`. |
-| `head` | Always | `commit` (null in an unborn repository), `branch` (null when detached) and the HEAD `message`. |
-| `workspace` | Always | `clean`, and `staged`, `unstaged`, `untracked` and `conflicted` paths with their status and, for renames, `old_path`. `staged_patch` (index against HEAD) and `unstaged_patch` (working tree against index) point to patch files. |
-| `commit_message` | `commit-msg` | Message file and text. The message does not exist at `pre-commit`. |
-| `push` | `pre-push` | The remote name and one update per pushed reference: `kind` (`create`, `update` or `delete`), `is_head` (the pushed tip is the checked-out HEAD), the new `commits`, `changed_files` and a `patch` file. |
-| `changes` | `PLEASE_CHANGE_BASE` names an available commit | The resolved base commit and the net changed files and patch from that commit to the working tree, including untracked files. |
+The [Run Context API](../knowledge/contracts/run-context/api.yaml) defines
+[delivery and lifetime](../knowledge/contracts/run-context/delivery.md) and the
+[document and patches](../knowledge/contracts/run-context/document.md), including
+their structural schema. Inspect its truncation indicators before relying on
+complete evidence; obtain missing facts from Git or fail the rule.
+Configure retention and section limits through the `context` settings above.
 
-`workspace.clean` is true only when nothing is staged, modified, untracked or conflicted;
-ignored files do not count. A path listed both as staged and unstaged is partially staged, so
-the file on disk differs from what a commit records. For a push, `clean` together with `is_head`
-tells a rule that the working tree equals what is being pushed. For a new reference, the commits
-are those not yet reachable from the remote's tracking references. When the remote tip is
-unknown locally, `range_available` is false and the rule must use Git itself.
-
-Patch objects have `file` (a name relative to the context directory, or null when there is no
-change), `bytes` and `truncated`. Paths that are not valid UTF-8 are counted in
-`unrepresentable_paths` instead of being listed. A section above `context.max_section_bytes`
-is flagged `truncated`; a patch above it is left out (`file` is null) and a list is counted in
-`omitted_*`. A rule then fails or reads the data from Git. Pre-push reads the reference list from standard input, so commands placed after
+Pre-push reads the reference list from standard input, so commands placed after
 the managed section of a composed hook do not receive it.
 
 ### Input snapshot
@@ -828,7 +811,6 @@ exceeded limits make the snapshot incomplete and prevent PASS.
 Reports and plans are written with experimental schema version 0. Report readers
 accept report and embedded plan versions 0 and 1 with identical validation during
 the transition.
-The run-context schema likewise accepts versions 0 and 1; new contexts use 0.
 Schema numbers describe machine-readable results, not configuration variants. Results record blocking,
 status, evidence, durations and captured output. ERROR always takes precedence;
 blocking FAIL follows; fail-fast skips and cancellations prevent success. Dependency

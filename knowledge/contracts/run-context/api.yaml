@@ -1,0 +1,32 @@
+id: API-0002
+name: Run Context
+version: 0
+contracts:
+  - id: CON-0004
+    name: Run Context Delivery and Lifetime
+    document: delivery.md
+    requirements:
+      - REQ-0012
+      - REQ-0020
+      - REQ-0233
+      - REQ-0241
+      - REQ-0242
+      - REQ-0247
+      - REQ-0248
+      - REQ-0249
+      - REQ-0250
+  - id: CON-0005
+    name: Run Context Document and Patches
+    document: document.md
+    schema: context.schema.json
+    requirements:
+      - REQ-0241
+      - REQ-0243
+      - REQ-0244
+      - REQ-0245
+      - REQ-0246
+      - REQ-0251
+      - REQ-0324
+      - REQ-0325
+      - REQ-0331
+      - REQ-0332
