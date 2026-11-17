@@ -499,6 +499,7 @@ else: print(json.dumps(response))
         );
         review(root.path(), "a", "first", "check");
         let result = execute(root.path());
+        support::assert_report_contract(&serde_json::to_value(&result).unwrap());
         assert_eq!(
             result.overall,
             if matches!(

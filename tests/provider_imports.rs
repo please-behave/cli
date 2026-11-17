@@ -174,6 +174,7 @@ fn separate_provider_and_ruleset_repositories_run_offline() {
     fs::rename(&f.rules, f.rules.with_extension("offline")).unwrap();
     fs::rename(&f.providers, f.providers.with_extension("offline")).unwrap();
     let report = f.execute(f.load(false).unwrap());
+    support::assert_report_contract(&serde_json::to_value(&report).unwrap());
     assert_eq!(report.overall, Status::Pass, "{:?}", report.results);
     assert_eq!(report.plan.plan_id, plan.plan_id);
     assert!(f.consumer.join(".git/provider-called").is_file());

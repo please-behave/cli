@@ -798,31 +798,20 @@ the managed section of a composed hook do not receive it.
 
 ### Input snapshot
 
-A snapshot records Git HEAD plus the hash, size and executable flag of tracked
-and nonignored untracked files, and of declared governance inputs even if they
-are ignored. Ignored files that no rule references, `.git` and `.please/reports`
-are excluded; script dependencies are not inferred. Limits: 8 MiB per file,
-128 MiB total, 100,000 paths, Git path-list output capped at 128 MiB and
-`.please` nesting limited to 16 levels. Unsupported symlinks, submodules, paths or
-exceeded limits make the snapshot incomplete and prevent PASS.
+A saved report identifies the evaluated working files, including declared local
+governance inputs even when ignored. Files that cannot be covered completely
+prevent PASS. See the binding [Snapshot and Freshness contract](../knowledge/contracts/report/snapshot.md)
+and its schema for coverage, exclusions and limits. Script dependencies are not
+inferred; declare the inputs your Rules rely on.
 
 ### Reports and other files
 
-Reports and [plans](../knowledge/contracts/plan/api.yaml) are written with experimental schema version 0. Report readers
-accept report and embedded plan versions 0 and 1 with identical validation during
-the transition.
-Schema numbers describe machine-readable results, not configuration variants. Results record blocking,
-status, evidence, durations and captured output. ERROR always takes precedence;
-blocking FAIL follows; fail-fast skips and cancellations prevent success. Dependency
-skips inherit the originating outcome. Disabled rules
-are listed in plans and stay out of results. JSON records FAIL even when the
-overall outcome is PASS because that review is non-blocking.
+Runs save local evidence in `.please/reports/last.json`. Use `please status` to
+compare the saved input with your current files, and `please status --details`
+to inspect results, findings and captured output. Keep reports and credentials
+local, and avoid printing secrets: captured output is not automatically redacted.
 
-Results that Please generates itself use the reserved IDs `please-plan`, `please-snapshot`,
-`please-tree-stability` and `please-commit-message-stability`.
-
-`reports/last.json` is replaced atomically after a run. Invalid configuration
-preserves a previous report. Keep reports and credentials local. Stdout/stderr
-retain the first 64 KiB each with full byte totals/truncation indicators; output
-is not automatically redacted. `--details` displays retained output and findings.
-Status compares the saved working-tree snapshot without executing rules again.
+The [Verification Report API](../knowledge/contracts/report/api.yaml) defines the
+[document and lifecycle](../knowledge/contracts/report/document.md), including
+versions, statuses, enforcement, output, usage and reader validation. Its schema
+references the independent [Execution Plan API](../knowledge/contracts/plan/api.yaml).

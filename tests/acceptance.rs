@@ -599,6 +599,7 @@ fn default_run_passes_omits_disabled_and_roundtrips_report() {
     assert_eq!(r.overall, Status::Pass);
     assert_eq!(r.results.len(), 1);
     assert_eq!(r.results[0].id, "always-ok");
+    support::assert_report_contract(&serde_json::to_value(&r).unwrap());
     let decoded = report::read(d.path()).unwrap();
     assert_eq!(decoded.snapshot.fingerprint, r.snapshot.fingerprint);
     assert!(!terminal::render(&r, false).contains('\x1b'));
@@ -610,6 +611,112 @@ fn default_run_passes_omits_disabled_and_roundtrips_report() {
     );
     assert_eq!(cli(d.path(), &["status"]).status.code(), Some(0));
 }
+#[test]
+fn omitted_review_reports_roundtrip_for_staged_and_explicit_base_points() {
+    // REQ-0178, REQ-0259, REQ-0260: both valid omission reasons remain readable.
+    for point in ["pre-commit", "check"] {
+        for (trigger, reason) in [
+            ("", "no_changes"),
+            (
+                "[review.trigger]\nchanged_files = ['docs/**']\n",
+                "trigger_not_matched",
+            ),
+        ] {
+            let d = project();
+            support::write(
+                d.path(),
+                ".please/reviews/unchanged/rule.toml",
+                &format!(
+                    "id = 'unchanged'\ndescription = 'Review unchanged input'\nrun_at = ['{point}']\n[review]\nprompt = 'prompt.md'\n{trigger}"
+                ),
+            );
+            support::write(
+                d.path(),
+                ".please/reviews/unchanged/prompt.md",
+                "Inspect the input.",
+            );
+            support::commit_all(d.path());
+            assert!(cli(d.path(), &["sync", "--yes"]).status.success());
+            let run = support::command(env!("CARGO_BIN_EXE_please"))
+                .current_dir(d.path())
+                .env("PLEASE_CHANGE_BASE", "HEAD")
+                .args(["run", "--at", point])
+                .output()
+                .unwrap();
+            assert_eq!(
+                run.status.code(),
+                Some(0),
+                "{}",
+                String::from_utf8_lossy(&run.stderr)
+            );
+            let document: serde_json::Value =
+                serde_json::from_slice(&fs::read(path(d.path(), "reports/last.json")).unwrap())
+                    .unwrap();
+            support::assert_report_contract(&document);
+            assert_eq!(document["plan"]["omitted"][0]["reason"], reason);
+            assert!(report::read(d.path()).is_ok(), "{point}: {reason}");
+            let status = cli(d.path(), &["status"]);
+            assert_eq!(
+                status.status.code(),
+                Some(0),
+                "{}",
+                String::from_utf8_lossy(&status.stderr)
+            );
+            assert!(String::from_utf8_lossy(&status.stdout).contains("CURRENT"));
+
+            let mut invalid = document.clone();
+            invalid["plan"]["omitted"][0]["reason"] = serde_json::json!("unknown_reason");
+            fs::write(path(d.path(), "reports/last.json"), invalid.to_string()).unwrap();
+            assert!(report::read(d.path()).is_err());
+            if point == "check" {
+                let mut missing_base = document.clone();
+                missing_base["plan"]
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("change_base");
+                fs::write(
+                    path(d.path(), "reports/last.json"),
+                    missing_base.to_string(),
+                )
+                .unwrap();
+                assert!(report::read(d.path()).is_err());
+            }
+        }
+    }
+}
+
+#[test]
+fn report_schema_rejects_malformed_snapshot_results_and_embedded_plan() {
+    let d = project();
+    let report = please::verify(d.path(), &Never).unwrap();
+    let document = serde_json::to_value(&report).unwrap();
+    support::assert_report_contract(&document);
+    let validator = support::report_contract_validator();
+    for (pointer, value) in [
+        ("/schema_version", serde_json::json!(2)),
+        ("/schema_version", serde_json::json!("0")),
+        ("/overall", serde_json::json!("NOT_RUN")),
+        ("/snapshot/complete", serde_json::json!("true")),
+        ("/snapshot/files", serde_json::json!([])),
+        ("/results/0/status", serde_json::json!("unknown")),
+        ("/results/0/duration_ms", serde_json::json!(-1)),
+        ("/plan/plan_schema_version", serde_json::json!(2)),
+    ] {
+        let mut invalid = document.clone();
+        *invalid.pointer_mut(pointer).unwrap() = value;
+        assert!(!validator.is_valid(&invalid), "accepted {pointer}");
+    }
+    let mut invalid = document.clone();
+    invalid["snapshot"]["unexpected"] = serde_json::json!(true);
+    assert!(!validator.is_valid(&invalid));
+    let mut invalid = document.clone();
+    invalid["plan"] = serde_json::json!({"plan_schema_version":0,"status":"blocked","blocking_reasons":["unavailable"]});
+    assert!(
+        !validator.is_valid(&invalid),
+        "diagnostic preview is not a saved prepared plan"
+    );
+}
+
 #[test]
 fn failing_check_runs_remaining_and_blocks_provider() {
     let d = project();
@@ -628,6 +735,7 @@ fn failing_check_runs_remaining_and_blocks_provider() {
     );
     synchronize(d.path());
     let r = please::verify(d.path(), &Never).unwrap();
+    support::assert_report_contract(&serde_json::to_value(&r).unwrap());
     assert_eq!(r.overall, Status::Fail);
     assert_eq!(r.overall.exit_code(), 1);
     assert_eq!(r.results[0].status, Status::Fail);
@@ -951,6 +1059,7 @@ fn no_report_corrupt_report_schema_and_no_color() {
             compatible["schema_version"] = serde_json::json!(report_version);
             compatible["plan"]["plan_schema_version"] = serde_json::json!(plan_version);
             fs::write(path(d.path(), "reports/last.json"), compatible.to_string()).unwrap();
+            support::assert_report_contract(&compatible);
             let saved = report::read(d.path()).unwrap();
             assert_eq!(saved.schema_version, report_version);
             assert_eq!(saved.plan.plan_schema_version, plan_version);
@@ -991,6 +1100,7 @@ fn huge_file_gives_unknown_and_blocks_verification() {
     f.set_len(8 * 1024 * 1024 + 1).unwrap();
     let r = please::verify(d.path(), &Never).unwrap();
     assert_eq!(r.overall, Status::Error);
+    support::assert_report_contract(&serde_json::to_value(&r).unwrap());
     let changes = git_snapshot::compare(&r.snapshot, &git_snapshot::capture(d.path()).unwrap(), 5);
     assert_eq!(changes.state, "UNKNOWN");
     assert_eq!(changes.total_files, None);

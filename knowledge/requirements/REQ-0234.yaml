@@ -4,7 +4,7 @@ area: integrity
 description: >-
   Input that cannot be covered completely, such as unsupported symlinks,
   submodules, special or non-UTF-8 paths, unreadable files and input beyond
-  the snapshot bounds of the configuration reference, must make the snapshot incomplete and must never
+  the snapshot bounds, must make the snapshot incomplete and must never
   be skipped silently.
 rationale: >-
   A snapshot with hidden gaps would let a result claim to have judged files it

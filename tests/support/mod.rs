@@ -147,3 +147,35 @@ pub fn assert_plan_contract(value: &serde_json::Value) {
         .collect();
     assert!(errors.is_empty(), "{errors:#?}\n{value:#}");
 }
+
+/// Resolve the embedded Plan schema from bundled source; validation stays offline.
+pub fn report_contract_validator() -> &'static jsonschema::Validator {
+    static VALIDATOR: std::sync::OnceLock<jsonschema::Validator> = std::sync::OnceLock::new();
+    VALIDATOR.get_or_init(|| {
+        let plan: serde_json::Value = serde_json::from_str(include_str!(
+            "../../knowledge/contracts/plan/plan.schema.json"
+        ))
+        .unwrap();
+        let schema: serde_json::Value = serde_json::from_str(include_str!(
+            "../../knowledge/contracts/report/report.schema.json"
+        ))
+        .unwrap();
+        let registry = jsonschema::Registry::new()
+            .add(plan["$id"].as_str().unwrap(), plan.clone())
+            .unwrap()
+            .prepare()
+            .unwrap();
+        jsonschema::options()
+            .with_registry(&registry)
+            .build(&schema)
+            .unwrap()
+    })
+}
+
+pub fn assert_report_contract(value: &serde_json::Value) {
+    let errors: Vec<_> = report_contract_validator()
+        .iter_errors(value)
+        .map(|error| error.to_string())
+        .collect();
+    assert!(errors.is_empty(), "{errors:#?}\n{value:#}");
+}

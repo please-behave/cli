@@ -38,13 +38,10 @@ See [usage and recovery](usage.md#optional-git-hook).
 
 ## Snapshots
 
-A snapshot is Git HEAD plus a sorted manifest of hashes, sizes and executable flags
-for tracked and nonignored untracked files, plus declared governance inputs even when
-ignored (INP-001). Discovery is read-only and uses no temporary commits, index writes
-or optional Git locks. Only hashes are stored, so line deltas are unavailable by
-design. Snapshots are not filesystem transactions: they are captured before and after
-execution and before provider calls, and changes between captures block PASS.
-Incomplete coverage always takes precedence over known differences.
+The [Snapshot and Freshness contract](../knowledge/contracts/report/snapshot.md)
+defines covered inputs, completeness, stability and comparison. The implementation
+captures manifests before and after execution and compares their file states;
+snapshots are not filesystem transactions.
 
 ## Execution and reporting
 
@@ -53,9 +50,9 @@ using the bounded process runner without an implicit shell. The runner drains bo
 the first bytes of each stream with full totals, runs POSIX processes in separate groups
 and kills descendants on timeout or fail-fast. It is not a hostile-process sandbox.
 
-Reports are written to a temporary file and renamed atomically over `last.json`. They are
-unsigned local evidence. Provider review durations are those of their own call; missing
-token counters stay unavailable and are never estimated.
+Report persistence, result semantics and usage follow the
+[Report Document and Lifecycle contract](../knowledge/contracts/report/document.md).
+The writer uses a temporary file and atomic rename for `last.json`.
 
 ## Providers
 
