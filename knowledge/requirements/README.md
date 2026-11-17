@@ -7,10 +7,10 @@ areas; this document explains why the artifact exists and how to keep it true.
 ## Why requirements exist
 
 Requirements are the contract between what the product is meant to be and what
-is built. Components say where things live, decisions say why a significant
-choice was made, but only requirements say what must hold. Everything else is
-measured against them: an implementation that violates a requirement is wrong,
-and a requirement that nothing verifies is a claim.
+is built. Components say where things live and decisions say why a significant
+choice was made. Requirements state the product promises;
+[API contracts](../contracts/README.md) specify exact interfaces. Implementation
+is measured against both. A requirement that nothing verifies is a claim.
 
 They are written for the person who owns the product as much as for agents. The
 owner reads requirements in plain product language and does not need to read

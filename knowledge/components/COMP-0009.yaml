@@ -39,6 +39,7 @@ files:
   - src/review_input.rs
   - src/review_context.rs
   - src/review_contract.rs
+  - knowledge/contracts/adapter/response.schema.json
 depends_on:
   - COMP-0003
   - COMP-0006

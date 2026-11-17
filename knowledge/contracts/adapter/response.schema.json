@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Adapter response",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version",
+    "reason",
+    "findings"
+  ],
+  "properties": {
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120,
+      "pattern": "^[^\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029]*[^\\s\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029][^\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029]*$",
+      "description": "One short summary line; detailed evidence belongs in findings"
+    },
+    "explanation": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 8000,
+      "pattern": "\\S",
+      "description": "Optional longer explanation of at most 8000 UTF-8 bytes"
+    },
+    "findings": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "message",
+          "path",
+          "line"
+        ],
+        "properties": {
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "pattern": "\\S",
+            "description": "At most 2000 UTF-8 bytes; keep evidence concise"
+          },
+          "path": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "line": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 4294967295
+          }
+        }
+      }
+    },
+    "protocol_version": {
+      "type": "integer",
+      "enum": [
+        0,
+        1
+      ]
+    },
+    "usage": {
+      "description": "Optional telemetry of any JSON type. Unrecognized, invalid or absent counters are unavailable and never change the verdict."
+    }
+  }
+}

@@ -12,6 +12,7 @@ from pathlib import Path
 SCRIPT = Path(__file__).resolve().with_name("check.py")
 SCHEMA = SCRIPT.parents[3] / "knowledge/components/schema.json"
 REQUIREMENT_SCHEMA = SCRIPT.parents[3] / "knowledge/requirements/schema.json"
+API_SCHEMA = SCRIPT.parents[3] / "knowledge/contracts/schema.json"
 DECISION_SCHEMA = SCRIPT.parents[3] / "knowledge/decisions/schema.json"
 spec = importlib.util.spec_from_file_location("knowledge_check", SCRIPT)
 check = importlib.util.module_from_spec(spec)
@@ -124,6 +125,76 @@ class RepositoryTests(unittest.TestCase):
             "rationale": "A reason.",
         } | changes
         (requirements / f"{value['id']}.yaml").write_text(json.dumps(value))
+
+    def write_api(self, folder="adapter", **changes):
+        self.write_requirement()
+        directory = self.root / "knowledge/contracts"
+        directory.mkdir(exist_ok=True)
+        shutil.copy(API_SCHEMA, directory / "schema.json")
+        directory = directory / folder
+        directory.mkdir(exist_ok=True)
+        (directory / "request.md").write_text("# Request\n")
+        (directory / "request.schema.json").write_text('{"type":"object"}')
+        value = {
+            "id": "API-0001",
+            "name": "Adapter",
+            "version": 0,
+            "contracts": [
+                {
+                    "id": "CON-0001",
+                    "name": "Request",
+                    "document": "request.md",
+                    "schema": "request.schema.json",
+                    "requirements": ["REQ-0001"],
+                }
+            ],
+        } | changes
+        (directory / "api.yaml").write_text(json.dumps(value))
+        return directory
+
+    def test_api_indices_resolve_contracts_and_requirements(self):
+        self.write_api()
+        self.assertEqual(self.errors(), [])
+
+    def test_api_version_must_be_a_nonnegative_integer(self):
+        for version in [-1, True, "0", 0.5]:
+            self.write_api(version=version)
+            self.assertTrue(any("version" in error for error in self.errors()), version)
+
+    def test_api_and_contract_ids_are_globally_unique(self):
+        self.write_api()
+        self.write_api("other")
+        errors = self.errors()
+        for identifier in ["API-0001", "CON-0001"]:
+            self.assertTrue(any(f"duplicate ID {identifier}" in error for error in errors), errors)
+
+    def test_contract_requirement_references_must_resolve(self):
+        self.write_api()
+        (self.root / "knowledge/requirements/REQ-0001.yaml").unlink()
+        self.assertTrue(any("unknown requirement REQ-0001" in error for error in self.errors()))
+
+    def test_contract_resources_must_exist_and_stay_local(self):
+        directory = self.write_api()
+        index = json.loads((directory / "api.yaml").read_text())
+        for resource in ["missing.md", "../request.md", "/request.md", "request.schema.json"]:
+            index["contracts"][0]["document"] = resource
+            (directory / "api.yaml").write_text(json.dumps(index))
+            self.assertTrue(self.errors(), resource)
+        index["contracts"][0]["document"] = "request.md"
+        (directory / "api.yaml").write_text(json.dumps(index))
+        (directory / "request.md").unlink()
+        (directory / "request.md").symlink_to(directory / "request.schema.json")
+        self.assertTrue(any("local .md file" in error for error in self.errors()))
+
+    def test_contract_schema_must_be_a_json_object(self):
+        directory = self.write_api()
+        for content in ["{invalid", "[]"]:
+            (directory / "request.schema.json").write_text(content)
+            self.assertTrue(any("invalid schema" in error for error in self.errors()))
+
+    def test_api_indices_reject_unknown_metadata(self):
+        self.write_api(extra="unrecognized")
+        self.assertTrue(any("unknown property extra" in error for error in self.errors()))
 
     def test_a_valid_requirement_passes(self):
         self.write_requirement()

@@ -10,6 +10,7 @@ The knowledge model records **agreed-upon product knowledge**, including retaine
 |---|---|
 | **Use Case** | Describes an actor's goal and interaction with the product. |
 | **[Requirement](requirements/README.md)** | Defines a binding, verifiable condition the product must satisfy. |
+| **[API Contract](contracts/README.md)** | Defines an interface, its compatibility boundary and exact obligations. |
 | **Decision** | Records an architectural choice and its rationale. |
 | **[Component](components/README.md)** | Assigns every compiled file to one responsibility with explicit boundaries. |
 
@@ -21,11 +22,14 @@ The [glossary](glossary.md) explains the core terms these artifacts use.
 
 ## Detailed References
 
-Requirements define the binding product promises. The configuration reference,
-adapter protocol, external rule set reference and execution-point and plan
-contract define exact fields, formats and protocols that complement those
-promises. Requirements refer to these contracts by name rather than copying
-their format details.
+Requirements define the binding product promises. [API contracts](contracts/README.md)
+define exact interfaces and reference the requirements they specify. Structural
+schemas and semantic contracts complement one another. User guides explain how
+to use these interfaces without redefining them.
+
+The configuration reference, external rule set reference and execution-point and
+plan contract also contain detailed interface definitions. Their definitions must
+remain consistent with Knowledge.
 
 Requirements and detailed references must agree. Resolve any contradiction
 explicitly before implementation and update the affected sources together.
@@ -36,7 +40,7 @@ explicitly before implementation and update the affected sources together.
 - Artifacts complement rather than duplicate one another.
 - Requirements describe observable behavior or properties, not unnecessary implementation details.
 - Relationships are recorded in one direction; reverse relationships are derived.
-- References point from the more volatile artifact to the more stable one: component to requirement, requirement to decision. A decision names only the decisions it supersedes.
+- References point from the more volatile artifact to the more stable one: component to requirement, contract to requirement, requirement to decision. A decision names only the decisions it supersedes.
 - Requirements are authoritative unless marked `obsolete: true`.
 - Decisions remain authoritative unless superseded by a newer decision referencing them through `supersedes`.
 - Historical artifacts may be retained for traceability. Artifacts withdrawn without replacement may be deleted; Git preserves their history.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check that components and requirements are valid and that the component map matches the code."""
+"""Validate knowledge artifacts, references and compiled component ownership."""
 
 import json
 import re
@@ -27,6 +27,7 @@ def validate(schema, value, where="$"):
         "array": lambda v: isinstance(v, list),
         "object": lambda v: isinstance(v, dict),
         "boolean": lambda v: isinstance(v, bool),
+        "integer": lambda v: type(v) is int,
     }
     if kind and not checks[kind](value):
         return [f"{where}: expected {kind}"]
@@ -34,6 +35,8 @@ def validate(schema, value, where="$"):
         errors.append(f"{where}: must equal {schema['const']!r}")
     if "enum" in schema and value not in schema["enum"]:
         errors.append(f"{where}: {value!r} is not one of {schema['enum']}")
+    if kind == "integer" and "minimum" in schema and value < schema["minimum"]:
+        errors.append(f"{where}: must be at least {schema['minimum']}")
     if kind == "string":
         if len(value) < schema.get("minLength", 0):
             errors.append(f"{where}: must not be empty")
@@ -73,6 +76,47 @@ def load_artifacts(root, folder, prefix):
         if not problems:
             artifacts[artifact["id"]] = artifact
     return artifacts, errors
+
+
+def check_contracts(root, requirements):
+    """Validate API indices and resolve their local resources and requirement links."""
+    directory = root / "knowledge/contracts"
+    if not directory.is_dir():
+        return []
+    schema = json.loads((directory / "schema.json").read_text())
+    errors, identifiers = [], {}
+    for path in sorted(directory.rglob("api.yaml")):
+        label = str(path.relative_to(root))
+        api = load_yaml(path)
+        problems = validate(schema, api, label)
+        errors += problems
+        if problems:
+            continue
+        for artifact in [api, *api["contracts"]]:
+            identifier = artifact["id"]
+            if identifier in identifiers:
+                errors.append(f"{label}: duplicate ID {identifier} (also in {identifiers[identifier]})")
+            identifiers[identifier] = label
+        for contract in api["contracts"]:
+            for reference in contract["requirements"]:
+                if reference not in requirements:
+                    errors.append(f"{contract['id']}: unknown requirement {reference}")
+            for field, suffix in [("document", ".md"), ("schema", ".json")]:
+                if field not in contract:
+                    continue
+                resource = path.parent / contract[field]
+                relative = Path(contract[field])
+                has_symlink = any((path.parent / Path(*relative.parts[:i])).is_symlink() for i in range(1, len(relative.parts) + 1))
+                if has_symlink or not resource.is_file() or resource.suffix != suffix:
+                    errors.append(f"{contract['id']}: {field} must reference a local {suffix} file: {contract[field]}")
+                elif field == "schema":
+                    try:
+                        value = json.loads(resource.read_text())
+                        if not isinstance(value, dict):
+                            raise ValueError("expected a schema object")
+                    except ValueError as error:
+                        errors.append(f"{contract['id']}: invalid schema {contract[field]}: {error}")
+    return errors
 
 
 def compiled_files(root):
@@ -136,6 +180,7 @@ def check(root):
     components, errors = load_artifacts(root, "components", "COMP")
     requirements, requirement_errors = load_artifacts(root, "requirements", "REQ")
     errors += requirement_errors
+    errors += check_contracts(root, requirements)
     errors += load_artifacts(root, "decisions", "DEC")[1]
     for identifier, requirement in requirements.items():
         for reference in requirement.get("decisions", []):

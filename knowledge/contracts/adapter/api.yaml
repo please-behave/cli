@@ -1,0 +1,48 @@
+id: API-0001
+name: Adapter Protocol
+version: 0
+contracts:
+  - id: CON-0001
+    name: Adapter Invocation
+    document: invocation.md
+    requirements:
+      - REQ-0118
+      - REQ-0125
+      - REQ-0130
+      - REQ-0131
+      - REQ-0162
+      - REQ-0219
+      - REQ-0220
+      - REQ-0221
+      - REQ-0227
+  - id: CON-0002
+    name: Adapter Request
+    document: request.md
+    schema: request.schema.json
+    requirements:
+      - REQ-0093
+      - REQ-0099
+      - REQ-0169
+      - REQ-0180
+      - REQ-0222
+      - REQ-0223
+      - REQ-0225
+      - REQ-0226
+      - REQ-0228
+      - REQ-0242
+      - REQ-0331
+      - REQ-0332
+  - id: CON-0003
+    name: Adapter Response
+    document: response.md
+    schema: response.schema.json
+    requirements:
+      - REQ-0101
+      - REQ-0116
+      - REQ-0118
+      - REQ-0121
+      - REQ-0122
+      - REQ-0130
+      - REQ-0132
+      - REQ-0222
+      - REQ-0331

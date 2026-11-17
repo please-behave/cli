@@ -114,7 +114,7 @@ An adapter is a trusted executable that translates between Please Behave and an
 AI service. It receives one JSON request, returns a JSON response and signals
 the verdict through its exit status, whether it calls a CLI, an HTTP API or a
 local model. This keeps Please Behave independent of any particular AI vendor. See the
-[adapter protocol](../docs/adapter-protocol.md).
+[adapter protocol](contracts/README.md).
 
 ## External Source
 

@@ -1,0 +1,192 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Adapter request",
+  "type": "object",
+  "required": [
+    "protocol_version",
+    "execution_point",
+    "input",
+    "context_file",
+    "rule_parameters",
+    "reviews",
+    "prompt",
+    "response_schema"
+  ],
+  "properties": {
+    "protocol_version": {
+      "type": "integer",
+      "enum": [
+        0,
+        1
+      ]
+    },
+    "execution_point": {
+      "type": "string",
+      "minLength": 1
+    },
+    "input": {
+      "type": "object",
+      "required": [
+        "excerpts",
+        "files"
+      ],
+      "properties": {
+        "excerpts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/excerpt"
+          }
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/file"
+          }
+        },
+        "change_set": {
+          "type": "string"
+        },
+        "commit_message": {
+          "type": "object",
+          "required": [
+            "lines"
+          ],
+          "properties": {
+            "lines": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "number",
+                  "text"
+                ],
+                "properties": {
+                  "number": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "text": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": true
+              }
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "context_file": {
+      "type": "string",
+      "minLength": 1
+    },
+    "rule_parameters": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "reviews": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "criteria",
+          "context_files",
+          "parameters"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "criteria": {
+            "type": "string",
+            "minLength": 1
+          },
+          "context_files": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "parameters": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "prompt": {
+      "type": "string",
+      "minLength": 1
+    },
+    "response_schema": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "excerpt": {
+      "type": "object",
+      "required": [
+        "path",
+        "start_line",
+        "end_line",
+        "text"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "start_line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "end_line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "file": {
+      "type": "object",
+      "required": [
+        "path",
+        "change"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "change": {
+          "type": "string",
+          "enum": [
+            "added",
+            "modified",
+            "deleted"
+          ]
+        },
+        "content": {
+          "type": "string"
+        },
+        "binary": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

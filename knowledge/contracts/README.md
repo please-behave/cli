@@ -1,0 +1,47 @@
+# API contracts
+
+An API is a compatibility boundary between a producer and its consumers.
+A contract defines one part of that boundary. Contracts in the same API share
+one compatibility version; separate documents do not imply separate versions.
+
+| API | Contracts |
+| --- | --- |
+| [Adapter Protocol](adapter/api.yaml) | [Invocation](adapter/invocation.md), [request](adapter/request.md), [response](adapter/response.md) |
+
+## Representation
+
+Each API directory contains `api.yaml`, validated by [schema.json](schema.json).
+The index records its stable `API-NNNN` ID, name, compatibility version and
+contracts. Each contract records a globally unique, stable `CON-NNNN` ID, name,
+document, optional structural schema and the requirements it specifies.
+IDs are never reused. Document and schema paths are relative to the index.
+
+The index is the source for API membership and Contract-to-Requirement links.
+Graph consumers can derive API and Contract nodes, API membership and requirement
+references from it. Reverse relationships are derived, not maintained separately.
+Contracts reach architectural decisions through their requirements. The glossary
+is explanatory prose and needs no graph representation.
+
+## Authority
+
+Requirements state the product promises; contracts define their exact interfaces.
+A structural schema defines fields, types and representable constraints. Its
+Markdown document defines meaning, sequencing, errors and conditions that need
+validation beyond the schema. Do not repeat field tables or numeric bounds in
+both places. A valid JSON document alone does not establish a valid verdict.
+
+Contracts and requirements must agree. Resolve contradictions with the owner;
+neither existing code nor an explanatory guide silently changes the contract.
+User documentation teaches usage and links to these definitions.
+
+## Compatibility
+
+[DEC-0026](../decisions/DEC-0026.yaml) defines compatibility versioning. The index
+records a single version per API. A document split or move does not change it.
+Each API specifies where its version appears and how unknown fields and versions
+are handled. Recording metadata does not introduce a new wire or configuration field.
+
+The `knowledge` check validates index structure, unique IDs, requirement references
+and document/schema paths. Contract tests check structural schemas against actual
+requests and responses. Semantic validation, byte limits and evidence checks
+remain explicit obligations even when a structural schema cannot express them.

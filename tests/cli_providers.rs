@@ -102,6 +102,117 @@ fn execute(root: &Path) -> report::Report {
     .unwrap()
 }
 #[test]
+fn knowledge_schemas_match_adapter_transport_and_generation_constraints() {
+    // REQ-0222, REQ-0331, REQ-0332: actual version-zero messages and legacy labels.
+    let root = fixture();
+    tool(root.path());
+    provider(root.path(), "first", "ok", "");
+    review(root.path(), "a", "first", "check");
+    let path = root.path().join("tool");
+    fs::write(
+        &path,
+        fs::read_to_string(&path).unwrap().replace(
+            "print(json.dumps({'protocol_version':request['protocol_version'],'reason':'Evidence inspected','findings':findings}))",
+            r#"response = {'protocol_version':request['protocol_version'],'reason':'Evidence inspected','findings':findings}
+with open('.please/reports/adapter-request.json', 'w') as f: json.dump(request, f)
+with open('.please/reports/adapter-response.json', 'w') as f: json.dump(response, f)
+print(json.dumps(response))"#,
+        ),
+    )
+    .unwrap();
+    let result = execute(root.path());
+    assert_eq!(result.overall, Status::Pass, "{:?}", result.results);
+    let load = |path: &str| -> serde_json::Value {
+        serde_json::from_str(&fs::read_to_string(root.path().join(path)).unwrap()).unwrap()
+    };
+    let request = load(".please/reports/adapter-request.json");
+    let response = load(".please/reports/adapter-response.json");
+    let request_schema: serde_json::Value = serde_json::from_str(include_str!(
+        "../knowledge/contracts/adapter/request.schema.json"
+    ))
+    .unwrap();
+    let response_schema: serde_json::Value = serde_json::from_str(include_str!(
+        "../knowledge/contracts/adapter/response.schema.json"
+    ))
+    .unwrap();
+    let requests = jsonschema::validator_for(&request_schema).unwrap();
+    let responses = jsonschema::validator_for(&response_schema).unwrap();
+    requests.validate(&request).unwrap();
+    responses.validate(&response).unwrap();
+    assert_eq!(request["protocol_version"], 0);
+    assert_eq!(response["protocol_version"], 0);
+    for version in [0, 1] {
+        let mut legacy = request.clone();
+        legacy["protocol_version"] = version.into();
+        assert!(requests.is_valid(&legacy));
+        let mut legacy = response.clone();
+        legacy["protocol_version"] = version.into();
+        assert!(responses.is_valid(&legacy));
+    }
+    let mut extension = request.clone();
+    extension["future_field"] = true.into();
+    assert!(requests.is_valid(&extension));
+    let mut invalid = request.clone();
+    invalid["reviews"]
+        .as_array_mut()
+        .unwrap()
+        .push(request["reviews"][0].clone());
+    assert!(!requests.is_valid(&invalid));
+    for field in [
+        "protocol_version",
+        "context_file",
+        "reviews",
+        "response_schema",
+    ] {
+        let mut invalid = request.clone();
+        invalid.as_object_mut().unwrap().remove(field);
+        assert!(!requests.is_valid(&invalid), "missing {field}");
+    }
+    for (field, value) in [
+        ("protocol_version", serde_json::json!(2)),
+        ("status", serde_json::json!("PASS")),
+        ("reason", serde_json::json!("two\nlines")),
+        (
+            "findings",
+            serde_json::json!([{"message":"missing location keys"}]),
+        ),
+    ] {
+        let mut invalid = response.clone();
+        invalid[field] = value;
+        assert!(!responses.is_valid(&invalid), "invalid {field}");
+    }
+    let mut telemetry = response.clone();
+    telemetry["usage"] = serde_json::json!({"input_tokens": "unavailable"});
+    assert!(responses.is_valid(&telemetry));
+
+    let mut generation = response_schema;
+    generation.as_object_mut().unwrap().remove("$schema");
+    generation.as_object_mut().unwrap().remove("title");
+    let properties = generation["properties"].as_object_mut().unwrap();
+    properties.remove("protocol_version");
+    properties.remove("usage");
+    generation["required"] = serde_json::json!(["reason", "findings"]);
+    assert_eq!(request["response_schema"], generation);
+    let properties = &generation["properties"];
+    assert_eq!(
+        properties["reason"]["maxLength"],
+        please::limits::MAX_SUMMARY_CHARS
+    );
+    assert_eq!(
+        properties["explanation"]["maxLength"],
+        please::limits::MAX_EXPLANATION_BYTES
+    );
+    assert_eq!(
+        properties["findings"]["maxItems"],
+        please::limits::MAX_FINDINGS
+    );
+    assert_eq!(
+        properties["findings"]["items"]["properties"]["message"]["maxLength"],
+        please::limits::MAX_FINDING_MESSAGE_BYTES
+    );
+}
+
+#[test]
 fn stdin_results_and_provider_isolation() {
     // REQ-0125: each review has its own planned call and result, including shared providers.
     let root = fixture();
