@@ -8,7 +8,7 @@ Enforce development rules across coding agents and workflows.
 
 > Please Behave is in early development and not ready for production use.
 > Configuration, schemas and protocols can change incompatibly without migration.
-> All format versions remain at 1 until version 1.0.0.
+> API contracts are experimental and do not yet promise compatibility.
 
 Please Behave is a source-available governance CLI for Git projects. Define
 development expectations as version-controlled rules alongside your code,

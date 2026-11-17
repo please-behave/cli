@@ -1,17 +1,21 @@
 id: DEC-0026
-name: Versions Stay At One Before 1.0
+name: API Contract Compatibility Versions
 context: >-
-  Please Behave versions its plans, reports, run context and adapter protocol.
-  While the CLI is below 1.0.0 it changes rapidly, breaking changes are the
-  norm and it is not production ready. Raising a version number for each
-  incompatible change costs time and makes users of older saved data fail with
-  errors such as an unsupported plan schema.
+  Please Behave exposes configuration and machine-readable interfaces.
+  These contracts are still being defined and may change incompatibly.
+  Consumers need to distinguish experimental contracts from contracts
+  that promise compatibility.
 decision: >-
-  Every versioned format, including plan, report and run context schemas and
-  the adapter protocol, stays at version 1 until the CLI reaches 1.0.0. Breaking
-  changes are made in place and no document recommends raising a version. From
-  1.0.0 on, changes are less frequent and more careful and may raise versions.
+  Each independently versioned API uses one nonnegative integer as its
+  compatibility version. Version 0 is experimental and may change
+  incompatibly without incrementing the version. Publishing version 1
+  establishes a compatibility promise: compatible extensions retain the
+  version, while incompatible changes increment it. Each API defines its
+  contract boundaries, version declaration and compatibility rules.
+  API versions are independent of the CLI release version. Version 0
+  does not weaken validation or permit fallback to unsupported formats.
+  Supporting older versions or providing migrations requires an explicit
+  decision and is not implied by a version increment.
 rationale: >-
-  The versions remain present so formats are identifiable and strict validation
-  stays in place, but no effort is spent on version management while there are
-  no stable consumers. Stale saved reports are replaced by running again.
+  Experimental contracts can evolve without artificial version churn,
+  while stable contracts make incompatible changes explicit to consumers.

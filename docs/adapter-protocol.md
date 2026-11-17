@@ -37,7 +37,7 @@ unmasked and shown by `please status --details`, so write the original error tex
 stderr and never include credentials. Never write progress text to stdout.
 
 The request and the response require integer `protocol_version: 1`. Other
-versions fail closed. The protocol stays at version 1 and changes in place while Please Behave is below 1.0.0.
+versions fail closed. Experimental API contracts may change incompatibly; API versions are independent of the CLI release version (DEC-0026).
 Adapters should reject unsupported request versions and may ignore unknown request
 fields. Please rejects unknown response fields. The response schema is sent with each
 request so adapters need not duplicate limits.
