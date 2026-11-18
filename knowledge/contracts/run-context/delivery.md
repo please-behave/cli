@@ -33,7 +33,9 @@ obligation does not provide a sandbox.
 ## Retention
 
 At the start of a run, old context directories are removed according to
-`context.retain_runs`, retaining the newest runs and preserving the current run.
+`context.retain_runs`, retaining that many newest earlier runs plus the current
+run. Earlier runs count regardless of whether they finished; contexts have no
+completed or aborted marker. The current run does not count toward the limit.
 Configuration defines the setting's default and permitted values. The context is
 transient input rather than a permanent report: consumers needing it later must
 account for retention. A saved report's snapshot is a separate representation.

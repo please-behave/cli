@@ -335,6 +335,19 @@ fn every_configuration_field_required_marker_and_default_is_documented() {
     );
 }
 #[test]
+fn context_retention_default_matches_the_project_schema() {
+    let schema = project_schema();
+    assert_eq!(
+        schema["properties"]["context"]["properties"]["retain_runs"]["default"],
+        10
+    );
+    for text in ["project = 'Example'", "project = 'Example'\n[context]"] {
+        let config: config::Config = toml::from_str(text).unwrap();
+        assert_eq!(config.context.retain_runs, 10);
+    }
+}
+
+#[test]
 fn project_schema_and_loader_agree_on_types_bounds_and_unknown_fields() {
     let root = project();
     let schema = project_schema();

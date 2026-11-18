@@ -490,7 +490,7 @@ fn write_private(path: &Path, bytes: &[u8]) -> Result<()> {
     Ok(())
 }
 
-/// Remove the oldest completed run directories beyond the retention, never the current one.
+/// Keep the newest earlier run directories, excluding the current run from the count.
 fn prune(base: &Path, keep: usize, current: &str) {
     let Ok(entries) = fs::read_dir(base) else {
         return;
@@ -499,14 +499,11 @@ fn prune(base: &Path, keep: usize, current: &str) {
         .filter_map(|entry| entry.ok())
         .filter(|entry| entry.file_type().is_ok_and(|kind| kind.is_dir()))
         .filter_map(|entry| entry.file_name().into_string().ok())
+        .filter(|name| name != current)
         .collect();
     runs.sort();
     let surplus = runs.len().saturating_sub(keep);
-    for name in runs
-        .into_iter()
-        .take(surplus)
-        .filter(|name| name != current)
-    {
+    for name in runs.into_iter().take(surplus) {
         let _ = fs::remove_dir_all(base.join(name));
     }
 }

@@ -2,7 +2,8 @@ id: REQ-0249
 name: Old Contexts Are Removed
 area: integrity
 description: >-
-  At the start of a run only the context files of the newest completed runs
-  must be kept, and the number of kept runs must be configurable.
+  At the start of a run only the context files of the newest earlier runs
+  must be kept, and the number of kept earlier runs must be configurable.
+  The current run must be preserved without counting toward that limit.
 rationale: >-
   Context files must not pile up without bound on disk.

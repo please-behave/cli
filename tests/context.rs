@@ -572,21 +572,50 @@ fn oversized_sections_are_marked_truncated_instead_of_failing_the_run() {
 }
 
 #[test]
-// REQ-0249: context retention honors the configured number of runs.
-fn only_the_configured_number_of_runs_is_retained() {
-    let root = project("[context]\nretain_runs = 3\n");
-    for _ in 0..6 {
-        ok(please(root.path(), &["run", "--at", "check"], &[]));
+// REQ-0249: retain the newest earlier runs in addition to the current run.
+fn context_retention_excludes_the_current_run() {
+    for (settings, keep) in [
+        ("[context]\nretain_runs = 3\n", 3),
+        ("[context]\nretain_runs = 1\n", 1),
+        ("", 10),
+    ] {
+        let root = project(settings);
+        let mut created = Vec::new();
+        for _ in 0..keep + 3 {
+            ok(please(root.path(), &["run", "--at", "check"], &[]));
+            let remaining: Vec<_> = contexts(root.path())
+                .into_iter()
+                .map(|(directory, _)| directory)
+                .collect();
+            created.push(remaining.last().unwrap().clone());
+            let start = created.len().saturating_sub(keep + 1);
+            assert_eq!(remaining, created[start..], "settings: {settings:?}");
+            for removed in &created[..start] {
+                assert!(!removed.exists());
+            }
+        }
     }
-    let remaining = contexts(root.path());
-    assert_eq!(remaining.len(), 3);
-    let ids: Vec<_> = remaining
-        .iter()
-        .map(|(_, value)| value["run_id"].as_str().unwrap().to_owned())
-        .collect();
-    let mut sorted = ids.clone();
-    sorted.sort();
-    assert_eq!(ids, sorted);
+}
+
+#[test]
+// REQ-0249: unfinished earlier runs count toward retention too.
+fn context_retention_counts_unfinished_earlier_runs() {
+    let root = project("[context]\nretain_runs = 1\n");
+    let base = root.path().join(".git/please/context");
+    let oldest = base.join("20000101T000000000Z-1-0");
+    let unfinished = base.join("20000102T000000000Z-1-0");
+    fs::create_dir_all(&oldest).unwrap();
+    fs::create_dir_all(&unfinished).unwrap();
+    fs::write(unfinished.join("workspace.patch"), "partial context").unwrap();
+
+    ok(please(root.path(), &["run", "--at", "check"], &[]));
+    assert!(!oldest.exists());
+    assert!(unfinished.join("workspace.patch").exists());
+    assert_eq!(fs::read_dir(&base).unwrap().count(), 2);
+
+    ok(please(root.path(), &["run", "--at", "check"], &[]));
+    assert!(!unfinished.exists());
+    assert_eq!(contexts(root.path()).len(), 2);
 }
 
 #[test]

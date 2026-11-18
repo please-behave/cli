@@ -59,7 +59,10 @@ locking other Please invocations. Rule-level declarations follow the
 
 ## Run context settings
 
-`context.retain_runs` controls retention of run-context directories.
+`context.retain_runs` is the number of newest earlier run-context directories to
+keep at the start of a run, regardless of whether those runs finished. The current
+run is preserved in addition to that number. Its default and permitted values are
+defined in [project.schema.json](project.schema.json).
 `context.max_section_bytes` bounds each context list, patch and message; it is not
 a limit on the complete JSON document or the project's snapshot. Larger sections
 remain visibly incomplete rather than silently trusted. The

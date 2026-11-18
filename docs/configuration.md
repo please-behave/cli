@@ -739,6 +739,10 @@ The [Run Context API](../knowledge/contracts/run-context/api.yaml) defines
 their structural schema. Inspect its truncation indicators before relying on
 complete evidence; obtain missing facts from Git or fail the rule.
 Configure retention and section limits through the `context` settings above.
+At the start of each run, `context.retain_runs` keeps the newest earlier run
+contexts (default: 10), plus the current run. Earlier runs count even if they did
+not finish. For example, `retain_runs = 3` keeps three earlier contexts and the
+current one.
 
 Pre-push reads the reference list from standard input, so commands placed after
 the managed section of a composed hook do not receive it.

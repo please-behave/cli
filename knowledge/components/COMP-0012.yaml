@@ -11,7 +11,7 @@ scope:
     pushed references or net changes when the run applies.
   - >-
     Writes patches as separate owner-only files, flags truncated sections and
-    keeps only the newest completed runs.
+    keeps only the configured number of newest earlier runs plus the current run.
 out_of_scope:
   - description: Handing the context to checks and adapters.
     owner: COMP-0002
