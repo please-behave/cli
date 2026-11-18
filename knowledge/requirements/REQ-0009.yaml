@@ -7,3 +7,7 @@ description: >-
 rationale: >-
   Please verifies a project and must not change a developer's environment on
   its own.
+test_exemption: >-
+  The requirement is the absence of any installation step, so there is no
+  behavior to assert beyond a missing tool ending the check with ERROR, which
+  REQ-0011 covers.
