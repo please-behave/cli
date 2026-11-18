@@ -219,6 +219,7 @@ fn commit_message_hook_and_adapter_contract() {
 }
 
 #[test]
+// REQ-0322: missing, symlinked and nonregular message files block adapter calls.
 fn missing_context_invalid_messages_and_failed_checks_never_call_adapter() {
     let f = Fixture::new();
     for args in [
@@ -265,6 +266,8 @@ fn missing_context_invalid_messages_and_failed_checks_never_call_adapter() {
 }
 
 #[test]
+// REQ-0320: the captured commit message changes the plan identity.
+// REQ-0323: an empty message still invokes the selected review.
 fn empty_messages_run_and_the_whole_message_is_bounded_and_part_of_identity() {
     let f = Fixture::new();
     support::write(&f.root, ".git/COMMIT_EDITMSG", "");

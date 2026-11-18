@@ -536,6 +536,7 @@ fn init_exact_paths_and_repeated_initialization_rejected() {
 }
 
 #[test]
+// REQ-0287: an existing directory or file causes ERROR without changing its contents.
 fn init_rejects_existing_configuration_entries_without_writes() {
     for kind in ["empty directory", "partial directory", "file"] {
         let d = tempdir().unwrap();
@@ -576,6 +577,7 @@ fn init_rejects_existing_configuration_entries_without_writes() {
 
 #[test]
 #[cfg(unix)]
+// REQ-0287: existing symlinks, including dangling links, are preserved and rejected.
 fn init_rejects_configuration_symlinks_without_writes() {
     for target_kind in ["directory", "file", "missing"] {
         let d = tempdir().unwrap();
@@ -1098,6 +1100,8 @@ fn checks_can_generate_ignored_bytecode_without_invalidating_verification() {
     );
 }
 #[test]
+// REQ-0273: --no-color suppresses ANSI in run output.
+// REQ-0275: missing reports exit 3 and corrupt or unsupported reports exit 2.
 fn no_report_corrupt_report_schema_and_no_color() {
     let d = project();
     assert_eq!(cli(d.path(), &["status"]).status.code(), Some(3));
@@ -1367,6 +1371,7 @@ fn oversized_change_set_ends_the_review_as_error_without_an_adapter_call() {
 }
 
 #[test]
+// REQ-0272: disabled checks and reviews count as defined rules.
 fn no_rules_message_requires_both_checks_and_reviews_to_be_undefined() {
     let message = "No rules defined yet.";
     for (keep_check, keep_review) in [(false, false), (true, false), (false, true)] {
@@ -1433,6 +1438,7 @@ fn help_lists_only_supported_commands_without_redundant_examples() {
 }
 
 #[test]
+// REQ-0277: unknown command invocations reproduce top-level help.
 fn unknown_commands_show_top_level_help_without_execution_or_escalation() {
     let d = tempdir().unwrap();
     let help = cli(d.path(), &["help"]);
@@ -1500,6 +1506,7 @@ fn colors_preserve_help_layout_and_use_semantic_status_colors() {
     assert!(!terminal::render_changes(&changes, false).contains('\x1b'));
 }
 #[test]
+// REQ-0273: redirected stdout and stderr omit ANSI despite forced color.
 fn piped_help_and_errors_never_include_ansi_even_if_color_is_forced() {
     let d = tempdir().unwrap();
     for args in [
@@ -1826,6 +1833,7 @@ fn cli_flushes_rule_start_while_the_check_is_still_running_and_keeps_raw_output_
     );
 }
 #[test]
+// REQ-0274: untrusted rule descriptions cannot inject escapes or extra progress rows.
 fn progress_uses_semantic_colors_and_sanitizes_rule_descriptions() {
     let event = please::Progress::RuleStarted {
         number: 1,
@@ -2370,4 +2378,169 @@ fn saved_report_preserves_run_identity_results_and_required_plan() {
         Some(".please/README.md")
     );
     assert_eq!(review.findings[0].line, Some(1));
+}
+
+#[test]
+// REQ-0270: overall status, rule counts and elapsed duration occupy one summary line.
+fn outcome_summary_keeps_status_counts_and_duration_together() {
+    let root = project();
+    let mut report = please::verify(root.path(), &Never).unwrap();
+    for (status, suffix) in [
+        (Status::Pass, ""),
+        (Status::Fail, " · 1 failed"),
+        (Status::Error, " · 1 errors"),
+    ] {
+        report.overall = status;
+        report.results[0].status = status;
+        let text = terminal::render_outcome(&report, 2345, false);
+        assert_eq!(
+            text.lines().next().unwrap(),
+            format!("{} · 1 rules{suffix} · 2.3 s", status.label())
+        );
+        assert_eq!(
+            text.lines()
+                .filter(|line| line.contains(" · 1 rules"))
+                .count(),
+            1
+        );
+    }
+}
+
+#[test]
+// REQ-0280: project commands reject subdirectories and non-repositories; help/version remain available.
+fn project_commands_require_the_working_tree_root() {
+    let root = project();
+    let nested = root.path().join("nested");
+    fs::create_dir(&nested).unwrap();
+    let outside = tempdir().unwrap();
+    for directory in [nested.as_path(), outside.path()] {
+        for args in [
+            vec!["init"],
+            vec!["sync", "--yes"],
+            vec!["run", "--at", "check"],
+            vec!["run", "--plan"],
+            vec!["status"],
+        ] {
+            let output = cli(directory, &args);
+            assert_eq!(
+                output.status.code(),
+                Some(2),
+                "{directory:?}: {args:?}: {output:?}"
+            );
+        }
+        for args in [vec!["help"], vec!["--help"], vec!["--version"]] {
+            assert!(cli(directory, &args).status.success(), "{args:?}");
+        }
+        assert!(!directory.join(".please").exists());
+    }
+    assert!(!path(root.path(), "reports/last.json").exists());
+}
+
+#[test]
+// REQ-0281: sync, verification, planning and status preserve HEAD, index, refs, reflogs and Git configuration.
+fn project_commands_preserve_git_state() {
+    fn state(root: &Path) -> std::collections::BTreeMap<PathBuf, Vec<u8>> {
+        fn capture(
+            root: &Path,
+            path: &Path,
+            result: &mut std::collections::BTreeMap<PathBuf, Vec<u8>>,
+        ) {
+            if path.is_dir() {
+                for entry in fs::read_dir(path).unwrap() {
+                    capture(root, &entry.unwrap().path(), result);
+                }
+            } else if path.is_file() {
+                result.insert(
+                    path.strip_prefix(root).unwrap().to_owned(),
+                    fs::read(path).unwrap(),
+                );
+            }
+        }
+        let mut result = std::collections::BTreeMap::new();
+        for name in ["HEAD", "index", "config", "packed-refs", "refs", "logs"] {
+            capture(root, &root.join(".git").join(name), &mut result);
+        }
+        result
+    }
+    let root = project();
+    let before = state(root.path());
+    for args in [
+        vec!["sync", "--yes"],
+        vec!["run"],
+        vec!["run", "--plan"],
+        vec!["status"],
+    ] {
+        assert!(cli(root.path(), &args).status.success(), "{args:?}");
+        assert_eq!(state(root.path()), before, "{args:?}");
+    }
+}
+
+#[test]
+// REQ-0288: initialization changes only .please and leaves the Git hooks directory untouched.
+// REQ-0289: the starter enables only its passing check, runs without a provider and ignores its report.
+fn starter_is_confined_and_runs_without_a_provider() {
+    let root = tempdir().unwrap();
+    git(root.path(), &["init", "--quiet"]);
+    let hooks = root.path().join(".git/hooks");
+    let before: std::collections::BTreeMap<_, _> = fs::read_dir(&hooks)
+        .unwrap()
+        .map(|entry| {
+            let path = entry.unwrap().path();
+            (
+                path.file_name().unwrap().to_owned(),
+                fs::read(path).unwrap(),
+            )
+        })
+        .collect();
+    assert!(cli(root.path(), &["init"]).status.success());
+    let entries: std::collections::BTreeSet<_> = fs::read_dir(root.path())
+        .unwrap()
+        .map(|entry| entry.unwrap().file_name())
+        .collect();
+    assert_eq!(
+        entries,
+        [
+            std::ffi::OsString::from(".git"),
+            std::ffi::OsString::from(".please")
+        ]
+        .into()
+    );
+    let after: std::collections::BTreeMap<_, _> = fs::read_dir(&hooks)
+        .unwrap()
+        .map(|entry| {
+            let path = entry.unwrap().path();
+            (
+                path.file_name().unwrap().to_owned(),
+                fs::read(path).unwrap(),
+            )
+        })
+        .collect();
+    assert_eq!(before, after);
+    let config = config::load(root.path()).unwrap();
+    assert!(config.provider.is_none());
+    assert_eq!(config.checks.len(), 2);
+    assert!(
+        config
+            .checks
+            .iter()
+            .any(|c| c.id == "always-ok" && c.enabled)
+    );
+    assert!(
+        config
+            .checks
+            .iter()
+            .any(|c| c.id == "deliberately-failing" && !c.enabled)
+    );
+    assert_eq!(config.reviews.len(), 1);
+    assert!(!config.reviews[0].enabled);
+    let report = please::verify(root.path(), &Never).unwrap();
+    assert_eq!(report.overall, Status::Pass);
+    assert_eq!(report.results.len(), 1);
+    assert_eq!(report.results[0].id, "always-ok");
+    let ignored = support::command("git")
+        .args(["check-ignore", ".please/reports/last.json"])
+        .current_dir(root.path())
+        .output()
+        .unwrap();
+    assert!(ignored.status.success(), "{ignored:?}");
 }

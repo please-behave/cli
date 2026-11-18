@@ -239,6 +239,7 @@ fn resolution_state_accepts_zero_and_one_without_refresh_or_fallback() {
 }
 
 #[test]
+// REQ-0291: changed resolutions and cache restoration report changes; unchanged refreshes report no-op.
 fn sync_output_tracks_import_state_and_cache_changes_without_hook_changes() {
     let f = Fixture::new();
     support::check(&f.root, "always-ok", &["check"], "exit 0");
@@ -593,6 +594,7 @@ fn concurrent_refreshes_publish_complete_state_and_share_checkout() {
 }
 
 #[test]
+// REQ-0282: import synchronization runs neither imported rules nor source Git hooks.
 fn retrieval_never_executes_rules_or_remote_hooks_and_errors_hide_credentials() {
     // REQ-0200: credential-bearing import URLs fail without echoing their secret.
     // REQ-0204: synchronization executes neither imported rule scripts nor source Git hooks.

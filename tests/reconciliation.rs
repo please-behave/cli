@@ -158,6 +158,7 @@ fn obsolete_hooks_are_rejected_and_provider_validation_is_preserved() {
 }
 
 #[test]
+// REQ-0297: synchronized hooks neither prompt nor change their modification time.
 fn approval_updates_removals_and_idempotency() {
     // REQ-0292, REQ-0305: changes need approval; hook presence follows effective assignments.
     let root = project(&["pre-commit"]);
@@ -213,6 +214,7 @@ fn approval_updates_removals_and_idempotency() {
 }
 
 #[test]
+// REQ-0311: installing and removing a managed section preserves foreign bytes and permissions.
 fn mixed_ownership_preserves_bytes_permissions_and_custom_exit_behavior() {
     let root = project(&["pre-commit"]);
     let path = hook(root.path(), "pre-commit");
@@ -241,6 +243,7 @@ fn mixed_ownership_preserves_bytes_permissions_and_custom_exit_behavior() {
 }
 
 #[test]
+// REQ-0309: malformed and duplicated markers or non-sh scripts stop reconciliation without overwriting hooks.
 fn conflicts_preserve_all_hooks_before_confirmation() {
     let root = project(&["pre-commit", "pre-push"]);
     let path = hook(root.path(), "pre-push");
@@ -276,6 +279,8 @@ fn conflicts_preserve_all_hooks_before_confirmation() {
 }
 
 #[test]
+// REQ-0308: an outside hooks path is rejected without writing there.
+// REQ-0309: symlinked, nonregular and foreign-owned hooks are conflicts.
 fn unsafe_paths_symlinks_and_foreign_ownership_fail_safely() {
     let root = project(&["pre-commit"]);
     let outside = tempfile::tempdir().unwrap();
@@ -303,6 +308,7 @@ fn unsafe_paths_symlinks_and_foreign_ownership_fail_safely() {
 }
 
 #[test]
+// REQ-0299: direct Git-backed runs reject unapproved hook drift before executing checks.
 fn commands_block_checks_on_noninteractive_drift_and_keep_plan_read_only() {
     // REQ-0154: previews succeed without prompting for or reconciling missing hooks.
     let root = project(&["pre-commit"]);
@@ -335,6 +341,7 @@ fn commands_block_checks_on_noninteractive_drift_and_keep_plan_read_only() {
 }
 
 #[test]
+// REQ-0313: a drifted hook fails with sync instructions and leaves its bytes unchanged.
 fn real_commit_hooks_forward_message_path_and_preserve_index_and_worktree() {
     let root = project(&["pre-commit", "commit-msg"]);
     checker(
@@ -380,6 +387,7 @@ esac
 }
 
 #[test]
+// REQ-0306: a failing pre-push check blocks the push before the remote ref is created.
 fn actual_push_hook_blocks_and_allows_pushes() {
     let root = project(&["pre-push"]);
     let remote = tempfile::tempdir().unwrap();
@@ -425,6 +433,7 @@ fn actual_push_hook_blocks_and_allows_pushes() {
 }
 
 #[test]
+// REQ-0307: Git resolves installed hooks in configured paths and linked worktrees.
 fn custom_hooks_directory_and_worktrees_use_git_resolution() {
     let root = project(&["pre-commit"]);
     ok(git(
@@ -468,6 +477,8 @@ fn custom_hooks_directory_and_worktrees_use_git_resolution() {
 }
 
 #[test]
+// REQ-0306: an unavailable Please executable blocks a real Git commit.
+// REQ-0312: invalid wrapper paths and mismatched execution points reject hook invocation.
 fn invocation_validation_recursion_and_missing_executable_block_commits() {
     let root = project(&["pre-commit"]);
     synchronize(root.path());
@@ -632,10 +643,14 @@ fn actual_terminal_approval_and_rejection_gate_execution() {
         &["pre-commit", "pre-push"],
         "git config --local please.executed yes\n",
     );
+    // REQ-0293: declined terminal approval preserves the prior report.
+    let previous = root.path().join(".please/reports/last.json");
+    fs::write(&previous, "prior report").unwrap();
     assert_eq!(
         terminal(root.path(), &["run", "--at", "pre-push"], b"n\n").code(),
         Some(2)
     );
+    assert_eq!(fs::read_to_string(&previous).unwrap(), "prior report");
     assert!(!hook(root.path(), "pre-commit").exists());
     assert!(
         !git(root.path(), &["config", "--get", "please.executed"])
@@ -654,6 +669,9 @@ fn actual_terminal_approval_and_rejection_gate_execution() {
 }
 
 #[test]
+// REQ-0282: sync installs hooks without executing the configured failing check.
+// REQ-0291: hook creation and removal report changes; repeated sync reports no-op.
+// REQ-0295: --yes applies the displayed hook plan without a terminal or prompt.
 fn auto_approve_reconciles_noninteractively_without_executing_rules() {
     let root = project(&["pre-commit", "commit-msg", "pre-push"]);
     checker(
@@ -662,7 +680,9 @@ fn auto_approve_reconciles_noninteractively_without_executing_rules() {
     );
     let report = root.path().join(".please/reports/last.json");
     fs::write(&report, "prior report").unwrap();
+    // REQ-0293: unavailable confirmation exits 2 without replacing the report.
     assert_eq!(cli(root.path(), &["sync"]).status.code(), Some(2));
+    assert_eq!(fs::read_to_string(&report).unwrap(), "prior report");
     assert!(!hook(root.path(), "pre-commit").exists());
     let output = ok(cli(root.path(), &["sync", "--yes"]));
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -714,6 +734,7 @@ fn auto_approve_reconciles_noninteractively_without_executing_rules() {
 }
 
 #[test]
+// REQ-0293: hook conflicts and invalid configuration exit 2 and preserve the prior report.
 fn auto_approve_preserves_conflicts_and_full_configuration_validation() {
     let root = project(&["pre-commit", "pre-push"]);
     let path = hook(root.path(), "pre-push");
@@ -754,6 +775,7 @@ fn auto_approve_cannot_bypass_hook_recursion_protection() {
 }
 
 #[test]
+// REQ-0304: all three supported Git events install and execute their own rules.
 fn fixed_hooks_select_only_their_own_effective_rules() {
     // REQ-0147: each managed hook runs only its own point and rejects a mismatched association.
     let root = project(&["check", "first"]);
@@ -800,6 +822,7 @@ fn fixed_hooks_select_only_their_own_effective_rules() {
 }
 
 #[test]
+// REQ-0314: checks cannot recursively start execution or synchronization in the same repository.
 fn direct_execution_blocks_nested_execution_and_reconciliation() {
     for point in ["check", "first", "pre-push"] {
         for nested in [format!("run --at {point}"), "sync --yes".into()] {
@@ -858,6 +881,7 @@ fn only_effective_builtin_assignments_require_hooks() {
 }
 
 #[test]
+// REQ-0299: custom and check points execute without inspecting or changing missing or stale hooks.
 fn explicit_points_execute_noninteractively_without_inspecting_or_changing_hooks() {
     // REQ-0148: check and custom points execute with missing, stale or unusable hook locations.
     let root = project(&["pre-commit"]);
@@ -906,4 +930,47 @@ fn explicit_points_execute_noninteractively_without_inspecting_or_changing_hooks
     }
     assert_eq!(fs::read_to_string(&file).unwrap(), stale);
     assert!(!root.path().join(".github").exists());
+}
+
+#[test]
+// REQ-0310: each installed hook has one delimited section identifying its owning repository.
+fn managed_sections_identify_the_repository() {
+    assert_eq!(
+        reconciliation::GIT_EVENTS
+            .iter()
+            .copied()
+            .collect::<std::collections::BTreeSet<_>>(),
+        ["pre-commit", "commit-msg", "pre-push"]
+            .into_iter()
+            .collect::<std::collections::BTreeSet<_>>()
+    );
+    let first = project(&reconciliation::GIT_EVENTS);
+    let second = project(&reconciliation::GIT_EVENTS);
+    synchronize(first.path());
+    synchronize(second.path());
+    let owner = |root: &Path| {
+        let mut owners = std::collections::BTreeSet::new();
+        for event in reconciliation::GIT_EVENTS {
+            let text = fs::read_to_string(hook(root, event)).unwrap();
+            assert_eq!(text.matches("# BEGIN PLEASE MANAGED\n").count(), 1);
+            assert_eq!(text.matches("# END PLEASE MANAGED\n").count(), 1);
+            let section = text
+                .split_once("# BEGIN PLEASE MANAGED\n")
+                .unwrap()
+                .1
+                .split_once("# END PLEASE MANAGED\n")
+                .unwrap()
+                .0;
+            let values: Vec<_> = section
+                .lines()
+                .filter_map(|line| line.strip_prefix("# Please Behave repository: "))
+                .collect();
+            assert_eq!(values.len(), 1);
+            assert!(!values[0].is_empty());
+            owners.insert(values[0].to_owned());
+        }
+        assert_eq!(owners.len(), 1);
+        owners.into_iter().next().unwrap()
+    };
+    assert_ne!(owner(first.path()), owner(second.path()));
 }

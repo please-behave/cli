@@ -548,6 +548,7 @@ fn execution_errors_fail_closed_for_explicit_points_ci_and_managed_hooks() {
 }
 
 #[test]
+// REQ-0285: a missing selected prompt is an ERROR; disabled reviews do not need it.
 fn missing_and_disabled_review_prompts_produce_execution_errors_only_when_selected() {
     let root = project();
     review(root.path(), "missing", "");

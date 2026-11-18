@@ -271,6 +271,7 @@ fn terminal_rows_are_bounded_and_success_replaces_running_state() {
     );
 }
 #[test]
+// REQ-0271: an empty execution explicitly says that no rules executed.
 fn empty_execution_and_integrity_failures_do_not_claim_rule_success() {
     let root = project();
     let mut report = please::verify_project_at(

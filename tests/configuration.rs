@@ -104,6 +104,7 @@ impl Provider for Mock {
 }
 
 #[test]
+// REQ-0283: unrelated TOML and supporting rule data are not parsed as configuration.
 fn fixed_discovery_and_defaults() {
     let d = project();
     assert!(config::load(d.path()).unwrap().checks.is_empty());
@@ -206,6 +207,7 @@ fn definitions_are_required_but_disabled_implementations_may_be_missing() {
 }
 
 #[test]
+// REQ-0286: prompt names reject empty names, separators, absolute paths and traversal.
 fn resource_filenames_are_confined() {
     for name in [
         "",
@@ -472,6 +474,7 @@ fn checks_reject_a_blocking_property() {
 
 #[cfg(unix)]
 #[test]
+// REQ-0286: a review prompt symlink is rejected during configuration loading.
 fn all_designated_paths_reject_symlinks() {
     use std::os::unix::fs::symlink;
     for relative in [
@@ -1582,4 +1585,23 @@ fn embedded_reference_tokens_reach_the_check_unchanged() {
         result.stdout.unwrap().text,
         "<--file=@rule/nonexistent>\n<--value=@param/undeclared>\n<email@example.test>\n"
     );
+}
+
+#[test]
+// REQ-0326: a rule set may share a rule ID, but two local sets may not share an ID.
+fn rule_set_ids_are_unique_independently_of_rule_ids() {
+    let root = project();
+    check(
+        root.path(),
+        "shared",
+        "run_at = ['check']",
+        "command = '@rule/index.sh'",
+        "exit 0",
+    );
+    let definition =
+        "id = 'shared'\ndescription = 'Shared set'\nrules = ['shared']\nrun_at = ['check']\n";
+    write(root.path(), ".please/rule-sets/first.toml", definition);
+    assert!(config::load(root.path()).is_ok());
+    write(root.path(), ".please/rule-sets/second.toml", definition);
+    assert!(error(root.path()).contains("duplicate"));
 }

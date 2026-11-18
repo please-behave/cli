@@ -626,6 +626,7 @@ print(json.dumps({'protocol_version':1, 'reason':'Parameters delivered', 'findin
 }
 
 #[test]
+// REQ-0290: initialization provides no provider configuration or default adapter.
 fn init_has_no_provider_and_selected_reviews_require_explicit_configuration() {
     // REQ-0215: a selected review without a provider blocks execution; disabled and unselected reviews need none.
     // REQ-0124: initialization supplies no provider and selected reviews need an explicit adapter.

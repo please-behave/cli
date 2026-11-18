@@ -348,6 +348,7 @@ fn detached_head_linked_worktree_and_shallow_clone_are_reported() {
 }
 
 #[test]
+// REQ-0324: the commit-msg run context carries the message text and file.
 fn commit_message_and_staged_files_reach_commit_msg() {
     let root = project("");
     let path = root.path();
