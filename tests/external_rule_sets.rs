@@ -1115,6 +1115,98 @@ fn cli_refresh_cached_plan_and_offline_hook_keep_existing_lifecycle() {
     );
 }
 
+#[cfg(unix)]
+#[test]
+fn nested_sync_rejects_before_refreshing_imports() {
+    // REQ-0314: rejection preserves the import state and resolved revisions before any write.
+    let f = Fixture::new();
+    f.imports(&[("repository", "main")]);
+    assert!(cli(&f, &["sync", "--yes"]).status.success());
+    let previous = f.state();
+    let original = git(&f.remote, &["rev-parse", "HEAD"]);
+    write(&f.remote, "repository/note.md", "new revision");
+    let updated = commit(&f.remote);
+    assert_ne!(original, updated);
+    for arguments in ["sync", "sync --yes"] {
+        support::check(
+            &f.root,
+            "nested-sync",
+            &["check"],
+            &format!("exec {:?} {arguments}", env!("CARGO_BIN_EXE_please")),
+        );
+        let output = cli(&f, &["run", "--at", "check"]);
+        assert_eq!(output.status.code(), Some(2));
+        let report = please::report::read(&f.root).unwrap();
+        let result = report
+            .results
+            .iter()
+            .find(|r| r.id == "nested-sync")
+            .unwrap();
+        assert_eq!(result.status, Status::Error);
+        assert!(
+            result
+                .stderr
+                .as_ref()
+                .unwrap()
+                .text
+                .contains("recursive Please Behave hook execution blocked")
+        );
+        assert_eq!(f.state(), previous);
+    }
+    assert!(cli(&f, &["sync", "--yes"]).status.success());
+    let state: serde_json::Value = serde_json::from_slice(&f.state()).unwrap();
+    assert_eq!(
+        state["resolutions"]
+            .as_object()
+            .unwrap()
+            .values()
+            .next()
+            .unwrap()["commit"],
+        updated
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn check_can_sync_imports_in_another_repository() {
+    // REQ-0314: the guard only rejects synchronization of the active repository.
+    let outer = Fixture::new();
+    let other = Fixture::new();
+    other.imports(&[("repository", "main")]);
+    assert!(cli(&other, &["sync", "--yes"]).status.success());
+    let previous = other.state();
+    write(&other.remote, "repository/note.md", "new revision");
+    let updated = commit(&other.remote);
+    support::check(
+        &outer.root,
+        "other-sync",
+        &["check"],
+        &format!(
+            "export XDG_CACHE_HOME={:?}\ncd {:?} && exec {:?} sync --yes",
+            other.cache,
+            other.root,
+            env!("CARGO_BIN_EXE_please")
+        ),
+    );
+    let output = cli(&outer, &["run", "--at", "check"]);
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_ne!(other.state(), previous);
+    let state: serde_json::Value = serde_json::from_slice(&other.state()).unwrap();
+    assert_eq!(
+        state["resolutions"]
+            .as_object()
+            .unwrap()
+            .values()
+            .next()
+            .unwrap()["commit"],
+        updated
+    );
+}
+
 #[test]
 fn all_fixed_hooks_execute_imported_rules_offline() {
     let f = Fixture::new();

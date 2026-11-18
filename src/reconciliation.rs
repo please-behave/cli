@@ -147,9 +147,9 @@ fn safe_path(path: &Path) -> Result<()> {
     Ok(())
 }
 
-fn repository_identity(project: &Project) -> Result<(PathBuf, String)> {
+fn repository_identity(root: &Path) -> Result<(PathBuf, String)> {
     let common = PathBuf::from(git(
-        &project.root,
+        root,
         &["rev-parse", "--path-format=absolute", "--git-common-dir"],
     )?)
     .canonicalize()?;
@@ -160,14 +160,24 @@ fn repository_identity(project: &Project) -> Result<(PathBuf, String)> {
     Ok((common, owner))
 }
 
+/// Reject a nested run or synchronization before loading or refreshing imports.
+pub fn ensure_not_recursive(root: &Path) -> Result<()> {
+    let (_, owner) = repository_identity(root)?;
+    ensure!(
+        std::env::var_os(GUARD).as_deref() != Some(std::ffi::OsStr::new(&owner)),
+        "recursive Please Behave hook execution blocked; run please sync manually outside the hook"
+    );
+    Ok(())
+}
+
 pub(crate) fn configure_guard(project: &Project, command: &mut Command) -> Result<()> {
-    let (_, owner) = repository_identity(project)?;
+    let (_, owner) = repository_identity(&project.root)?;
     command.env(GUARD, owner);
     Ok(())
 }
 
 fn location(project: &Project) -> Result<(PathBuf, String)> {
-    let (common, owner) = repository_identity(project)?;
+    let (common, owner) = repository_identity(&project.root)?;
     let directory = PathBuf::from(git(
         &project.root,
         &["rev-parse", "--path-format=absolute", "--git-path", "hooks"],
@@ -527,16 +537,13 @@ pub fn prepare(
     point: Option<&str>,
     auto_approve: bool,
 ) -> Result<(Option<HookContext>, bool)> {
-    let (_, owner) = repository_identity(project)?;
-    ensure!(
-        std::env::var_os(GUARD).as_deref() != Some(std::ffi::OsStr::new(&owner)),
-        "recursive Please Behave hook execution blocked; run please sync manually outside the hook"
-    );
+    ensure_not_recursive(&project.root)?;
     // Direct explicit points need recursion protection, but no hook state.
     if invocation.is_none() && point.is_some_and(|point| !GIT_EVENTS.contains(&point)) {
         return Ok((None, false));
     }
     if let Some(invocation) = invocation {
+        let (_, owner) = repository_identity(&project.root)?;
         let plan = inspect(project)?;
         ensure!(
             GIT_EVENTS.contains(&invocation.event.as_str()),

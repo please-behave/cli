@@ -138,7 +138,8 @@ exec my-message-checker "$message"
 ```
 
 A checker must not invoke Please Behave again; a repository-scoped guard blocks nested
-execution.
+execution and synchronization before any writes, including import refreshes. Checks
+may invoke Please Behave in other repositories.
 
 ### Ownership and recovery
 

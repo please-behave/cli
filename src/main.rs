@@ -38,6 +38,7 @@ fn execute(cli: Cli) -> Result<i32> {
             Ok(0)
         }
         Words::Sync { yes } => {
+            please::reconciliation::ensure_not_recursive(&root)?;
             let (project, imports_changed) = config::refresh(&root)?;
             for diagnostic in &project.effective.diagnostics {
                 eprintln!("Note: {}", terminal::clean(diagnostic));
