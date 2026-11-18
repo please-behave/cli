@@ -12,6 +12,7 @@ ruff = "0.17.4"
 "cargo:cargo-audit" = "0.23.0"
 "aqua:taiki-e/cargo-llvm-cov" = "0.9.1"
 "aqua:boyter/scc" = "4.1.0"
+shfmt = "3.14.1"
 
 [tasks.build]
 description = "Build the native release executable"
@@ -23,8 +24,8 @@ usage = 'flag "--install" help="Wait for success, pin the new version in mise.to
 run = 'python3 tools/release.py ${usage_install:+--install}'
 
 [tasks.format]
-description = "Format Rust and Python source"
-run = ["cargo fmt --all", "ruff format"]
+description = "Format Rust, Python and shell sources"
+run = ["cargo fmt --all", "ruff format", "git ls-files -z '*.sh' | xargs -0 -r shfmt -w"]
 
 [tasks.verify]
 description = "Run the deterministic Please Behave checks and stop at the first blocker"
