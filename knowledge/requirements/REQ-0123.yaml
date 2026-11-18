@@ -7,3 +7,8 @@ description: >-
 rationale: >-
   Token counts are adapter claims and cannot serve as billing or quota
   statements.
+test_exemption: >-
+  A negative requirement: no cost or budget feature exists. The closed report
+  schema (knowledge/contracts/report/report.schema.json) has no field for
+  either and the configuration loader rejects unknown settings, so there is
+  no behavior to assert beyond that absence.

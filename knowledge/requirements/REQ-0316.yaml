@@ -8,3 +8,8 @@ description: >-
 rationale: >-
   Installing Please must not drag a language runtime onto every developer
   machine and CI runner.
+test_exemption: >-
+  A property of the build, not of runtime behavior: the released executable
+  is a native Rust binary (.github/scripts/package-release.py packages an
+  already-built native executable). The runners provide Python and Node, so no
+  smoke test can show that they are not needed.

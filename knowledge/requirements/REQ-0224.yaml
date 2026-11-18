@@ -10,3 +10,8 @@ rationale: >-
   and its reports.
 decisions:
   - DEC-0010
+test_exemption: >-
+  A negative requirement: no authentication, model or tool setting exists.
+  The configuration loader rejects unknown settings, so the absence follows
+  from the closed configuration; a single test could not show it for the whole
+  product.

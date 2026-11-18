@@ -8,3 +8,7 @@ description: >-
 rationale: >-
   A promise of graceful termination must not be silently dropped where it
   cannot be kept.
+test_exemption: >-
+  The rejection is compiled only for targets without Unix process groups
+  (src/config.rs), and every released platform is macOS or Linux
+  (docs/releasing.md), so no supported runner can reach it.
