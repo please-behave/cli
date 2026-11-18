@@ -374,7 +374,12 @@ pub fn apply(project: &Project, plan: &Plan) -> Result<()> {
     apply_operations(project, plan, &mut |_| Ok(()))
 }
 
-fn apply_operations(
+/// Internal fault-injection boundary for offline integration tests. The callback runs
+/// after staging, before each write (with the number already applied), and once
+/// before verification (with the total count). Normal application uses a no-op;
+/// this boundary has no CLI or configuration surface.
+#[doc(hidden)]
+pub fn apply_operations(
     project: &Project,
     plan: &Plan,
     before_write: &mut dyn FnMut(usize) -> Result<()>,
@@ -440,6 +445,7 @@ fn apply_operations(
             applied += 1;
         }
         fs::File::open(&plan.directory)?.sync_all()?;
+        before_write(applied).context("verify hooks")?;
         ensure!(inspect(project)?.synchronized(), "hook verification failed");
         Ok(())
     })();
@@ -576,107 +582,5 @@ pub fn prepare(
     } else {
         let changed = reconcile(project, &mut |plan| approve_plan(plan, auto_approve))?;
         Ok((None, changed))
-    }
-}
-
-#[cfg(all(test, unix))]
-mod tests {
-    use super::*;
-
-    fn project() -> tempfile::TempDir {
-        let root = tempfile::tempdir().unwrap();
-        assert!(
-            Command::new("git")
-                .args(["init", "--quiet"])
-                .current_dir(root.path())
-                .status()
-                .unwrap()
-                .success()
-        );
-        crate::init::init(root.path()).unwrap();
-        fs::write(
-            root.path().join(".please/config.toml"),
-            "project = 'My_App'\nmax_display_files = 5\n",
-        )
-        .unwrap();
-        let path = root.path().join(".please/checks/always-ok/rule.toml");
-        fs::write(
-            &path,
-            fs::read_to_string(&path)
-                .unwrap()
-                .replace("[\"pre-push\"]", "['pre-commit', 'pre-push']"),
-        )
-        .unwrap();
-        root
-    }
-
-    #[test]
-    fn partial_write_failure_rolls_back_and_reports_operation() {
-        let root = project();
-        let project = crate::config::load(root.path()).unwrap();
-        let plan = inspect(&project).unwrap();
-        let error = apply_operations(&project, &plan, &mut |index| {
-            ensure!(index == 0, "injected replacement failure");
-            Ok(())
-        })
-        .unwrap_err();
-        let diagnostic = format!("{error:#}");
-        assert!(
-            diagnostic.contains("pre-push")
-                && diagnostic.contains("1 earlier operations applied; rollback completed"),
-            "{diagnostic}"
-        );
-        assert!(!plan.directory.join("pre-commit").exists());
-        assert!(!plan.directory.join("pre-push").exists());
-        assert!(!fs::read_dir(&plan.directory).unwrap().any(|entry| {
-            entry
-                .unwrap()
-                .file_name()
-                .to_string_lossy()
-                .starts_with(".please-hook-")
-        }));
-        apply(&project, &inspect(&project).unwrap()).unwrap();
-        assert!(inspect(&project).unwrap().synchronized());
-    }
-
-    #[test]
-    fn rollback_does_not_overwrite_concurrent_custom_edits() {
-        let root = project();
-        let project = crate::config::load(root.path()).unwrap();
-        let plan = inspect(&project).unwrap();
-        let path = plan.directory.join("pre-commit");
-        let error = apply_operations(&project, &plan, &mut |index| {
-            if index == 1 {
-                fs::write(&path, "#!/bin/sh\n# concurrent edit\n")?;
-                bail!("injected failure");
-            }
-            Ok(())
-        })
-        .unwrap_err();
-        assert!(format!("{error:#}").contains("concurrent edit; preserve file"));
-        assert_eq!(
-            fs::read_to_string(path).unwrap(),
-            "#!/bin/sh\n# concurrent edit\n"
-        );
-    }
-
-    #[test]
-    fn filesystem_permission_failure_applies_no_hooks() {
-        let root = project();
-        let project = crate::config::load(root.path()).unwrap();
-        let plan = inspect(&project).unwrap();
-        fs::set_permissions(&plan.directory, permissions(0o555)).unwrap();
-        let result = apply(&project, &plan);
-        fs::set_permissions(&plan.directory, permissions(0o755)).unwrap();
-        // Root can bypass directory mode; CI normally runs unprivileged.
-        if unsafe { libc::geteuid() } != 0 {
-            let diagnostic = format!("{:#}", result.unwrap_err());
-            assert!(
-                diagnostic.contains("stage hook")
-                    && diagnostic.contains("0 earlier operations applied")
-            );
-            assert!(!plan.directory.join("pre-commit").exists());
-            assert!(!plan.directory.join("pre-push").exists());
-        }
     }
 }

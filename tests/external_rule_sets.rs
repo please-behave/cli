@@ -759,6 +759,293 @@ fn cli(f: &Fixture, args: &[&str]) -> std::process::Output {
         .unwrap()
 }
 
+#[cfg(unix)]
+fn assert_sync_error(output: std::process::Output, expected: &str) {
+    assert_eq!(output.status.code(), Some(2));
+    let diagnostic = String::from_utf8_lossy(&output.stderr);
+    assert!(diagnostic.contains(expected), "{diagnostic}");
+    assert!(!String::from_utf8_lossy(&output.stdout).contains("successfully"));
+}
+
+#[cfg(unix)]
+#[test]
+fn import_count_limit_fails_synchronization() {
+    // REQ-0205: reject excessive imports before retrieval or state publication.
+    let f = Fixture::new();
+    f.imports(&vec![("repository", "main"); please::limits::MAX_RULES + 1]);
+    assert_sync_error(
+        cli(&f, &["sync", "--yes"]),
+        "at most 256 external Rule Set and provider imports",
+    );
+    assert!(!f.root.join(".git/please/external-rule-sets.json").exists());
+}
+
+#[cfg(unix)]
+#[test]
+fn expanded_repository_size_limits_fail_synchronization() {
+    // REQ-0205: tiny compressed Git objects must not bypass expanded file/total bounds.
+    for total in [false, true] {
+        let f = Fixture::new();
+        f.imports(&[("repository", "main")]);
+        assert!(cli(&f, &["sync", "--yes"]).status.success());
+        let previous = f.state();
+        let file_bytes = please::limits::MAX_SNAPSHOT_FILE_BYTES;
+        let count = if total {
+            please::limits::MAX_SNAPSHOT_BYTES / file_bytes + 1
+        } else {
+            1
+        };
+        for index in 0..count {
+            let file = fs::File::create(f.remote.join(format!("expanded-{index}"))).unwrap();
+            file.set_len(file_bytes + u64::from(!total)).unwrap();
+        }
+        commit(&f.remote);
+        let expected = if total {
+            "cached repository exceeds 134217728 bytes"
+        } else {
+            "cached file exceeds 8388608 bytes"
+        };
+        assert_sync_error(cli(&f, &["sync", "--yes"]), expected);
+        assert_eq!(f.state(), previous);
+    }
+}
+
+/// Delegate all real Git work except one operation, which blocks after a readiness
+/// marker. Each test owns its PATH and children; no process-global environment edits.
+#[cfg(unix)]
+fn blocked_git(f: &Fixture, operation: &str) -> (TempDir, std::process::Command) {
+    use std::os::unix::fs::PermissionsExt;
+    let real_git = support::command("sh")
+        .args(["-c", "command -v git"])
+        .output()
+        .unwrap();
+    assert!(real_git.status.success());
+    let bin = tempfile::tempdir().unwrap();
+    let script = bin.path().join("git");
+    fs::write(&script, "#!/bin/sh\nfor arg do\n  if [ \"$arg\" = \"$TEST_BLOCK_OPERATION\" ]; then\n    echo $$ > \"$TEST_GIT_READY\"\n    exec sleep 120\n  fi\ndone\nexec \"$TEST_REAL_GIT\" \"$@\"\n").unwrap();
+    fs::set_permissions(script, fs::Permissions::from_mode(0o755)).unwrap();
+    let path = std::env::join_paths(
+        std::iter::once(bin.path().to_path_buf())
+            .chain(std::env::split_paths(&std::env::var_os("PATH").unwrap())),
+    )
+    .unwrap();
+    let mut command = support::command(env!("CARGO_BIN_EXE_please"));
+    command
+        .current_dir(&f.root)
+        .args(["sync", "--yes"])
+        .env("XDG_CACHE_HOME", &f.cache)
+        .env("PATH", path)
+        .env(
+            "TEST_REAL_GIT",
+            String::from_utf8(real_git.stdout).unwrap().trim(),
+        )
+        .env("TEST_BLOCK_OPERATION", operation)
+        .env("TEST_GIT_READY", bin.path().join("ready"))
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped());
+    (bin, command)
+}
+
+/// Kill and reap even on assertion failures; the blocked Git has its own group.
+#[cfg(unix)]
+struct BlockedSync {
+    child: std::process::Child,
+    git_pid: Option<i32>,
+}
+#[cfg(unix)]
+impl Drop for BlockedSync {
+    fn drop(&mut self) {
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+        if let Some(pid) = self.git_pid {
+            unsafe {
+                libc::kill(-pid, libc::SIGKILL);
+            }
+        }
+    }
+}
+
+#[cfg(unix)]
+fn wait_for_git(command: &mut std::process::Command, bin: &Path) -> BlockedSync {
+    let mut process = BlockedSync {
+        child: command.spawn().unwrap(),
+        git_pid: None,
+    };
+    let started = std::time::Instant::now();
+    loop {
+        if let Ok(text) = fs::read_to_string(bin.join("ready")) {
+            if let Ok(pid) = text.trim().parse() {
+                process.git_pid = Some(pid);
+                return process;
+            }
+        }
+        assert!(
+            started.elapsed() < std::time::Duration::from_secs(10),
+            "Git readiness deadline exceeded"
+        );
+        assert!(
+            process.child.try_wait().unwrap().is_none(),
+            "sync exited before Git readiness"
+        );
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
+}
+
+#[cfg(unix)]
+fn retrieval_deadline(operation: &str, seconds: u64, expected: &str) {
+    let f = Fixture::new();
+    f.imports(&[("repository", "main")]);
+    let (bin, mut command) = blocked_git(&f, operation);
+    let started = std::time::Instant::now();
+    let mut process = wait_for_git(&mut command, bin.path());
+    let status = loop {
+        if let Some(status) = process.child.try_wait().unwrap() {
+            break status;
+        }
+        assert!(
+            started.elapsed() < std::time::Duration::from_secs(seconds + 15),
+            "sync did not enforce Git deadline"
+        );
+        std::thread::sleep(std::time::Duration::from_millis(20));
+    };
+    use std::io::Read;
+    let mut stderr = Vec::new();
+    process
+        .child
+        .stderr
+        .take()
+        .unwrap()
+        .read_to_end(&mut stderr)
+        .unwrap();
+    assert_eq!(status.code(), Some(2));
+    assert!(
+        String::from_utf8_lossy(&stderr).contains(expected),
+        "{}",
+        String::from_utf8_lossy(&stderr)
+    );
+    assert!(started.elapsed() >= std::time::Duration::from_secs(seconds));
+    assert!(!f.root.join(".git/please/external-rule-sets.json").exists());
+    drop(process);
+    assert!(cli(&f, &["sync", "--yes"]).status.success());
+}
+
+#[cfg(unix)]
+#[test]
+fn retrieval_deadline_fails_synchronization() {
+    // REQ-0205: a stalled remote Git operation fails at the published deadline.
+    retrieval_deadline(
+        "clone",
+        please::limits::EXTERNAL_FETCH_TIMEOUT_SECONDS,
+        "Git operation timed out",
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn local_git_deadline_fails_synchronization() {
+    // REQ-0205: materialization is also bounded, without any remote service.
+    retrieval_deadline(
+        "read-tree",
+        please::limits::EXTERNAL_GIT_TIMEOUT_SECONDS,
+        "cannot materialize Git cache revision",
+    );
+}
+
+#[cfg(unix)]
+fn locked_file(path: &Path) -> fs::File {
+    use std::os::fd::AsRawFd;
+    let file = fs::File::open(path).unwrap();
+    assert_eq!(
+        unsafe { libc::flock(file.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) },
+        0
+    );
+    file
+}
+
+#[cfg(unix)]
+#[test]
+fn bounded_state_and_shared_cache_lock_waits_fail_synchronization() {
+    // REQ-0205: both project and shared-cache contention fail rather than wait forever.
+    let f = Fixture::new();
+    f.imports(&[("repository", "main")]);
+    assert!(cli(&f, &["sync", "--yes"]).status.success());
+    let previous = f.state();
+    let repositories = f.cache.join("please/git");
+    let repository = fs::read_dir(repositories)
+        .unwrap()
+        .next()
+        .unwrap()
+        .unwrap()
+        .path();
+    for path in [
+        f.root.join(".git/please/resolution.lock"),
+        repository.join("cache.lock"),
+    ] {
+        let lock = locked_file(&path);
+        let mut command = support::command(env!("CARGO_BIN_EXE_please"));
+        command
+            .current_dir(&f.root)
+            .env("XDG_CACHE_HOME", &f.cache)
+            .args(["sync", "--yes"]);
+        let started = std::time::Instant::now();
+        let output =
+            please::process::run(&mut command, std::time::Duration::from_secs(45)).unwrap();
+        assert!(!output.timed_out, "sync did not enforce lock deadline");
+        assert_eq!(output.status.code(), Some(2));
+        assert!(
+            output
+                .stderr
+                .text
+                .contains("external cache busy; retry please sync")
+        );
+        assert!(
+            started.elapsed()
+                >= std::time::Duration::from_secs(please::limits::EXTERNAL_LOCK_TIMEOUT_SECONDS)
+        );
+        assert_eq!(f.state(), previous);
+        drop(lock);
+    }
+    assert!(cli(&f, &["sync", "--yes"]).status.success());
+}
+
+#[cfg(unix)]
+#[test]
+fn killed_sync_releases_project_and_shared_cache_locks() {
+    // REQ-0230: SIGKILL bypasses destructors while both actual import locks are held.
+    use std::os::fd::AsRawFd;
+    let f = Fixture::new();
+    f.imports(&[("repository", "main")]);
+    let (bin, mut command) = blocked_git(&f, "clone");
+    let process = wait_for_git(&mut command, bin.path());
+    let repository = fs::read_dir(f.cache.join("please/git"))
+        .unwrap()
+        .next()
+        .unwrap()
+        .unwrap()
+        .path();
+    let paths = [
+        f.root.join(".git/please/resolution.lock"),
+        repository.join("cache.lock"),
+    ];
+    for path in &paths {
+        let file = fs::File::open(path).unwrap();
+        assert_eq!(
+            unsafe { libc::flock(file.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) },
+            -1
+        );
+        assert_eq!(
+            std::io::Error::last_os_error().kind(),
+            std::io::ErrorKind::WouldBlock
+        );
+    }
+    drop(process);
+    for path in &paths {
+        drop(locked_file(path));
+    }
+    assert!(cli(&f, &["sync", "--yes"]).status.success());
+    external::load(&f.root, false, Some(&f.cache.join("please"))).unwrap();
+}
+
 #[test]
 fn cli_refresh_cached_plan_and_offline_hook_keep_existing_lifecycle() {
     let f = Fixture::new();

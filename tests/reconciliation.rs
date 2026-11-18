@@ -123,6 +123,152 @@ fn point_is(point: &str) -> String {
 }
 
 #[test]
+fn post_write_interference_fails_verification() {
+    // REQ-0301: a replaced hook changed before inspection must never report success.
+    let root = project(&["pre-commit"]);
+    let p = config::load(root.path()).unwrap();
+    let plan = reconciliation::inspect(&p).unwrap();
+    let path = hook(root.path(), "pre-commit");
+    let error = reconciliation::apply_operations(&p, &plan, &mut |applied| {
+        if applied == 1 {
+            fs::remove_file(&path)?;
+        }
+        Ok(())
+    })
+    .unwrap_err();
+    assert!(format!("{error:#}").contains("hook verification failed"));
+    assert!(!reconciliation::inspect(&p).unwrap().synchronized());
+}
+
+#[test]
+fn staged_and_later_hooks_are_revalidated_before_writing() {
+    // REQ-0302: edits after staging and after an earlier write survive stale plans.
+    for interfere_at in [0, 1] {
+        let root = project(&["pre-commit", "pre-push"]);
+        let p = config::load(root.path()).unwrap();
+        let plan = reconciliation::inspect(&p).unwrap();
+        let path = hook(
+            root.path(),
+            if interfere_at == 0 {
+                "pre-commit"
+            } else {
+                "pre-push"
+            },
+        );
+        let foreign = "#!/bin/sh\n# concurrent edit\n";
+        let error = reconciliation::apply_operations(&p, &plan, &mut |applied| {
+            if applied == interfere_at {
+                executable(&path, foreign);
+            }
+            Ok(())
+        })
+        .unwrap_err();
+        assert!(format!("{error:#}").contains("hook changed concurrently"));
+        assert_eq!(fs::read_to_string(&path).unwrap(), foreign);
+        if interfere_at == 1 {
+            assert!(!hook(root.path(), "pre-commit").exists());
+        }
+    }
+}
+
+#[test]
+fn failed_write_restores_every_changed_hook_and_cleans_staging() {
+    // REQ-0303: restore both existing bytes/mode and the absence of a created hook.
+    let root = project(&["commit-msg", "pre-commit", "pre-push"]);
+    let original = "#!/bin/sh\n# original hook\n";
+    let path = hook(root.path(), "commit-msg");
+    executable(&path, original);
+    fs::set_permissions(&path, fs::Permissions::from_mode(0o750)).unwrap();
+    let p = config::load(root.path()).unwrap();
+    let plan = reconciliation::inspect(&p).unwrap();
+    let error = reconciliation::apply_operations(&p, &plan, &mut |applied| {
+        anyhow::ensure!(applied != 2, "injected replacement failure");
+        Ok(())
+    })
+    .unwrap_err();
+    let diagnostic = format!("{error:#}");
+    assert!(
+        diagnostic.contains("pre-push")
+            && diagnostic.contains("2 earlier operations applied; rollback completed"),
+        "{diagnostic}"
+    );
+    assert_eq!(fs::read_to_string(&path).unwrap(), original);
+    assert_eq!(
+        fs::metadata(path).unwrap().permissions().mode() & 0o777,
+        0o750
+    );
+    assert!(!hook(root.path(), "pre-commit").exists());
+    assert!(!hook(root.path(), "pre-push").exists());
+    assert!(!fs::read_dir(hook(root.path(), "")).unwrap().any(|entry| {
+        entry
+            .unwrap()
+            .file_name()
+            .to_string_lossy()
+            .starts_with(".please-hook-")
+    }));
+    synchronize(root.path());
+    assert!(reconciliation::inspect(&p).unwrap().synchronized());
+}
+
+#[test]
+fn rollback_reports_every_unrestorable_path_and_continues_restoring() {
+    // REQ-0303: report each failed restoration while still restoring other hooks.
+    for blocked in [vec!["commit-msg", "pre-commit"], vec!["pre-commit"]] {
+        let root = project(&["commit-msg", "pre-commit", "pre-push"]);
+        let p = config::load(root.path()).unwrap();
+        let plan = reconciliation::inspect(&p).unwrap();
+        let error = reconciliation::apply_operations(&p, &plan, &mut |applied| {
+            if applied == 2 {
+                for event in &blocked {
+                    executable(&hook(root.path(), event), "#!/bin/sh\n# concurrent edit\n");
+                }
+                anyhow::bail!("injected replacement failure");
+            }
+            Ok(())
+        })
+        .unwrap_err();
+        let diagnostic = format!("{error:#}");
+        for event in &blocked {
+            assert!(
+                diagnostic.contains(&format!(
+                    "{}: concurrent edit; preserve file",
+                    hook(root.path(), event).display()
+                )),
+                "{diagnostic}"
+            );
+            assert_eq!(
+                fs::read_to_string(hook(root.path(), event)).unwrap(),
+                "#!/bin/sh\n# concurrent edit\n"
+            );
+        }
+        if blocked.len() == 1 {
+            assert!(!hook(root.path(), "commit-msg").exists());
+        }
+        assert!(!hook(root.path(), "pre-push").exists());
+    }
+}
+
+#[test]
+fn filesystem_permission_failure_applies_no_hooks() {
+    let root = project(&["pre-commit", "pre-push"]);
+    let p = config::load(root.path()).unwrap();
+    let plan = reconciliation::inspect(&p).unwrap();
+    let directory = hook(root.path(), "");
+    fs::set_permissions(&directory, fs::Permissions::from_mode(0o555)).unwrap();
+    let result = reconciliation::apply(&p, &plan);
+    fs::set_permissions(&directory, fs::Permissions::from_mode(0o755)).unwrap();
+    if unsafe { libc::geteuid() } != 0 {
+        let diagnostic = format!("{:#}", result.unwrap_err());
+        assert!(
+            diagnostic.contains("stage hook")
+                && diagnostic.contains("0 earlier operations applied")
+        );
+        assert!(!hook(root.path(), "pre-commit").exists());
+        assert!(!hook(root.path(), "pre-push").exists());
+    }
+}
+
+#[test]
 fn obsolete_hooks_are_rejected_and_provider_validation_is_preserved() {
     let root = project(&["pre-commit"]);
     let path = root.path().join(".please/config.toml");
