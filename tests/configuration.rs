@@ -1094,6 +1094,52 @@ fn string_commands_reject_invalid_syntax() {
     }
 }
 
+#[test]
+fn invalid_references_explain_supported_tokens_and_literal_escape() {
+    // REQ-0018: all four reference error categories name the supported tokens and
+    // literal escape when loading configuration, including disabled checks.
+    for enabled in [true, false] {
+        for (reference, diagnostic) in [
+            ("@unknown/file", "unsupported reference"),
+            ("@", "invalid reference"),
+            ("@rule", "invalid reference"),
+            ("@repo", "invalid reference"),
+            ("@source", "invalid reference"),
+            ("@param", "invalid reference"),
+            ("@context/extra", "unsupported reference"),
+            ("@param/", "invalid parameter reference"),
+            ("@param/1bad", "invalid parameter reference"),
+            ("@param/a/b", "invalid parameter reference"),
+            ("@param/absent", "command refers to undeclared parameter"),
+        ] {
+            let d = project();
+            check(
+                d.path(),
+                "invalid",
+                &format!("enabled = {enabled}"),
+                &format!("command = 'tool {reference}'"),
+                "exit 0",
+            );
+            let message = error(d.path());
+            for expected in [
+                ".please/checks/invalid/rule.toml",
+                diagnostic,
+                "@context",
+                "@param/<name>",
+                "@rule/",
+                "@repo/",
+                "@source/",
+                "@@ for a literal @",
+            ] {
+                assert!(
+                    message.contains(expected),
+                    "{reference:?}, enabled={enabled}: missing {expected:?} in {message}"
+                );
+            }
+        }
+    }
+}
+
 #[cfg(unix)]
 #[test]
 fn string_command_arguments_reach_the_process_unchanged() {

@@ -78,7 +78,7 @@ fn reference(argument: &str) -> anyhow::Result<Option<Reference<'_>>> {
                 && suffix
                     .bytes()
                     .all(|c| c.is_ascii_alphanumeric() || c == b'_'),
-            "check.command: invalid parameter reference {argument:?}; use @param/ followed by a declared parameter name"
+            "check.command: invalid parameter reference {argument:?}; use @param/ followed by a declared parameter name; supported are @context, @param/<name>, @rule/, @repo/ and @source/; use @@ for a literal @"
         );
         return Ok(Some(Reference::Parameter(suffix)));
     }

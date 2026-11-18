@@ -326,7 +326,7 @@ fn load_rules(
                 for name in check.command.parameter_names() {
                     ensure!(
                         rule.parameters.contains_key(name),
-                        "{}: command refers to undeclared parameter {name:?}",
+                        "{}: command refers to undeclared parameter {name:?}; supported are @context, @param/<name>, @rule/, @repo/ and @source/; use @@ for a literal @",
                         path.display()
                     );
                 }

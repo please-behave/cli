@@ -224,6 +224,9 @@ disable resolution.
 Path suffixes use nonempty relative components separated by `/`; empty suffixes, `.`,
 `..`, backslashes and colons are rejected when loading, as are unknown prefixes, a bare
 `@`, a malformed `@param/` name or an `@param/` reference to an undeclared parameter.
+Errors for unknown prefixes, malformed reserved references, malformed parameter
+names and undeclared parameters list the supported tokens and the `@@` literal escape,
+including for disabled checks.
 Immediately before execution, referenced paths must exist, symlinks anywhere in the
 root or suffix are rejected, and the canonical path is passed on. A missing path, a
 missing `@context` or a parameter without a value is a per-rule ERROR with no fallback.
