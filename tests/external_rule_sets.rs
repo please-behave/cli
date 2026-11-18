@@ -2754,3 +2754,465 @@ rules = [
         ["check".into(), "verify".into()].into()
     );
 }
+
+#[cfg(unix)]
+#[test]
+fn coordinated_display_renames_preserve_local_and_imported_execution() {
+    // REQ-0137: labels cannot affect identity, selection, order, delivered parameters or providers.
+    let f = Fixture::new();
+    fs::remove_dir_all(f.root.join(".please/checks")).unwrap();
+    fs::remove_dir_all(f.root.join(".please/reviews")).unwrap();
+    write(&f.root, "evidence", "changed evidence\n");
+    write(
+        &f.remote,
+        "repository/ruleset.toml",
+        "id = 'quality'\ndescription = 'Label fixture'\nrun_at = ['check']\nrules = ['repository/checks/z-check', 'repository/reviews/a-review', 'repository/checks/disabled']\n",
+    );
+    fs::remove_dir_all(f.remote.join("repository/checks/required-files")).unwrap();
+    let definitions = |root: &Path, directory: &str, label: &str, value: &str, imported: bool| {
+        let provider = if imported {
+            "imported-chosen"
+        } else {
+            "local-chosen"
+        };
+        write(
+            root,
+            &format!("{directory}/providers/{provider}.toml"),
+            "command = 'fake-adapter'\ntimeout_seconds = 17\n[parameters]\nmodel = 'synthetic-model'\n",
+        );
+        let parameter = if imported {
+            "required = true".to_owned()
+        } else {
+            format!("value = {value:?}")
+        };
+        for (kind, id, body) in [
+            (
+                "checks",
+                "z-check",
+                "[check]\ncommand = 'sh @rule/index.sh @param/label'\n",
+            ),
+            (
+                "reviews",
+                "a-review",
+                "[review]\nprovider = 'chosen'\nprompt = 'prompt.md'\n",
+            ),
+        ] {
+            write(
+                root,
+                &format!("{directory}/{kind}/{id}/rule.toml"),
+                &format!(
+                    "id = {id:?}\nname = {label:?}\ndescription = 'Label fixture'\nrun_at = ['check']\n{body}[parameters.label]\ntype = 'string'\n{parameter}\n"
+                ).replace("provider = 'chosen'", &format!("provider = {provider:?}")),
+            );
+        }
+        write(
+            root,
+            &format!("{directory}/checks/disabled/rule.toml"),
+            &format!(
+                "id = 'disabled'\nname = {label:?}\ndescription = 'Unselected label fixture'\nenabled = false\nrun_at = ['check']\n[check]\ncommand = 'exit 1'\n"
+            ),
+        );
+        write(
+            root,
+            &format!("{directory}/checks/z-check/index.sh"),
+            "printf '%s' \"$1\"\n",
+        );
+        write(
+            root,
+            &format!("{directory}/reviews/a-review/prompt.md"),
+            "Inspect evidence.\n",
+        );
+    };
+    definitions(&f.root, ".please", "Zulu local", "local-value", false);
+    definitions(
+        &f.remote,
+        "repository",
+        "Alpha imported",
+        "imported-value",
+        true,
+    );
+    commit(&f.remote);
+    mapped_imports(
+        &f,
+        &[(
+            "repository",
+            "[imports.rule_parameters.z-check]\nlabel = 'imported-value'\n[imports.rule_parameters.a-review]\nlabel = 'imported-value'",
+        )],
+        &[],
+    );
+    struct Inspect(std::sync::Mutex<Vec<(String, String, String)>>);
+    impl Provider for Inspect {
+        fn review(&self, request: &Request<'_>) -> anyhow::Result<String> {
+            let review = request.reviews[0];
+            let expected = if review.id.starts_with("git:") {
+                "imported-value"
+            } else {
+                "local-value"
+            };
+            assert_eq!(request.parameters["label"], expected);
+            assert_eq!(
+                request.provider_config()?.parameters["model"],
+                "synthetic-model"
+            );
+            self.0.lock().unwrap().push((
+                review.id.clone(),
+                review.provider.clone().unwrap(),
+                request.parameters["label"].clone(),
+            ));
+            Ok(serde_json::json!({"reviews":[{"id":review.id,"status":"PASS","reason":"Evidence inspected","findings":[{"message":"Evidence", "path":"evidence", "line":1}]}]}).to_string())
+        }
+    }
+    let run = || {
+        let provider = Inspect(std::sync::Mutex::new(Vec::new()));
+        let report = please::verify_project_at(
+            f.load(true).unwrap(),
+            &provider,
+            please::VerificationMode::AllRules,
+            Some("check"),
+            &mut |_| {},
+        )
+        .unwrap();
+        assert_eq!(report.overall, Status::Pass);
+        assert_eq!(report.results.len(), 4);
+        assert_eq!(report.plan.required_ids.len(), 4);
+        assert_eq!(report.plan.disabled_rules.len(), 2);
+        assert!(
+            report
+                .plan
+                .disabled_rules
+                .iter()
+                .all(|r| r.id.ends_with("disabled"))
+        );
+        let selection: Vec<_> = report
+            .plan
+            .scheduled
+            .iter()
+            .map(|r| {
+                (
+                    r.id.clone(),
+                    r.kind.clone(),
+                    r.selected_by.clone(),
+                    r.provider.clone(),
+                    serde_json::to_value(&r.provider_config).unwrap(),
+                )
+            })
+            .collect();
+        let outputs: Vec<_> = report
+            .results
+            .iter()
+            .filter(|r| r.kind == "check")
+            .map(|r| (r.id.clone(), r.stdout.as_ref().unwrap().text.clone()))
+            .collect();
+        assert_eq!(outputs.len(), 2);
+        for (id, output) in &outputs {
+            assert_eq!(
+                output,
+                if id.starts_with("git:") {
+                    "imported-value"
+                } else {
+                    "local-value"
+                }
+            );
+        }
+        let mut calls = provider.0.into_inner().unwrap();
+        calls.sort();
+        assert_eq!(calls.len(), 2);
+        (report.plan.required_ids, selection, outputs, calls)
+    };
+    let before = run();
+    // Reverse the labels' lexical order and give checks/reviews colliding names.
+    definitions(&f.root, ".please", "Alpha renamed", "local-value", false);
+    definitions(
+        &f.remote,
+        "repository",
+        "Zulu renamed",
+        "imported-value",
+        true,
+    );
+    commit(&f.remote);
+    assert_eq!(run(), before);
+    let loaded = f.load(false).unwrap();
+    let plan = planner::build(&loaded, Some("check"), false).unwrap().plan;
+    for rule in &plan.scheduled {
+        assert_eq!(
+            rule.name.as_deref(),
+            Some(if rule.id.starts_with("git:") {
+                "Zulu renamed"
+            } else {
+                "Alpha renamed"
+            })
+        );
+    }
+}
+
+#[test]
+fn coordinated_project_and_worktree_resolutions_remain_independent() {
+    // REQ-0229: refresh each distinct resolution in a shared cache without rewriting either neighbor.
+    let f = Fixture::new();
+    let mut revisions = Vec::new();
+    for index in 0..4 {
+        write(&f.remote, "repository/revision", &index.to_string());
+        revisions.push(commit(&f.remote));
+        git(&f.remote, &["branch", &format!("consumer-{index}")]);
+    }
+    f.imports(&[("repository", "consumer-0")]);
+    commit(&f.root);
+    let linked = f._directory.path().join("linked");
+    git(
+        &f.root,
+        &[
+            "worktree",
+            "add",
+            "--quiet",
+            "-b",
+            "linked",
+            linked.to_str().unwrap(),
+        ],
+    );
+    let other = f._directory.path().join("other");
+    git(
+        &f.root,
+        &[
+            "clone",
+            "--quiet",
+            "--no-local",
+            f.root.to_str().unwrap(),
+            other.to_str().unwrap(),
+        ],
+    );
+    let roots = [&f.root, &linked, &other];
+    let cache = f.cache.join("please");
+    let state_paths: Vec<_> = roots
+        .iter()
+        .map(|root| {
+            root.join(git(
+                root,
+                &["rev-parse", "--git-path", "please/external-rule-sets.json"],
+            ))
+        })
+        .collect();
+    let sync = |root: &Path| {
+        let output = support::command(env!("CARGO_BIN_EXE_please"))
+            .current_dir(root)
+            .env("XDG_CACHE_HOME", &f.cache)
+            .args(["sync", "--yes"])
+            .output()
+            .unwrap();
+        assert!(output.status.success(), "{output:?}");
+    };
+    for (index, root) in roots.iter().enumerate() {
+        let path = root.join(".please/config.toml");
+        fs::write(
+            &path,
+            fs::read_to_string(&path)
+                .unwrap()
+                .replace("consumer-0", &format!("consumer-{index}")),
+        )
+        .unwrap();
+        sync(root);
+        let loaded = external::load(root, false, Some(&cache)).unwrap();
+        assert!(
+            loaded
+                .effective
+                .rules
+                .values()
+                .filter_map(|r| r.external.as_ref())
+                .map(|o| o.commit.as_str())
+                .collect::<Vec<_>>()
+                == [revisions[index].as_str()]
+        );
+    }
+    let mut states: Vec<_> = state_paths.iter().map(|p| fs::read(p).unwrap()).collect();
+    assert!(states[0] != states[1] && states[1] != states[2] && states[0] != states[2]);
+    for (index, root) in roots.iter().enumerate() {
+        git(
+            &f.remote,
+            &[
+                "update-ref",
+                &format!("refs/heads/consumer-{index}"),
+                &revisions[3],
+            ],
+        );
+        sync(root);
+        for (neighbor, path) in state_paths.iter().enumerate() {
+            let bytes = fs::read(path).unwrap();
+            if neighbor == index {
+                assert_ne!(bytes, states[neighbor]);
+                states[neighbor] = bytes;
+            } else {
+                assert_eq!(bytes, states[neighbor]);
+            }
+        }
+        let loaded = external::load(root, false, Some(&cache)).unwrap();
+        assert!(
+            loaded
+                .effective
+                .rules
+                .values()
+                .filter_map(|r| r.external.as_ref())
+                .map(|o| o.commit.as_str())
+                .collect::<Vec<_>>()
+                == [revisions[3].as_str()]
+        );
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn coordinated_declined_terminal_approval_keeps_refreshed_imports() {
+    // REQ-0294: sync persists a moving import before terminal hook approval, even when declined.
+    use std::{
+        io::{Read, Write},
+        os::fd::FromRawFd,
+    };
+    let f = Fixture::new();
+    f.imports(&[("repository", "main")]);
+    assert!(cli(&f, &["sync", "--yes"]).status.success());
+    let previous = f.state();
+    write(&f.remote, "repository/revision", "refreshed\n");
+    let revision = commit(&f.remote);
+    support::check(&f.root, "needs-hook", &["pre-commit"], "exit 0");
+    let hook = f.root.join(".git/hooks/pre-commit");
+    let foreign = b"#!/bin/sh\n# Keep this user hook\n";
+    fs::write(&hook, foreign).unwrap();
+    use std::os::unix::fs::PermissionsExt;
+    fs::set_permissions(&hook, fs::Permissions::from_mode(0o755)).unwrap();
+    let (mut master_fd, mut slave_fd) = (-1, -1);
+    assert_eq!(
+        unsafe {
+            libc::openpty(
+                &mut master_fd,
+                &mut slave_fd,
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+            )
+        },
+        0
+    );
+    let mut master = unsafe { fs::File::from_raw_fd(master_fd) };
+    let slave = unsafe { fs::File::from_raw_fd(slave_fd) };
+    let mut child = support::command(env!("CARGO_BIN_EXE_please"))
+        .current_dir(&f.root)
+        .env("XDG_CACHE_HOME", &f.cache)
+        .env("NO_COLOR", "1")
+        .args(["sync"])
+        .stdin(slave.try_clone().unwrap())
+        .stdout(slave.try_clone().unwrap())
+        .stderr(slave)
+        .spawn()
+        .unwrap();
+    // Wait for the approval prompt before answering; prove refresh already persisted at that boundary.
+    let state = f.root.join(".git/please/external-rule-sets.json");
+    let reader = std::thread::spawn(move || {
+        let mut transcript = Vec::new();
+        let mut byte = [0];
+        let mut answered = false;
+        while matches!(master.read(&mut byte), Ok(1)) {
+            transcript.push(byte[0]);
+            if !answered && String::from_utf8_lossy(&transcript).contains("[y/N]") {
+                let persisted = fs::read(&state).unwrap();
+                assert_ne!(persisted, previous);
+                assert!(String::from_utf8_lossy(&persisted).contains(&revision));
+                master.write_all(b"n\n").unwrap();
+                answered = true;
+            }
+        }
+        assert!(answered, "{}", String::from_utf8_lossy(&transcript));
+        transcript
+    });
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(15);
+    let status = loop {
+        if let Some(status) = child.try_wait().unwrap() {
+            break status;
+        }
+        if std::time::Instant::now() > deadline {
+            child.kill().unwrap();
+            child.wait().unwrap();
+            panic!("terminal sync timed out: {:?}", reader.join().unwrap());
+        }
+        std::thread::sleep(std::time::Duration::from_millis(20));
+    };
+    let transcript = reader.join().unwrap();
+    assert_eq!(
+        status.code(),
+        Some(2),
+        "{}",
+        String::from_utf8_lossy(&transcript)
+    );
+    assert_eq!(fs::read(hook).unwrap(), foreign);
+    // Loading without refresh after making the source unavailable proves the resolution survived rejection.
+    let expected = git(&f.remote, &["rev-parse", "HEAD"]);
+    fs::rename(&f.remote, f.remote.with_extension("offline")).unwrap();
+    let loaded = external::load(&f.root, false, Some(&f.cache.join("please"))).unwrap();
+    let origins: Vec<_> = loaded
+        .effective
+        .rules
+        .values()
+        .filter_map(|r| r.external.as_ref())
+        .collect();
+    assert!(!origins.is_empty());
+    assert!(origins.iter().all(|o| o.commit == expected));
+}
+
+#[cfg(unix)]
+#[test]
+fn coordinated_sync_preserves_governed_files_through_hook_lifecycle_and_failure() {
+    // REQ-0298: import refresh and hook creation/update/removal/failure leave the governed tree intact.
+    use std::{collections::BTreeMap, os::unix::fs::PermissionsExt};
+    fn snapshot(root: &Path, directory: &Path, files: &mut BTreeMap<PathBuf, Vec<u8>>) {
+        for entry in fs::read_dir(directory).unwrap() {
+            let path = entry.unwrap().path();
+            let relative = path.strip_prefix(root).unwrap();
+            if relative == Path::new(".git") || relative == Path::new(".please/reports") {
+                continue;
+            }
+            if path.is_dir() {
+                snapshot(root, &path, files);
+            } else {
+                files.insert(relative.to_path_buf(), fs::read(path).unwrap());
+            }
+        }
+    }
+    let f = Fixture::new();
+    f.imports(&[("repository", "main")]);
+    write(&f.root, "src/example.rs", "fn main() {}\n");
+    write(&f.root, "README.md", "Governed documentation\n");
+    write(&f.root, "untracked.bin", "\0untracked bytes\n");
+    let sync = |success: bool| {
+        let mut before = BTreeMap::new();
+        snapshot(&f.root, &f.root, &mut before);
+        let output = cli(&f, &["sync", "--yes"]);
+        assert_eq!(output.status.success(), success, "{output:?}");
+        let mut after = BTreeMap::new();
+        snapshot(&f.root, &f.root, &mut after);
+        assert_eq!(after, before);
+        output
+    };
+    sync(true);
+    let previous = f.state();
+    write(&f.remote, "repository/revision", "advanced\n");
+    let revision = commit(&f.remote);
+    sync(true);
+    assert_ne!(f.state(), previous);
+    assert!(String::from_utf8_lossy(&f.state()).contains(&revision));
+    support::check(&f.root, "needs-hook", &["pre-commit"], "exit 0");
+    sync(true);
+    let hook = f.root.join(".git/hooks/pre-commit");
+    let original = fs::read_to_string(&hook).unwrap();
+    assert!(original.contains("--at 'pre-commit'"));
+    fs::write(&hook, original.replace("--at 'pre-commit'", "--at 'check'")).unwrap();
+    let output = sync(true);
+    assert!(String::from_utf8_lossy(&output.stderr).contains("Update hook"));
+    assert_eq!(fs::read_to_string(&hook).unwrap(), original);
+    support::check(&f.root, "needs-hook", &["check"], "exit 0");
+    sync(true);
+    assert!(!hook.exists());
+    support::check(&f.root, "needs-hook", &["pre-commit"], "exit 0");
+    let foreign = "#!/usr/bin/env python3\nprint('foreign hook')\n";
+    fs::write(&hook, foreign).unwrap();
+    fs::set_permissions(&hook, fs::Permissions::from_mode(0o755)).unwrap();
+    let output = sync(false);
+    assert!(String::from_utf8_lossy(&output.stderr).contains("hook"));
+    assert_eq!(fs::read_to_string(hook).unwrap(), foreign);
+}
