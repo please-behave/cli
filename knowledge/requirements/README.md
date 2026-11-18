@@ -25,9 +25,9 @@ code to know what the product promises.
   and the tests that cite it show how it is verified.
 - **Reviewing.** A change is judged against the requirements of the components
   it touches. A violated requirement is a finding even when no test caught it.
-- **Finding gaps.** A requirement no test cites is unverified, and behavior that
-  no requirement describes is unspecified. Both are visible and neither is
-  acceptable for long.
+- **Finding gaps.** A requirement with neither a test citation nor a justified
+  exemption is unverified, and behavior that no requirement describes is
+  unspecified. Both are visible and neither is acceptable for long.
 
 ## What a requirement is
 
@@ -122,9 +122,10 @@ after confirming that the assertions exercise the requirement. A citation
 records representative coverage rather than proof of every clause.
 
 The documentation check reads line comments in Rust product tests and Python
-tooling tests. It validates that cited requirement IDs exist and lists
-active requirements with no test citation as verification gaps. Missing
-citations remain visible until a suitable test is identified or added.
+tooling tests and validates that cited requirement IDs exist. Every active
+requirement must have either a test citation or a non-empty `test_exemption`,
+never both; the check fails on violations. Obsolete requirements are excluded
+from this obligation.
 
 A requirement that cannot reasonably be verified by an automated test carries
 a `test_exemption` with the concrete reason: it has no observable behavior to

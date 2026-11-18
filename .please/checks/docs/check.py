@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Check local Markdown links/anchors and test references to requirements offline."""
 
+import json
 from pathlib import Path
 import re
 import subprocess
@@ -44,15 +45,21 @@ def check_requirements(root):
     directory = root / "knowledge/requirements"
     definitions = sorted(directory.glob("REQ-*.yaml"))
     assert definitions, "no requirement definitions found"
+    result = subprocess.run(["yq", "eval-all", "-o=json", "-I=0", "[.]", *map(str, definitions)], capture_output=True, text=True)
+    if result.returncode:
+        raise RuntimeError(f"yq failed for requirement definitions: {result.stderr.strip()}")
     active = set()
     known = set()
-    for path in definitions:
-        text = path.read_text()
-        identifier = re.search(r"^id: (REQ-\d{4})$", text, re.M)
-        assert identifier and identifier[1] == path.stem, f"{path.relative_to(root)}: invalid requirement ID"
-        known.add(identifier[1])
-        if not re.search(r"^obsolete: true$", text, re.M):
-            active.add(identifier[1])
+    exempt = set()
+    for path, requirement in zip(definitions, json.loads(result.stdout), strict=True):
+        identifier = requirement.get("id")
+        assert identifier == path.stem and re.fullmatch(r"REQ-\d{4}", identifier), f"{path.relative_to(root)}: invalid requirement ID"
+        known.add(identifier)
+        if requirement.get("obsolete") is not True:
+            active.add(identifier)
+            exemption = requirement.get("test_exemption")
+            if isinstance(exemption, str) and exemption.strip():
+                exempt.add(identifier)
 
     tests = set((root / "tests").rglob("*.rs"))
     for scope in [".please/checks", ".github/scripts", "tools"]:
@@ -64,7 +71,15 @@ def check_requirements(root):
         for identifier in re.findall(r"\bREQ-\d+\b", "\n".join(comments)):
             assert identifier in known, f"{path.relative_to(root)}: unknown requirement {identifier}"
             cited.add(identifier)
-    return active & cited, active - cited
+    errors = []
+    missing = active - cited - exempt
+    conflicting = cited & exempt
+    if missing:
+        errors.append("Active requirements without a test citation or non-empty test_exemption: " + ", ".join(sorted(missing)))
+    if conflicting:
+        errors.append("Active requirements with both a test citation and test_exemption: " + ", ".join(sorted(conflicting)))
+    assert not errors, "\n".join(errors)
+    return active & cited, exempt
 
 
 def main():
@@ -75,13 +90,9 @@ def main():
     )
     files = [ROOT / name for name in sorted(set(filter(None, tracked))) if (ROOT / name).is_file()]
     check_links(ROOT, files)
-    cited, missing = check_requirements(ROOT)
+    cited, exempt = check_requirements(ROOT)
     print(f"Documentation passed: {len(files)} Markdown files; local links, anchors and requirement references.")
-    print(
-        f"Requirement references: {len(cited)}/{len(cited) + len(missing)} active requirements cited by tests; representative coverage only."
-    )
-    if missing:
-        print("Verification gaps (active requirements without test citations): " + ", ".join(sorted(missing)))
+    print(f"Requirement verification: {len(cited) + len(exempt)} active requirements; {len(cited)} cited by tests, {len(exempt)} exempted.")
 
 
 if __name__ == "__main__":

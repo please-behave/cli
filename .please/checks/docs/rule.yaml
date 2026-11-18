@@ -1,4 +1,4 @@
-purpose: Keep the Markdown documentation internally consistent and the requirement references in tests valid.
+purpose: Keep Markdown documentation internally consistent and active requirements linked to tests or justified exemptions.
 problem: >-
   Broken links and anchors, and tests that cite requirements which do not
   exist, go unnoticed and make documentation and requirements untraceable.
@@ -12,12 +12,13 @@ conditions:
     rationale: The ID is the key by which tests cite requirements.
   - statement: Every requirement ID cited in a test comment is defined.
     rationale: A citation without a requirement is a typo or outdated.
+  - statement: Active requirements satisfy the verification contract in knowledge/requirements/README.md.
+    rationale: Verification gaps and contradictory exemptions must not accumulate.
 success_criteria:
   - A broken link, a missing anchor or an unknown requirement ID fails and the message names the file.
+  - A violation of the requirement verification contract fails and lists the affected IDs.
   - A crash or an unexpected error is an ERROR.
 out_of_scope:
   - description: External links.
   - description: The content of the documentation and the quality of the tests.
-limitations:
-  - Active requirements that no test cites are only reported and do not fail the Rule.
 placement: Local, because it depends on the documentation and requirement layout of this repository only.
