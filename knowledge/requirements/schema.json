@@ -68,6 +68,11 @@
       "type": "boolean",
       "const": true,
       "description": "Marks a requirement as historical and no longer binding. Omit this property for active requirements."
+    },
+    "test_exemption": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The reason no test cites this requirement: it has no observable behavior to assert automatically, or another named mechanism verifies it, such as a rule under .please/checks/ or a release workflow. Omit the property when tests cite the requirement."
     }
   }
 }

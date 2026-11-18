@@ -91,6 +91,7 @@ dependency validation and reporting is too large.
 | `rationale` | One plain sentence on why the product needs this. It is what the owner judges, since the statement alone says what holds but not why anyone wants it. If the reason needs more than a sentence, the requirement is probably too large or too small. |
 | `decisions` | The decisions that shaped this requirement. Omit it when no significant choice stands behind it; most requirements need none. |
 | `obsolete` | Set to `true` when the requirement no longer binds. Delete a requirement that was withdrawn without replacement. |
+| `test_exemption` | The reason no test cites the requirement. See [Test References](#test-references). Omit it when tests cite the requirement. |
 
 References point from this artifact to the more stable one: a requirement names
 the decisions that shaped it, and a decision never names requirements. The
@@ -124,6 +125,11 @@ The documentation check reads line comments in Rust product tests and Python
 tooling tests. It validates that cited requirement IDs exist and lists
 active requirements with no test citation as verification gaps. Missing
 citations remain visible until a suitable test is identified or added.
+
+A requirement that cannot reasonably be verified by an automated test carries
+a `test_exemption` with the concrete reason: it has no observable behavior to
+assert, or another named mechanism verifies it, such as a rule under
+`.please/checks/` or a release workflow. Difficulty alone is not a reason.
 
 ## What the check cannot see
 
