@@ -365,6 +365,7 @@ fn direct_and_interpreter_execution_keep_consumer_and_resources() {
 #[cfg(unix)]
 #[test]
 fn blocking_failures_errors_and_disabled_rules() {
+    // REQ-0025, REQ-0026: spawn failures and timeouts are ERROR; FAIL and ERROR prevent overall success.
     for (implementation, script, expected) in [
         ("command = 'sh @rule/index.sh'", "exit 1", Status::Fail),
         ("command = 'sh @rule/index.sh'", "exit 2", Status::Error),
@@ -448,6 +449,7 @@ fn failed_check_prevents_reviews() {
 
 #[test]
 fn checks_reject_a_blocking_property() {
+    // REQ-0027: a check cannot declare a blocking property.
     for attribute in ["blocking = false", "blocking = true"] {
         let d = project();
         check(
@@ -799,6 +801,7 @@ fn saved_reports_reject_inconsistent_metadata() {
 #[cfg(unix)]
 #[test]
 fn local_rules_share_entrypoints_with_independent_results() {
+    // REQ-0021, REQ-0023: checks sharing a script keep their own results and plans accept references to missing paths.
     use std::os::unix::fs::PermissionsExt;
     for interpreter in ["", "sh "] {
         let d = project();
@@ -887,6 +890,7 @@ fn local_rules_share_entrypoints_with_independent_results() {
 #[cfg(unix)]
 #[test]
 fn shared_commands_reject_symlinks_at_execution() {
+    // REQ-0019: references through symbolic links are rejected before each execution.
     use std::os::unix::fs::symlink;
     for target in ["scripts/shared.sh", "scripts", ".please/checks/readme"] {
         let d = project();
@@ -948,6 +952,7 @@ fn shared_commands_reject_symlinks_at_execution() {
 
 #[test]
 fn shared_entrypoints_recheck_missing_and_nonregular_files_before_execution() {
+    // REQ-0020: a reference to a missing or unusable path is an ERROR without fallback.
     for replace_with_directory in [false, true] {
         let d = project();
         check(
@@ -971,6 +976,7 @@ fn shared_entrypoints_recheck_missing_and_nonregular_files_before_execution() {
 
 #[test]
 fn string_commands_parse_arguments_without_a_shell() {
+    // REQ-0003, REQ-0005: quoting and escaping rules split a command without shell interpretation.
     for (command, expected) in [
         (
             "python3 scripts/check-docs.py",
@@ -1019,6 +1025,7 @@ fn string_commands_parse_arguments_without_a_shell() {
 
 #[test]
 fn string_commands_reject_invalid_syntax() {
+    // REQ-0004, REQ-0005, REQ-0017: shell syntax, unbalanced quoting and malformed reference paths are rejected, even for disabled checks.
     for command in [
         "",
         " \t ",
@@ -1079,6 +1086,7 @@ fn string_commands_reject_invalid_syntax() {
 #[cfg(unix)]
 #[test]
 fn string_command_arguments_reach_the_process_unchanged() {
+    // REQ-0003: operators, expansions and globs stay literal arguments.
     let d = project();
     write(
         d.path(),
@@ -1170,6 +1178,7 @@ fn command_representations_execute_equivalently() {
 
 #[test]
 fn commands_validate_without_execution() {
+    // REQ-0001, REQ-0007, REQ-0011: missing, blank or NUL commands are rejected at load; a missing executable is an ERROR only when the check runs.
     for implementation in [
         "",
         "command = []",
@@ -1272,6 +1281,125 @@ fn commands_preserve_literal_arguments_and_rule_context() {
 }
 
 #[test]
+fn check_timeouts_default_and_stay_within_their_bounds() {
+    // REQ-0002: the default and the 1..3600 bounds of a check timeout are enforced when loading.
+    for (setting, accepted) in [
+        ("", true),
+        ("timeout_seconds = 1", true),
+        ("timeout_seconds = 3600", true),
+        ("timeout_seconds = 0", false),
+        ("timeout_seconds = 3601", false),
+        ("timeout_seconds = -1", false),
+        ("timeout_seconds = 1.5", false),
+        ("timeout_seconds = '5'", false),
+    ] {
+        let d = project();
+        check(
+            d.path(),
+            "bounded",
+            "enabled = false",
+            &format!("command = 'git --version'\n{setting}"),
+            "exit 0",
+        );
+        let loaded = config::load(d.path());
+        assert_eq!(loaded.is_ok(), accepted, "{setting}");
+        if setting.is_empty() {
+            assert_eq!(loaded.unwrap().checks[0].timeout_seconds, 30);
+        }
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn check_commands_run_at_the_repository_root_without_standard_input() {
+    // REQ-0008: a check runs in the repository root and receives no input offered to the invocation.
+    use std::io::Write;
+    let d = project();
+    check(
+        d.path(),
+        "context",
+        "run_at = ['check']",
+        "command = 'sh @rule/index.sh'",
+        "pwd -P\ncat\n",
+    );
+    let mut child = support::command(env!("CARGO_BIN_EXE_please"))
+        .env("PLEASE_CHANGE_BASE", "HEAD")
+        .args(["run", "--at", "check"])
+        .current_dir(d.path())
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .unwrap();
+    // Data offered on the invocation's own input must never reach the check.
+    let mut input = child.stdin.take().unwrap();
+    let _ = input.write_all(b"offered input\n");
+    drop(input);
+    assert!(child.wait().unwrap().success());
+    let saved = report::read(d.path()).unwrap();
+    assert_eq!(
+        saved.results[0].stdout.as_ref().unwrap().text,
+        format!("{}\n", d.path().canonicalize().unwrap().display())
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn executables_resolve_through_the_search_path_or_a_repository_relative_path() {
+    // REQ-0010: executables are found on the search path or by a path relative to the repository root.
+    use std::os::unix::fs::PermissionsExt;
+    let d = project();
+    write(
+        d.path(),
+        "please-probe/tool.sh",
+        "#!/bin/sh\nprintf relative\n",
+    );
+    fs::set_permissions(
+        d.path().join("please-probe/tool.sh"),
+        fs::Permissions::from_mode(0o755),
+    )
+    .unwrap();
+    // The test process does not run in the repository root, so only resolution
+    // against the root can find the explicit relative path.
+    for (command, expected) in [
+        ("please-probe/tool.sh", "relative"),
+        ("./please-probe/tool.sh", "relative"),
+        ("sh -c 'printf found'", "found"),
+    ] {
+        check(
+            d.path(),
+            "lookup",
+            "run_at = ['check']",
+            &format!("command = {}", serde_json::to_string(command).unwrap()),
+            "exit 2",
+        );
+        let p = config::load(d.path()).unwrap();
+        let result = please::checks::execute(&p, &p.checks[0]);
+        assert_eq!(result.status, Status::Pass, "{command}: {}", result.reason);
+        assert_eq!(result.stdout.unwrap().text, expected, "{command}");
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn references_may_name_directories() {
+    // REQ-0013: reference tokens may point to directories.
+    let d = project();
+    write(d.path(), "scripts/inner.sh", "exit 0");
+    write(d.path(), ".please/checks/dirs/data/file", "data");
+    check(
+        d.path(),
+        "dirs",
+        "run_at = ['check']",
+        "command = 'sh @rule/index.sh @rule/data @repo/scripts @source/scripts'",
+        "test -d \"$1\" && test -d \"$2\" && test -d \"$3\"",
+    );
+    let p = config::load(d.path()).unwrap();
+    let result = please::checks::execute(&p, &p.checks[0]);
+    assert_eq!(result.status, Status::Pass, "{}", result.reason);
+}
+
+#[test]
 fn direct_commands_use_the_existing_process_runner() {
     let d = project();
     check(
@@ -1309,6 +1437,7 @@ fn direct_commands_use_the_existing_process_runner() {
 #[cfg(unix)]
 #[test]
 fn local_path_references_execute_with_consumer_working_directory() {
+    // REQ-0008, REQ-0012, REQ-0013, REQ-0014, REQ-0015, REQ-0016: rule, source and repo references resolve as single absolute arguments in any position, quoted or not, from the repository root; @@ stays literal.
     use std::os::unix::fs::PermissionsExt;
     let d = project();
     let script = "#!/bin/sh\ntest -s README.md || exit 2\nprintf '<%s>\\n' \"$PWD\" \"$@\"\n";

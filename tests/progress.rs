@@ -110,6 +110,7 @@ fn invalid_names_are_rejected_including_disabled_rules() {
 }
 #[test]
 fn progress_modes_are_explicit_and_auto_respects_the_output_environment() {
+    // REQ-0042: plain output never redraws in CI, non-terminal or plain mode.
     for mode in ["auto", "plain", "tty"] {
         assert!(Cli::try_parse_from(["please", "run", "--progress", mode]).is_ok());
     }
@@ -353,6 +354,7 @@ fn version_line() -> String {
 #[cfg(unix)]
 #[test]
 fn github_actions_terminal_stays_append_only_with_explicit_tty() {
+    // REQ-0042: no cursor controls even with an explicit tty mode under GitHub Actions.
     let (raw, summary) = terminal_run(true);
     // A PTY translates ordinary newlines to CRLF; only escape sequences
     // or bare carriage returns would indicate interactive output here.
@@ -428,6 +430,7 @@ fn large_review_runs_use_bounded_output_without_rewriting_scrollback() {
 
 #[test]
 fn elapsed_ticks_waiting_states_and_short_boards_are_bounded() {
+    // REQ-0039: waiting and running states with completed counts are shown.
     let now = std::time::Instant::now();
     let mut renderer = terminal::ProgressRenderer::new(true, false, 80, 6);
     for number in 1..=12 {
@@ -492,6 +495,7 @@ fn elapsed_ticks_waiting_states_and_short_boards_are_bounded() {
 
 #[test]
 fn start_numbers_survive_out_of_order_completion_and_unstarted_results() {
+    // REQ-0039, REQ-0043: progress states and counts match the run; queued and skipped rules are not announced as started.
     for redraw in [false, true] {
         let mut renderer = terminal::ProgressRenderer::new(redraw, false, 120, 24);
         let now = std::time::Instant::now();

@@ -7,6 +7,7 @@ use support::write;
 
 #[test]
 fn validated_execution_point_overrides_inherited_context_for_checks_and_provider_processes() {
+    // REQ-0012: @context, @param and @rule references reach the check.
     let root = tempfile::tempdir().unwrap();
     assert!(
         support::command("git")

@@ -47,6 +47,7 @@ fn commit(root: &Path) -> String {
 #[cfg(unix)]
 #[test]
 fn check_dependencies_are_qualified_per_binding_and_consumer_references_are_exact() {
+    // REQ-0053, REQ-0055: imported dependencies resolve within their import; an ambiguous short name is rejected.
     let f = Fixture::new();
     write(
         &f.remote,

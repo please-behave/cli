@@ -43,6 +43,7 @@ fn verify(root: &TempDir) -> report::Report {
 }
 #[test]
 fn defaults_overrides_validation_and_semantic_identity() {
+    // REQ-0030, REQ-0032, REQ-0033: the limit is a positive integer that never changes plan identity; invalid resource names are rejected.
     let root = project();
     let mut loaded = config::load(root.path()).unwrap();
     assert_eq!(loaded.config.execution.max_parallel.get(), 4);
@@ -124,6 +125,7 @@ fn defaults_overrides_validation_and_semantic_identity() {
 #[cfg(unix)]
 #[test]
 fn independent_processes_overlap_and_captures_remain_attributed() {
+    // REQ-0028, REQ-0029: checks run concurrently by default and their output stays available in saved details.
     let root = project();
     let signals = tempfile::tempdir().unwrap();
     for (id, other) in [("a", "b"), ("b", "a")] {
@@ -187,6 +189,7 @@ fn independent_processes_overlap_and_captures_remain_attributed() {
 #[cfg(unix)]
 #[test]
 fn failures_timeouts_and_spawn_errors_release_resources() {
+    // REQ-0025, REQ-0037: failing, timed out and unstartable checks release their resource.
     for script in ["exit 1", "exit 2", "sleep 30"] {
         let root = project();
         support::check(root.path(), "a", &["check"], script);
@@ -248,4 +251,25 @@ fn cli_override_controls_serial_execution() {
         "{}",
         String::from_utf8_lossy(&output.stderr)
     );
+}
+
+#[cfg(unix)]
+#[test]
+fn a_limit_of_one_never_overlaps_checks_and_a_higher_limit_does() {
+    // REQ-0030: the configured limit bounds concurrency; one runs checks serially.
+    let signals = tempfile::tempdir().unwrap();
+    let dir = signals.path().display();
+    let script = format!("mkdir '{dir}/lock' || exit 1\nsleep 0.3\nrmdir '{dir}/lock'");
+    for (limit, expected) in [(1, Status::Pass), (2, Status::Fail)] {
+        let root = project();
+        support::write(
+            root.path(),
+            ".please/config.toml",
+            &format!("project = 'Example'\n[execution]\nmax_parallel = {limit}\n"),
+        );
+        support::check(root.path(), "a", &["check"], &script);
+        support::check(root.path(), "b", &["check"], &script);
+        assert_eq!(verify(&root).overall, expected, "limit {limit}");
+        let _ = fs::remove_dir(signals.path().join("lock"));
+    }
 }

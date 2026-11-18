@@ -59,6 +59,7 @@ fn verify(root: &TempDir, provider: &Mock, fail_fast: bool) -> report::Report {
 
 #[test]
 fn invalid_dependencies_block_planning_before_execution() {
+    // REQ-0054, REQ-0055: missing, unselected, self and cyclic dependencies are rejected before any command runs.
     for (deps, expected) in [
         (vec!["missing"], "not selected"),
         (vec!["a"], "self-dependency"),
@@ -106,6 +107,7 @@ fn reviews_cannot_declare_dependencies_even_when_disabled_or_empty() {
 #[cfg(unix)]
 #[test]
 fn chains_branching_and_resources_obey_pass_dependencies() {
+    // REQ-0032, REQ-0034, REQ-0038, REQ-0050: exact-ID dependencies and a shared resource constrain dispatch; plan identity and result order stay canonical.
     let root = project();
     let signals = tempfile::tempdir().unwrap();
     let dir = signals.path().display();
@@ -155,6 +157,7 @@ fn chains_branching_and_resources_obey_pass_dependencies() {
 #[cfg(unix)]
 #[test]
 fn originating_outcome_gates_reviews_and_skips_propagate_without_execution() {
+    // REQ-0059, REQ-0060, REQ-0061: only PASS satisfies a dependency; dependents become NOT_RUN transitively naming their prerequisite.
     for (exit, fast, expected) in [
         (1, false, Status::Fail),
         (1, true, Status::Fail),
@@ -180,4 +183,78 @@ fn originating_outcome_gates_reviews_and_skips_propagate_without_execution() {
         }
         assert_eq!(report::read(root.path()).unwrap().overall, expected);
     }
+}
+
+fn disable(root: &TempDir, id: &str) {
+    let path = root.path().join(format!(".please/checks/{id}/rule.toml"));
+    let text = fs::read_to_string(&path).unwrap();
+    fs::write(path, text.replace("enabled = true", "enabled = false")).unwrap();
+}
+
+#[test]
+fn plans_record_the_canonical_dependencies_of_each_check() {
+    // REQ-0058: scheduled checks carry their sorted, deduplicated dependency IDs.
+    let root = project();
+    check(&root, "b", &[], "exit 0");
+    check(&root, "c", &[], "exit 0");
+    check(&root, "a", &["c", "b", "c"], "exit 0");
+    let plan = planner::build(&config::load(root.path()).unwrap(), Some("check"), false)
+        .unwrap()
+        .plan;
+    let scheduled = |id: &str| plan.scheduled.iter().find(|r| r.id == id).unwrap();
+    assert_eq!(scheduled("a").depends_on, ["b", "c"]);
+    assert!(scheduled("b").depends_on.is_empty());
+}
+
+#[test]
+fn disabled_checks_keep_dependency_syntax_validation_without_resolution() {
+    // REQ-0056: a disabled check may name an unresolvable target but not a malformed one.
+    let root = project();
+    check(&root, "enabled", &[], "exit 0");
+    check(&root, "off", &["nowhere"], "exit 0");
+    disable(&root, "off");
+    let plan = planner::build(&config::load(root.path()).unwrap(), Some("check"), false)
+        .unwrap()
+        .plan;
+    assert_eq!(plan.scheduled.len(), 1);
+    for malformed in ["", " padded", "line\nbreak"] {
+        check(&root, "off", &[malformed], "exit 0");
+        disable(&root, "off");
+        assert!(config::load(root.path()).is_err(), "accepted {malformed:?}");
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn waiting_checks_leave_concurrency_slots_to_runnable_ones() {
+    // REQ-0036: a check waiting for a resource or a prerequisite occupies no slot.
+    let root = project();
+    support::write(
+        root.path(),
+        ".please/config.toml",
+        "project = 'Example'\n[execution]\nmax_parallel = 2\n",
+    );
+    let signals = tempfile::tempdir().unwrap();
+    let dir = signals.path().display();
+    // The holder only finishes once the runnable check ran, which needs a free slot
+    // while the holder runs, the resource waiter and the dependent are still waiting.
+    check(
+        &root,
+        "a-holder",
+        &[],
+        &format!(
+            "i=0\nwhile [ ! -f '{dir}/done' ]; do i=$((i+1)); [ $i -lt 500 ] || exit 2; sleep 0.01; done"
+        ),
+    );
+    check(&root, "b-resource", &[], "exit 0");
+    check(&root, "c-dependent", &["a-holder"], "exit 0");
+    check(&root, "d-runnable", &[], &format!("touch '{dir}/done'"));
+    for id in ["a-holder", "b-resource"] {
+        let path = root.path().join(format!(".please/checks/{id}/rule.toml"));
+        let text = fs::read_to_string(&path).unwrap();
+        fs::write(path, format!("{text}resource = 'shared'\n")).unwrap();
+    }
+    let report = verify(&root, &Mock(AtomicUsize::new(0)), false);
+    assert_eq!(report.overall, Status::Pass, "{:?}", report.results);
+    assert!(report.results.iter().all(|r| r.status == Status::Pass));
 }

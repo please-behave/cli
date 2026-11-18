@@ -253,6 +253,7 @@ fn review_configuration_errors_stop_calls_even_for_advisory_rules() {
 
 #[test]
 fn fail_fast_has_no_persistent_configuration_or_plan_selection_effect() {
+    // REQ-0032: requesting fail-fast leaves the plan and its full selection unchanged.
     let root = project();
     support::check(root.path(), "a", &["check"], "exit 1");
     support::check(root.path(), "b", &["check"], "exit 0");

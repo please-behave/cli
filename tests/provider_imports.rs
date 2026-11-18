@@ -363,6 +363,7 @@ fn imported_provider_symlinks_are_rejected() {
 
 #[test]
 fn executable_references_and_literal_arguments_preserve_token_boundaries() {
+    // REQ-0015: @@ arguments of a provider stay literal with one @ removed.
     use std::os::unix::fs::PermissionsExt;
     let mut f = Fixture::new();
     let adapter = f.providers.join("packages/quality/adapter.py");

@@ -51,6 +51,7 @@ fn run(root: &std::path::Path) -> (please::report::Report, Vec<String>) {
 }
 #[test]
 fn history_persists_and_changes_dispatch_without_changing_plan() {
+    // REQ-0032, REQ-0038, REQ-0044, REQ-0045: estimates reorder dispatch inside the worktree-local cache but not the plan or the result order.
     let root = project();
     let cache = root.path().join(".git/please-scheduling.json");
     let plan = planner::build(&config::load(root.path()).unwrap(), Some("check"), true)
@@ -93,6 +94,7 @@ fn history_persists_and_changes_dispatch_without_changing_plan() {
 }
 #[test]
 fn corrupt_and_unwritable_cache_never_change_verification() {
+    // REQ-0048: a corrupt or unwritable duration cache never changes the outcome.
     let root = project();
     let cache = root.path().join(".git/please-scheduling.json");
     for contents in ["invalid JSON", r#"{"estimates":{"check":{"a":-1}}}"#] {
@@ -193,6 +195,7 @@ fn review_history_orders_calls_and_preserves_result_order() {
 
 #[test]
 fn linked_worktree_history_stays_outside_governed_files_and_is_isolated() {
+    // REQ-0045: the duration cache lives in the worktree-local Git directory.
     let root = project();
     assert!(
         support::command("git")
@@ -239,4 +242,60 @@ fn linked_worktree_history_stays_outside_governed_files_and_is_isolated() {
         .output()
         .unwrap();
     assert!(std::path::Path::new(String::from_utf8(output.stdout).unwrap().trim()).is_file());
+}
+
+#[test]
+fn remaining_dependency_path_orders_dispatch_without_overriding_eligibility() {
+    // REQ-0044, REQ-0046: the longest remaining path decides the order among runnable
+    // checks, and an estimate never lets a check start before its prerequisite passed.
+    let root = project();
+    support::check(root.path(), "c", &["check"], "exit 0");
+    support::check(root.path(), "d", &["check"], "exit 0");
+    let path = root.path().join(".please/checks/d/rule.toml");
+    let text = fs::read_to_string(&path).unwrap();
+    fs::write(&path, format!("depends_on = ['c']\n{text}")).unwrap();
+    fs::write(
+        root.path().join(".git/please-scheduling.json"),
+        r#"{"estimates":{"check":{"a":50,"b":10,"c":1,"d":100}}}"#,
+    )
+    .unwrap();
+    let (report, starts) = run(root.path());
+    assert_eq!(report.overall, Status::Pass);
+    // c leads with a path of 1 + 100; d (100) only becomes runnable after c passed.
+    assert_eq!(starts, ["c", "d", "a", "b"]);
+    assert_eq!(
+        report
+            .results
+            .iter()
+            .map(|i| i.id.as_str())
+            .collect::<Vec<_>>(),
+        ["a", "b", "c", "d"]
+    );
+}
+
+#[test]
+fn scheduling_priorities_and_estimates_are_not_configurable() {
+    // REQ-0049: neither rules nor the project configuration accept scheduling settings.
+    for (file, setting) in [
+        (".please/checks/a/rule.toml", "priority = 5\n"),
+        (".please/checks/a/rule.toml", "estimated_duration_ms = 5\n"),
+        (".please/config.toml", "priority = 5\n"),
+        (".please/config.toml", "estimated_duration_ms = 5\n"),
+    ] {
+        let root = project();
+        let path = root.path().join(file);
+        let text = fs::read_to_string(&path).unwrap();
+        let text = if file.ends_with("config.toml") {
+            text.replace(
+                "max_parallel = 1\n",
+                &format!("max_parallel = 1\n{setting}"),
+            )
+        } else {
+            format!("{setting}{text}")
+        };
+        assert!(text.contains(setting), "{setting} was not added");
+        fs::write(&path, text).unwrap();
+        let error = config::load(root.path()).unwrap_err();
+        assert!(format!("{error:#}").contains(setting.split(' ').next().unwrap()));
+    }
 }

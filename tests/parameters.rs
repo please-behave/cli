@@ -116,6 +116,7 @@ type = 'file'
 
 #[test]
 fn invalid_parameters_are_named_execution_errors() {
+    // REQ-0020: a required parameter without a value ends the check as ERROR.
     for (declarations, parameter, reason) in [
         (
             "[parameters.scope]\ntype = 'string'\nrequired = true",
