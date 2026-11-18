@@ -33,6 +33,7 @@ fn fixture() -> tempfile::TempDir {
 }
 
 #[test]
+// REQ-0252: rule and provider IDs reject the reserved please- prefix.
 fn product_prefix_is_reserved_for_rules_and_providers() {
     for id in ["please-plan", "please-snapshot", "please-tree-stability"] {
         let root = fixture();

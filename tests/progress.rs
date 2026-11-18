@@ -113,8 +113,17 @@ fn invalid_names_are_rejected_including_disabled_rules() {
     }
 }
 #[test]
+// REQ-0265: run accepts the three progress modes and defaults to auto.
+// REQ-0266: auto redraw requires an interactive non-CI non-dumb terminal.
 fn progress_modes_are_explicit_and_auto_respects_the_output_environment() {
     // REQ-0042: plain output never redraws in CI, non-terminal or plain mode.
+    assert!(matches!(
+        Cli::try_parse_from(["please", "run"]).unwrap().command,
+        please::cli::Words::Run {
+            progress: ProgressMode::Auto,
+            ..
+        }
+    ));
     for mode in ["auto", "plain", "tty"] {
         assert!(Cli::try_parse_from(["please", "run", "--progress", mode]).is_ok());
     }
@@ -152,6 +161,7 @@ fn progress_modes_are_explicit_and_auto_respects_the_output_environment() {
     ));
 }
 #[test]
+// REQ-0264: each CLI progress mode includes the display name and description.
 fn concise_cli_keeps_diagnostics_and_avoids_duplicate_results() {
     let root = project();
     named(&root, "first", "First check");
@@ -212,6 +222,9 @@ fn concise_cli_keeps_diagnostics_and_avoids_duplicate_results() {
     );
 }
 #[test]
+// REQ-0264: redrawn results retain the status and elapsed time in a bounded row.
+// REQ-0267: rendered progress rows stay narrower than the terminal.
+// REQ-0268: internal phases and successful exit reasons stay hidden.
 fn terminal_rows_are_bounded_and_success_replaces_running_state() {
     let mut renderer = terminal::ProgressRenderer::new(true, false, 60, 24);
     let description = "Very long description ".repeat(20);

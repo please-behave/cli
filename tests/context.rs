@@ -178,6 +178,8 @@ fn find<'a>(entries: &'a Value, path: &str) -> &'a Value {
 }
 
 #[test]
+// REQ-0241: executing a check produces a context that obeys the strict published schema.
+// REQ-0244: inapplicable push and commit-message sections are absent.
 fn schema_is_strict_and_requires_the_stable_sections() {
     let root = project("");
     let (_, context) = run_check(root.path());
@@ -255,6 +257,7 @@ fn clean_workspace_reports_head_branch_and_message() {
 }
 
 #[test]
+// REQ-0243: Git change facts refer to separate files containing the actual patches.
 fn staged_unstaged_untracked_and_partially_staged_files_are_separated() {
     let root = project("");
     let path = root.path();
@@ -521,6 +524,7 @@ fn dirty_workspace_is_visible_at_pre_push() {
 }
 
 #[test]
+// REQ-0251: PLEASE_CHANGE_BASE supplies the base and removing it omits net changes.
 fn explicit_change_base_adds_net_changes_since_that_commit() {
     let root = project("");
     let path = root.path();
@@ -543,6 +547,7 @@ fn explicit_change_base_adds_net_changes_since_that_commit() {
 }
 
 #[test]
+// REQ-0246: oversized context sections and omitted patches are explicitly marked truncated.
 fn oversized_sections_are_marked_truncated_instead_of_failing_the_run() {
     let root = project("[context]\nmax_section_bytes = 1024\n");
     let path = root.path();
@@ -566,6 +571,7 @@ fn oversized_sections_are_marked_truncated_instead_of_failing_the_run() {
 }
 
 #[test]
+// REQ-0249: context retention honors the configured number of runs.
 fn only_the_configured_number_of_runs_is_retained() {
     let root = project("[context]\nretain_runs = 3\n");
     for _ in 0..6 {
@@ -597,6 +603,7 @@ fn context_settings_are_validated() {
 }
 
 #[test]
+// REQ-0245: unusable change bases do not fail the run and omit their section.
 fn an_unusable_change_base_omits_the_section_instead_of_failing_the_run() {
     let root = project("");
     for base in [
@@ -613,4 +620,90 @@ fn an_unusable_change_base_omits_the_section_instead_of_failing_the_run() {
     }
     let (_, context) = latest(root.path(), "check");
     assert!(context.get("changes").is_none());
+}
+
+#[test]
+// REQ-0247: context documents and patch files deny access to group and other users.
+fn context_and_patch_files_are_private_to_the_owner() {
+    use std::os::unix::fs::PermissionsExt;
+    let root = project("");
+    write(root.path(), "a.txt", "private modified content\n");
+    let output = please(root.path(), &["run", "--at", "check"], &[]);
+    assert!(output.status.success());
+    let (directory, context) = latest(root.path(), "check");
+    assert!(context["workspace"]["unstaged_patch"]["file"].is_string());
+    assert_eq!(
+        fs::metadata(&directory).unwrap().permissions().mode() & 0o077,
+        0
+    );
+    for entry in fs::read_dir(directory).unwrap() {
+        let path = entry.unwrap().path();
+        assert_eq!(
+            fs::metadata(&path).unwrap().permissions().mode() & 0o077,
+            0,
+            "{}",
+            path.display()
+        );
+    }
+}
+
+#[test]
+// REQ-0248: each linked worktree stores context outside the snapshot in its own Git directory.
+fn linked_worktrees_keep_contexts_separate_from_project_inputs() {
+    let root = project("");
+    let other = tempfile::tempdir().unwrap();
+    let linked = other.path().join("linked");
+    ok(git(
+        root.path(),
+        &[
+            "worktree",
+            "add",
+            "--quiet",
+            linked.to_str().unwrap(),
+            "-b",
+            "context-side",
+        ],
+    ));
+    let mut directories = Vec::new();
+    for worktree in [root.path(), linked.as_path()] {
+        let before = please::git_snapshot::capture(worktree).unwrap();
+        ok(please(worktree, &["run", "--at", "check"], &[]));
+        let stored = contexts(worktree);
+        assert_eq!(stored.len(), 1);
+        let directory = stored[0].0.canonicalize().unwrap();
+        let git_dir = PathBuf::from(text(git(worktree, &["rev-parse", "--absolute-git-dir"])));
+        assert!(directory.starts_with(git_dir.canonicalize().unwrap()));
+        let relative = directory
+            .strip_prefix(worktree.canonicalize().unwrap())
+            .ok();
+        assert!(relative.is_none_or(|p| p.starts_with(".git")));
+        let after = please::git_snapshot::capture(worktree).unwrap();
+        assert_eq!(before.fingerprint, after.fingerprint);
+        directories.push(directory);
+    }
+    assert_ne!(directories[0], directories[1]);
+    assert_eq!(contexts(root.path()).len(), 1);
+}
+
+#[test]
+// REQ-0250: inability to create the run context ends the run with ERROR before a check starts.
+fn context_storage_failure_blocks_rule_execution() {
+    let root = project("");
+    let marker = tempfile::tempdir().unwrap();
+    let started = marker.path().join("started");
+    support::check(
+        root.path(),
+        "must-not-start",
+        &["check"],
+        &format!("touch '{}'\n", started.display()),
+    );
+    write(
+        root.path(),
+        ".git/please/context",
+        "a file blocks the context directory",
+    );
+    let output = please(root.path(), &["run", "--at", "check"], &[]);
+    assert_eq!(output.status.code(), Some(2));
+    assert!(!started.exists());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("context"));
 }

@@ -57,12 +57,14 @@ fn tool(root: &Path) {
 import json, os, sys, time
 mode = sys.argv[1]
 assert sys.argv[2:] == ['$HOME', '$(false)', '|', '']
+assert os.path.samefile(os.getcwd(), os.path.dirname(os.path.abspath(__file__)))
 assert not [name for name in os.environ if name.startswith('PLEASE_')]
 if mode == 'unread':
     time.sleep(30)
 request = json.load(sys.stdin)
 assert request['protocol_version'] == 0
 assert request['execution_point'] == 'check' and os.path.isfile(request['context_file'])
+assert os.path.isabs(request['context_file'])
 prompt = request['prompt']
 assert 'Unique review instructions' in prompt
 assert request['response_schema']['required'] == ['reason', 'findings']
@@ -102,6 +104,8 @@ fn execute(root: &Path) -> report::Report {
     .unwrap()
 }
 #[test]
+// REQ-0223: requests contain review instructions and the exact response generation schema.
+// REQ-0242: requests name an existing absolute run context file.
 fn knowledge_schemas_match_adapter_transport_and_generation_constraints() {
     // REQ-0222, REQ-0331, REQ-0332: actual version-zero messages and legacy labels.
     let root = fixture();
@@ -213,6 +217,8 @@ print(json.dumps(response))"#,
 }
 
 #[test]
+// REQ-0219: adapter arguments remain literal while review input arrives over stdin.
+// REQ-0220: a repository-relative adapter runs successfully from the project root.
 fn stdin_results_and_provider_isolation() {
     // REQ-0092: selected reviews execute configured executable adapters and preserve isolated results.
     // REQ-0125: each review has its own planned call and result, including shared providers.
@@ -243,6 +249,7 @@ fn stdin_results_and_provider_isolation() {
     assert_eq!(report::read(root.path()).unwrap().overall, Status::Pass);
 }
 #[test]
+// REQ-0227: the adapter deadline also bounds delivery to a process that never reads stdin.
 fn process_and_response_errors_never_pass_and_keep_original_output() {
     for mode in [
         "malformed",
@@ -310,6 +317,7 @@ fn process_and_response_errors_never_pass_and_keep_original_output() {
     }
 }
 #[test]
+// REQ-0221: credentials and executables are required only after checks permit a selected review.
 fn runtime_requirements_are_deferred_until_selected_after_checks() {
     let root = fixture();
     tool(root.path());
@@ -350,6 +358,7 @@ fn runtime_requirements_are_deferred_until_selected_after_checks() {
     assert_eq!(execute(root.path()).overall, Status::Error);
 }
 #[test]
+// REQ-0218: unknown provider fields are rejected.
 fn adapter_configuration_is_strict_and_defaults_are_explicit() {
     let root = fixture();
     provider(root.path(), "first", "ok", "");
@@ -542,6 +551,8 @@ else: print(json.dumps(response))
 }
 
 #[test]
+// REQ-0225: opaque mixed JSON values reach the adapter and non-JSON values are rejected.
+// REQ-0226: review keys replace provider keys and nested tables without changing unrelated keys.
 fn structured_parameters_merge_per_review_without_changing_provider_definition() {
     let root = fixture();
     write(
@@ -694,6 +705,7 @@ fn documented_dummy_runs_from_supporting_adapter_directory() {
 }
 
 #[test]
+// REQ-0216: unknown provider names fail configuration loading even on disabled reviews.
 fn unknown_named_references_are_rejected_even_for_disabled_reviews() {
     let root = fixture();
     review(root.path(), "a", "missing", "check");
@@ -712,5 +724,33 @@ fn unknown_named_references_are_rejected_even_for_disabled_reviews() {
             error.contains("unknown provider") && error.contains("missing"),
             "{error}"
         );
+    }
+}
+
+#[test]
+// REQ-0217: providers require a nonempty command and a timeout within the contract bounds.
+fn provider_command_and_timeout_are_required_and_bounded() {
+    let root = fixture();
+    review(root.path(), "a", "first", "check");
+    let path = root.path().join(".please/providers/first.toml");
+    for invalid in [
+        "timeout_seconds = 1\n",
+        "command = ''\ntimeout_seconds = 1\n",
+        "command = 'fake-adapter'\n",
+        "command = 'fake-adapter'\ntimeout_seconds = -1\n",
+        "command = 'fake-adapter'\ntimeout_seconds = 3601\n",
+        "command = 'fake-adapter'\ntimeout_seconds = '1'\n",
+    ] {
+        write(root.path(), ".please/providers/first.toml", invalid);
+        assert!(config::load(root.path()).is_err(), "accepted {invalid}");
+    }
+    for timeout in [0, 1, 3600] {
+        fs::write(
+            &path,
+            format!("command = 'fake-adapter'\ntimeout_seconds = {timeout}\n"),
+        )
+        .unwrap();
+        let project = config::load(root.path()).unwrap();
+        assert_eq!(project.providers["first"].timeout_seconds, timeout);
     }
 }

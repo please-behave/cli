@@ -1879,6 +1879,7 @@ fn shared_rule_references_reject_symlink_components() {
 
 #[cfg(unix)]
 #[test]
+// REQ-0228: mapped imported reviews receive the consumer execution point.
 fn imported_and_local_checks_and_reviews_receive_the_consumer_execution_point() {
     let f = Fixture::new();
     write(

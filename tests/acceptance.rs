@@ -644,6 +644,8 @@ fn validation_does_not_execute_checks_or_provider() {
     assert_eq!(cli(d.path(), &["sync", "--yes"]).status.code(), Some(0));
 }
 #[test]
+// REQ-0238: an unchanged saved snapshot gives current status.
+// REQ-0255: the saved report is readable from the project.
 fn default_run_passes_omits_disabled_and_roundtrips_report() {
     let d = project();
     let r = please::verify(d.path(), &Never).unwrap();
@@ -902,6 +904,8 @@ fn provider_error_and_timeout_are_errors() {
     assert_eq!(mock.calls.get(), 1);
 }
 #[test]
+// REQ-0238: modified content makes status stale.
+// REQ-0240: changed paths respect the display bound and exact totals omit line counts.
 fn status_tracks_staged_modified_untracked_and_ignores_report_changes() {
     let d = project();
     let root = d.path();
@@ -986,6 +990,7 @@ fn ignored_artifacts_do_not_change_verification_inputs() {
 }
 
 #[test]
+// REQ-0232: ignored governing files and explicit references remain snapshot inputs.
 fn ignored_governance_inputs_remain_fingerprinted() {
     let d = project();
     let root = d.path();
@@ -1145,18 +1150,31 @@ fn no_report_corrupt_report_schema_and_no_color() {
     assert!(!out.stdout.contains(&0x1b));
 }
 #[test]
+// REQ-0234: an oversized input cannot silently produce a complete snapshot.
+// REQ-0235: incomplete input blocks execution and produces ERROR.
+// REQ-0238: incomplete comparisons report UNKNOWN without exact totals.
 fn huge_file_gives_unknown_and_blocks_verification() {
     let d = project();
+    let marker = tempdir().unwrap();
+    let started = marker.path().join("started");
+    support::check(
+        d.path(),
+        "must-not-start",
+        &["pre-push"],
+        &format!("touch '{}'\n", started.display()),
+    );
     let f = fs::File::create(d.path().join("huge.bin")).unwrap();
     f.set_len(8 * 1024 * 1024 + 1).unwrap();
     let r = please::verify(d.path(), &Never).unwrap();
     assert_eq!(r.overall, Status::Error);
+    assert!(!started.exists());
     support::assert_report_contract(&serde_json::to_value(&r).unwrap());
     let changes = git_snapshot::compare(&r.snapshot, &git_snapshot::capture(d.path()).unwrap(), 5);
     assert_eq!(changes.state, "UNKNOWN");
     assert_eq!(changes.total_files, None);
 }
 #[test]
+// REQ-0233: verification leaves HEAD unchanged and does not create an index or branch.
 fn no_root_detection_or_git_mutation() {
     let d = tempdir().unwrap();
     git(d.path(), &["init", "--quiet"]);
@@ -1214,6 +1232,8 @@ fn timeout_output_capture_and_shell_are_explicit() {
 
 #[cfg(unix)]
 #[test]
+// REQ-0236: a check that changes input blocks the enabled review before its provider call.
+// REQ-0262: tree stability errors remain explicit results even when the check succeeds.
 fn changing_files_during_checks_blocks_pass() {
     // REQ-0237: a check that changes project files prevents a successful result.
     let d = project();
@@ -1233,6 +1253,7 @@ fn terminal_strips_control_sequences_from_untrusted_values() {
 }
 
 #[test]
+// REQ-0239: staging preserves freshness while a changed HEAD makes it stale.
 fn staging_alone_does_not_stale_content_and_head_changes_do() {
     let d = project();
     fs::write(d.path().join("file.txt"), "content\n").unwrap();
@@ -1736,6 +1757,7 @@ fn failed_checks_report_skipped_reviews_without_claiming_they_started() {
 }
 #[cfg(unix)]
 #[test]
+// REQ-0263: stderr exposes a start before completion and the final result after completion.
 fn cli_flushes_rule_start_while_the_check_is_still_running_and_keeps_raw_output_private() {
     use std::io::{BufRead, BufReader, Read};
     use std::process::Stdio;
@@ -2237,4 +2259,115 @@ fn a_counter_missing_from_any_call_stays_unavailable() {
         text.contains("15 total · 10 input (unavailable cached) · 5 output"),
         "{text}"
     );
+}
+
+#[cfg(unix)]
+#[test]
+// REQ-0231: snapshots identify tracked and untracked bytes, sizes, modes and HEAD, excluding Git and reports.
+fn snapshot_records_file_identity_and_executable_changes() {
+    use std::os::unix::fs::PermissionsExt;
+    let d = project();
+    let root = d.path();
+    support::write(root, "tracked", "abc");
+    git(root, &["add", "tracked"]);
+    support::write(root, "untracked", "abc");
+    fs::set_permissions(root.join("untracked"), fs::Permissions::from_mode(0o644)).unwrap();
+    support::write(root, ".please/reports/extra.json", "excluded");
+    let before = git_snapshot::capture(root).unwrap();
+    assert!(before.complete);
+    let head = support::command("git")
+        .args(["rev-parse", "HEAD"])
+        .current_dir(root)
+        .output()
+        .unwrap();
+    assert!(head.status.success());
+    assert_eq!(
+        before.head.as_deref(),
+        Some(String::from_utf8(head.stdout).unwrap().trim())
+    );
+    for file in ["tracked", "untracked"] {
+        assert_eq!(before.files[file].bytes, 3);
+        assert_eq!(
+            before.files[file].sha256,
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        );
+    }
+    assert!(!before.files["untracked"].executable);
+    assert!(
+        before
+            .files
+            .keys()
+            .all(|p| !p.starts_with(".git/") && !p.starts_with(".please/reports/"))
+    );
+    fs::set_permissions(root.join("untracked"), fs::Permissions::from_mode(0o755)).unwrap();
+    let after = git_snapshot::capture(root).unwrap();
+    assert!(after.files["untracked"].executable);
+    let changes = git_snapshot::compare(&before, &after, 5);
+    assert_eq!(changes.state, "STALE");
+    assert_eq!(changes.sample_paths, ["untracked"]);
+}
+
+#[test]
+// REQ-0254: invalid configuration preserves the previous report byte for byte.
+fn invalid_configuration_does_not_replace_the_saved_report() {
+    let d = project();
+    please::verify(d.path(), &Never).unwrap();
+    let report_path = path(d.path(), "reports/last.json");
+    let before = fs::read(&report_path).unwrap();
+    support::write(d.path(), ".please/config.toml", "unknown_setting = true\n");
+    assert_eq!(cli(d.path(), &["run"]).status.code(), Some(2));
+    assert_eq!(fs::read(report_path).unwrap(), before);
+}
+
+#[test]
+// REQ-0256: the saved report identifies the input, repository, provider and UTC run time.
+// REQ-0257: the saved report retains results, elapsed durations, findings and configuration-error flags.
+// REQ-0258: the saved plan retains required rule IDs and their blocking policy.
+fn saved_report_preserves_run_identity_results_and_required_plan() {
+    let d = project();
+    enable(d.path());
+    let provider = mock(vec![verdict("product-consistency", "FAIL")]);
+    let run = please::verify(d.path(), &provider).unwrap();
+    let saved = report::read(d.path()).unwrap();
+    assert_eq!(saved.overall, Status::Fail);
+    assert_eq!(
+        saved.repository,
+        d.path().canonicalize().unwrap().to_string_lossy()
+    );
+    assert_eq!(saved.provider, "adapter");
+    let time = chrono::DateTime::parse_from_rfc3339(&saved.timestamp).unwrap();
+    assert_eq!(time.offset().local_minus_utc(), 0);
+    assert_eq!(
+        saved.snapshot.fingerprint,
+        git_snapshot::capture(d.path()).unwrap().fingerprint
+    );
+    assert_eq!(
+        saved.plan.required_ids,
+        ["always-ok", "product-consistency"]
+    );
+    assert_eq!(
+        serde_json::to_value(&saved.plan).unwrap(),
+        serde_json::to_value(&run.plan).unwrap()
+    );
+    assert!(saved.plan.scheduled.iter().all(|rule| rule.blocking));
+    assert_eq!(saved.results.len(), 2);
+    for (actual, expected) in saved.results.iter().zip(&run.results) {
+        assert_eq!(
+            serde_json::to_value(actual).unwrap(),
+            serde_json::to_value(expected).unwrap()
+        );
+    }
+    assert!(saved.results[0].duration_ms > 0);
+    let review = &saved.results[1];
+    assert_eq!(review.status, Status::Fail);
+    assert!(!review.configuration_error);
+    assert_eq!(
+        review.findings[0].message,
+        "Documented expectations inspected"
+    );
+    assert_eq!(
+        review.findings[0].path.as_deref(),
+        Some(".please/README.md")
+    );
+    assert_eq!(review.findings[0].line, Some(1));
 }

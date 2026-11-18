@@ -79,6 +79,7 @@ fn standard_output_and_then_the_reason_are_the_fallbacks() {
 }
 
 #[test]
+// REQ-0269: failed reviews show reasons and findings without raw adapter noise.
 fn a_review_fail_shows_its_reason_and_findings_not_its_output() {
     let mut review = item(
         "consistency",
@@ -126,6 +127,7 @@ fn a_review_error_without_structure_is_treated_like_a_check() {
 }
 
 #[test]
+// REQ-0261: a blocking ERROR outranks a blocking FAIL.
 fn several_failures_are_counted_but_only_the_first_is_detailed() {
     let mut first = item("a", "check", Status::Fail, "x");
     first.stderr = capture("first cause");
@@ -134,6 +136,7 @@ fn several_failures_are_counted_but_only_the_first_is_detailed() {
     let mut advisory = item("c", "review", Status::Fail, "x");
     advisory.blocking = false;
     let text = outcome(vec![first, second, advisory]);
+    assert!(text.starts_with("ERROR"));
     assert!(summary(&text).starts_with("prevented success · first: a"));
     assert!(text.contains("\n2 rules prevented"));
     assert!(text.contains("first cause") && !text.contains("second cause"));
