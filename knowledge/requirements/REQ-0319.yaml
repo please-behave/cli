@@ -7,3 +7,10 @@ description: >-
 rationale: >-
   What users download is exactly what was verified and not a rebuild that
   nobody tested.
+test_exemption: >-
+  Verified by the Release workflow in .github/workflows/release.yml: native
+  candidates are version-stamped before smoke testing, and smoke receipts,
+  archive hashes and release evidence bind the published bytes to the
+  planned source and version. The mandatory artifact and release-evidence
+  gates reject mismatches before publication;
+  .github/scripts/test_release.py exercises those rejection paths.

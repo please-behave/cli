@@ -7,3 +7,9 @@ description: >-
 rationale: >-
   One language keeps the output readable for every team and for the tools and
   agents that read it.
+test_exemption: >-
+  English wording is verified by human review under AGENTS.md, which
+  requires English product output, and by review of help, diagnostics and
+  report changes. Unrestricted diagnostic prose has no deterministic
+  language oracle that can establish English without rejecting valid
+  identifiers and quoted user text.

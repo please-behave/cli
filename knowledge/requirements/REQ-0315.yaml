@@ -6,3 +6,8 @@ description: >-
   the release documentation lists.
 rationale: >-
   Users install a single binary on their platform without a toolchain.
+test_exemption: >-
+  Verified by the Release Candidate matrix in .github/workflows/release.yml:
+  each documented target builds and smoke-tests its native executable before
+  publication. The matrix and archive target set are checked by
+  .github/scripts/test_release.py.

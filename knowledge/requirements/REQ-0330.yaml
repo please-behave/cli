@@ -7,3 +7,9 @@ description: >-
 rationale: >-
   Readers must be able to follow the documentation to the information it
   promises.
+test_exemption: >-
+  Verified by the docs rule in .please/checks/docs/check.py at pre-commit
+  and pre-push. It checks local Markdown targets and anchors and validates
+  requirement references in test comments;
+  .please/checks/docs/test_check_docs.py exercises missing targets, missing
+  anchors and unknown requirement IDs.

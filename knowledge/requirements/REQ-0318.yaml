@@ -6,3 +6,9 @@ description: >-
   covers all of its archives.
 rationale: >-
   Users can verify that what they downloaded is what was published.
+test_exemption: >-
+  Verified by .github/scripts/checksums.py and the mandatory
+  .github/scripts/check-release-artifacts.py publication gate in
+  .github/workflows/release.yml, which requires checksum coverage for the
+  complete archive set. The tooling tests in .github/scripts/test_release.py
+  check incomplete and corrupt artifact sets.
