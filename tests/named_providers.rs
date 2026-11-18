@@ -213,6 +213,7 @@ fn commit(root: &Path) {
 
 #[test]
 fn imported_providers_resolve_across_sets_offline_and_reconcile_atomically() {
+    // REQ-0210: rule-set providers cannot override local or other imported provider definitions.
     let root = project();
     let remote = tempfile::tempdir().unwrap();
     let cache = tempfile::tempdir().unwrap();

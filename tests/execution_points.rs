@@ -184,6 +184,7 @@ fn parsed_set(rules: &str) -> (PathBuf, config::RuleSet) {
 
 #[test]
 fn reference_overrides_replace_set_points_and_union_without_changing_identity() {
+    // REQ-0182: repeated references union their effective execution points.
     // REQ-0141: references inherit set points or replace them with a nonempty per-reference list.
     let definitions = [
         assignment("a", true, &["pre-commit"]),

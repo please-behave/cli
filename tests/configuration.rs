@@ -634,6 +634,8 @@ fn external_refs_cache_offline_isolation_and_consumer_execution() {
 
 #[test]
 fn external_invalid_roots_import_overrides_and_scope_references_fail() {
+    // REQ-0185: imported rule sets reject nested imports.
+    // REQ-0186: the selected import directory must contain a rule set, not a project configuration.
     let f = External::new();
     f.imports(&[("missing", "main")]);
     assert!(f.load(true).is_err());

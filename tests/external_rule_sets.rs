@@ -300,7 +300,44 @@ impl Provider for Never {
 }
 
 #[test]
+fn refreshing_an_import_needs_no_update_confirmation_or_announcement() {
+    // REQ-0198: a moving import refreshes noninteractively without update management output.
+    let f = Fixture::new();
+    // No hook changes are needed, so any confirmation would concern the import itself.
+    support::check(&f.root, "always-ok", &["check"], "exit 0");
+    f.imports(&[("repository", "main")]);
+    let sync = || {
+        let output = support::command(env!("CARGO_BIN_EXE_please"))
+            .current_dir(&f.root)
+            .env("XDG_CACHE_HOME", &f.cache)
+            .env("NO_COLOR", "1")
+            .args(["sync"])
+            .output()
+            .unwrap();
+        assert!(output.status.success(), "{output:?}");
+        assert_eq!(output.stdout, b"Synchronization completed successfully.\n");
+        assert!(output.stderr.is_empty(), "{output:?}");
+    };
+    sync();
+    let previous = f.state();
+    write(&f.remote, "repository/new-resource", "updated import\n");
+    let revision = commit(&f.remote);
+    sync();
+    assert_ne!(f.state(), previous);
+    let project = external::load(&f.root, false, Some(&f.cache.join("please"))).unwrap();
+    assert!(
+        project
+            .effective
+            .rules
+            .values()
+            .filter_map(|r| r.external.as_ref())
+            .all(|o| o.commit == revision)
+    );
+}
+
+#[test]
 fn branch_tag_and_full_commit_share_one_immutable_revision() {
+    // REQ-0197: branches, annotated tags and full hashes resolve to their exact commit.
     let f = Fixture::new();
     git(&f.remote, &["tag", "-a", "v1.0.0", "-m", "tag"]);
     let commit = git(&f.remote, &["rev-parse", "HEAD"]);
@@ -429,6 +466,7 @@ fn offline_execution_uses_last_resolution_and_refresh_moves_only_mutable_refs() 
 
 #[test]
 fn invalid_refresh_preserves_previous_valid_state_without_claiming_success() {
+    // REQ-0202: an invalid refresh leaves the prior validated resolution state usable and unchanged.
     let f = Fixture::new();
     f.imports(&[("repository", "main")]);
     f.load(true).unwrap();
@@ -447,6 +485,7 @@ fn invalid_refresh_preserves_previous_valid_state_without_claiming_success() {
 
 #[test]
 fn missing_state_missing_cache_and_corruption_fail_closed() {
+    // REQ-0207: absent resolution state, missing cached content and modified definitions block loading.
     let f = Fixture::new();
     f.imports(&[("repository", "main")]);
     assert!(format!("{:#}", f.load(false).unwrap_err()).contains("please sync"));
@@ -466,6 +505,7 @@ fn missing_state_missing_cache_and_corruption_fail_closed() {
 
 #[test]
 fn unavailable_references_and_repository_are_actionable() {
+    // REQ-0197: an unavailable reference fails instead of falling back to another revision.
     let f = Fixture::new();
     f.imports(&[("repository", "not-a-reference")]);
     assert!(format!("{:#}", f.load(true).unwrap_err()).contains("reference"));
@@ -487,6 +527,7 @@ fn repository_root_is_a_governance_root() {
 
 #[test]
 fn repeated_imports_are_separate_bindings_and_consumer_overrides_are_rejected() {
+    // REQ-0188: consumer imports cannot override imported rule properties.
     let f = Fixture::new();
     f.imports(&[("repository", "main"), ("./repository/", "main")]);
     let p = f.load(true).unwrap();
@@ -537,6 +578,7 @@ fn traversal_and_symlink_escapes_are_rejected() {
 
 #[test]
 fn concurrent_refreshes_publish_complete_state_and_share_checkout() {
+    // REQ-0203: concurrent refreshes of one project publish complete, equivalent rule state.
     let f = Fixture::new();
     f.imports(&[("repository", "main"), ("software", "main")]);
     std::thread::scope(|scope| {
@@ -552,6 +594,8 @@ fn concurrent_refreshes_publish_complete_state_and_share_checkout() {
 
 #[test]
 fn retrieval_never_executes_rules_or_remote_hooks_and_errors_hide_credentials() {
+    // REQ-0200: credential-bearing import URLs fail without echoing their secret.
+    // REQ-0204: synchronization executes neither imported rule scripts nor source Git hooks.
     let f = Fixture::new();
     definitions(&f.remote, "repository", "sh -c 'touch SHOULD_NOT_EXIST'");
     commit(&f.remote);
@@ -668,6 +712,8 @@ fn imported_check_failure_propagates_and_no_unselected_rule_executes() {
 
 #[test]
 fn source_instruction_paths_cannot_escape_the_rule_directory() {
+    // REQ-0194: referenced disabled reviews still validate their prompt paths.
+    // REQ-0195: imported prompt paths reject absolute paths, parent traversal and symlink escapes.
     for instructions in [
         "../software/criteria.md",
         "/tmp/criteria.md",
@@ -857,6 +903,7 @@ fn removed_and_changed_imports_require_their_own_resolution() {
 
 #[test]
 fn separate_projects_resolving_concurrently_share_one_cache() {
+    // REQ-0203: different projects can refresh concurrently against one revision cache.
     let f = Fixture::new();
     f.imports(&[("repository", "main")]);
     let second = f.root.with_file_name("second");
@@ -926,6 +973,8 @@ fn malformed_configuration_does_not_echo_url_credentials() {
 #[cfg(unix)]
 #[test]
 fn authentication_failure_hides_helper_diagnostics() {
+    // REQ-0199: authentication uses the host SSH command with Git terminal prompting disabled.
+    // REQ-0201: failed-import diagnostics do not echo secret-bearing Git helper output.
     use std::os::unix::fs::PermissionsExt;
     let f = Fixture::new();
     f.imports(&[("repository", "main")]);
@@ -938,7 +987,7 @@ fn authentication_failure_hides_helper_diagnostics() {
     let ssh = f.root.with_file_name("fake-ssh");
     fs::write(
         &ssh,
-        "#!/bin/sh\necho 'Permission denied: SECRET' >&2\nexit 1\n",
+        "#!/bin/sh\ntest \"$GIT_TERMINAL_PROMPT\" = 0 || exit 99\necho 'Permission denied: SECRET' >&2\nexit 1\n",
     )
     .unwrap();
     fs::set_permissions(&ssh, fs::Permissions::from_mode(0o755)).unwrap();
@@ -1104,6 +1153,8 @@ fn source_points(f: &Fixture, path: &str, points: &[&str]) {
 
 #[test]
 fn independent_mappings_resolve_inheritance_many_to_one_and_offline_execution() {
+    // REQ-0189: mappings are import-local, allow many-to-one targets and drive offline selection.
+    // REQ-0191: changing mappings preserves cached source definitions, identities and resolution state.
     let f = Fixture::new();
     source_points(&f, "repository", &["lint", "test"]);
     source_points(&f, "software", &["lint"]);
@@ -1221,6 +1272,8 @@ fn independent_mappings_resolve_inheritance_many_to_one_and_offline_execution() 
 
 #[test]
 fn invalid_import_mappings_fail_with_source_target_and_import_context() {
+    // REQ-0189: invalid mapping names and unknown sources or targets fail with import context.
+    // REQ-0190: built-in execution points cannot be either end of a mapping.
     let f = Fixture::new();
     source_points(&f, "repository", &["quality"]);
     commit(&f.remote);
@@ -1290,6 +1343,7 @@ fn invalid_import_mappings_fail_with_source_target_and_import_context() {
 
 #[test]
 fn unmapped_custom_points_require_consumer_declarations_and_keep_names() {
+    // REQ-0189: unmapped imported custom points require a project declaration.
     let f = Fixture::new();
     source_points(&f, "repository", &["quality", "audit"]);
     commit(&f.remote);
@@ -1492,6 +1546,7 @@ fn explicit_points_execute_imported_rules_offline_with_missing_and_outdated_hook
 #[cfg(unix)]
 #[test]
 fn import_parameters_preserve_bindings_mappings_resources_and_reference_deduplication() {
+    // REQ-0164: the project supplies independent parameter values for each import binding.
     // REQ-0145: duplicate imported references execute one check and one review per binding.
     let f = Fixture::new();
     write(
@@ -1674,6 +1729,7 @@ fn import_parameter_values_cannot_leak_to_other_imports_or_undeclared_names() {
 
 #[test]
 fn shared_rules_are_reused_across_sets_and_points_offline() {
+    // REQ-0192: multiple rule sets share rule directories referenced from the repository root.
     // REQ-0187, REQ-0193, REQ-0206: separate bindings, referenced definitions only, offline execution.
     let f = Fixture::new();
     fs::remove_dir_all(f.root.join(".please/checks")).unwrap();
@@ -1757,6 +1813,8 @@ fn shared_rules_are_reused_across_sets_and_points_offline() {
 
 #[test]
 fn external_rule_references_reject_unsafe_paths_and_duplicate_ids() {
+    // REQ-0181: distinct external definitions with identical IDs are rejected even when their contents match.
+    // REQ-0195: external rule references reject absolute, traversing and non-directory paths.
     for reference in [
         "../checks/outside",
         "/checks/outside",
@@ -1792,6 +1850,7 @@ fn external_rule_references_reject_unsafe_paths_and_duplicate_ids() {
 #[cfg(unix)]
 #[test]
 fn shared_rule_references_reject_symlink_components() {
+    // REQ-0195: external rule directories and definitions reject symbolic link components.
     for component in [
         "rules",
         "rules/checks/shared",

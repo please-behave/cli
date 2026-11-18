@@ -100,8 +100,54 @@ fn cli(root: &Path, args: &[&str]) -> std::process::Output {
 fn version_line() -> String {
     format!("Please Behave {}\n", env!("CARGO_PKG_VERSION"))
 }
+
+#[test]
+fn execution_points_select_only_their_rules_and_empty_points_establish_no_pass() {
+    // REQ-0150: an empty point succeeds without rule results or a claimed rule PASS.
+    // REQ-0151: named points select their own rules and unknown points are rejected.
+    // REQ-0152: omitting the point selects pre-push.
+    let d = project();
+    support::check(d.path(), "push-only", &["pre-push"], "exit 0");
+    support::check(d.path(), "check-only", &["check"], "exit 0");
+    fs::remove_dir_all(path(d.path(), "checks/always-ok")).unwrap();
+    for (point, expected) in [
+        (None, vec!["push-only"]),
+        (Some("check"), vec!["check-only"]),
+        (Some("pre-commit"), vec![]),
+    ] {
+        let report = please::verify_project_at(
+            config::load(d.path()).unwrap(),
+            &Never,
+            please::VerificationMode::AllRules,
+            point,
+            &mut |_| {},
+        )
+        .unwrap();
+        assert_eq!(report.overall, Status::Pass);
+        assert_eq!(report.plan.at, point.unwrap_or("pre-push"));
+        assert_eq!(
+            report
+                .results
+                .iter()
+                .map(|r| r.id.as_str())
+                .collect::<Vec<_>>(),
+            expected
+        );
+        if expected.is_empty() {
+            let text = terminal::render_outcome(&report, 5, false);
+            assert!(text.contains("No rules executed"));
+            assert!(!text.contains("1 passed"));
+        }
+    }
+    let error = please::planner::build(&config::load(d.path()).unwrap(), Some("unknown"), false)
+        .err()
+        .unwrap();
+    assert!(error.to_string().contains("unknown execution point"));
+}
+
 #[test]
 fn run_prints_its_version_first_in_every_mode() {
+    // REQ-0184: runs print the binary version before normal output and configuration errors.
     let d = project();
     let version = version_line();
     let shown = String::from_utf8(cli(d.path(), &["--version"]).stdout).unwrap();
@@ -138,6 +184,9 @@ fn run_prints_its_version_first_in_every_mode() {
 }
 #[test]
 fn json_plan_errors_use_current_schema_and_blocking_reasons() {
+    // REQ-0154: previews leave the saved report, check marker and missing hooks untouched.
+    // REQ-0156: JSON previews always carry a schema version, status and blocking reasons.
+    // REQ-0157: blocked previews retain known input details and omit unavailable input.
     let d = project();
     support::check(
         d.path(),
@@ -222,6 +271,7 @@ fn json_plan_errors_use_current_schema_and_blocking_reasons() {
 
 #[test]
 fn plan_contract_covers_review_context_and_rejects_malformed_documents() {
+    // REQ-0154: a preview prepares context without an available adapter or a written run context.
     let d = project();
     support::check(d.path(), "prerequisite", &["check"], "exit 0");
     support::write(
@@ -322,6 +372,7 @@ context = [{path = "evidence.md"}]
 
 #[test]
 fn human_plan_uses_english_and_preserves_layout_and_values() {
+    // REQ-0155: rendered plans show ordered selection, omissions, required rules, input, providers and context bounds.
     // Fixed metadata exercises optional display sections without invoking rules or providers.
     let mut plan: please::planner::Plan = serde_json::from_value(serde_json::json!({
         "plan_schema_version": 1,

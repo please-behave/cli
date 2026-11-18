@@ -616,10 +616,12 @@ print(json.dumps({'protocol_version':1, 'reason':'Parameters delivered', 'findin
 
 #[test]
 fn init_has_no_provider_and_selected_reviews_require_explicit_configuration() {
+    // REQ-0215: a selected review without a provider blocks execution; disabled and unselected reviews need none.
     // REQ-0124: initialization supplies no provider and selected reviews need an explicit adapter.
     let root = fixture();
     assert!(!root.path().join(".please/provider.toml").exists());
     assert!(config::load(root.path()).unwrap().provider.is_none());
+    support::check(root.path(), "must-not-start", &["check"], "touch executed");
     write(
         root.path(),
         ".please/reviews/a/rule.toml",
@@ -638,6 +640,8 @@ fn init_has_no_provider_and_selected_reviews_require_explicit_configuration() {
             .iter()
             .any(|r| r.contains("no adapter configured"))
     );
+    assert_eq!(execute(root.path()).overall, Status::Error);
+    assert!(!root.path().join("executed").exists());
     assert!(
         planner::build(&project, Some("pre-push"), false)
             .unwrap()

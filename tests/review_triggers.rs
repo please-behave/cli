@@ -85,6 +85,7 @@ fn plan(root: &Path, base: Option<&str>) -> Plan {
 
 #[test]
 fn exact_glob_multiple_patterns_and_invalid_configuration() {
+    // REQ-0171: portable trigger grammar is case-sensitive and rejects invalid local and disabled configurations.
     let paths = ["docs/a/b.md", "readme.md", ".hidden", "naïve.md"]
         .into_iter()
         .map(String::from)
@@ -146,13 +147,16 @@ fn exact_glob_multiple_patterns_and_invalid_configuration() {
 
 #[test]
 fn net_comparison_covers_commits_worktree_add_delete_rename_and_unusual_names() {
+    // REQ-0174: base comparisons include net staged, unstaged, untracked and governance changes but exclude ignored data and reports.
     let root = fixture();
-    for name in ["modified", "deleted", "old", "staged"] {
+    for name in ["modified", "deleted", "old", "staged", "reverted"] {
         write(root.path(), name, "before\n");
     }
     let base = commit(root.path());
     write(root.path(), "earlier", "first commit\n");
+    write(root.path(), "reverted", "temporary change\n");
     commit(root.path());
+    write(root.path(), "reverted", "before\n");
     write(root.path(), "later", "last commit\n");
     commit(root.path());
     write(root.path(), "modified", "after\n");
@@ -188,6 +192,7 @@ fn net_comparison_covers_commits_worktree_add_delete_rename_and_unusual_names() 
         assert!(paths.contains_key(name), "{name}");
     }
     assert!(!paths.contains_key("ignored"));
+    assert!(!paths.contains_key("reverted"));
     assert!(!paths.contains_key(".please/rubric.md"));
     assert!(!paths.contains_key(".please/adapters/__pycache__/adapter.pyc"));
     assert!(!paths.contains_key(".please/reports/private"));
@@ -195,6 +200,70 @@ fn net_comparison_covers_commits_worktree_add_delete_rename_and_unusual_names() 
     assert!(!head_paths.contains_key("earlier"));
     assert!(!head_paths.contains_key(".please/config.toml"));
     assert!(!head_paths.contains_key(".please/provider.toml"));
+}
+
+#[test]
+fn renames_select_reviews_matching_either_path() {
+    // REQ-0175: moving a file selects a review watching the old or the new path.
+    let root = fixture();
+    git(root.path(), &["mv", "evidence", "renamed"]);
+    for watched in ["evidence", "renamed"] {
+        review(
+            root.path(),
+            &format!("[review.trigger]\nchanged_files = [{watched:?}]\n"),
+            "",
+        );
+        let preview = plan(root.path(), Some("HEAD"));
+        assert!(preview.executable(), "{:?}", preview.blocking_reasons);
+        assert_eq!(preview.scheduled.len(), 1, "{watched}");
+        assert_eq!(preview.scheduled[0].id, "review");
+        assert!(preview.omitted.is_empty());
+        assert_eq!(preview.context.scopes[0].files, [watched]);
+    }
+}
+
+#[test]
+fn equal_base_trees_keep_distinct_resolved_commits_in_plan_identity() {
+    // REQ-0179: even equal base trees retain their resolved commit in the plan identity.
+    let root = fixture();
+    let first = git(root.path(), &["rev-parse", "HEAD"]);
+    let output = support::command("git")
+        .current_dir(root.path())
+        .args([
+            "-c",
+            "user.name=Fixture",
+            "-c",
+            "user.email=fixture@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "-c",
+            "core.hooksPath=/dev/null",
+            "commit",
+            "--allow-empty",
+            "-qm",
+            "test: keep the same tree",
+        ])
+        .output()
+        .unwrap();
+    assert!(output.status.success(), "{output:?}");
+    let second = git(root.path(), &["rev-parse", "HEAD"]);
+    assert_ne!(first, second);
+    review(root.path(), "", "");
+    let before = plan(root.path(), Some("HEAD~1"));
+    let after = plan(root.path(), Some("HEAD"));
+    assert!(before.executable() && after.executable());
+    assert_eq!(before.change_base.as_deref(), Some(first.as_str()));
+    assert_eq!(after.change_base.as_deref(), Some(second.as_str()));
+    assert_eq!(
+        serde_json::to_value(&before.input).unwrap(),
+        serde_json::to_value(&after.input).unwrap()
+    );
+    assert_eq!(
+        serde_json::to_value(&before.context).unwrap(),
+        serde_json::to_value(&after.context).unwrap()
+    );
+    assert_ne!(before.plan_id, after.plan_id);
+    assert_eq!(before.plan_id, plan(root.path(), Some(&first)).plan_id);
 }
 
 #[test]
@@ -438,13 +507,26 @@ fn matched_triggers_execute_through_adapter_boundary() {
 
 #[test]
 fn unreliable_index_flags_block_comparison() {
+    // REQ-0176: assume-unchanged and skip-worktree flags block comparison and execution rather than omit reviews.
     let root = fixture();
+    review(
+        root.path(),
+        "[review.trigger]\nchanged_files = ['absent']\n",
+        "",
+    );
     git(
         root.path(),
         &["update-index", "--assume-unchanged", "evidence"],
     );
     write(root.path(), "evidence", "Hidden modification\n");
     assert!(git_snapshot::changed_paths(root.path(), "HEAD").is_err());
+    let blocked = plan(root.path(), Some("HEAD"));
+    assert!(!blocked.executable());
+    assert!(blocked.omitted.is_empty());
+    assert_eq!(
+        invoke(root.path(), Some("HEAD"), false).status.code(),
+        Some(2)
+    );
     git(
         root.path(),
         &["update-index", "--no-assume-unchanged", "evidence"],
@@ -454,6 +536,13 @@ fn unreliable_index_flags_block_comparison() {
         &["update-index", "--skip-worktree", "evidence"],
     );
     assert!(git_snapshot::changed_paths(root.path(), "HEAD").is_err());
+    let blocked = plan(root.path(), Some("HEAD"));
+    assert!(!blocked.executable());
+    assert!(blocked.omitted.is_empty());
+    assert_eq!(
+        invoke(root.path(), Some("HEAD"), false).status.code(),
+        Some(2)
+    );
     git(
         root.path(),
         &["update-index", "--no-skip-worktree", "evidence"],
@@ -478,6 +567,7 @@ fn non_utf8_names_block_comparison() {
 
 #[test]
 fn imported_patterns_share_validation_and_consumer_paths() {
+    // REQ-0171: imported trigger patterns undergo the same grammar validation.
     let root = fixture();
     let remote = fixture();
     let cache = tempfile::tempdir().unwrap();

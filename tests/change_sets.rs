@@ -49,6 +49,7 @@ fn files(set: &change_set::ChangeSet) -> Vec<(&str, State)> {
 
 #[test]
 fn pre_commit_changes_are_the_staged_ones() {
+    // REQ-0172: pre-commit and commit-msg change sets contain staged changes only.
     let root = fixture();
     write(root.path(), "kept", "one\n");
     write(root.path(), "gone", "two\n");
@@ -76,6 +77,7 @@ fn pre_commit_changes_are_the_staged_ones() {
 
 #[test]
 fn a_direct_pre_push_run_takes_the_commits_not_on_any_remote() {
+    // REQ-0172: direct pre-push selects unpushed commits and excludes working changes.
     let root = fixture();
     // An unborn branch has nothing to push.
     assert!(
@@ -116,6 +118,7 @@ fn a_direct_pre_push_run_takes_the_commits_not_on_any_remote() {
 
 #[test]
 fn reviews_without_changes_are_omitted_and_triggers_limit_the_scope() {
+    // REQ-0170: untriggered reviews select any staged change; triggered reviews select only matching paths.
     let root = fixture();
     review(root.path(), "all", "pre-commit", "");
     review(
@@ -213,6 +216,7 @@ fn content_above_the_bound_ends_input_preparation_as_an_error() {
 
 #[test]
 fn check_without_a_base_blocks_every_review() {
+    // REQ-0173: enabled check-point reviews require an explicit change base.
     let root = fixture();
     review(root.path(), "all", "check", "");
     let out = support::command(env!("CARGO_BIN_EXE_please"))

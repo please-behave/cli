@@ -157,6 +157,7 @@ print(json.dumps({'protocol_version':1, 'reason':'Evidence inspected', 'findings
 
 #[test]
 fn separate_provider_and_ruleset_repositories_run_offline() {
+    // REQ-0196: serialized plans and reports retain sanitized rule and provider provenance without source selectors or cache paths.
     // REQ-0206, REQ-0208: independently imported providers and rules execute from the offline cache.
     let f = Fixture::new();
     let project = f.load(true).unwrap();
@@ -177,6 +178,41 @@ fn separate_provider_and_ruleset_repositories_run_offline() {
     support::assert_report_contract(&serde_json::to_value(&report).unwrap());
     assert_eq!(report.overall, Status::Pass, "{:?}", report.results);
     assert_eq!(report.plan.plan_id, plan.plan_id);
+    for plan in [&plan, &report.plan] {
+        let rule = &plan.scheduled[0];
+        for (origin, selected_path, revision) in [
+            (
+                rule.origin.as_ref().unwrap().external.as_ref().unwrap(),
+                "policy",
+                &f.rules_ref,
+            ),
+            (
+                rule.provider_origin.as_ref().unwrap(),
+                "packages/quality",
+                &f.provider_ref,
+            ),
+        ] {
+            assert_eq!(origin.path, selected_path);
+            assert_eq!(&origin.reference, revision);
+            assert_eq!(&origin.commit, revision);
+            assert_eq!(origin.repository.len(), 64);
+            assert!(
+                origin
+                    .repository
+                    .bytes()
+                    .all(|byte| byte.is_ascii_hexdigit())
+            );
+        }
+    }
+    for serialized in [
+        serde_json::to_string(&plan).unwrap(),
+        serde_json::to_string(&report).unwrap(),
+    ] {
+        assert!(!serialized.contains(f.cache.to_str().unwrap()));
+        for selector in [&f.rules, &f.providers] {
+            assert!(!serialized.contains(selector.to_str().unwrap()));
+        }
+    }
     assert!(f.consumer.join(".git/provider-called").is_file());
     assert!(!f.consumer.join(".please/providers/quality.toml").exists());
     assert!(!f.consumer.join(".please/adapters").exists());
@@ -186,6 +222,7 @@ fn separate_provider_and_ruleset_repositories_run_offline() {
 
 #[test]
 fn shared_repository_and_independent_revisions_are_supported() {
+    // REQ-0213: changing the selected provider revision changes the plan identity.
     let mut f = Fixture::new();
     support::write(
         &f.rules,
@@ -235,6 +272,7 @@ fn shared_repository_and_independent_revisions_are_supported() {
 
 #[test]
 fn provider_only_imports_need_no_rules_and_never_invoke_adapters() {
+    // REQ-0209: a rule cannot infer an independent provider import from its provider name.
     let f = Fixture::new();
     f.configure(false, true);
     let project = f.load(true).unwrap();
@@ -255,6 +293,7 @@ fn provider_only_imports_need_no_rules_and_never_invoke_adapters() {
 
 #[test]
 fn collisions_and_unsafe_resources_fail_without_publishing_state() {
+    // REQ-0210: duplicate independent provider imports and local-provider collisions fail without replacing state.
     let f = Fixture::new();
     f.load(true).unwrap();
     let state = f.consumer.join(".git/please/external-rule-sets.json");
@@ -305,7 +344,41 @@ fn collisions_and_unsafe_resources_fail_without_publishing_state() {
 }
 
 #[test]
+fn unused_imported_providers_still_validate_every_resource_reference() {
+    // REQ-0212: malformed, missing and symlink resources fail even without a consuming review.
+    for token in [
+        "@unknown/adapter.py",
+        "@provider//absolute",
+        "@source/../adapter.py",
+        "@provider/missing",
+        "@provider/link.py",
+    ] {
+        let mut f = Fixture::new();
+        std::os::unix::fs::symlink("adapter.py", f.providers.join("packages/quality/link.py"))
+            .unwrap();
+        support::write(
+            &f.providers,
+            "packages/quality/provider.toml",
+            &format!("command = 'python3'\nargs = [{token:?}]\ntimeout_seconds = 5\n"),
+        );
+        f.provider_ref = commit(&f.providers);
+        f.configure(false, true);
+        assert!(
+            f.load(true).is_err(),
+            "accepted unused provider reference {token}"
+        );
+        assert!(!f.consumer.join(".git/provider-called").exists());
+        assert!(
+            !f.consumer
+                .join(".git/please/external-rule-sets.json")
+                .exists()
+        );
+    }
+}
+
+#[test]
 fn cached_provider_tampering_is_fatal_even_for_advisory_reviews() {
+    // REQ-0207: cached adapter tampering after loading prevents launch even for advisory reviews.
     let f = Fixture::new();
     let project = f.load(true).unwrap();
     let path = f.cached(&project).join("packages/quality/adapter.py");
@@ -363,6 +436,7 @@ fn imported_provider_symlinks_are_rejected() {
 
 #[test]
 fn executable_references_and_literal_arguments_preserve_token_boundaries() {
+    // REQ-0211: provider, source and repository references resolve in adapter commands, arguments and executable requirements.
     // REQ-0015: @@ arguments of a provider stay literal with one @ removed.
     use std::os::unix::fs::PermissionsExt;
     let mut f = Fixture::new();

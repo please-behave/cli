@@ -304,6 +304,7 @@ fn unsafe_paths_symlinks_and_foreign_ownership_fail_safely() {
 
 #[test]
 fn commands_block_checks_on_noninteractive_drift_and_keep_plan_read_only() {
+    // REQ-0154: previews succeed without prompting for or reconciling missing hooks.
     let root = project(&["pre-commit"]);
     support::check(
         root.path(),

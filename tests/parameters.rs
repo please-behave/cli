@@ -50,6 +50,7 @@ fn run(root: &Path) -> report::Report {
 
 #[test]
 fn local_parameters_deliver_strings_and_consumer_files_without_changing_rule_resources() {
+    // REQ-0163: string and file parameters resolve by name while an unset optional parameter stays absent.
     // REQ-0091: check inputs arrive as arguments without PLEASE_ parameter environment variables.
     // REQ-0162, REQ-0167: explicit parameter arguments preserve values without inherited PLEASE_ inputs.
     let root = project();
@@ -109,6 +110,8 @@ type = 'file'
         .parameters
         .resolve(&p.root, "parameters")
         .unwrap();
+    assert!(!env.contains_key("unused"));
+    assert_eq!(env["label"], "arbitrary value $with spaces");
     assert_eq!(
         env["scopes_file"],
         p.root.join(".commit-scopes").to_str().unwrap()
@@ -117,6 +120,8 @@ type = 'file'
 
 #[test]
 fn invalid_parameters_are_named_execution_errors() {
+    // REQ-0165: invalid names, types and values fail before execution with the rule, parameter and reason.
+    // REQ-0166: missing, nonregular, absolute and parent-traversing file values fail.
     // REQ-0020: a required parameter without a value ends the check as ERROR.
     for (declarations, parameter, reason) in [
         (
@@ -166,7 +171,7 @@ fn invalid_parameters_are_named_execution_errors() {
         ),
     ] {
         let root = project();
-        check(root.path(), "invalid", &["check"], "exit 0");
+        check(root.path(), "invalid", &["check"], "touch executed");
         parameters(root.path(), "invalid", &format!("\n{declarations}\n"));
         support::assert_rule_contract(
             &fs::read_to_string(root.path().join(".please/checks/invalid/rule.toml")).unwrap(),
@@ -184,11 +189,13 @@ fn invalid_parameters_are_named_execution_errors() {
             item.reason
         );
         assert_eq!(report::read(root.path()).unwrap().overall, Status::Error);
+        assert!(!root.path().join("executed").exists());
     }
 }
 
 #[test]
 fn file_parameters_reject_symlink_traversal_even_when_the_target_is_inside() {
+    // REQ-0166: file parameters reject symlink traversal even to another file inside the repository.
     use std::os::unix::fs::symlink;
     for external in [false, true] {
         let root = project();
@@ -390,8 +397,14 @@ fn reviews_validate_and_call_by_resolved_environment() {
 
 #[test]
 fn provider_subprocess_receives_only_its_call_parameters_and_clears_inherited_values() {
+    // REQ-0169: adapters receive each review's resolved rule parameters in their own request field.
     use std::os::unix::fs::PermissionsExt;
     let root = project();
+    write(
+        root.path(),
+        ".please/provider.toml",
+        "command = 'fake-adapter'\ntimeout_seconds = 5\n[parameters]\nlabel = 'provider setting'\n",
+    );
     review(
         root.path(),
         "a",
@@ -409,6 +422,7 @@ import json, os, sys
 assert not [name for name in os.environ if name.startswith("PLEASE_")]
 request = json.load(sys.stdin)
 assert request["execution_point"] == "check"
+assert request["reviews"][0]["parameters"]["label"] == "provider setting"
 parameters = request["rule_parameters"]
 assert "undeclared" not in parameters and "optional" not in parameters
 if parameters["label"] == "first":
