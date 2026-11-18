@@ -157,6 +157,7 @@ fn chains_branching_and_resources_obey_pass_dependencies() {
 #[cfg(unix)]
 #[test]
 fn originating_outcome_gates_reviews_and_skips_propagate_without_execution() {
+    // REQ-0062: prerequisite skips preserve the originating FAIL or ERROR overall outcome.
     // REQ-0059, REQ-0060, REQ-0061: only PASS satisfies a dependency; dependents become NOT_RUN transitively naming their prerequisite.
     for (exit, fast, expected) in [
         (1, false, Status::Fail),

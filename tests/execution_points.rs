@@ -74,6 +74,7 @@ fn resolution_obeys_membership_override_union_and_disabled_rules() {
 }
 #[test]
 fn invalid_assignments_are_rejected_even_when_disabled_or_overridden() {
+    // REQ-0142: disabled and overridden assignments still validate their point lists.
     let a = assignment("a", true, &[]);
     for sets in [
         vec![],
@@ -124,6 +125,8 @@ fn invalid_assignments_are_rejected_even_when_disabled_or_overridden() {
 
 #[test]
 fn four_reserved_points_and_ordinary_custom_points() {
+    // REQ-0146: the four built-in execution points exist and their names are reserved.
+    // REQ-0149: release is an ordinary custom point requiring a project declaration.
     let resolved = rules::resolve(
         &Default::default(),
         &[assignment(
@@ -181,6 +184,7 @@ fn parsed_set(rules: &str) -> (PathBuf, config::RuleSet) {
 
 #[test]
 fn reference_overrides_replace_set_points_and_union_without_changing_identity() {
+    // REQ-0141: references inherit set points or replace them with a nonempty per-reference list.
     let definitions = [
         assignment("a", true, &["pre-commit"]),
         assignment("b", true, &[]),
@@ -234,6 +238,7 @@ fn reference_overrides_replace_set_points_and_union_without_changing_identity() 
 
 #[test]
 fn invalid_reference_tables_and_points_are_rejected() {
+    // REQ-0142: repeated references validate even when another reference is valid or the rule is disabled.
     for reference in [
         r#"{ run_at = ["check"] }"#,
         r#"{ id = "a", run_at = "check" }"#,

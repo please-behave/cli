@@ -1224,6 +1224,8 @@ fn unusual_paths_and_binary_files_are_fingerprinted() {
 }
 #[test]
 fn prompt_has_no_safety_instructions() {
+    // REQ-0093: adapter instructions impose no read-only restriction on repository access.
+    // REQ-0101: review instructions require FAIL when PASS cannot be established.
     let d = project();
     enable(d.path());
     let project = config::load(d.path()).unwrap();
@@ -1266,6 +1268,7 @@ fn prompt_has_no_safety_instructions() {
 
 #[test]
 fn oversized_change_set_ends_the_review_as_error_without_an_adapter_call() {
+    // REQ-0097: an oversized change set produces ERROR before the provider is invoked.
     let d = project();
     enable(d.path());
     fs::write(d.path().join("big.txt"), "x\n".repeat(20 * 1024)).unwrap();
@@ -1781,6 +1784,7 @@ fn progress_uses_semantic_colors_and_sanitizes_rule_descriptions() {
 
 #[test]
 fn usage_is_summed_across_review_calls() {
+    // REQ-0121: usage from two adapter calls is summed and persisted.
     use please::{provider::Response, report::TokenUsage};
     struct Metered {
         calls: Cell<u32>,
@@ -2022,6 +2026,8 @@ fn checks_only_cli_skips_enabled_adapter_reviews_and_status_keeps_the_scope() {
 
 #[test]
 fn review_context_sections_keep_source_lines_merge_overlap_and_ignore_code_headings() {
+    // REQ-0095: ATX selection includes subsections, ignores fenced headings and rejects missing or ambiguous headings.
+    // REQ-0096: selected context retains the original source line range.
     let d = project();
     let document = "# Policy\nIntro\n## Scope\nRequired\n```md\n## Scope\n```\n### Detail\nMore\n## Other\nUnrelated\n";
     fs::write(d.path().join("Policy.md"), document).unwrap();
@@ -2075,6 +2081,9 @@ fn review_context_rejects_escaping_missing_and_excessive_sources_without_a_provi
 
 #[test]
 fn triggers_limit_the_scope_of_content_and_change_set() {
+    // REQ-0127: initial scope excludes changed files that do not match triggers.
+    // REQ-0128: the initial prompt includes the current content of matching files.
+    // REQ-0129: the initial change set includes scoped changes and excludes unrelated ones.
     let d = project();
     fs::write(d.path().join("entry.swift"), "old entry\n").unwrap();
     fs::write(d.path().join("unrelated.swift"), "old unrelated\n").unwrap();

@@ -214,6 +214,7 @@ print(json.dumps(response))"#,
 
 #[test]
 fn stdin_results_and_provider_isolation() {
+    // REQ-0092: selected reviews execute configured executable adapters and preserve isolated results.
     // REQ-0125: each review has its own planned call and result, including shared providers.
     let root = fixture();
     tool(root.path());
@@ -439,6 +440,8 @@ fn completed_fail_and_error_respect_review_blocking() {
 
 #[test]
 fn protocol_versions_and_complete_coverage_fail_closed_while_usage_is_tolerant() {
+    // REQ-0122: zero, negative and nonnumeric counters remain unavailable.
+    // REQ-0132: invalid and inconsistent usage counters leave the successful verdict unchanged.
     for mode in [
         "wrong-version",
         "zero-version",
@@ -613,6 +616,7 @@ print(json.dumps({'protocol_version':1, 'reason':'Parameters delivered', 'findin
 
 #[test]
 fn init_has_no_provider_and_selected_reviews_require_explicit_configuration() {
+    // REQ-0124: initialization supplies no provider and selected reviews need an explicit adapter.
     let root = fixture();
     assert!(!root.path().join(".please/provider.toml").exists());
     assert!(config::load(root.path()).unwrap().provider.is_none());

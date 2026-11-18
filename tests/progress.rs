@@ -46,6 +46,8 @@ fn named(root: &TempDir, id: &str, name: &str) {
 }
 #[test]
 fn names_are_saved_without_changing_identity_and_disambiguated_consistently() {
+    // REQ-0138: duplicate local names acquire origin and occurrence suffixes.
+    // REQ-0139: saved labels survive configuration changes and technical IDs remain in details.
     let root = project();
     named(&root, "first", "Validation");
     named(&root, "second", "Validation");
@@ -69,6 +71,7 @@ fn names_are_saved_without_changing_identity_and_disambiguated_consistently() {
             .collect::<Vec<_>>(),
         ["first", "second"]
     );
+    fs::remove_dir_all(root.path().join(".please/checks")).unwrap();
     let saved = report::read(root.path()).unwrap();
     assert_eq!(saved.plan.display_names(), names);
     assert!(terminal::render(&saved, false).contains("Validation [local] #2"));
@@ -87,6 +90,7 @@ fn names_are_saved_without_changing_identity_and_disambiguated_consistently() {
 }
 #[test]
 fn invalid_names_are_rejected_including_disabled_rules() {
+    // REQ-0136: invalid display names are rejected even for disabled rules.
     for name in [
         "".into(),
         " leading".into(),

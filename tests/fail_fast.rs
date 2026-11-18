@@ -88,6 +88,8 @@ fn dummy(status: &'static str) -> Dummy {
 
 #[test]
 fn cli_defaults_to_complete_execution_and_fail_fast_reports_unstarted_rules() {
+    // REQ-0069: the default run completes the later check after a failure.
+    // REQ-0086: fail-fast retains unstarted results with no output and an explicit reason.
     let root = project();
     support::check(root.path(), "a", &["check"], "printf failed-output; exit 1");
     support::check(root.path(), "b", &["check"], "printf completed-output");
@@ -154,6 +156,7 @@ fn cli_defaults_to_complete_execution_and_fail_fast_reports_unstarted_rules() {
 
 #[test]
 fn check_failures_and_errors_stop_scheduling() {
+    // REQ-0068: check FAIL, exit ERROR and spawn ERROR stop subsequent scheduling.
     for (script, expected) in [("exit 1", Status::Fail), ("exit 2", Status::Error)] {
         let root = project();
         support::check(root.path(), "a", &["check"], script);
@@ -183,6 +186,10 @@ fn check_failures_and_errors_stop_scheduling() {
 
 #[test]
 fn only_fatal_review_results_stop_later_calls() {
+    // REQ-0068: only blocking review failures and errors trigger fail-fast.
+    // REQ-0084: the triggering adapter call finishes and its completed results are saved.
+    // REQ-0085: no later adapter is invoked after blocking fail-fast triggers.
+    // REQ-0104: advisory FAIL and ERROR remain visible while the run succeeds.
     for status in ["FAIL", "ERROR", "invalid"] {
         for blocking in [false, true] {
             for fail_fast in [false, true] {
@@ -219,6 +226,10 @@ fn only_fatal_review_results_stop_later_calls() {
                     }
                 );
                 assert_eq!(report::read(root.path()).unwrap().overall, report.overall);
+                assert_eq!(
+                    serde_json::to_value(report::read(root.path()).unwrap().results).unwrap(),
+                    serde_json::to_value(&report.results).unwrap()
+                );
             }
         }
     }
@@ -226,6 +237,7 @@ fn only_fatal_review_results_stop_later_calls() {
 
 #[test]
 fn review_configuration_errors_stop_calls_even_for_advisory_rules() {
+    // REQ-0068: missing prompts and parameter errors stop review calls even for advisory rules.
     for missing_prompt in [false, true] {
         let root = project();
         review(root.path(), "a", "first", false);
@@ -253,6 +265,7 @@ fn review_configuration_errors_stop_calls_even_for_advisory_rules() {
 
 #[test]
 fn fail_fast_has_no_persistent_configuration_or_plan_selection_effect() {
+    // REQ-0087: both top-level and execution-level persistent fail_fast settings are rejected.
     // REQ-0032: requesting fail-fast leaves the plan and its full selection unchanged.
     let root = project();
     support::check(root.path(), "a", &["check"], "exit 1");
@@ -285,6 +298,8 @@ fn fail_fast_has_no_persistent_configuration_or_plan_selection_effect() {
 
 #[test]
 fn termination_configuration_is_optional_strict_and_does_not_enable_fail_fast() {
+    // REQ-0074: termination is configured in the project and does not enable fail-fast.
+    // REQ-0075: grace defaults, integer bounds and validation with termination disabled are enforced.
     let root = project();
     let defaults = config::load(root.path()).unwrap().config.execution;
     assert!(!defaults.fail_fast_terminate_running_instances);
@@ -424,6 +439,8 @@ while True:
 
 #[test]
 fn fail_fast_terminates_groups_gracefully_and_escalates_after_the_leader_exits() {
+    // REQ-0077: SIGTERM reaches descendants and SIGKILL removes stubborn groups after the leader exits.
+    // REQ-0079: cancelled checks retain reasons, exit status, elapsed time and partial output.
     for (stubborn, stubborn_parent) in [(false, false), (true, false), (true, true)] {
         for failure_exit in [1, 2] {
             let root = project();
@@ -519,6 +536,7 @@ fn fail_fast_terminates_groups_gracefully_and_escalates_after_the_leader_exits()
 
 #[test]
 fn cancellation_cannot_pass_or_override_the_triggering_failure() {
+    // REQ-0082: cancellation prevents success without replacing the triggering failure or error.
     use please::report::Item;
     let cancelled = Item::simple("cancelled", "check", Status::Cancelled, "Fail-fast".into());
     assert_eq!(report::overall(&[cancelled]), Status::Error);
@@ -536,6 +554,7 @@ fn cancellation_cannot_pass_or_override_the_triggering_failure() {
 
 #[test]
 fn running_checks_finish_by_default_and_without_invocation_fail_fast() {
+    // REQ-0073: an already running check finishes after fail-fast when termination is disabled.
     for (setting, fail_fast) in [(None, true), (Some(false), true), (Some(true), false)] {
         let root = project();
         let mut text = "project = 'Example'\n[execution]\nmax_parallel = 2\n".to_string();
@@ -585,4 +604,91 @@ fn running_checks_finish_by_default_and_without_invocation_fail_fast() {
             "finished-normally"
         );
     }
+}
+
+#[test]
+fn reviews_wait_for_every_successful_check_to_finish() {
+    // REQ-0065: every selected check has reported completion before the adapter starts.
+    struct AfterChecks {
+        finished: Mutex<Vec<String>>,
+        calls: Mutex<usize>,
+    }
+    impl Provider for AfterChecks {
+        fn review(&self, request: &Request<'_>) -> anyhow::Result<String> {
+            let mut finished = self.finished.lock().unwrap().clone();
+            finished.sort();
+            assert_eq!(finished, ["a", "b"]);
+            *self.calls.lock().unwrap() += 1;
+            dummy("PASS").review(request)
+        }
+    }
+    let root = project();
+    for id in ["a", "b"] {
+        support::check(root.path(), id, &["check"], "printf finished");
+    }
+    review(root.path(), "later", "one", true);
+    let provider = AfterChecks {
+        finished: Mutex::new(Vec::new()),
+        calls: Mutex::new(0),
+    };
+    let report = please::verify_project_at(
+        config::load(root.path()).unwrap(),
+        &provider,
+        VerificationMode::AllRules,
+        Some("check"),
+        &mut |event| {
+            if let Progress::RuleFinished { item, .. } = event {
+                if item.kind == "check" {
+                    assert_eq!(item.status, Status::Pass);
+                    provider.finished.lock().unwrap().push(item.id.clone());
+                }
+            }
+        },
+    )
+    .unwrap();
+    assert_eq!(*provider.calls.lock().unwrap(), 1);
+    assert_eq!(report.overall, Status::Pass);
+    assert_eq!(report.results.len(), 3);
+    assert!(
+        report
+            .results
+            .iter()
+            .all(|item| item.status == Status::Pass)
+    );
+}
+
+#[test]
+fn interrupted_check_changes_are_left_in_place() {
+    // REQ-0083: cancellation leaves an interrupted check's partially written file untouched.
+    let root = project();
+    termination_fixture(&root, false, false, 1);
+    let script = root.path().join(".please/checks/b/process.py");
+    let text = fs::read_to_string(&script).unwrap().replace(
+        "Path('.git/parent-ready').touch()",
+        "Path('interrupted-output.txt').write_text('partial output before cancellation')\nPath('.git/parent-ready').touch()",
+    );
+    fs::write(script, text).unwrap();
+    let report = please::verify_project_with_fail_fast(
+        config::load(root.path()).unwrap(),
+        &dummy("PASS"),
+        VerificationMode::AllRules,
+        Some("check"),
+        None,
+        true,
+        &mut |_| {},
+    )
+    .unwrap();
+    assert_eq!(
+        report
+            .results
+            .iter()
+            .find(|item| item.id == "b")
+            .unwrap()
+            .status,
+        Status::Cancelled
+    );
+    assert_eq!(
+        fs::read_to_string(root.path().join("interrupted-output.txt")).unwrap(),
+        "partial output before cancellation"
+    );
 }

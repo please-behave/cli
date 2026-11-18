@@ -221,6 +221,7 @@ fn failures_timeouts_and_spawn_errors_release_resources() {
 #[cfg(unix)]
 #[test]
 fn cli_override_controls_serial_execution() {
+    // REQ-0090: an invocation overrides a project concurrency limit of four with one.
     let root = project();
     let signals = tempfile::tempdir().unwrap();
     support::write(

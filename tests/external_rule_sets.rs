@@ -1492,6 +1492,7 @@ fn explicit_points_execute_imported_rules_offline_with_missing_and_outdated_hook
 #[cfg(unix)]
 #[test]
 fn import_parameters_preserve_bindings_mappings_resources_and_reference_deduplication() {
+    // REQ-0145: duplicate imported references execute one check and one review per binding.
     let f = Fixture::new();
     write(
         &f.remote,
@@ -1948,6 +1949,7 @@ printf '%s' "$point"
 
 #[test]
 fn imported_names_survive_namespacing_and_saved_status_uses_short_unique_labels() {
+    // REQ-0136: an imported rule without a display name uses its own short ID.
     let f = Fixture::new();
     let path = f.remote.join("repository/checks/required-files/rule.toml");
     fs::write(

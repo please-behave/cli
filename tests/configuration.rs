@@ -145,6 +145,7 @@ fn fixed_discovery_and_defaults() {
 
 #[test]
 fn strict_configuration_and_implementation_validation() {
+    // REQ-0143: an enabled rule without an effective execution point is rejected.
     // REQ-0284: unknown fields and invalid rule configuration are rejected during loading.
     for (attributes, implementation) in [
         ("run_at = ['unknown']", "command = '@rule/index.sh'"),
@@ -241,6 +242,7 @@ fn resource_filenames_are_confined() {
 
 #[test]
 fn local_sets_override_union_and_validate_scope() {
+    // REQ-0135: rule sets reject enabled and blocking overrides.
     let d = project();
     check(
         d.path(),
@@ -302,6 +304,7 @@ fn local_sets_override_union_and_validate_scope() {
 
 #[test]
 fn duplicate_ids_and_exactly_one_implementation() {
+    // REQ-0134: a rule declaring both check and review implementations is rejected.
     let d = project();
     check(
         d.path(),
@@ -414,6 +417,7 @@ fn blocking_failures_errors_and_disabled_rules() {
 
 #[test]
 fn reviews_preserve_provider_contract_and_nonblocking_failures() {
+    // REQ-0102: reviews block by default and explicit advisory configuration permits success.
     for (attributes, verdict, expected) in [
         ("", "PASS", Status::Pass),
         ("", "FAIL", Status::Fail),
@@ -433,6 +437,7 @@ fn reviews_preserve_provider_contract_and_nonblocking_failures() {
 #[cfg(unix)]
 #[test]
 fn failed_check_prevents_reviews() {
+    // REQ-0067: gated reviews are NOT_RUN with a check-phase reason.
     let d = project();
     check(
         d.path(),
@@ -445,6 +450,7 @@ fn failed_check_prevents_reviews() {
     let result = please::verify(d.path(), &Mock("PASS")).unwrap();
     assert_eq!(result.overall, Status::Fail);
     assert_eq!(result.results[1].status, Status::NotRun);
+    assert!(result.results[1].reason.contains("check phase"));
 }
 
 #[test]
@@ -1553,4 +1559,25 @@ rules = [
             assert_eq!(origin.rule_sets, ["quality".into()].into());
         }
     }
+}
+
+#[cfg(unix)]
+#[test]
+fn embedded_reference_tokens_reach_the_check_unchanged() {
+    // REQ-0089: reference-like text inside an option is an ordinary literal argument.
+    let root = project();
+    check(
+        root.path(),
+        "literal-option",
+        "run_at = ['check']",
+        "command = 'sh @rule/index.sh --file=@rule/nonexistent --value=@param/undeclared email@example.test'",
+        "printf '<%s>\\n' \"$@\"",
+    );
+    let project = config::load(root.path()).unwrap();
+    let result = please::checks::execute(&project, &project.checks[0]);
+    assert_eq!(result.status, Status::Pass, "{}", result.reason);
+    assert_eq!(
+        result.stdout.unwrap().text,
+        "<--file=@rule/nonexistent>\n<--value=@param/undeclared>\n<email@example.test>\n"
+    );
 }

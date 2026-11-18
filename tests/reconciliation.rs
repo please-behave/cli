@@ -754,6 +754,7 @@ fn auto_approve_cannot_bypass_hook_recursion_protection() {
 
 #[test]
 fn fixed_hooks_select_only_their_own_effective_rules() {
+    // REQ-0147: each managed hook runs only its own point and rejects a mismatched association.
     let root = project(&["check", "first"]);
     // A local Rule Set overrides the Rule's own custom assignment.
     fs::create_dir_all(root.path().join(".please/rule-sets")).unwrap();
@@ -857,6 +858,7 @@ fn only_effective_builtin_assignments_require_hooks() {
 
 #[test]
 fn explicit_points_execute_noninteractively_without_inspecting_or_changing_hooks() {
+    // REQ-0148: check and custom points execute with missing, stale or unusable hook locations.
     let root = project(&["pre-commit"]);
     support::check(
         root.path(),
