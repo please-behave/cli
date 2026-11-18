@@ -1,0 +1,16 @@
+purpose: Prove that the release candidate executable works end to end before it is released.
+problem: A release artifact could be unusable even though the ordinary build and tests passed.
+value: A broken candidate is stopped at the release gate.
+conditions:
+  - statement: The candidate executable passes the same scripted end-to-end flow as the native smoke test.
+    rationale: The same behavior is expected of the shipped artifact as of the local build.
+  - statement: The Rule depends on no other Rule and uses its own copy of the smoke script.
+    rationale: The release gate runs independently and the built candidate is supplied by the release workflow. This is documented in docs/self-governance.md.
+success_criteria:
+  - A deviation from the expected behavior fails.
+  - A missing executable or any other technical failure is an ERROR.
+out_of_scope:
+  - description: Building, packaging and publishing the candidate.
+limitations:
+  - The script is an identical copy of the one in native-smoke, and nothing verifies that the two stay identical.
+placement: Local, because it gates the release of this repository only and runs at the custom release point.

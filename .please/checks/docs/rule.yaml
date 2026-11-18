@@ -1,0 +1,23 @@
+purpose: Keep the Markdown documentation internally consistent and the requirement references in tests valid.
+problem: >-
+  Broken links and anchors, and tests that cite requirements which do not
+  exist, go unnoticed and make documentation and requirements untraceable.
+value: >-
+  Documentation and requirements stay linked without network access, and
+  mistakes are found at commit time.
+conditions:
+  - statement: Local Markdown links and anchors resolve, including links to the README of this repository on GitHub.
+    rationale: References must not lead nowhere.
+  - statement: Every requirement definition has an ID that matches its file name.
+    rationale: The ID is the key by which tests cite requirements.
+  - statement: Every requirement ID cited in a test comment is defined.
+    rationale: A citation without a requirement is a typo or outdated.
+success_criteria:
+  - A broken link, a missing anchor or an unknown requirement ID fails and the message names the file.
+  - A crash or an unexpected error is an ERROR.
+out_of_scope:
+  - description: External links.
+  - description: The content of the documentation and the quality of the tests.
+limitations:
+  - Active requirements that no test cites are only reported and do not fail the Rule.
+placement: Local, because it depends on the documentation and requirement layout of this repository only.

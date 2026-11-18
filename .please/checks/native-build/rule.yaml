@@ -1,0 +1,11 @@
+purpose: Keep the release executable buildable.
+problem: A broken release build is only noticed in the release workflow.
+value: Build failures become visible before the push.
+conditions:
+  - statement: The release executable builds.
+    rationale: It is the artifact that is shipped, so it must build.
+success_criteria:
+  - A build failure fails and a successful build passes.
+out_of_scope:
+  - description: Packaging and publishing, which are handled by the release workflow.
+placement: Local, because the build belongs to this repository's technology stack.

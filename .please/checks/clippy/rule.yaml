@@ -1,0 +1,11 @@
+purpose: Keep Rust code free of Clippy warnings.
+problem: Common Rust mistakes and unidiomatic code go unnoticed and accumulate.
+value: Typical defects and style problems are found before they are pushed.
+conditions:
+  - statement: Clippy reports no warnings for all targets.
+    rationale: It is the linter of the Rust toolchain, and warnings are treated as errors so that none accumulate.
+success_criteria:
+  - Code with a Clippy warning fails and clean code passes.
+out_of_scope:
+  - description: Linting of other languages.
+placement: Local, because the linter belongs to this repository's technology stack.

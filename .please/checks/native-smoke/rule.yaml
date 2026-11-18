@@ -1,0 +1,23 @@
+purpose: Prove that the built executable works end to end in an isolated repository, without AI calls.
+problem: Unit and acceptance tests do not show whether the finished binary works as a whole.
+value: A defect in the overall behavior is found before the push.
+conditions:
+  - statement: In a fresh, uncommitted Git repository the commands of the executable return the expected exit codes and reports for PASS, FAIL, STALE, CURRENT and NOT_RUN.
+    rationale: These are the externally visible results users depend on.
+  - statement: Output contains no ANSI escapes when NO_COLOR is set.
+    rationale: Color control is part of the interface.
+  - statement: A failing check causes enabled reviews to be skipped, and no provider is called and no commit is created.
+    rationale: The smoke test must stay offline and leave no trace.
+  - statement: When a release tag is given, the executable's version matches it.
+    rationale: It prevents testing a binary that is not the planned release.
+  - statement: The Rule runs only after the native build succeeded.
+    rationale: It tests the built executable, so a failed build makes it meaningless.
+success_criteria:
+  - A deviation from the expected behavior fails.
+  - A missing executable or any other technical failure is an ERROR.
+out_of_scope:
+  - description: Behavior outside this scripted flow.
+  - description: Real providers and other platforms.
+limitations:
+  - Only the fixed scripted flow is exercised.
+placement: Local, because it tests this repository's own product.

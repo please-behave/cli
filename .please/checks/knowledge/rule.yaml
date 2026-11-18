@@ -1,0 +1,24 @@
+purpose: Keep the Knowledge artifacts valid and the component map consistent with the source code.
+problem: >-
+  Knowledge is the source of truth for product behavior. Without a check,
+  components, declared dependencies and code drift apart unnoticed.
+value: The component map stays complete and current, and references between artifacts resolve.
+conditions:
+  - statement: Components, requirements, decisions and API contracts conform to their schemas, and references between them resolve.
+    rationale: Artifacts that do not match their schema or point nowhere cannot be relied on.
+  - statement: Referenced local documents and schemas exist, are not reached through symbolic links, and schemas are valid JSON objects.
+    rationale: Contracts must reference resources inside the repository.
+  - statement: Every compiled file belongs to exactly one component. These are all files below src plus the files embedded at compile time.
+    rationale: Ownership must be complete and unambiguous.
+  - statement: The dependencies a component declares match the dependencies observed in the source, in both directions.
+    rationale: An undeclared dependency hides coupling, and a declared but unused one is stale.
+success_criteria:
+  - Every violation fails the Rule and is listed individually.
+  - A missing helper tool or any other technical failure is an ERROR.
+  - Mutual dependencies between components are reported as a note and do not fail.
+out_of_scope:
+  - description: Whether the content of requirements and decisions is meaningful.
+  - description: Code outside src.
+limitations:
+  - Dependencies are derived from crate and library path references with regular expressions, and test code after the first test configuration attribute is ignored.
+placement: Local, because it covers the Knowledge layout and source structure of this repository only.

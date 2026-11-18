@@ -1,0 +1,11 @@
+purpose: Keep all Rust tests passing.
+problem: Regressions stay unnoticed until after a release.
+value: Broken behavior is found before it is pushed.
+conditions:
+  - statement: All Rust unit, acceptance and documentation tests pass.
+    rationale: They are the executable specification of the product.
+success_criteria:
+  - A failing test fails the Rule and a passing suite passes it.
+out_of_scope:
+  - description: Python tests, which have their own Rule.
+placement: Local, because the test runner belongs to this repository's technology stack.

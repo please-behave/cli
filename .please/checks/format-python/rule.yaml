@@ -1,0 +1,11 @@
+purpose: Keep Python sources formatted with Ruff.
+problem: Unformatted code fills diffs with noise and causes style discussions.
+value: Formatting is uniform and no longer reviewed by hand.
+conditions:
+  - statement: Ruff reports no formatting differences.
+    rationale: It is the formatter chosen for the Python helper scripts and tests of this repository.
+success_criteria:
+  - Unformatted code fails and formatted code passes.
+out_of_scope:
+  - description: Formatting of other languages.
+placement: Local, because the formatter belongs to this repository's technology stack.
