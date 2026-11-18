@@ -520,7 +520,7 @@ impl External {
         for name in ["repository", "software"] {
             write(
                 &remote,
-                &format!("{name}/config.toml"),
+                &format!("{name}/ruleset.toml"),
                 &format!(
                     "id = {name:?}\ndescription = 'Reusable set'\nrules = ['{name}/checks/readme']\nrun_at = ['check']"
                 ),
@@ -630,7 +630,7 @@ fn external_invalid_roots_import_overrides_and_scope_references_fail() {
     f.imports(&[("missing", "main")]);
     assert!(f.load(true).is_err());
     f.imports(&[("repository", "main")]);
-    let file = f.remote.join("repository/config.toml");
+    let file = f.remote.join("repository/ruleset.toml");
     let original = fs::read_to_string(&file).unwrap();
     for suffix in [
         "\nproject = 'Consumer'",
@@ -650,6 +650,12 @@ fn external_invalid_roots_import_overrides_and_scope_references_fail() {
     f.commit();
     assert!(f.load(true).is_err());
     fs::write(&file, &original).unwrap();
+    // A selected directory without ruleset.toml is rejected, even with a config.toml.
+    fs::rename(&file, f.remote.join("repository/config.toml")).unwrap();
+    f.commit();
+    let error = f.load(true).err().unwrap();
+    assert!(format!("{error:#}").contains("ruleset.toml"));
+    fs::rename(f.remote.join("repository/config.toml"), &file).unwrap();
     fs::remove_file(f.remote.join("repository/checks/readme/rule.toml")).unwrap();
     f.commit();
     assert!(f.load(true).is_err());

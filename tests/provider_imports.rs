@@ -61,7 +61,7 @@ impl Fixture {
         }
         support::write(
             &rules,
-            "policy/config.toml",
+            "policy/ruleset.toml",
             "id = 'policy'\ndescription = 'Review evidence'\nrun_at = ['check']\nrules = ['rules/reviews/evidence']\n",
         );
         support::write(
@@ -389,7 +389,7 @@ fn imported_message_review_uses_an_independent_cached_adapter() {
     let mut f = Fixture::new();
     support::write(
         &f.rules,
-        "policy/config.toml",
+        "policy/ruleset.toml",
         "id = 'policy'\ndescription = 'Commit wording'\nrun_at = ['commit-msg']\nrules = ['rules/reviews/evidence']\n",
     );
     support::write(

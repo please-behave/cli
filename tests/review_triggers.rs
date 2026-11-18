@@ -483,7 +483,7 @@ fn imported_patterns_share_validation_and_consumer_paths() {
     let cache = tempfile::tempdir().unwrap();
     write(
         remote.path(),
-        "rules/config.toml",
+        "rules/ruleset.toml",
         "id = 'imported'\ndescription = 'Imported reviews'\nrules = ['rules/reviews/quality']\nrun_at = ['check']\n",
     );
     write(

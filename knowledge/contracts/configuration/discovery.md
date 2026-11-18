@@ -31,8 +31,11 @@ are data: Please never interprets them as governance configuration. Arbitrary or
 nested files cannot introduce extra definitions.
 
 Explicit Git imports select source directories under the
-[external Rule Set reference](../../../docs/external-rule-sets.md). They do not
-extend local recursive discovery. Named provider packages follow the
+[external Rule Set reference](../../../docs/external-rule-sets.md). Each selected
+directory defines exactly one Rule Set in its `ruleset.toml`, with optional named
+provider configurations in `providers/*.toml` beside it; a directory without
+`ruleset.toml` fails validation. Imports do not extend local recursive
+discovery. Named provider packages follow the
 [independent provider import reference](../../../docs/configuration.md#import-providers-from-git).
 These definitions belong to this same configuration compatibility boundary.
 

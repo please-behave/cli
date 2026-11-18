@@ -8,15 +8,15 @@ lists consumer fields, Rule definitions and execution semantics.
 
 ```text
 governance-rules/
-  repository/config.toml
-  releasable-software/config.toml
+  repository/ruleset.toml
+  releasable-software/ruleset.toml
   rules/checks/readme/rule.toml
   rules/checks/readme/index.sh
   rules/checks/changelog/rule.toml
   rules/checks/changelog/index.sh
 ```
 
-`repository/config.toml`:
+`repository/ruleset.toml`:
 
 ```toml
 id = "repository"
@@ -40,7 +40,7 @@ command = "sh @rule/index.sh"
 test -s README.md
 ```
 
-`releasable-software/config.toml`:
+`releasable-software/ruleset.toml`:
 
 ```toml
 id = "releasable-software"
@@ -82,7 +82,7 @@ path = "releasable-software"
 ref = "v1.2.0"
 ```
 
-Each selected directory defines exactly one Rule Set in `config.toml`.
+Each selected directory defines exactly one Rule Set in `ruleset.toml`.
 External references also support per-reference overrides:
 
 ```toml
@@ -134,7 +134,7 @@ repeated references within one binding execute once. See
 ## Named provider configurations
 
 A selected directory may distribute complete named configurations in
-`providers/<id>.toml` beside its `config.toml`. They use the same adapter fields,
+`providers/<id>.toml` beside its `ruleset.toml`. They use the same adapter fields,
 defaults and limits as [local provider configurations](configuration.md#configure-the-ai-provider).
 All provider files in that directory are validated, including unused definitions.
 A review selects one with `provider = "quality"` in its `[review]` table.

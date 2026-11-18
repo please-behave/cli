@@ -341,7 +341,7 @@ fn imported_message_reviews_use_the_same_hook_contract() {
     ok(git(&source, &["init", "--quiet", "--initial-branch=main"]));
     support::write(
         &source,
-        "commit-msg/quality/config.toml",
+        "commit-msg/quality/ruleset.toml",
         "id = 'quality'\ndescription = 'Commit message wording'\nrun_at = ['commit-msg']\nrules = ['rules/reviews/message']\n",
     );
     support::write(

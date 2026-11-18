@@ -50,7 +50,7 @@ fn check_dependencies_are_qualified_per_binding_and_consumer_references_are_exac
     let f = Fixture::new();
     write(
         &f.remote,
-        "repository/config.toml",
+        "repository/ruleset.toml",
         "id = 'quality'\ndescription = 'Dependencies'\nrun_at = ['check']\nrules = ['repository/checks/build', 'repository/checks/test']\n",
     );
     for (id, depends) in [("build", "[]"), ("test", "['build']")] {
@@ -109,7 +109,7 @@ fn check_dependencies_are_qualified_per_binding_and_consumer_references_are_exac
 fn definitions(root: &Path, path: &str, script: &str) {
     write(
         root,
-        &format!("{path}/config.toml"),
+        &format!("{path}/ruleset.toml"),
         &format!(
             "id = 'quality'\ndescription = 'Reusable rules'\nrules = ['{path}/checks/required-files']\nrun_at = ['check']\n"
         ),
@@ -434,7 +434,7 @@ fn invalid_refresh_preserves_previous_valid_state_without_claiming_success() {
     let previous = f.state();
     write(
         &f.remote,
-        "repository/config.toml",
+        "repository/ruleset.toml",
         "id = \"quality\"\ndescription = \"Reusable rules\"\nrules = [\"repository/checks/missing\"]\nrun_at = [\"check\"]\n",
     );
     commit(&f.remote);
@@ -518,7 +518,7 @@ fn traversal_and_symlink_escapes_are_rejected() {
         std::os::unix::fs::symlink("../software", f.remote.join("link")).unwrap();
         fs::remove_file(f.remote.join("repository/checks/required-files/index.sh")).unwrap();
         std::os::unix::fs::symlink(
-            "../../../software/config.toml",
+            "../../../software/ruleset.toml",
             f.remote.join("repository/checks/required-files/index.sh"),
         )
         .unwrap();
@@ -599,7 +599,7 @@ fn imported_reviews_use_source_instructions_and_consumer_evidence() {
     write(&f.root, "README.md", "# Consumer\n");
     write(
         &f.remote,
-        "repository/config.toml",
+        "repository/ruleset.toml",
         r#"id = "reviews"
 description = "Reusable reviews"
 rules = ["repository/reviews/documentation"]
@@ -685,7 +685,7 @@ prompt = {instructions:?}
 "#
             ),
         );
-        let central = f.remote.join("repository/config.toml");
+        let central = f.remote.join("repository/ruleset.toml");
         let text = fs::read_to_string(&central).unwrap().replace(
             "repository/checks/required-files",
             "repository/reviews/review",
@@ -714,7 +714,7 @@ fn cli(f: &Fixture, args: &[&str]) -> std::process::Output {
 fn cli_refresh_cached_plan_and_offline_hook_keep_existing_lifecycle() {
     let f = Fixture::new();
     f.imports(&[("repository", "main")]);
-    let source = f.remote.join("repository/config.toml");
+    let source = f.remote.join("repository/ruleset.toml");
     fs::write(
         &source,
         fs::read_to_string(&source)
@@ -785,7 +785,7 @@ fn all_fixed_hooks_execute_imported_rules_offline() {
     f.imports(&[("repository", "main")]);
     write(
         &f.remote,
-        "repository/config.toml",
+        "repository/ruleset.toml",
         "id = 'quality'\ndescription = 'Reusable rules'\nrules = ['repository/checks/required-files']\nrun_at = ['pre-commit', 'commit-msg', 'pre-push']\n",
     );
     write(
@@ -1094,7 +1094,7 @@ fn mapped_imports(f: &Fixture, mappings: &[(&str, &str)], custom: &[&str]) {
     write(&f.root, ".please/config.toml", &text);
 }
 fn source_points(f: &Fixture, path: &str, points: &[&str]) {
-    let file = f.remote.join(path).join("config.toml");
+    let file = f.remote.join(path).join("ruleset.toml");
     let text = fs::read_to_string(&file)
         .unwrap()
         .replace("['check']", &format!("{points:?}"));
@@ -1132,7 +1132,7 @@ fn independent_mappings_resolve_inheritance_many_to_one_and_offline_execution() 
         "id = 'disabled'\ndescription = 'Disabled'\nenabled = false\nrun_at = ['test']\n[check]\ncommand = 'sh @rule/index.sh'\n",
     );
     write(&f.remote, "repository/checks/disabled/index.sh", "exit 1\n");
-    let central = f.remote.join("repository/config.toml");
+    let central = f.remote.join("repository/ruleset.toml");
     let text = fs::read_to_string(&central).unwrap().replace(
         "'repository/checks/required-files'",
         "'repository/checks/required-files', 'repository/checks/standalone', 'repository/checks/disabled'",
@@ -1168,7 +1168,7 @@ fn independent_mappings_resolve_inheritance_many_to_one_and_offline_execution() 
     let before = serde_json::to_value(&project.effective.rules).unwrap();
     let contents = f.contents();
     assert!(
-        fs::read_to_string(contents.join("repository/config.toml"))
+        fs::read_to_string(contents.join("repository/ruleset.toml"))
             .unwrap()
             .contains("lint")
     );
@@ -1494,7 +1494,7 @@ fn import_parameters_preserve_bindings_mappings_resources_and_reference_deduplic
     let f = Fixture::new();
     write(
         &f.remote,
-        "repository/config.toml",
+        "repository/ruleset.toml",
         "id = 'quality'\ndescription = 'Parameterized checks and reviews'\nrules = ['repository/checks/required-files', 'repository/checks/required-files', 'repository/reviews/parameter-review']\nrun_at = ['lint', 'test']\n",
     );
     let check_path = f.remote.join("repository/checks/required-files/rule.toml");
@@ -1707,7 +1707,7 @@ fn shared_rules_are_reused_across_sets_and_points_offline() {
     for (set, point) in [("repository", "pre-push"), ("software", "check")] {
         write(
             &f.remote,
-            &format!("{set}/config.toml"),
+            &format!("{set}/ruleset.toml"),
             &format!(
                 "id = {set:?}\ndescription = 'Shared rules'\nrules = ['rules/checks/shared', 'rules/checks/shared', 'rules/reviews/shared']\nrun_at = [{point:?}]\n"
             ),
@@ -1759,14 +1759,14 @@ fn external_rule_references_reject_unsafe_paths_and_duplicate_ids() {
         "../checks/outside",
         "/checks/outside",
         "rules/checks/../../outside",
-        "repository/config.toml",
+        "repository/ruleset.toml",
         "repository/checks/required-files/rule.toml",
         "missing/checks/rule",
     ] {
         let f = Fixture::new();
         write(
             &f.remote,
-            "repository/config.toml",
+            "repository/ruleset.toml",
             &format!(
                 "id = 'set'\ndescription = 'Unsafe reference'\nrules = [{reference:?}]\nrun_at = ['check']\n"
             ),
@@ -1778,7 +1778,7 @@ fn external_rule_references_reject_unsafe_paths_and_duplicate_ids() {
     let f = Fixture::new();
     write(
         &f.remote,
-        "repository/config.toml",
+        "repository/ruleset.toml",
         "id = 'set'\ndescription = 'Duplicate IDs'\nrules = ['repository/checks/required-files', 'software/checks/required-files']\nrun_at = ['check']\n",
     );
     commit(&f.remote);
@@ -1803,7 +1803,7 @@ fn shared_rule_references_reject_symlink_components() {
         );
         write(
             &f.remote,
-            "repository/config.toml",
+            "repository/ruleset.toml",
             "id = 'set'\ndescription = 'Symlink'\nrules = ['rules/checks/shared']\nrun_at = ['check']\n",
         );
         let path = f.remote.join(component);
@@ -1822,7 +1822,7 @@ fn imported_and_local_checks_and_reviews_receive_the_consumer_execution_point() 
     let f = Fixture::new();
     write(
         &f.remote,
-        "repository/config.toml",
+        "repository/ruleset.toml",
         "id = 'quality'\ndescription = 'Context rules'\nrules = ['repository/checks/required-files', 'repository/reviews/context']\nrun_at = ['source-point']\n",
     );
     let script = r#"set -eu
@@ -1999,7 +1999,7 @@ fn shared_entrypoints_execute_each_rule_offline() {
     let f = Fixture::new();
     write(
         &f.remote,
-        "repository/config.toml",
+        "repository/ruleset.toml",
         "id = 'quality'\ndescription = 'Shared entrypoints'\nrules = ['rules/checks/pass', 'rules/checks/fail', 'rules/checks/error', 'rules/checks/missing', 'rules/checks/disabled']\nrun_at = ['check']\n",
     );
     write(
@@ -2314,7 +2314,7 @@ fn reference_overrides_preserve_paths_mapping_identity_and_offline_reports() {
     let f = Fixture::new();
     write(
         &f.remote,
-        "repository/config.toml",
+        "repository/ruleset.toml",
         r#"
 id = "quality"
 description = "Reference overrides"

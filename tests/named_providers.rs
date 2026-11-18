@@ -190,7 +190,7 @@ fn calls_and_saved_reports_keep_provider_and_parameter_boundaries() {
 fn set(root: &Path, directory: &str, rules: &[&str]) {
     write(
         root,
-        &format!("{directory}/config.toml"),
+        &format!("{directory}/ruleset.toml"),
         &format!(
             "id = 'quality'\ndescription = 'Shared quality'\nrules = {rules:?}\nrun_at = ['check']\n"
         ),

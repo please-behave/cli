@@ -130,7 +130,7 @@ pub(crate) fn load(root: &Path) -> Result<Loaded> {
     Ok(loaded)
 }
 pub(crate) fn load_external(root: &Path, selected: &Path, consumer: Config) -> Result<Loaded> {
-    let central = selected.join("config.toml");
+    let central = selected.join("ruleset.toml");
     let mut set: RuleSet = document(root, &central)?;
     let mut directories = std::collections::BTreeMap::new();
     for reference in &set.rules {

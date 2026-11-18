@@ -334,7 +334,7 @@ need no default. Unknown explicit references fail even when disabled. Adding nam
 configurations never changes the default.
 
 External Rule Sets can distribute `providers/<id>.toml` beside their selected
-`config.toml`. Existing import boundaries, immutable caches and offline execution
+`ruleset.toml`. Existing import boundaries, immutable caches and offline execution
 apply. Repeated imports of the same immutable file share one definition; distinct
 definitions with the same ID fail. Local overrides are unsupported.
 
@@ -631,7 +631,7 @@ name differently or share targets. No global or individual Rule mapping exists.
 Mapping preserves Rule identity, enabled/blocking state, resources and provenance;
 it changes neither cached files nor revision identity and works offline without
 fetching. No other import fields or Rule overrides are accepted. Remove the import to
-stop using it. A selected directory defines one set in `config.toml`, with the
+stop using it. A selected directory defines one set in `ruleset.toml`, with the
 same four fields as a local set. External `rules` entries name Rule directories
 relative to the external repository root, for example:
 
