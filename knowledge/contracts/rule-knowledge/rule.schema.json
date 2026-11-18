@@ -10,8 +10,6 @@
     "problem",
     "value",
     "conditions",
-    "success_criteria",
-    "out_of_scope",
     "placement"
   ],
   "properties": {
@@ -61,7 +59,7 @@
         "type": "string",
         "minLength": 1
       },
-      "description": "How to tell that the implementation serves the purpose. They are the yardstick for reviewing the check or prompt, for example which known violations it must catch and which compliant cases it must accept."
+      "description": "How to tell that the implementation serves the purpose. They are the yardstick for reviewing the check or prompt, for example which known violations it must catch and which compliant cases it must accept. Omit them when the Rule only passes a command to a well-known tool and the tool's own result is the yardstick."
     },
     "exceptions": {
       "type": "array",
@@ -88,7 +86,7 @@
       "type": "array",
       "minItems": 1,
       "uniqueItems": true,
-      "description": "Plausible expectations the Rule deliberately does not cover. They mark the boundary and point to the Rule that takes over.",
+      "description": "Plausible expectations the Rule deliberately does not cover. They mark the boundary and point to the Rule that takes over. Omit them when no neighboring Rule or matter could be mistaken for part of this one.",
       "items": {
         "type": "object",
         "additionalProperties": false,

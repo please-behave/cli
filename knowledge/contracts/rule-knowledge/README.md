@@ -34,7 +34,9 @@ referenced by their IDs.
   it and the benefit it brings.
 - **Rule: conditions and success criteria.** Each condition carries its reason.
   The success criteria are the measure for reviewing the implementation against
-  the intent, not a test plan.
+  the intent, not a test plan. A Rule that only passes a command to a well-known
+  tool, such as a formatter, a linter or a test run, may omit the success criteria
+  and the out-of-scope list, because the tool's own result is the yardstick.
 - **Rule: boundaries.** `out_of_scope` names the neighboring Rule that owns a
   matter. `limitations` states what a passing result does not prove.
 - **Rule: placement.** Why the Rule is shared or local.
