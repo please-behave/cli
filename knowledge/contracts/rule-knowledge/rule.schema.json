@@ -1,0 +1,150 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/please-behave/cli/knowledge/contracts/rule-knowledge/rule.schema.json",
+  "title": "Rule knowledge",
+  "description": "Guiding question: Why does this Rule exist and what must it achieve?\n\nRule knowledge is the structured companion of a Rule definition. It records the purpose, the problem the Rule prevents, the conditions it enforces with their reasons, and the measure by which its implementation is judged. It never repeats what rule.toml already defines.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "purpose",
+    "problem",
+    "value",
+    "conditions",
+    "success_criteria",
+    "out_of_scope",
+    "placement"
+  ],
+  "properties": {
+    "purpose": {
+      "type": "string",
+      "minLength": 1,
+      "description": "One sentence stating what the Rule is meant to achieve."
+    },
+    "problem": {
+      "type": "string",
+      "minLength": 1,
+      "description": "What goes wrong without the Rule and why that matters: the risk and its consequence, not just the symptom."
+    },
+    "value": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The benefit a repository gains while the Rule holds."
+    },
+    "conditions": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "description": "What counts as compliant, one verifiable statement each, with the reason for that exact condition.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["statement", "rationale"],
+        "properties": {
+          "statement": {
+            "type": "string",
+            "minLength": 1,
+            "description": "One condition a reader can verify."
+          },
+          "rationale": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Why the Rule demands this condition."
+          }
+        }
+      }
+    },
+    "success_criteria": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "How to tell that the implementation serves the purpose. They are the yardstick for reviewing the check or prompt, for example which known violations it must catch and which compliant cases it must accept."
+    },
+    "exceptions": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "description": "Deliberate allowances within the conditions, with the reason for each.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["description", "rationale"],
+        "properties": {
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "rationale": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "out_of_scope": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "description": "Plausible expectations the Rule deliberately does not cover. They mark the boundary and point to the Rule that takes over.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["description"],
+        "properties": {
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "owner": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "description": "ID of the Rule that is responsible instead. Omit it when no Rule owns the matter."
+          }
+        }
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "What the Rule cannot see by its nature, so that a passing result is not mistaken for more than it proves."
+    },
+    "blocking_rationale": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Why a Review is blocking or advisory. Checks are always blocking and omit this. Execution points are justified by the Rule Set."
+    },
+    "placement": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Why the Rule belongs where it is: in a shared catalog instead of locally in each repository, or why it is local."
+    },
+    "parameters": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "For each declared parameter, why it exists. Types, defaults and bounds stay in rule.toml."
+    },
+    "references": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Standards, Knowledge artifacts or documents that stand behind the Rule."
+    }
+  }
+}
