@@ -56,7 +56,8 @@ Cargo build, Clippy and test
 commands explicitly use --offline. The execution
 wrapper also sets Cargo/npm offline mode and disables Rustup auto-install when
 invoking a Git-backed point. Direct Rule commands need no launcher. Dependency
-audits run at check in CI with advisory access; they remain outside pre-commit and pre-push.
+audits are not Checks: the daily Dependency Audit workflow runs them, and the imported Security Rule Set only
+verifies that the workflow exists.
 Checks neither install the governor nor repair project files.
 
 ## Execution points and required coverage
@@ -69,7 +70,7 @@ use independent synthetic configurations.
 Assignments are authoritative in `.please/` and the imported Rule Sets. Preview any point with
 `mise exec -- please run --at <point> --plan`. Commit-msg runs the imported commit Check and
 advisory Review, release runs the CLI smoke test of an already-built candidate, and check
-runs every pre-push rule plus audits and the conditional AGENTS.md quality Review.
+runs every pre-push rule plus the conditional AGENTS.md quality Review.
 
 The local [checks](../.please/checks) use string commands. Python scripts run
 as `python3 scripts/<name>.py`, relative to the consuming repository root.
@@ -103,8 +104,7 @@ same binary for smoke testing and packaging. Neither needs an extra launcher.
 
 Formatting, documentation, Clippy, Rust acceptance tests
 and release regression tests, Conventional Commits, actionlint,
-Rust/npm dependency audits remain required at the points shown above. Audits
-need advisory feeds. Release artifact verification runs directly in the publish
+Release artifact verification runs directly in the publish
 job after download and checksum generation; it requires EXPECTED_RELEASE_VERSION,
 GITHUB_SHA, GITHUB_RUN_ID, GITHUB_RUN_ATTEMPT and a complete dist/ artifact set.
 Candidate verification uses the same verifier for its single BUILD_TARGET, before

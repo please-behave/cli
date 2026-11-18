@@ -93,7 +93,7 @@ Please Behave. Dependencies are locked in `package-lock.json`.
    depend only on Plan and execute independently in parallel when a release is needed.
    Readiness runs `python3 .github/scripts/check-release-ci.py` directly to verify successful push CI
    for the exact source, repository, workflow, main branch and required jobs.
-   Source checks, dependency audits and unit tests are reused from CI without an age limit.
+   Source checks and unit tests are reused from CI without an age limit.
 3. The four-platform Candidate matrix installs the published governor, synchronizes
    imports and stamps Cargo.toml/Cargo.lock with the planned version. Actions builds first, then invokes the independent local release-smoke Rule
    at `release` against the actual binary on each native host, then packages and
@@ -197,10 +197,11 @@ Native downloads still need Git and, for enabled reviews, Codex CLI/login.
 - Linux: test Git hook integration offline.
 - Workflow syntax/expressions: pinned actionlint. Version stamping and
   archive-integrity checks: credential-free tests.
-- Dependency audits: cargo-audit checks Cargo.lock against RustSec; npm audit
-  blocks high/critical release-tooling advisories. Moderate npm advisories remain
-  visible but do not block. Advisory feeds require network access; unavailable
-  audits fail the job rather than silently pass.
+- Dependency audits run in the separate daily Dependency Audit workflow, not in CI or the release pipeline.
+  It scans Cargo.lock with cargo-audit (RustSec) and package-lock.json with npm audit once each, records the
+  findings in one shared JSON report and a step summary, and fails from the `AUDIT_FAIL_ON` severity set in
+  the workflow. Findings of unknown severity always fail. A scan that cannot complete fails as a technical
+  error, distinct from findings. Releases neither wait for nor are blocked by this workflow.
 - Dependency updates use Renovate, with `chore(deps)` commit prefixes to satisfy the
   commit policy. Action references use full commit SHAs; runtime/tool versions
   and dependency updates are reviewed.
@@ -221,7 +222,7 @@ changes. Git hooks run local validation at commit and push; agents must not run
 `please run --at pre-push` or other checks manually. The [quality-gate catalogue](self-governance.md)
 documents every execution point, installation, the Renovate-managed pin and report artifacts.
 
-The pipeline also runs actionlint, and dependency audits.
+The pipeline also runs actionlint.
 Do not run `npm run release` locally as a test: it is a publishing command. Local
 validation cannot certify other hosted platforms; inspect all GitHub jobs before
 using a release.

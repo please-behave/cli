@@ -1,9 +1,0 @@
-id = "rust-audit"
-name = "Rust dependency audit"
-description = "No Rust dependency has a known vulnerability"
-enabled = true
-run_at = ["check"]
-
-[check]
-command = "cargo audit"
-timeout_seconds = 300
