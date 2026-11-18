@@ -944,8 +944,8 @@ fn managed_sections_identify_the_repository() {
             .into_iter()
             .collect::<std::collections::BTreeSet<_>>()
     );
-    let first = project(&reconciliation::GIT_EVENTS);
-    let second = project(&reconciliation::GIT_EVENTS);
+    let first = project(reconciliation::GIT_EVENTS);
+    let second = project(reconciliation::GIT_EVENTS);
     synchronize(first.path());
     synchronize(second.path());
     let owner = |root: &Path| {
