@@ -72,14 +72,16 @@ after stable graduation.
 Please Behave starts at **0.1.0** and stays in the `0.x` development series. Features and
 breaking changes increment the minor version; fixes and maintenance increment
 patch. Moving to `1.0.0` requires an explicit change to the development-series
-policy in release.config.mjs, not merely a breaking commit.
+policy in the shared release configuration (please-behave-governance), not merely a breaking commit.
 
 The published v0.1.0 tag establishes the release history. Semantic Release
 calculates subsequent versions and handles publication. If no release-worthy
 commits exist after a release, the workflow exits without building or publishing.
-The Node version range in [package.json](../package.json) and
-`npm ci --ignore-scripts` are needed only for release tooling, not to build or run
-Please Behave. Dependencies are locked in `package-lock.json`.
+Semantic Release, its configuration, the CI proof, the evidence and the publication
+are shared release actions and reusable workflows from please-behave-governance,
+pinned by commit. This repository keeps no Node tooling for releases; it only holds
+the artifact policy (`.github/release-artifacts.json`) and the native build, smoke test
+and packaging.
 
 ## Release sequence
 
@@ -88,8 +90,8 @@ Please Behave. Dependencies are locked in `package-lock.json`.
    not run; no tag, commit or release is created.
 2. `release-readiness` (Release Readiness) and `release-candidate` (Release Candidate)
    depend only on Plan and execute independently in parallel when a release is needed.
-   Readiness runs `python3 .github/scripts/check-release-ci.py` directly to verify successful push CI
-   for the exact source, repository, workflow, main branch and required jobs.
+   Readiness is the shared `release-readiness` workflow; it verifies successful push CI
+   for the exact source, repository, workflow, main branch and the required job `Check`.
    Source checks and unit tests are reused from CI without an age limit.
 3. The four-platform Candidate matrix installs the published governor, synchronizes
    imports and stamps Cargo.toml/Cargo.lock with the planned version. Actions builds first, then invokes the independent local release-smoke Rule
@@ -107,7 +109,7 @@ Please Behave. Dependencies are locked in `package-lock.json`.
    `python3 .github/scripts/check-release-artifacts.py` verifies exactly four archives and
    their evidence, source/version/run identity, archive/binary/smoke hashes, executable
    permissions, allowed members and README/LICENSE bytes. It never rebuilds binaries.
-   Publish verifies common release evidence directly with `.github/scripts/release-evidence.py verify`; it installs no governor or build toolchain.
+   Publish verifies the release evidence with the shared `evidence` action; it installs no governor or build toolchain.
 6. Semantic Release recalculates the version, requires it to match the plan, and
    checks local HEAD, the dispatched SHA and remote main before creating a tag.
    It generates notes, tags the tested source, pushes the tag/Git notes and publishes
@@ -116,7 +118,7 @@ Please Behave. Dependencies are locked in `package-lock.json`.
 
 ### CI proof and reruns
 
-`.github/release-ci.json` explicitly requires the `Check` job in
+The `required-jobs` input of the readiness job in `.github/workflows/release.yml` requires the `Check` job in
 `.github/workflows/ci.yml`, in `please-behave/cli`, for a push to main at the exact
 release SHA. Current CI has one Linux x64 job; four-platform coverage is supplied
 by Release Candidate. Consumers with a CI matrix must list every required entry
@@ -195,7 +197,7 @@ Native downloads still need Git and, for enabled reviews, Codex CLI/login.
 - Workflow syntax/expressions: pinned actionlint. Version stamping and
   archive-integrity checks: credential-free tests.
 - Dependency audits run in the separate daily Dependency Audit workflow, not in CI or the release pipeline.
-  It scans Cargo.lock with cargo-audit (RustSec) and package-lock.json with npm audit once each, records the
+  It scans Cargo.lock with cargo-audit (RustSec), records the
   findings in one shared JSON report and a step summary, and fails from the `AUDIT_FAIL_ON` severity set in
   the workflow. Findings of unknown severity always fail. A scan that cannot complete fails as a technical
   error, distinct from findings. Releases neither wait for nor are blocked by this workflow.
@@ -220,8 +222,7 @@ changes. Git hooks run local validation at commit and push; agents must not run
 documents every execution point, installation, the Renovate-managed pin and report artifacts.
 
 The pipeline also runs actionlint.
-Do not run `npm run release` locally as a test: it is a publishing command. Local
-validation cannot certify other hosted platforms; inspect all GitHub jobs before
+Local validation cannot certify other hosted platforms; inspect all GitHub jobs before
 using a release.
 
 References: [Semantic Release configuration](https://semantic-release.gitbook.io/semantic-release/usage/configuration),
@@ -230,13 +231,11 @@ References: [Semantic Release configuration](https://semantic-release.gitbook.io
 
 ## Shared evidence
 
-GitHub Actions runs `.github/scripts/release-evidence.py record` after successful
-candidate verification and `.github/scripts/release-evidence.py verify` on the collected
-set before publication. `.github/release-artifacts.json` names each target's
+GitHub Actions runs the shared `evidence` action (`record`) after successful
+candidate verification and (`verify`) on the collected set before publication. `.github/release-artifacts.json` names each target's
 archive, metadata and smoke receipt. The manifest binds hashes to version,
-source, repository, workflow and current run/attempt. This preserves the previous
-pinned implementation as workflow tooling, outside Please Behave.
-The local `.github/scripts/release-guard.mjs` verifies source and version before tagging.
+source, repository, workflow and current run/attempt. The implementation is
+shared workflow tooling outside Please Behave; the shared guard verifies source and version before tagging.
 
 Release policy and candidate-evidence readers accept schema versions `0` and `1`.
 Policies and newly recorded evidence use experimental schema version `0`. Version compatibility does not relax source, run, attempt or hash checks.

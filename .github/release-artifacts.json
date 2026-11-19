@@ -1,7 +1,4 @@
 {
-  "schema_version": 0,
-  "repository": "please-behave/cli",
-  "workflow": ".github/workflows/release.yml",
   "root": "dist",
   "targets": {
     "aarch64-apple-darwin": [

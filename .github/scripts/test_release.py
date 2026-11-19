@@ -92,20 +92,18 @@ class ReleaseTests(unittest.TestCase):
         self.assertIn("needs: [plan, release-readiness, release-candidate]", publisher)
         self.assertIn("contents: write", publisher)
         self.assertIn("persist-credentials: false", publisher)
-        for required in (
-            "actions/download-artifact@",
-            "pattern: please-${{ github.run_id }}-${{ github.run_attempt }}-*",
-            "python3 .github/scripts/checksums.py",
-            "python3 .github/scripts/check-release-artifacts.py",
-            "npm run release",
-            "EXPECTED_RELEASE_VERSION: ${{ needs.plan.outputs.version }}",
-        ):
+        order = [
+            "actions/release/evidence@",
+            ".github/scripts/checksums.py",
+            ".github/scripts/check-release-artifacts.py",
+            "actions/release/publish-release@",
+        ]
+        for required in order:
             self.assertIn(required, publisher)
-        self.assertLess(publisher.index("actions/download-artifact@"), publisher.index(".github/scripts/checksums.py"))
-        self.assertLess(publisher.index(".github/scripts/checksums.py"), publisher.index(".github/scripts/check-release-artifacts.py"))
-        self.assertLess(publisher.index(".github/scripts/check-release-artifacts.py"), publisher.index("npm run release"))
+        self.assertEqual([publisher.index(step) for step in order], sorted(publisher.index(step) for step in order))
+        self.assertIn("operation: verify", publisher)
+        self.assertIn("EXPECTED_RELEASE_VERSION: ${{ needs.plan.outputs.version }}", publisher)
         verification = publisher.split("      - name: Verify collected release artifacts\n", 1)[1].split("      - name:", 1)[0]
-        self.assertIn("EXPECTED_RELEASE_VERSION: ${{ needs.plan.outputs.version }}", verification)
         for bypass in ("continue-on-error", "if:", "||"):
             self.assertNotIn(bypass, verification)
 
@@ -334,35 +332,28 @@ class ReleaseTests(unittest.TestCase):
         jobs = re.split(r"^  ([a-z-]+):\n", workflow.split("jobs:\n", 1)[1], flags=re.M)
         jobs = dict(zip(jobs[1::2], jobs[2::2]))
         self.assertEqual(set(jobs), {"plan", "release-readiness", "release-candidate", "publish"})
+        self.assertIn(".github/workflows/release-plan.yml@", jobs["plan"])
+        self.assertIn(".github/workflows/release-readiness.yml@", jobs["release-readiness"])
+        self.assertIn("required-jobs: Check", jobs["release-readiness"])
         for name in ("release-readiness", "release-candidate"):
             self.assertIn("needs: plan", jobs[name])
             self.assertIn("needs.plan.outputs.release == 'true'", jobs[name])
             self.assertNotIn("continue-on-error", jobs[name])
-        self.assertIn("execution-point: release", jobs["release-candidate"])
-        self.assertNotIn("checks-only", jobs["release-candidate"])
-        self.assertIn("summary: 'true'", jobs["release-candidate"])
-        for name in ("release-readiness", "publish"):
-            self.assertNotIn("please-behave/action@", jobs[name])
-            self.assertNotIn("please sync", jobs[name])
-        self.assertIn("python3 .github/scripts/check-release-ci.py", jobs["release-readiness"])
         candidate = jobs["release-candidate"]
         ordered = [
             "mise run build --offline",
             ".github/scripts/smoke-receipt.py before",
-            "execution-point: release",
+            "actions/release/governance@",
             ".github/scripts/smoke-receipt.py after",
             "mise run package",
             ".github/scripts/check-release-artifacts.py --candidate",
-            ".github/scripts/release-evidence.py record",
+            "actions/release/evidence@",
         ]
         self.assertEqual([candidate.index(step) for step in ordered], sorted(candidate.index(step) for step in ordered))
-        self.assertLess(jobs["publish"].index(".github/scripts/release-evidence.py verify"), jobs["publish"].index("npm run release"))
-        self.assertIn("actions: read", jobs["release-readiness"])
-        for name in ("plan", "release-candidate", "publish"):
+        self.assertIn("operation: record", candidate)
+        self.assertIn("target: ${{ matrix.target }}", candidate)
+        for name in ("plan", "release-readiness", "release-candidate", "publish"):
             self.assertNotIn("actions: write", jobs[name])
-        self.assertIn("install: 'false'", candidate)
-        self.assertIn("sync: 'true'", candidate)
-        self.assertNotIn("steps.governor", workflow)
         self.assertIn("install_args: python rust github:please-behave/cli", candidate)
         self.assertIn("MISE_AUTO_INSTALL: 'false'", workflow)
         self.assertNotIn("rustup toolchain install", workflow)
@@ -370,23 +361,17 @@ class ReleaseTests(unittest.TestCase):
         tasks = tomllib.loads((ROOT / "mise.toml").read_text())["tasks"]
         self.assertEqual(tasks["build"]["run"], "cargo build --release --locked")
         self.assertEqual(tasks["package"]["run"], "python3 .github/scripts/package-release.py")
-        self.assertNotIn("setup-node", jobs["release-candidate"])
-        for name in ("plan",):
-            self.assertNotIn("please run", jobs[name])
-            self.assertNotIn("please sync", jobs[name])
-            self.assertNotIn("please-behave/action@", jobs[name])
         for name in ("release-readiness", "release-candidate"):
             self.assertIn(f"needs.{name}.result == 'success'", jobs["publish"])
         self.assertNotIn("always()", jobs["publish"])
         self.assertNotIn("cargo", jobs["publish"])
-        for repeated in ("scripts/prepare-ci.sh", "unittest discover", "actionlint"):
+        for repeated in ("scripts/prepare-ci.sh", "unittest discover", "actionlint", "npm "):
             self.assertNotIn(repeated, workflow)
         self.assertIn("group: release-main", workflow)
         self.assertIn("cancel-in-progress: false", workflow)
         self.assertIn("workflow_dispatch:", workflow)
-        policy = json.loads((ROOT / ".github/release-ci.json").read_text())
-        self.assertEqual(policy["required_jobs"], ["Check"])
-        self.assertNotIn("required_steps", policy)
+        self.assertFalse((ROOT / "release.config.mjs").exists())
+        self.assertFalse((ROOT / "package.json").exists())
 
     def test_single_candidate_verification_and_smoke_binary_binding(self):
         with tempfile.TemporaryDirectory() as temporary:

@@ -14,17 +14,6 @@
   "minimumReleaseAgeBehaviour": "timestamp-optional",
   "packageRules": [
     {
-      "description": "Update the semantic-release changelog stack together so its preset and writer remain compatible.",
-      "groupName": "semantic-release toolchain",
-      "matchPackageNames": [
-        "semantic-release",
-        "@semantic-release/commit-analyzer",
-        "@semantic-release/github",
-        "@semantic-release/release-notes-generator",
-        "conventional-changelog-conventionalcommits"
-      ]
-    },
-    {
       "matchUpdateTypes": [
         "major"
       ],

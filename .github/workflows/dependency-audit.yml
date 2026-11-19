@@ -20,10 +20,9 @@ jobs:
       - name: Install audit tools
         uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
         with:
-          install_args: python node rust cargo:cargo-audit
+          install_args: python rust cargo:cargo-audit
       - name: Audit the dependencies
         uses: christianpflugradt/please-behave-governance/actions/dependency-audit@83bb5095593e4043176ea66e9229ec0e93ec6ad5 # updates/actions/dependency-audit
         with:
-          npm: .
           cargo: .
           fail-on: ${{ env.AUDIT_FAIL_ON }}
