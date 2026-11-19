@@ -22,7 +22,7 @@ jobs:
         with:
           install_args: python rust cargo:cargo-audit
       - name: Audit the dependencies
-        uses: christianpflugradt/please-behave-governance/actions/dependency-audit@83bb5095593e4043176ea66e9229ec0e93ec6ad5 # updates/actions/dependency-audit
+        uses: christianpflugradt/please-behave-governance/actions/dependency-audit@ef32fb94723c4e10822ef56c7fef36615d983f58 # updates/actions/dependency-audit
         with:
           cargo: .
           fail-on: ${{ env.AUDIT_FAIL_ON }}
