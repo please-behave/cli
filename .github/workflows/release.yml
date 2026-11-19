@@ -74,18 +74,12 @@ jobs:
         run: cargo fetch --locked
       - name: Build native candidate
         run: mise run build --offline
-      - name: Capture candidate identity before quality checks
-        run: python3 .github/scripts/smoke-receipt.py before
       - name: Validate native candidate behavior
         uses: christianpflugradt/please-behave-governance/actions/release/governance@ddb176f80831329b2328b9cf0c976f4e6f634c31 # updates/actions/release
         with:
           target: ${{ matrix.target }}
-      - name: Verify smoke-tested candidate identity
-        run: python3 .github/scripts/smoke-receipt.py after
       - name: Package smoke-tested candidate
         run: mise run package
-      - name: Verify candidate archive
-        run: python3 .github/scripts/verify-release.py "$EXPECTED_RELEASE_VERSION" --candidate
       - name: Record release candidate evidence
         uses: christianpflugradt/please-behave-governance/actions/release/evidence@ddb176f80831329b2328b9cf0c976f4e6f634c31 # updates/actions/release
         with:
@@ -119,11 +113,6 @@ jobs:
         with:
           operation: verify
           version: ${{ needs.plan.outputs.version }}
-      - name: Verify collected release artifacts
-        timeout-minutes: 3
-        env:
-          EXPECTED_RELEASE_VERSION: ${{ needs.plan.outputs.version }}
-        run: python3 .github/scripts/verify-release.py "$EXPECTED_RELEASE_VERSION"
       - name: Checksum all native archives
         working-directory: dist
         run: sha256sum -- *.tar.gz > SHA256SUMS

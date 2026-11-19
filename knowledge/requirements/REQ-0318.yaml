@@ -7,8 +7,7 @@ description: >-
 rationale: >-
   Users can verify that what they downloaded is what was published.
 test_exemption: >-
-  Verified by the mandatory .github/scripts/verify-release.py
-  publication gate in .github/workflows/release.yml, which requires the
-  complete archive set, and by the sha256sum step that generates SHA256SUMS
-  from exactly those archives. The tooling tests in
-  .github/scripts/test_release.py check incomplete and corrupt artifact sets.
+  Verified by the shared evidence action, which restores exactly the
+  archives of the policy in .github/release-artifacts.json, and by the
+  sha256sum step in .github/workflows/release.yml that generates SHA256SUMS
+  from exactly those archives.

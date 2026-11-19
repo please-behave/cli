@@ -97,17 +97,13 @@ and packaging.
    imports and stamps Cargo.toml/Cargo.lock with the planned version. Actions builds first, then invokes the independent local release-smoke Rule
    at `release` against the actual binary on each native host, then packages and
    verifies it. Formatting, Clippy and unit tests are not repeated.
-4. Actions records a smoke receipt with the binary hash before and after quality testing.
-   Packaging checks the executable version and copies exactly those tested bytes, with
-   README and LICENSE. `.github/scripts/verify-release.py VERSION --candidate` validates the
-   archive layout and that it holds the smoke-tested binary. The shared `evidence` action
-   then binds archive and receipt to the planned version, source, workflow run and attempt.
-   Smoke receipts travel with the archives but are not public release assets.
+4. Packaging copies the tested binary, README and LICENSE into the archive; the release
+   smoke Rule has already checked that the binary reports the planned version. The archive
+   layout is covered by the packager test in CI. The shared `evidence` action then binds the
+   archive to the planned version, source, workflow run and attempt.
 5. `publish` (Publish) requires Plan, Readiness and the entire Candidate matrix to
    succeed. The shared `evidence` action restores only current-run/current-attempt candidates
-   and verifies their source, version, run identity and hashes. A mandatory call to
-   `python3 .github/scripts/verify-release.py VERSION` then verifies exactly four archives,
-   their smoke receipts, executable permissions, allowed members and README/LICENSE bytes.
+   and verifies their source, version, run identity and hashes of exactly four archives.
    `SHA256SUMS` is generated from the archives. It never rebuilds binaries and installs no governor or build toolchain.
 6. Semantic Release recalculates the version, requires it to match the plan, and
    checks local HEAD, the dispatched SHA and remote main before creating a tag.
@@ -160,7 +156,7 @@ without building or publishing again. Partial publication still needs inspection
 ## Native downloads
 
 Published releases provide four native archives and `SHA256SUMS`. Build jobs
-transfer archives, metadata and smoke receipts using run/attempt-specific artifact
+transfer archives using run/attempt-specific artifact
 names. CI and all four native Candidate jobs use the SHA-pinned
 [Action](https://github.com/please-behave/action).
 Mise installs the governor pinned in `mise.toml`. Each gate uses `install: 'false'`
@@ -232,7 +228,7 @@ References: [Semantic Release configuration](https://semantic-release.gitbook.io
 
 GitHub Actions runs the shared `evidence` action (`record`) after successful
 candidate verification and (`verify`) on the collected set before publication. `.github/release-artifacts.json` names each target's
-archive, metadata and smoke receipt. The manifest binds hashes to version,
+archive. The manifest binds hashes to version,
 source, repository, workflow and current run/attempt. The implementation is
 shared workflow tooling outside Please Behave; the shared guard verifies source and version before tagging.
 

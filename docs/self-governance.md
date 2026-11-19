@@ -104,11 +104,8 @@ same binary for smoke testing and packaging. Neither needs an extra launcher.
 
 Formatting, documentation, Clippy, Rust acceptance tests
 and release regression tests, Conventional Commits, actionlint,
-Release artifact verification runs directly in the publish
-job after download and checksum generation; it requires EXPECTED_RELEASE_VERSION,
-GITHUB_SHA, GITHUB_RUN_ID, GITHUB_RUN_ATTEMPT and a complete dist/ artifact set.
-Candidate verification uses the same verifier for its single BUILD_TARGET, before
-aggregate checksum generation. Both verify the successful smoke receipt.
+The archive layout is covered by the packager test in test_release.py; the shared
+evidence action binds the packaged archives to the planned source and version.
 These checks cannot all be meaningfully executed in an unprepared local checkout.
 
 For manual developer use:

@@ -9,8 +9,6 @@ rationale: >-
   Installers and automation can find the right archive and its content without
   guessing.
 test_exemption: >-
-  Verified by .github/scripts/package-release.py and the mandatory
-  .github/scripts/verify-release.py publication gate in
-  .github/workflows/release.yml. Tooling tests in
+  Verified by .github/scripts/package-release.py. Tooling tests in
   .github/scripts/test_release.py exercise archive naming, member layout,
   executable permissions and README/LICENSE content.

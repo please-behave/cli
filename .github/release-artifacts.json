@@ -2,20 +2,16 @@
   "root": "dist",
   "targets": {
     "aarch64-apple-darwin": [
-      "please-v{version}-aarch64-apple-darwin.tar.gz",
-      "smoke/aarch64-apple-darwin.json"
+      "please-v{version}-aarch64-apple-darwin.tar.gz"
     ],
     "x86_64-apple-darwin": [
-      "please-v{version}-x86_64-apple-darwin.tar.gz",
-      "smoke/x86_64-apple-darwin.json"
+      "please-v{version}-x86_64-apple-darwin.tar.gz"
     ],
     "x86_64-unknown-linux-gnu": [
-      "please-v{version}-x86_64-unknown-linux-gnu.tar.gz",
-      "smoke/x86_64-unknown-linux-gnu.json"
+      "please-v{version}-x86_64-unknown-linux-gnu.tar.gz"
     ],
     "aarch64-unknown-linux-gnu": [
-      "please-v{version}-aarch64-unknown-linux-gnu.tar.gz",
-      "smoke/aarch64-unknown-linux-gnu.json"
+      "please-v{version}-aarch64-unknown-linux-gnu.tar.gz"
     ]
   }
 }

@@ -16,8 +16,8 @@ The `knowledge` Rule keeps the [component map](../knowledge/components/README.md
 complete and consistent with the source.
 
 `release` selects the independent release-smoke Rule for an already-built
-candidate. Actions builds first, then runs the quality gate. Packaging, smoke
-receipts and the archive layout check are workflow scripts, outside Please Behave; CI proof,
+candidate. Actions builds first, then runs the quality gate. Version stamping and
+packaging are workflow scripts, outside Please Behave; CI proof,
 evidence and publication guards are shared actions from please-behave-governance. The ordinary pre-push/check build and smoke Rules
 retain their existing dependencies and resource locking.
 

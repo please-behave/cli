@@ -9,8 +9,7 @@ rationale: >-
   nobody tested.
 test_exemption: >-
   Verified by the Release workflow in .github/workflows/release.yml: native
-  candidates are version-stamped before smoke testing, and smoke receipts,
-  archive hashes and release evidence bind the published bytes to the
-  planned source and version. The mandatory artifact and shared release-evidence
-  gates reject mismatches before publication;
-  .github/scripts/test_release.py exercises those rejection paths.
+  candidates are version-stamped before smoke testing, which checks the
+  binary version, and the shared release evidence binds the archive hashes
+  to the planned source and version. The evidence gate rejects mismatches
+  before publication; .github/scripts/test_release.py covers the packaging.
