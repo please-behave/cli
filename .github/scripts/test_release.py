@@ -46,7 +46,11 @@ class ReleaseTests(unittest.TestCase):
         name = f"please-v{version}-{target}"
         archive = dist / f"{name}.tar.gz"
         with tarfile.open(archive, "w:gz") as output:
-            for filename, data in (("please", binary), ("README.md", Path("README.md").read_bytes()), ("LICENSE", Path("LICENSE").read_bytes())):
+            for filename, data in (
+                ("please", binary),
+                ("README.md", Path("README.md").read_bytes()),
+                ("LICENSE", Path("LICENSE").read_bytes()),
+            ):
                 member = tarfile.TarInfo(f"{name}/{filename}")
                 member.mode = 0o755 if filename == "please" else 0o644
                 member.size = len(data)
