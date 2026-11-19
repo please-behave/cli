@@ -17,7 +17,7 @@ class GovernanceTests(unittest.TestCase):
         self.assertNotIn("install_args", installation)  # Install every configured quality tool.
         self.assertLess(ci.index(installation), ci.index(execution))
         self.assertLess(ci.index("mise run setup"), ci.index(execution))
-        reference = re.search(r"uses: (please-behave/action@[a-f0-9]{40})", execution)[1]
+        self.assertRegex(execution, r"uses: please-behave/action@[a-f0-9]{40}")
         self.assertIn("install: 'false'", execution)
         self.assertIn("sync: 'true'", execution)
         self.assertEqual(ci.count("please-behave/action@"), 1)
@@ -33,7 +33,7 @@ class GovernanceTests(unittest.TestCase):
         self.assertNotIn("scripts/agents-review-summary.py", ci)
         self.assertIn("path: .please/reports/last.json", ci)
         release = (ROOT / ".github/workflows/release.yml").read_text()
-        self.assertIn(f"uses: {reference}", release)
+        self.assertNotIn("please-behave/action@", release)  # The shared governance action pins the governor.
 
     def test_renovate_uses_the_shared_governor_update_policy(self):
         config = json.loads((ROOT / "renovate.json").read_text())
