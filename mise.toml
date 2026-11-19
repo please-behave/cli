@@ -19,9 +19,9 @@ description = "Build the native release executable"
 run = "cargo build --release --locked"
 
 [tasks.release]
-description = "Start the GitHub Release workflow for remote main; --install waits, then adopts the release as governor"
-usage = 'flag "--install" help="Wait for success, pin the new version in mise.toml and run mise install"'
-run = 'python3 tools/release.py ${usage_install:+--install}'
+description = "Start the GitHub Release workflow for remote main once CI is idle; --follow watches the run"
+usage = 'flag "--follow" help="Watch the dispatched release run until it finishes"'
+run = 'python3 tools/release.py ${usage_follow:+--follow}'
 
 [tasks.format]
 description = "Format Rust, Python and shell sources"
