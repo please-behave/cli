@@ -1,0 +1,51 @@
+id: DEC-0027
+name: History-Based Scheduling With A Fail-Fast Fast Lane
+context: >-
+  Please executes multiple independent rules concurrently, but static
+  execution order can leave available capacity underutilized or delay
+  long-running dependency chains. Rule execution reports already contain
+  duration measurements that can inform scheduling decisions. Local
+  execution latency is particularly important because developers run
+  governance checks repeatedly during development. Scheduling should
+  improve over time without introducing manual priority configuration,
+  shared infrastructure, or substantial operational complexity. In fail-fast
+  runs, filling every slot with long checks can postpone a quick blocking
+  result even when short checks are runnable.
+decision: >-
+  Please prioritizes runnable rules using estimated execution durations
+  derived from previous local runs. Estimates are maintained per stable
+  rule identity in a non-versioned local cache using a lightweight
+  moving average. Successfully completed executions update the estimates;
+  rules without history receive a uniform fallback estimate. Scheduling
+  priority is based on the estimated longest remaining dependency path,
+  including the rule itself. When execution capacity becomes available,
+  the scheduler prefers the highest-priority eligible rule while respecting
+  dependencies, concurrency limits, and exclusive resource constraints.
+  Rules waiting for prerequisites or resources do not reserve execution
+  capacity. Equal priorities are resolved deterministically. Scheduling
+  history is not committed to the repository or synchronized between
+  environments. In fail-fast invocations with an effective check concurrency
+  limit of at least two, exactly one slot instead picks the eligible check
+  with the smallest own duration estimate, resolving ties by canonical ID.
+  That slot is reused with the same priority when its worker completes; other
+  slots keep longest-remaining-path priority. The fast lane dispatches first
+  when both kinds of slot are free. It accepts checks of any duration and
+  never reserves idle capacity. This exception applies only to checks, not
+  AI reviews. Complete and serial runs retain the usual order.
+  The optimization introduces no user-configurable
+  priorities, weights, or duration estimates.
+rationale: >-
+  Historical duration estimates allow scheduling to adapt to actual
+  project characteristics without requiring users to maintain performance
+  metadata. Considering remaining dependency paths prioritizes work that
+  may delay completion of the entire run rather than simply starting
+  individually expensive rules first. Local caching keeps the mechanism
+  lightweight and focuses optimization on frequently repeated developer
+  workflows. Resource and dependency constraints remain authoritative,
+  preserving correctness independently of scheduling decisions. A simple
+  heuristic offers practical improvements without the complexity of
+  globally optimal scheduling. A single fast lane reduces time to an early
+  blocking result without delaying all long paths; choosing the shortest
+  eligible estimate avoids thresholds and additional configuration.
+supersedes:
+  - DEC-0017

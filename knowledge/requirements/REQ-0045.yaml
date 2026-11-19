@@ -8,4 +8,4 @@ rationale: >-
   Timing history is a private local aid and must not enter the repository or
   travel between machines.
 decisions:
-  - DEC-0017
+  - DEC-0027

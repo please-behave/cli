@@ -1,0 +1,15 @@
+id: REQ-0333
+name: Fail-Fast Check Fast Lane
+area: checks
+description: >-
+  When fail-fast is requested with an effective check concurrency limit of at
+  least two, exactly one execution slot must start the runnable check with the
+  smallest estimated duration whenever that slot is free, resolving ties by
+  canonical ID and accepting any duration without reserving idle capacity;
+  all other slots must retain remaining-path priority. Complete runs, serial
+  runs and AI reviews must retain their existing scheduling order.
+rationale: >-
+  Giving short checks a slot surfaces blocking problems earlier while long
+  dependency chains continue to make progress.
+decisions:
+  - DEC-0027

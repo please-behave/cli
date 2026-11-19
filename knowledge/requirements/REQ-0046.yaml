@@ -7,4 +7,4 @@ description: >-
 rationale: >-
   A guess about duration must never change which checks are allowed to run.
 decisions:
-  - DEC-0017
+  - DEC-0027

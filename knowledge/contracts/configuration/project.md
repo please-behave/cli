@@ -42,6 +42,15 @@ dependency waits use no execution slot; reviews run only after the check phase.
 The scheduling limit, local duration history and fail-fast execution strategy do
 not change semantic [plan identity](../plan/prepared.md).
 
+Invocation-level `--fail-fast` with an effective limit of at least two gives
+exactly one check slot shortest-estimated-duration priority. When free, that
+slot dispatches first and chooses the eligible check with the smallest own
+estimate, breaking ties by canonical ID; other slots retain priority by the longest
+remaining dependency path. It accepts any duration and reserves no idle capacity.
+Eligibility, resource exclusion and the concurrency limit remain authoritative.
+Uniform fallback estimates apply without history. Complete runs, serial runs
+and reviews retain their usual order. This behavior has no configuration field.
+
 `execution.fail_fast_terminate_running_instances` permits termination of running
 checks only when invocation-level `--fail-fast` triggers. It does not enable
 fail-fast on its own. Fail-fast has no persistent configuration field. Without

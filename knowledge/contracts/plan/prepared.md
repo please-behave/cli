@@ -35,7 +35,11 @@ Invalid, ambiguous, disabled, unselected or review references, self-dependencies
 and cycles block planning before execution. Reviews neither declare nor satisfy
 check dependencies. Execution runs the check phase before any review, scheduling
 runnable checks by estimated remaining dependency-path duration with canonical ID
-ties. Resource waits and completion order do not change serialized rule order.
+ties. In fail-fast runs with an effective concurrency limit of at least two,
+one slot instead picks the shortest estimated runnable check, with canonical ID
+ties, before filling other free slots with remaining-path priority. This affects
+only dispatch, not the plan's canonical order. Resource waits and completion
+order do not change serialized rule order.
 
 `disabled_rules` lists disabled definitions separately, with no selection reasons;
 they are never results. `omitted` contains applicable reviews excluded for

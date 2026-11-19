@@ -67,6 +67,15 @@ invocation. Set the limit to one when serial execution is useful. Enable
 `execution.fail_fast_terminate_running_instances` only when interrupted checks can
 leave their work in an acceptable state; it takes effect with `run --fail-fast`.
 
+With `run --fail-fast` and an effective limit of at least two, one slot always
+picks the runnable check with the shortest estimated duration; the other slots
+prioritize the longest remaining dependency path. The fast lane accepts any
+duration and never holds capacity idle. Ties use canonical IDs. Estimates come
+from local history, with a uniform fallback for checks without history, and
+never override dependencies, resource locks or the concurrency limit. Complete
+runs and serial runs keep remaining-path priority; reviews are unaffected.
+There is no fast-lane setting.
+
 Declare additional execution points under `execution_points.custom`. Invoke
 `check` and custom points explicitly, including in CI; they need no Git hooks.
 Use `context` settings to control stored run contexts and section sizes, and

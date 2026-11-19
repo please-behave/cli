@@ -299,3 +299,243 @@ fn scheduling_priorities_and_estimates_are_not_configurable() {
         assert!(format!("{error:#}").contains(setting.split(' ').next().unwrap()));
     }
 }
+
+/// Hold workers until coordinator events release them; estimates never act as sleeps.
+fn gated_run(
+    rules: &[(&str, u64, Option<&str>, &[&str])],
+    limit: usize,
+    fail_fast: bool,
+    releases: &[&[&str]],
+    with_history: bool,
+) -> Vec<String> {
+    let root = project();
+    let mut estimates = serde_json::Map::new();
+    for &(id, estimate, resource, dependencies) in rules {
+        support::check(
+            root.path(),
+            id,
+            &["check"],
+            &format!("while [ ! -f .git/release-{id} ]; do sleep 0.01; done"),
+        );
+        let path = root.path().join(format!(".please/checks/{id}/rule.toml"));
+        let text = fs::read_to_string(&path).unwrap();
+        let text = format!("depends_on = {dependencies:?}\n{text}");
+        let text = match resource {
+            Some(resource) => text.replace("[check]", &format!("[check]\nresource = {resource:?}")),
+            None => text,
+        };
+        fs::write(path, text).unwrap();
+        estimates.insert(id.into(), estimate.into());
+    }
+    if with_history {
+        fs::write(
+            root.path().join(".git/please-scheduling.json"),
+            serde_json::json!({"estimates": {"check": estimates}}).to_string(),
+        )
+        .unwrap();
+    }
+    let mut project = config::load(root.path()).unwrap();
+    project.config.execution.max_parallel = limit.try_into().unwrap();
+    let mut starts = Vec::new();
+    let mut running = std::collections::BTreeSet::new();
+    let mut passed = std::collections::BTreeSet::new();
+    let report = please::verify_project_with_fail_fast(
+        project,
+        &NoReviews,
+        please::VerificationMode::ChecksOnly,
+        Some("check"),
+        None,
+        fail_fast,
+        &mut |event| match event {
+            Progress::RuleStarted { id, .. } => {
+                let rule = rules.iter().find(|r| r.0 == id).unwrap();
+                assert!(rule.3.iter().all(|d| passed.contains(*d)));
+                if let Some(resource) = rule.2 {
+                    assert!(running.iter().all(|active: &String| {
+                        rules.iter().find(|r| r.0 == active).unwrap().2 != Some(resource)
+                    }));
+                }
+                assert!(running.insert(id.to_owned()));
+                assert!(running.len() <= limit);
+                starts.push(id.to_owned());
+                for release in releases.get(starts.len() - 1).copied().unwrap_or_default() {
+                    fs::write(root.path().join(format!(".git/release-{release}")), "").unwrap();
+                }
+            }
+            Progress::RuleFinished { item, .. } => {
+                assert!(running.remove(&item.id));
+                assert_eq!(item.status, Status::Pass, "{}: {}", item.id, item.reason);
+                passed.insert(item.id.clone());
+            }
+            _ => (),
+        },
+    )
+    .unwrap();
+    assert_eq!(report.overall, Status::Pass);
+    assert!(running.is_empty());
+    assert_eq!(passed.len(), rules.len());
+    assert_eq!(
+        report
+            .results
+            .iter()
+            .map(|r| r.id.as_str())
+            .collect::<Vec<_>>(),
+        rules.iter().map(|r| r.0).collect::<Vec<_>>()
+    );
+    starts
+}
+
+#[test]
+fn fail_fast_fast_lane_refills_independently_of_long_path_slots() {
+    // REQ-0333, REQ-0044, REQ-0030, REQ-0046: one slot stays shortest-first,
+    // while the other stays longest-path-first, whichever worker finishes first.
+    let rules = [
+        ("a", 1000, None, &[][..]),
+        ("b", 900, None, &[][..]),
+        ("c", 1, None, &[][..]),
+        ("d", 2, None, &[][..]),
+        ("e", 800, None, &[][..]),
+        ("f", 3, None, &[][..]),
+    ];
+    assert_eq!(
+        gated_run(
+            &rules,
+            2,
+            true,
+            &[&[], &["a"], &["c"], &["b"], &["d"], &["e", "f"]],
+            true
+        ),
+        ["c", "a", "b", "d", "e", "f"]
+    );
+    assert_eq!(
+        gated_run(
+            &rules,
+            3,
+            true,
+            &[&[], &[], &["a"], &["c"], &["b"], &["d", "e", "f"]],
+            true
+        ),
+        ["c", "a", "b", "e", "d", "f"]
+    );
+}
+
+#[test]
+fn fast_lane_preserves_complete_serial_and_equal_estimate_order() {
+    // REQ-0333, REQ-0044: complete and serial runs retain the existing order;
+    // equal estimates use canonical IDs, including without local history.
+    let rules = [
+        ("a", 1000, None, &[][..]),
+        ("b", 10, None, &[][..]),
+        ("c", 1, None, &[][..]),
+    ];
+    assert_eq!(
+        &gated_run(&rules, 2, false, &[&[], &["a", "b", "c"]], true)[..2],
+        ["a", "b"]
+    );
+    for fail_fast in [false, true] {
+        assert_eq!(
+            gated_run(&rules, 1, fail_fast, &[&["a", "b", "c"]], true),
+            ["a", "b", "c"]
+        );
+    }
+    for with_history in [false, true] {
+        let equal = [
+            ("a", 1, None, &[][..]),
+            ("b", 1, None, &[][..]),
+            ("c", 1, None, &[][..]),
+        ];
+        assert_eq!(
+            &gated_run(&equal, 2, true, &[&[], &["a", "b", "c"]], with_history)[..2],
+            ["a", "b"]
+        );
+    }
+}
+
+#[test]
+fn fast_lane_skips_resource_and_dependency_waiters_without_reserving_capacity() {
+    // REQ-0333, REQ-0046, REQ-0030: even very small estimates cannot override
+    // prerequisites or locks, and long checks may occupy the fast lane.
+    let rules = [
+        ("a", 1000, Some("shared"), &[][..]),
+        ("b", 1, Some("shared"), &[][..]),
+        ("c", 2, None, &["b"][..]),
+        ("d", 3, None, &[][..]),
+        ("e", 900, None, &[][..]),
+    ];
+    assert_eq!(
+        gated_run(
+            &rules,
+            2,
+            true,
+            &[&[], &["e"], &["b"], &["c", "d"], &["a"]],
+            true
+        ),
+        ["b", "e", "d", "c", "a"]
+    );
+    // A free fast lane scans past a shorter resource or dependency waiter.
+    for (resource, dependencies) in [(Some("shared"), &[][..]), (None, &["a"][..])] {
+        let blocked = [
+            ("a", 1000, Some("shared"), &[][..]),
+            ("b", 1, None, &[][..]),
+            ("c", 2, resource, dependencies),
+            ("d", 3, None, &[][..]),
+        ];
+        assert_eq!(
+            gated_run(&blocked, 2, true, &[&[], &["b"], &["a"], &["c", "d"]], true),
+            ["b", "a", "d", "c"]
+        );
+    }
+    // Only one check is eligible initially, and it must use the fast lane.
+    let chain = [("a", 10000, None, &[][..]), ("b", 1, None, &["a"][..])];
+    assert_eq!(
+        gated_run(&chain, 2, true, &[&["a"], &["b"]], true),
+        ["a", "b"]
+    );
+}
+
+#[test]
+fn short_fast_lane_failure_stops_pending_checks_and_drains_running_work() {
+    // REQ-0333, REQ-0068, REQ-0073, REQ-0086: an early short failure
+    // stops dispatch, retains pending results, and lets the long worker finish.
+    let root = project();
+    support::check(
+        root.path(),
+        "a",
+        &["check"],
+        "while [ ! -f .git/short-finished ]; do sleep 0.01; done",
+    );
+    support::check(root.path(), "b", &["check"], "exit 0");
+    support::check(root.path(), "c", &["check"], "exit 1");
+    fs::write(
+        root.path().join(".git/please-scheduling.json"),
+        r#"{"estimates":{"check":{"a":1000,"b":900,"c":1}}}"#,
+    )
+    .unwrap();
+    let mut project = config::load(root.path()).unwrap();
+    project.config.execution.max_parallel = 2.try_into().unwrap();
+    let mut starts = Vec::new();
+    let report = please::verify_project_with_fail_fast(
+        project,
+        &NoReviews,
+        please::VerificationMode::ChecksOnly,
+        Some("check"),
+        None,
+        true,
+        &mut |event| match event {
+            Progress::RuleStarted { id, .. } => starts.push(id.to_owned()),
+            Progress::RuleFinished { item, .. } if item.id == "c" => {
+                fs::write(root.path().join(".git/short-finished"), "").unwrap();
+            }
+            _ => (),
+        },
+    )
+    .unwrap();
+    assert_eq!(starts, ["c", "a"]);
+    assert_eq!(report.overall, Status::Fail);
+    assert_eq!(
+        report.results.iter().map(|r| r.status).collect::<Vec<_>>(),
+        [Status::Pass, Status::NotRun, Status::Fail]
+    );
+    assert!(report.results[1].reason.contains("Fail-fast"));
+    assert!(report.results[1].stdout.is_none());
+}

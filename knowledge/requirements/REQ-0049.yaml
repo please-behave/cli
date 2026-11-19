@@ -6,4 +6,4 @@ description: >-
 rationale: >-
   Users must not have to maintain timing data for scheduling to work.
 decisions:
-  - DEC-0017
+  - DEC-0027

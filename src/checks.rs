@@ -150,20 +150,28 @@ pub(crate) fn schedule(
                 .collect()
         })
         .collect();
-    let priorities = crate::scheduling::priorities(
-        &dependencies,
-        checks
-            .iter()
-            .map(|c| history.estimate("check", &c.id))
-            .collect(),
-    );
+    let estimates: Vec<_> = checks
+        .iter()
+        .map(|c| history.estimate("check", &c.id))
+        .collect();
+    let priorities = crate::scheduling::priorities(&dependencies, estimates.clone());
     let mut order: Vec<_> = (0..checks.len()).collect();
     order.sort_by(|&a, &b| {
         priorities[b]
             .cmp(&priorities[a])
             .then_with(|| checks[a].id.cmp(&checks[b].id))
     });
+    let mut fast_order = order.clone();
+    fast_order.sort_by(|&a, &b| {
+        estimates[a]
+            .cmp(&estimates[b])
+            .then_with(|| checks[a].id.cmp(&checks[b].id))
+    });
+    let fast_lane = fail_fast && max_parallel.get() >= 2;
     thread::scope(|scope| {
+        // Keep the lane attached to its worker until completion, independently
+        // of which other slot becomes available first.
+        let mut fast_worker = None;
         let (sender, receiver) = mpsc::channel();
         let mut pending: BTreeSet<_> = (0..checks.len()).collect();
         let mut running = BTreeMap::new();
@@ -218,7 +226,9 @@ pub(crate) fn schedule(
             }
             // A blocked resource never claims a slot; scan past it.
             while !stopped && running.len() < max_parallel.get() {
-                let Some(index) = order
+                let use_fast_lane = fast_lane && fast_worker.is_none();
+                let dispatch_order = if use_fast_lane { &fast_order } else { &order };
+                let Some(index) = dispatch_order
                     .iter()
                     .copied()
                     .filter(|index| pending.contains(index))
@@ -251,6 +261,9 @@ pub(crate) fn schedule(
                             resources.insert(resource.as_str());
                         }
                         running.insert(index, (handle, started));
+                        if use_fast_lane {
+                            fast_worker = Some(index);
+                        }
                     }
                     Err(cause) => {
                         let item = error(
@@ -289,6 +302,9 @@ pub(crate) fn schedule(
                     let Some((handle, started)) = running.remove(&index) else {
                         continue;
                     };
+                    if fast_worker == Some(index) {
+                        fast_worker = None;
+                    }
                     let item = handle.join().unwrap_or_else(|_| {
                         error(
                             index,

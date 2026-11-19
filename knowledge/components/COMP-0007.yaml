@@ -15,7 +15,7 @@ scope:
     dependents of failed prerequisites as not run.
   - >-
     Orders runnable checks by estimated remaining duration using local run
-    history.
+    history, with one shortest-estimate slot in concurrent fail-fast runs.
   - >-
     Stops scheduling further checks after the first blocking failure when
     fail-fast is requested.
@@ -80,3 +80,4 @@ requirements:
   - REQ-0091
   - REQ-0162
   - REQ-0314
+  - REQ-0333
