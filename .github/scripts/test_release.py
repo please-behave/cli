@@ -37,12 +37,21 @@ class ReleaseTests(unittest.TestCase):
         environment.start()
         self.addCleanup(environment.stop)
 
-    def write_smoke(self, dist, version, sha, target, binary_hash):
+    def write_smoke(self, dist, target, binary_hash):
         folder = dist / "smoke"
         folder.mkdir(exist_ok=True)
-        (folder / f"{target}.json").write_text(
-            json.dumps(dict(**verification.release_context(version, sha, target), binary_sha256=binary_hash))
-        )
+        (folder / f"{target}.json").write_text(json.dumps(dict(binary_sha256=binary_hash)))
+
+    def write_archive(self, dist, version, target, binary=b"fixture binary"):
+        name = f"please-v{version}-{target}"
+        archive = dist / f"{name}.tar.gz"
+        with tarfile.open(archive, "w:gz") as output:
+            for filename, data in (("please", binary), ("README.md", Path("README.md").read_bytes()), ("LICENSE", Path("LICENSE").read_bytes())):
+                member = tarfile.TarInfo(f"{name}/{filename}")
+                member.mode = 0o755 if filename == "please" else 0o644
+                member.size = len(data)
+                output.addfile(member, io.BytesIO(data))
+        return archive
 
     def test_package_metadata_matches_lockfile(self):
         root = ROOT
@@ -57,12 +66,13 @@ class ReleaseTests(unittest.TestCase):
         self.assertEqual(locked[0]["version"], package["version"])
 
     @unittest.skipUnless(os.name == "posix", "Native release targets are Unix")
+    @unittest.skipUnless(os.name == "posix", "Native release targets are Unix")
     def test_packager_produces_the_verified_archive_contract(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             for filename in ("Cargo.toml", "README.md", "LICENSE"):
                 shutil.copy2(ROOT / filename, root / filename)
-            env = dict(os.environ, RELEASE_TAG="v0.1.0", GITHUB_SHA="a" * 40)
+            env = dict(os.environ, RELEASE_TAG="v0.1.0")
             for target in verification.TARGETS:
                 binary = root / f"target/{target}/release/please"
                 binary.parent.mkdir(parents=True)
@@ -76,15 +86,9 @@ class ReleaseTests(unittest.TestCase):
                 self.assertIn("Binary version mismatch", result.stderr)
                 self.assertFalse((root / f"dist/please-v0.1.0-{target}.tar.gz").exists())
                 binary.write_text("#!/bin/sh\nprintf 'please 0.1.0\\n'\n")
-                self.write_smoke(root / "dist", "0.1.0", "a" * 40, target, verification.digest(binary.read_bytes()))
+                self.write_smoke(root / "dist", target, verification.digest(binary.read_bytes()))
                 subprocess.run([sys.executable, str(SCRIPTS / "package-release.py")], cwd=root, env=env, check=True)
-            subprocess.run([sys.executable, str(SCRIPTS / "checksums.py")], cwd=root, check=True)
-            subprocess.run(
-                [sys.executable, str(SCRIPTS / "check-release-artifacts.py")],
-                cwd=root,
-                env=dict(env, EXPECTED_RELEASE_VERSION="0.1.0"),
-                check=True,
-            )
+            subprocess.run([sys.executable, str(SCRIPTS / "verify-release.py"), "0.1.0"], cwd=root, check=True)
 
     def test_publish_requires_verified_artifacts_before_publication(self):
         release = (ROOT / ".github/workflows/release.yml").read_text()
@@ -94,8 +98,8 @@ class ReleaseTests(unittest.TestCase):
         self.assertIn("persist-credentials: false", publisher)
         order = [
             "actions/release/evidence@",
-            ".github/scripts/checksums.py",
-            ".github/scripts/check-release-artifacts.py",
+            ".github/scripts/verify-release.py",
+            "sha256sum",
             "actions/release/publish-release@",
         ]
         for required in order:
@@ -127,78 +131,62 @@ class ReleaseTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 set_version("3.0.0", root)
 
-    def test_complete_archives_checksums_and_revision_binding(self):
-        with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
+    def test_complete_archives_are_bound_to_the_smoke_tested_binary(self):
+        def prepare(root):
             dist = root / "dist"
             dist.mkdir()
-            (dist / "metadata").mkdir()
             for target in verification.TARGETS:
-                name = f"please-v1.2.3-{target}"
-                archive = dist / f"{name}.tar.gz"
-                binary = f"fixture executable for {target}".encode()
-                with tarfile.open(archive, "w:gz") as output:
-                    for file, data in (
-                        ("please", binary),
-                        ("README.md", Path("README.md").read_bytes()),
-                        ("LICENSE", Path("LICENSE").read_bytes()),
-                    ):
-                        member = tarfile.TarInfo(f"{name}/{file}")
-                        member.mode = 0o755 if file == "please" else 0o644
-                        member.size = len(data)
-                        output.addfile(member, io.BytesIO(data))
-                metadata = dict(
-                    **verification.release_context("1.2.3", "a" * 40, target),
-                    binary_version="please 1.2.3",
-                    archive_sha256=verification.digest(archive.read_bytes()),
-                    binary_sha256=verification.digest(binary),
-                    smoke_binary_sha256=verification.digest(binary),
-                )
-                (dist / "metadata" / f"{target}.json").write_text(json.dumps(metadata))
-                self.write_smoke(dist, "1.2.3", "a" * 40, target, verification.digest(binary))
-            sums = "".join(f"{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}\n" for p in sorted(dist.glob("*.tar.gz")))
-            subprocess.run([sys.executable, str(SCRIPTS / "checksums.py")], cwd=root, check=True)
-            self.assertEqual((dist / "SHA256SUMS").read_text(), sums)
-            verification.verify("1.2.3", "a" * 40, dist)
-            metadata_path = next((dist / "metadata").glob("*.json"))
-            original_metadata = metadata_path.read_text()
-            wrong_version = json.loads(original_metadata)
-            wrong_version["binary_version"] = "please 9.9.9"
-            metadata_path.write_text(json.dumps(wrong_version))
-            with self.assertRaisesRegex(ValueError, "Mismatched artifact metadata"):
-                verification.verify("1.2.3", "a" * 40, dist)
-            metadata_path.write_text(original_metadata)
-            # Even checksum-consistent duplicate members are invalid archives.
-            archive_path = dist / f"please-v1.2.3-{wrong_version['target']}.tar.gz"
-            original_archive = archive_path.read_bytes()
-            with tarfile.open(fileobj=io.BytesIO(original_archive), mode="r:gz") as source:
-                with tarfile.open(archive_path, "w:gz") as output:
-                    for member in source.getmembers():
-                        output.addfile(member, source.extractfile(member) if member.isfile() else None)
-                    member = source.getmembers()[0]
-                    output.addfile(member, source.extractfile(member))
-            duplicate_metadata = json.loads(original_metadata)
-            duplicate_metadata["archive_sha256"] = verification.digest(archive_path.read_bytes())
-            metadata_path.write_text(json.dumps(duplicate_metadata))
-            (dist / "SHA256SUMS").write_text(
-                "".join(f"{verification.digest(p.read_bytes())}  {p.name}\n" for p in sorted(dist.glob("*.tar.gz")))
-            )
-            with self.assertRaisesRegex(ValueError, "Unexpected archive contents"):
-                verification.verify("1.2.3", "a" * 40, dist)
-            archive_path.write_bytes(original_archive)
-            metadata_path.write_text(original_metadata)
-            (dist / "SHA256SUMS").write_text(sums)
-            with self.assertRaises(ValueError):
-                verification.verify("1.2.3", "b" * 40, dist)
-            with self.assertRaises(ValueError):
-                verification.verify("9.9.9", "a" * 40, dist)
-            (dist / "SHA256SUMS").write_text("tampered\n")
-            with self.assertRaises(ValueError):
-                verification.verify("1.2.3", "a" * 40, dist)
-            (dist / "SHA256SUMS").write_text(sums)
-            next(dist.glob("*.tar.gz")).write_bytes(b"tampered")
-            with self.assertRaises(ValueError):
-                verification.verify("1.2.3", "a" * 40, dist)
+                self.write_archive(dist, "1.2.3", target)
+                self.write_smoke(dist, target, verification.digest(b"fixture binary"))
+            return dist
+
+        def read_members(archive):
+            with tarfile.open(archive, "r:gz") as source:
+                return [(member, source.extractfile(member).read() if member.isfile() else None) for member in source.getmembers()]
+
+        def write_members(archive, members):
+            with tarfile.open(archive, "w:gz") as output:
+                for member, data in members:
+                    output.addfile(member, io.BytesIO(data) if data is not None else None)
+
+        with tempfile.TemporaryDirectory() as temporary:
+            dist = prepare(Path(temporary))
+            verification.verify("1.2.3", dist)
+            with self.assertRaises(ValueError):  # Archives of another version are not the planned ones.
+                verification.verify("9.9.9", dist)
+        for failure in ("missing", "corrupt", "extra", "missing-smoke", "smoke", "permissions", "readme", "license", "link", "duplicate"):
+            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as temporary:
+                dist = prepare(Path(temporary))
+                archive = dist / f"please-v1.2.3-{verification.TARGETS[0]}.tar.gz"
+                receipt = dist / "smoke" / f"{verification.TARGETS[0]}.json"
+                if failure == "missing":
+                    archive.unlink()
+                elif failure == "corrupt":
+                    archive.write_bytes(b"corrupted archive")
+                elif failure == "extra":
+                    (dist / "unexpected.tar.gz").write_bytes(b"extra")
+                elif failure == "missing-smoke":
+                    receipt.unlink()
+                elif failure == "smoke":
+                    receipt.write_text(json.dumps(dict(binary_sha256="0" * 64)))
+                else:
+                    members = read_members(archive)
+                    if failure == "permissions":
+                        members[0][0].mode = 0o644
+                    elif failure in ("readme", "license"):
+                        index = 1 if failure == "readme" else 2
+                        members[index] = (members[index][0], b"changed packaged documentation")
+                        members[index][0].size = len(members[index][1])
+                    elif failure == "link":
+                        link = tarfile.TarInfo("unexpected-link")
+                        link.type = tarfile.SYMTYPE
+                        link.linkname = "/outside"
+                        members.append((link, None))
+                    elif failure == "duplicate":
+                        members.append(members[0])
+                    write_members(archive, members)
+                with self.assertRaises((ValueError, OSError, tarfile.TarError)):
+                    verification.verify("1.2.3", dist)
 
     def test_native_matrix_and_archive_contract_cover_the_same_platforms(self):
         workflow = (ROOT / ".github/workflows/release.yml").read_text()
@@ -209,123 +197,6 @@ class ReleaseTests(unittest.TestCase):
         ci = (ROOT / ".github/workflows/ci.yml").read_text()
         self.assertNotIn("matrix:", ci)
         self.assertIn("BUILD_TARGET: x86_64-unknown-linux-gnu", ci)
-
-    def test_artifact_gate_blocks_missing_corrupt_version_and_source(self):
-        for failure in (
-            None,
-            "missing",
-            "corrupt",
-            "version",
-            "source",
-            "missing-version",
-            "missing-source",
-            "run",
-            "attempt",
-            "missing-smoke",
-            "smoke",
-            "permissions",
-            "readme",
-            "license",
-            "link",
-            "extra",
-        ):
-            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as temporary:
-                root = Path(temporary)
-                (root / ".github/scripts").mkdir(parents=True)
-                for name in ("verify-release.py", "check-release-artifacts.py"):
-                    shutil.copy2(SCRIPTS / name, root / ".github/scripts" / name)
-                dist = root / "dist"
-                (dist / "metadata").mkdir(parents=True)
-                for file in ("README.md", "LICENSE"):
-                    shutil.copy2(ROOT / file, root / file)
-                for target in verification.TARGETS:
-                    name = f"please-v1.2.3-{target}"
-                    data = b"fixture binary already verified on its native runner"
-                    archive = dist / f"{name}.tar.gz"
-                    with tarfile.open(archive, "w:gz") as output:
-                        for filename, content in (
-                            ("please", data),
-                            ("README.md", (root / "README.md").read_bytes()),
-                            ("LICENSE", (root / "LICENSE").read_bytes()),
-                        ):
-                            member = tarfile.TarInfo(f"{name}/{filename}")
-                            member.size = len(content)
-                            member.mode = 0o755 if filename == "please" else 0o644
-                            output.addfile(member, io.BytesIO(content))
-                    metadata = dict(
-                        **verification.release_context("1.2.3", "a" * 40, target),
-                        binary_version="please 1.2.3",
-                        archive_sha256=verification.digest(archive.read_bytes()),
-                        binary_sha256=verification.digest(data),
-                        smoke_binary_sha256=verification.digest(data),
-                    )
-                    (dist / "metadata" / f"{target}.json").write_text(json.dumps(metadata))
-                    self.write_smoke(dist, "1.2.3", "a" * 40, target, verification.digest(data))
-                (dist / "SHA256SUMS").write_text(
-                    "".join(f"{verification.digest(p.read_bytes())}  {p.name}\n" for p in sorted(dist.glob("*.tar.gz")))
-                )
-                archive = next(dist.glob("*.tar.gz"))
-                if failure == "missing":
-                    archive.unlink()
-                elif failure == "corrupt":
-                    archive.write_bytes(b"corrupted archive")
-                if failure in ("permissions", "readme", "license", "link"):
-                    original = archive.read_bytes()
-                    with tarfile.open(fileobj=io.BytesIO(original), mode="r:gz") as source:
-                        with tarfile.open(archive, "w:gz") as output:
-                            for member in source.getmembers():
-                                content = source.extractfile(member).read()
-                                if failure == "permissions" and member.name.endswith("/please"):
-                                    member.mode = 0o644
-                                if (failure == "readme" and member.name.endswith("/README.md")) or (
-                                    failure == "license" and member.name.endswith("/LICENSE")
-                                ):
-                                    content = b"changed packaged documentation"
-                                    member.size = len(content)
-                                output.addfile(member, io.BytesIO(content))
-                            if failure == "link":
-                                link = tarfile.TarInfo("unexpected-link")
-                                link.type = tarfile.SYMTYPE
-                                link.linkname = "/outside"
-                                output.addfile(link)
-                    meta = dist / "metadata" / (archive.name.removesuffix(".tar.gz").removeprefix("please-v1.2.3-") + ".json")
-                    record = json.loads(meta.read_text())
-                    record["archive_sha256"] = verification.digest(archive.read_bytes())
-                    meta.write_text(json.dumps(record))
-                    (dist / "SHA256SUMS").write_text(
-                        "".join(f"{verification.digest(p.read_bytes())}  {p.name}\n" for p in sorted(dist.glob("*.tar.gz")))
-                    )
-                if failure == "extra":
-                    (dist / "unexpected.tar.gz").write_bytes(b"extra")
-                if failure in ("missing-smoke", "smoke"):
-                    receipt = next((dist / "smoke").glob("*.json"))
-                    if failure == "missing-smoke":
-                        receipt.unlink()
-                    else:
-                        record = json.loads(receipt.read_text())
-                        record["binary_sha256"] = "0" * 64
-                        receipt.write_text(json.dumps(record))
-                env = dict(
-                    os.environ,
-                    EXPECTED_RELEASE_VERSION="9.9.9" if failure == "version" else "1.2.3",
-                    GITHUB_SHA=("b" if failure == "source" else "a") * 40,
-                )
-                if failure == "run":
-                    env["GITHUB_RUN_ID"] = "124"
-                if failure == "attempt":
-                    env["GITHUB_RUN_ATTEMPT"] = "2"
-                if failure == "missing-version":
-                    env.pop("EXPECTED_RELEASE_VERSION")
-                elif failure == "missing-source":
-                    env.pop("GITHUB_SHA")
-                result = subprocess.run(
-                    [sys.executable, ".github/scripts/check-release-artifacts.py"], cwd=root, env=env, capture_output=True, text=True
-                )
-                if failure is None:
-                    self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
-                    self.assertIn("Verified 4 archives", result.stdout)
-                else:
-                    self.assertNotEqual(result.returncode, 0, result.stderr or result.stdout)
 
     def test_release_job_contract_permissions_and_selection(self):
         workflow = (ROOT / ".github/workflows/release.yml").read_text()
@@ -346,7 +217,7 @@ class ReleaseTests(unittest.TestCase):
             "actions/release/governance@",
             ".github/scripts/smoke-receipt.py after",
             "mise run package",
-            ".github/scripts/check-release-artifacts.py --candidate",
+            ".github/scripts/verify-release.py",
             "actions/release/evidence@",
         ]
         self.assertEqual([candidate.index(step) for step in ordered], sorted(candidate.index(step) for step in ordered))
@@ -373,51 +244,17 @@ class ReleaseTests(unittest.TestCase):
         self.assertFalse((ROOT / "release.config.mjs").exists())
         self.assertFalse((ROOT / "package.json").exists())
 
-    def test_single_candidate_verification_and_smoke_binary_binding(self):
+    def test_candidate_verification_covers_only_the_built_target(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            for filename in ("Cargo.toml", "README.md", "LICENSE"):
-                shutil.copy2(ROOT / filename, root / filename)
-            target = verification.TARGETS[0]
-            binary = root / f"target/{target}/release/please"
-            binary.parent.mkdir(parents=True)
-            binary.write_text("#!/bin/sh\nprintf 'please 0.1.0\\n'\n")
-            binary.chmod(0o755)
             dist = root / "dist"
             dist.mkdir()
-            env = dict(os.environ, RELEASE_TAG="v0.1.0", EXPECTED_RELEASE_VERSION="0.1.0", GITHUB_SHA="a" * 40, BUILD_TARGET=target)
-
-            def package():
-                return subprocess.run([sys.executable, str(SCRIPTS / "package-release.py")], cwd=root, env=env, capture_output=True)
-
-            self.assertNotEqual(package().returncode, 0)  # Missing smoke evidence.
-            self.write_smoke(dist, "0.1.0", "a" * 40, target, verification.digest(binary.read_bytes()))
-            self.assertEqual(package().returncode, 0)
-
-            def verify(**changes):
-                return subprocess.run(
-                    [sys.executable, str(SCRIPTS / "check-release-artifacts.py"), "--candidate"],
-                    cwd=root,
-                    env=dict(env, **changes),
-                    capture_output=True,
-                )
-
-            self.assertEqual(verify().returncode, 0)
-            for changes in (
-                dict(GITHUB_RUN_ID="124"),
-                dict(GITHUB_RUN_ATTEMPT="2"),
-                dict(GITHUB_SHA="b" * 40),
-                dict(EXPECTED_RELEASE_VERSION="0.2.0"),
-                dict(BUILD_TARGET=verification.TARGETS[1]),
-            ):
-                self.assertNotEqual(verify(**changes).returncode, 0)
-            binary.write_text(binary.read_text() + "# changed after smoke\n")
-            self.assertNotEqual(package().returncode, 0)
-            receipt = dist / "smoke" / f"{target}.json"
-            data = json.loads(receipt.read_text())
-            data["binary_sha256"] = "0" * 64
-            receipt.write_text(json.dumps(data))
-            self.assertNotEqual(verify().returncode, 0)
+            target = verification.TARGETS[0]
+            self.write_archive(dist, "1.2.3", target)
+            self.write_smoke(dist, target, verification.digest(b"fixture binary"))
+            verification.verify("1.2.3", dist, targets=(target,))
+            with self.assertRaises(ValueError):
+                verification.verify("1.2.3", dist)  # The complete set needs every target.
 
     def test_smoke_receipt_requires_the_complete_real_smoke_test(self):
         governor = os.environ.get("PLEASE_EXECUTABLE") or shutil.which("please")
@@ -426,7 +263,7 @@ class ReleaseTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             target = verification.TARGETS[0]
-            env = dict(os.environ, RELEASE_TAG=f"v{version}", GITHUB_SHA="a" * 40, BUILD_TARGET=target)
+            env = dict(os.environ, RELEASE_TAG=f"v{version}", BUILD_TARGET=target)
             binary = root / f"target/{target}/release/please"
             binary.parent.mkdir(parents=True)
             shutil.copy2(governor, binary)
@@ -461,16 +298,6 @@ class ReleaseTests(unittest.TestCase):
             )
             self.assertNotEqual(result.returncode, 0)
             self.assertFalse(receipt.exists(), "failed smoke must remove any previous receipt")
-
-    def test_missing_or_extra_archives_are_rejected(self):
-        with tempfile.TemporaryDirectory() as temporary:
-            dist = Path(temporary)
-            with self.assertRaises(ValueError):
-                verification.verify("1.0.0", "a" * 40, dist)
-            (dist / "dist").mkdir()
-            result = subprocess.run([sys.executable, str(SCRIPTS / "checksums.py")], cwd=dist, capture_output=True, text=True)
-            self.assertNotEqual(result.returncode, 0)
-            self.assertIn("No native archives found", result.stderr)
 
 
 if __name__ == "__main__":

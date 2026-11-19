@@ -16,9 +16,9 @@ The `knowledge` Rule keeps the [component map](../knowledge/components/README.md
 complete and consistent with the source.
 
 `release` selects the independent release-smoke Rule for an already-built
-candidate. Actions builds first, then runs the quality gate. Packaging, CI proof,
-smoke receipts, artifact identity/completeness and publication guards are workflow
-scripts, outside Please Behave. The ordinary pre-push/check build and smoke Rules
+candidate. Actions builds first, then runs the quality gate. Packaging, smoke
+receipts and the archive layout check are workflow scripts, outside Please Behave; CI proof,
+evidence and publication guards are shared actions from please-behave-governance. The ordinary pre-push/check build and smoke Rules
 retain their existing dependencies and resource locking.
 
 `config.toml` declares only the custom `release` point. All three Rule Sets and
@@ -59,12 +59,9 @@ AGENTS.md at check.
 
 ## Release workflow ownership
 
-GitHub Actions invokes `.github/scripts/check-release-ci.py` for exact-source CI proof
-and `.github/scripts/release-evidence.py` to record and verify candidate manifests.
-Policies live in `.github/release-ci.json` and `.github/release-artifacts.json`.
-These scripts preserve the previous pinned implementations without an external
-release Rule Set. Semantic Release loads the local `.github/scripts/release-guard.mjs`
-to check the planned version, checkout, repository, main branch and remote main.
+GitHub Actions uses the shared release workflows and actions of please-behave-governance for
+planning, exact-source CI proof, candidate evidence and publication. The policy of the candidate
+files lives in `.github/release-artifacts.json`.
 Offline release tests require no external release cache or provider calls.
 
 ## Published governor updates

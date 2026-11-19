@@ -97,19 +97,18 @@ and packaging.
    imports and stamps Cargo.toml/Cargo.lock with the planned version. Actions builds first, then invokes the independent local release-smoke Rule
    at `release` against the actual binary on each native host, then packages and
    verifies it. Formatting, Clippy and unit tests are not repeated.
-4. Actions records a receipt binding the binary hash before/after quality testing to the
-   planned version, source, target, workflow run and attempt. Packaging checks the
-   executable version and copies exactly those tested bytes, with README and LICENSE.
-   `.github/scripts/check-release-artifacts.py --candidate` validates each individual archive before upload. Artifacts
-   are named `please-RUN_ID-RUN_ATTEMPT-TARGET`; metadata and smoke receipts travel
-   with the archives but are not public release assets.
+4. Actions records a smoke receipt with the binary hash before and after quality testing.
+   Packaging checks the executable version and copies exactly those tested bytes, with
+   README and LICENSE. `.github/scripts/verify-release.py VERSION --candidate` validates the
+   archive layout and that it holds the smoke-tested binary. The shared `evidence` action
+   then binds archive and receipt to the planned version, source, workflow run and attempt.
+   Smoke receipts travel with the archives but are not public release assets.
 5. `publish` (Publish) requires Plan, Readiness and the entire Candidate matrix to
-   succeed. It downloads only current-run/current-attempt artifacts and generates
-   complete `SHA256SUMS`. A mandatory direct call to
-   `python3 .github/scripts/check-release-artifacts.py` verifies exactly four archives and
-   their evidence, source/version/run identity, archive/binary/smoke hashes, executable
-   permissions, allowed members and README/LICENSE bytes. It never rebuilds binaries.
-   Publish verifies the release evidence with the shared `evidence` action; it installs no governor or build toolchain.
+   succeed. The shared `evidence` action restores only current-run/current-attempt candidates
+   and verifies their source, version, run identity and hashes. A mandatory call to
+   `python3 .github/scripts/verify-release.py VERSION` then verifies exactly four archives,
+   their smoke receipts, executable permissions, allowed members and README/LICENSE bytes.
+   `SHA256SUMS` is generated from the archives. It never rebuilds binaries and installs no governor or build toolchain.
 6. Semantic Release recalculates the version, requires it to match the plan, and
    checks local HEAD, the dispatched SHA and remote main before creating a tag.
    It generates notes, tags the tested source, pushes the tag/Git notes and publishes

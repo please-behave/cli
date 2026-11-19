@@ -85,7 +85,7 @@ jobs:
       - name: Package smoke-tested candidate
         run: mise run package
       - name: Verify candidate archive
-        run: python3 .github/scripts/check-release-artifacts.py --candidate
+        run: python3 .github/scripts/verify-release.py "$EXPECTED_RELEASE_VERSION" --candidate
       - name: Record release candidate evidence
         uses: christianpflugradt/please-behave-governance/actions/release/evidence@ddb176f80831329b2328b9cf0c976f4e6f634c31 # updates/actions/release
         with:
@@ -119,13 +119,14 @@ jobs:
         with:
           operation: verify
           version: ${{ needs.plan.outputs.version }}
-      - name: Checksum all native archives
-        run: python3 .github/scripts/checksums.py
       - name: Verify collected release artifacts
         timeout-minutes: 3
         env:
           EXPECTED_RELEASE_VERSION: ${{ needs.plan.outputs.version }}
-        run: python3 .github/scripts/check-release-artifacts.py
+        run: python3 .github/scripts/verify-release.py "$EXPECTED_RELEASE_VERSION"
+      - name: Checksum all native archives
+        working-directory: dist
+        run: sha256sum -- *.tar.gz > SHA256SUMS
       - name: Publish versioned CLI archives and release notes
         uses: christianpflugradt/please-behave-governance/actions/release/publish-release@ddb176f80831329b2328b9cf0c976f4e6f634c31 # updates/actions/release
         with:

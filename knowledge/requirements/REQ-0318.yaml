@@ -7,8 +7,8 @@ description: >-
 rationale: >-
   Users can verify that what they downloaded is what was published.
 test_exemption: >-
-  Verified by .github/scripts/checksums.py and the mandatory
-  .github/scripts/check-release-artifacts.py publication gate in
-  .github/workflows/release.yml, which requires checksum coverage for the
-  complete archive set. The tooling tests in .github/scripts/test_release.py
-  check incomplete and corrupt artifact sets.
+  Verified by the mandatory .github/scripts/verify-release.py
+  publication gate in .github/workflows/release.yml, which requires the
+  complete archive set, and by the sha256sum step that generates SHA256SUMS
+  from exactly those archives. The tooling tests in
+  .github/scripts/test_release.py check incomplete and corrupt artifact sets.
