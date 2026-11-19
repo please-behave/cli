@@ -87,6 +87,7 @@ two separately agreed stages with a release boundary:
 
 - Work on `main`. Automatically commit and push each coherent change,
   including documentation, within the agreed stages. Follow `docs/releasing.md`.
+  Rebase onto `origin/main` before pushing so the slow gate runs once.
 - Use Conventional Commits with a specific English imperative summary and
   optional scopes from `.please/commit-scopes.txt`.
 - Stage only task-related files and preserve unrelated edits. Never
