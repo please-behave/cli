@@ -95,10 +95,8 @@ Resource names are exact, case-sensitive opaque identifiers. They coordinate
 local and imported checks within one invocation, without namespacing by import.
 They do not lock other Please invocations. Resource-waiting checks occupy no
 execution slots; later independent checks can start first. Failures and timeouts
-do not stop remaining checks. Results retain canonical ID order. Existing rule
-files remain valid, but checks relying on serial execution need resources or a
-limit of 1. Older CLI releases reject these new configuration fields; upgrade
-pinned consumers before adding them to shared rulesets.
+do not stop remaining checks. Results retain canonical ID order. Checks that
+rely on serial execution need resources or a limit of 1.
 
 The [execution settings contract](../knowledge/contracts/configuration/project.md#execution-settings)
 defines fail-fast termination, grace periods and platform requirements. Inspect
@@ -724,7 +722,7 @@ and `requirements.executables`: `@adapter/` selects the package directory,
 leading @; other unknown @ prefixes fail. Referenced paths must exist and cannot
 use absolute suffixes, parent traversal or symlinks. Resolved paths remain single
 literal arguments, including spaces. Ordinary tokens still use PATH or the
-consumer root. Local and legacy Rule Set adapter profile arguments keep their literal
+consumer root. Arguments of local and Rule Set adapter profiles keep their literal
 behavior. There is no shell expansion, dependency installation or sandbox.
 
 Run `please sync` to resolve and validate both import kinds, without executing
