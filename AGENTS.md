@@ -41,13 +41,6 @@
   expanding the work. Include `Closes #NUMBER` only when completing the
   issue's full scope; keep it open while required stages remain.
 
-## Code discovery
-
-Prefer `codebase-memory-mcp` when available. Verify the project and index,
-use targeted graph searches and source snippets, and check coverage before
-relying on results. Read source for coverage gaps or unavailable tools.
-Graph results do not prove completeness.
-
 ## Repository governor
 
 The governor is the independently installed, published release pinned in
