@@ -28,7 +28,7 @@ validation alone does not validate a command grammar, file path, trigger or evid
 `id` is the technical Rule identity, case-sensitive and independent of its directory
 name. Its syntax, bounds and reserved prefix are defined by the schema. Local Rule
 IDs are unique across checks and reviews in their source scope; imported Rules
-retain distinct, namespaced import bindings. Every reference resolves to one exact
+retain distinct, binding-qualified identities. Every reference resolves to one exact
 identity, and duplicate identities are configuration errors even for identical
 definitions. Rule Set IDs use their own uniqueness scope.
 

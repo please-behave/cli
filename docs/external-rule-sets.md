@@ -117,7 +117,7 @@ settings, nested imports or references to other sets.
 Per-import `[imports.execution_points]` maps external custom names to custom names
 already declared by the consumer. The table belongs only to the preceding import.
 Resolve inheritance first, map effective assignments once, then deduplicate and
-namespace Rules. Built-ins (`pre-commit`, `commit-msg`, `pre-push`, `check`) cannot
+qualify Rules by their binding. Built-ins (`pre-commit`, `commit-msg`, `pre-push`, `check`) cannot
 appear on either side. Unknown sources/targets and invalid names are errors.
 Unmapped names stay unchanged and must be consumer-known. Separate imports may
 map the same source differently; multiple sources may share one target. Mapping

@@ -45,7 +45,7 @@ the ID alone does not distinguish which import supplies it.
 ## Rule Identity
 
 A rule identity identifies a [rule](#rule) within a run. It is the rule ID for
-a local rule and the namespaced rule ID for an imported rule, so rules from
+a local rule and the binding-qualified rule ID for an imported rule, so rules from
 different imports remain distinguishable in references, plans and reports.
 
 ## Check

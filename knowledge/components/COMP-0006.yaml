@@ -7,7 +7,7 @@ scope:
     Resolves effective rules from execution points and rule sets, including
     membership, overrides and disabled rules.
   - >-
-    Enforces rule identity: names, namespaces and uniqueness within the
+    Enforces rule identity: names, binding qualification and uniqueness within the
     effective selection.
   - >-
     Selects reviews by file-change triggers using the restricted portable glob
@@ -32,8 +32,8 @@ must_not:
   - >-
     Let an execution point override the parameters of a rule.
   - >-
-    Derive a rule namespace implicitly instead of taking the one the rule set
-    defines.
+    Let a rule set or a consumer choose or remap the binding qualifier of
+    imported rule identities.
 files:
   - src/rules.rs
   - src/review_trigger.rs

@@ -27,7 +27,7 @@ execution points and contributing Rule Set IDs. Imported origins additionally
 identify the source repository by a hash of its selector, selected directory,
 configured reference and full resolved commit; credentials and machine-specific
 cache paths are not provenance. Import mappings change effective points before
-selection and keep distinct import scopes and namespaced identities.
+selection and keep distinct import scopes and binding-qualified identities.
 
 `depends_on` records sorted, deduplicated canonical check IDs. Dependencies resolve
 within the enabled checks selected at this point; they never select extra Rules.

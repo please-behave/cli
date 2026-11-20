@@ -49,7 +49,7 @@ duplicate keys, unknown fields, duplicate identities, invalid references and
 unsafe resources fail validation, including in disabled Rules. Identity uniqueness
 is checked when the configuration is loaded, within the source scope (the local
 project or one import binding) and independent of the rules a run selects;
-explicit import namespaces retain separate bindings. Rule Set IDs are independent of Rule IDs.
+import bindings stay separate. Rule Set IDs are independent of Rule IDs.
 
 Configuration directories and definitions reject symlink traversal and must stay
 within their source boundary. Review prompt resources are resolved without

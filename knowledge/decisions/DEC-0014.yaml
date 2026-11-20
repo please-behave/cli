@@ -1,5 +1,5 @@
 id: DEC-0014
-name: Explicit Rule Namespaces and Stable Rule Identity
+name: Binding-Qualified Rule Identity
 context: >-
   Rules may originate from local definitions or independently maintained
   external rule sets. Different sources may define rules with identical
@@ -8,10 +8,12 @@ context: >-
   Without stable identities and unambiguous resolution, rule selection,
   execution, and reporting become difficult to reason about.
 decision: >-
-  Rules are identified by their fully qualified names, consisting of
-  an optional namespace and a rule name. Namespaces are explicitly
-  defined by the rule set and cannot be remapped by consumers. They
-  are never derived implicitly from repository URLs or directory paths.
+  A local rule is identified by its rule ID. An imported rule is
+  identified by its rule ID qualified with its import binding, which
+  the consumer's import configuration determines: the source, the
+  directory, the parameter values and the occurrence among identical
+  bindings. Rule sets define no namespace and consumers cannot remap
+  identities.
   Rule identities must be unique within their source scope, the local
   project or one import binding, independent of the selection of a run.
   Duplicate identities are configuration errors detected when the
@@ -22,12 +24,13 @@ decision: >-
   distinct rule definitions. Each rule identity may be executed at
   most once per run.
 rationale: >-
-  Explicit namespaces allow independently maintained rule sets to
-  coexist without requiring global naming coordination. Stable rule
+  Binding-qualified identities allow independently maintained rule sets
+  to coexist without requiring global naming coordination or a namespace
+  that every rule set author must choose and keep collision-free. Stable rule
   identities simplify configuration resolution, result reporting,
   and future auditing. Separating rule definitions from execution
   points preserves predictable behavior while allowing scripts and
   other implementations to be reused. Checking uniqueness per source
   scope keeps every reference resolvable to exactly one rule without
   depending on which rules a run selects, while separate import
-  bindings and namespaces still let independent rule sets coexist.
+  bindings still let independent rule sets coexist.

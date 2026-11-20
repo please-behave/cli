@@ -77,7 +77,7 @@ as `python3 scripts/<name>.py`, relative to the consuming repository root.
 The pinned published governor supports these commands and explicit path
 references for imported Checks. There are no local index.sh launchers.
 Local Rule directories and IDs use descriptive names without numeric prefixes.
-Imported Rules retain their git-prefixed binding namespace. The native-smoke Check
+Imported Rules retain their git-prefixed binding qualifier. The native-smoke Check
 declares `depends_on = ["native-build"]` at every point where it runs, so it tests
 the candidate executable only after a successful build. Build, smoke, Clippy and
 Rust tests share the `cargo` resource lock. The independent release-smoke Rule

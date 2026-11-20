@@ -125,7 +125,7 @@ command = "./scripts/smoke.sh"
 
 Explicitly select an enabled `build` check at the same point. Dependencies never
 select extra rules. Use exact IDs, not names: imported bare references stay within
-that import binding; consumer references to imports require the full namespaced
+that import binding; consumer references to imports require the full binding-qualified
 ID from a JSON plan. Cross-import short-name lookup is unsupported. Missing,
 unselected, ambiguous, self or cyclic dependencies fail before execution. Disabled
 checks validate dependency syntax without resolving targets. Duplicate entries

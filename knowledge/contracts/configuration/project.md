@@ -28,7 +28,7 @@ an empty table behaves the same way. A missing field is not an explicit null.
 ## Project label and presentation
 
 `project` is the configured display label, preserved in plans and reports. It is
-not a Rule identity, import namespace or provider reference. `max_display_files`
+not a Rule identity, import binding or provider reference. `max_display_files`
 bounds the changed paths shown by status. This presentation setting does not
 weaken snapshot coverage or turn incomplete comparisons into exact totals; the
 [Snapshot and Freshness contract](../report/snapshot.md) defines those guarantees.

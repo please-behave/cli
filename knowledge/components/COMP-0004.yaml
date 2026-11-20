@@ -31,7 +31,7 @@ must_not:
   - >-
     Detect available updates or ask for interactive update confirmation.
   - >-
-    Derive rule namespaces from repository URLs or directory paths.
+    Let a rule set or a consumer choose or remap the binding qualifier of imported rule identities.
 files:
   - src/external.rs
   - src/external/cache.rs

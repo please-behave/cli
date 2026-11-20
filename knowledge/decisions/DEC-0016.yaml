@@ -10,7 +10,7 @@ decision: >-
   Deterministic checks may declare dependencies on other deterministic
   checks through an optional depends_on property. AI reviews cannot
   declare dependencies and cannot be referenced as dependencies.
-  Dependencies reference stable check identities, including namespaces,
+  Dependencies reference stable check identities, including import binding qualification,
   and must resolve within the effective execution selection. Missing
   dependencies, ambiguous identities, self-dependencies, and cycles
   are configuration errors. A check may execute only after all declared
