@@ -12,9 +12,10 @@ decision: >-
   an optional namespace and a rule name. Namespaces are explicitly
   defined by the rule set and cannot be remapped by consumers. They
   are never derived implicitly from repository URLs or directory paths.
-  Rule identities must be unique within the effective execution
-  selection. Duplicate identities are configuration errors, even when
-  their definitions are identical. A rule may be selected at multiple
+  Rule identities must be unique within their source scope, the local
+  project or one import binding, independent of the selection of a run.
+  Duplicate identities are configuration errors detected when the
+  configuration is loaded, even when their definitions are identical. A rule may be selected at multiple
   execution points without changing its configuration. Execution
   points select rules but do not override their parameters. Different
   parameterizations of the same underlying implementation require
@@ -26,6 +27,7 @@ rationale: >-
   identities simplify configuration resolution, result reporting,
   and future auditing. Separating rule definitions from execution
   points preserves predictable behavior while allowing scripts and
-  other implementations to be reused. Restricting uniqueness to
-  the effective execution selection avoids rejecting unrelated
-  configurations that are never executed together.
+  other implementations to be reused. Checking uniqueness per source
+  scope keeps every reference resolvable to exactly one rule without
+  depending on which rules a run selects, while separate import
+  bindings and namespaces still let independent rule sets coexist.

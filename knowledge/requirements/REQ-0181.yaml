@@ -1,13 +1,15 @@
 id: REQ-0181
-name: Rule Identities Are Unique Within A Run
+name: Rule Identities Are Unique Within Their Source Scope
 area: rules
 description: >-
-  Within the effective selection of a run, rule identities (the ID of a local
-  rule or the namespaced ID of an imported rule) must be unique, a rule
-  reference must resolve to exactly one rule, and a duplicate identity must be
-  rejected as a configuration error even when the definitions are identical.
+  Rule identities must be unique within their source scope, which is the local
+  project or one import binding, independent of which rules a run selects. A
+  duplicate identity must be rejected as a configuration error when the
+  configuration is loaded, even when the definitions are identical, and a rule
+  reference must resolve to exactly one rule.
 rationale: >-
-  A run must never be unable to tell which rule a result, a reference or a
-  report line belongs to.
+  A reference, a result or a report line must never be unable to tell which
+  rule it belongs to, so identity is checked structurally and never depends on
+  the selection of a run.
 decisions:
   - DEC-0014

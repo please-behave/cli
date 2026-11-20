@@ -17,7 +17,8 @@ decision: >-
   must establish that selected rules can execute before their
   execution begins. Missing requirements belonging exclusively to
   unselected rules must not prevent execution. Rule identity
-  conflicts are validated within the effective execution selection.
+  conflicts are structural and are validated within their source scope
+  when configuration is loaded.
 rationale: >-
   Execution-scoped validation allows a single project configuration
   to support local development and CI environments with different
