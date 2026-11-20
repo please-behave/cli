@@ -8,7 +8,3 @@ description: >-
 rationale: >-
   Status and tools must always find a complete report, and a failed run is the
   one that most needs one.
-test_exemption: >-
-  Atomicity comes from replacing last.json through a persisted temporary file
-  in the same directory (src/report.rs). Interrupting a write cannot be
-  reproduced deterministically in an offline test.

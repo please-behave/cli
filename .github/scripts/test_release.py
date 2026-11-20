@@ -47,6 +47,7 @@ class ReleaseTests(unittest.TestCase):
         self.assertEqual(locked[0]["version"], package["version"])
 
     @unittest.skipUnless(os.name == "posix", "Native release targets are Unix")
+    # REQ-0317: archives are named by version and target and hold one same-named directory with the executable, README and license.
     def test_packager_produces_the_archive_contract(self):
         for target in TARGETS:
             with self.subTest(target=target), tempfile.TemporaryDirectory() as temporary:
@@ -98,7 +99,11 @@ class ReleaseTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 set_version("3.0.0", root)
 
+    # REQ-0315: the release matrix builds a native executable for each target that the release documentation lists.
     def test_native_matrix_and_archive_contract_cover_the_same_platforms(self):
+        documented = re.findall(r"^\| [^|]+ \| `([^`]+)` \|", (ROOT / "docs/releasing.md").read_text(), flags=re.M)
+        self.assertEqual(set(documented), set(TARGETS))
+        self.assertEqual(len(documented), len(TARGETS))
         workflow = (ROOT / ".github/workflows/release.yml").read_text()
         release = [dict(os=os_name, target=target) for os_name, target in re.findall(r"- \{os: ([^,]+), target: ([^}]+)\}", workflow)]
         self.assertEqual({entry["target"] for entry in release}, set(TARGETS))

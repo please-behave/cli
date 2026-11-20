@@ -409,6 +409,120 @@ fn adapter_configuration_is_strict_and_defaults_are_explicit() {
     );
 }
 #[test]
+// REQ-0224: provider and review definitions have no authentication, model or tool settings outside the opaque parameters.
+fn authentication_model_and_tool_settings_exist_only_as_opaque_parameters() {
+    let root = fixture();
+    provider(root.path(), "first", "ok", "");
+    review(root.path(), "a", "first", "check");
+    let provider_path = root.path().join(".please/providers/first.toml");
+    let review_path = root.path().join(".please/reviews/a/rule.toml");
+    let provider_valid = fs::read_to_string(&provider_path).unwrap();
+    let review_valid = fs::read_to_string(&review_path).unwrap();
+    let settings = [
+        "api_key = 'x'",
+        "token = 'x'",
+        "auth = 'x'",
+        "credentials = 'x'",
+        "model = 'x'",
+        "tools = ['x']",
+        "allowed_tools = ['x']",
+    ];
+    for setting in settings {
+        for (path, rejected) in [
+            (&provider_path, format!("{setting}\n{provider_valid}")),
+            (&review_path, format!("{setting}\n{review_valid}")),
+            (&review_path, format!("{review_valid}{setting}\n")),
+        ] {
+            fs::write(path, rejected).unwrap();
+            assert!(config::load(root.path()).is_err(), "{setting}");
+            fs::write(&provider_path, &provider_valid).unwrap();
+            fs::write(&review_path, &review_valid).unwrap();
+        }
+    }
+    fs::write(
+        &provider_path,
+        format!("{provider_valid}{}\n", settings.join("\n")),
+    )
+    .unwrap();
+    fs::write(
+        &review_path,
+        format!(
+            "{review_valid}[review.parameters]\n{}\n",
+            settings.join("\n")
+        ),
+    )
+    .unwrap();
+    assert!(config::load(root.path()).is_ok());
+}
+#[test]
+// REQ-0123: no cost or total token budget setting exists and the report states neither.
+fn reviews_have_no_cost_estimate_or_token_budget() {
+    let root = fixture();
+    provider(root.path(), "first", "ok", "");
+    review(root.path(), "a", "first", "check");
+    let provider_path = root.path().join(".please/providers/first.toml");
+    let review_path = root.path().join(".please/reviews/a/rule.toml");
+    let provider_valid = fs::read_to_string(&provider_path).unwrap();
+    let review_valid = fs::read_to_string(&review_path).unwrap();
+    for setting in [
+        "token_budget = 1",
+        "max_total_tokens = 1",
+        "max_cost = 1",
+        "price_per_token = 1",
+    ] {
+        for (path, rejected) in [
+            (&provider_path, format!("{setting}\n{provider_valid}")),
+            (&review_path, format!("{review_valid}{setting}\n")),
+        ] {
+            fs::write(path, rejected).unwrap();
+            assert!(config::load(root.path()).is_err(), "{setting}");
+            fs::write(&provider_path, &provider_valid).unwrap();
+            fs::write(&review_path, &review_valid).unwrap();
+        }
+    }
+    write(
+        root.path(),
+        "tool",
+        r#"#!/usr/bin/env python3
+import json, sys
+request = json.load(sys.stdin)
+usage = {'input_tokens':10,'cached_input_tokens':3,'output_tokens':4}
+finding = {'message':'Evidence inspected','path':'evidence','line':1}
+print(json.dumps({'protocol_version':request['protocol_version'],'reason':'Evidence inspected','findings':[finding],'usage':usage}))
+"#,
+    );
+    fs::set_permissions(root.path().join("tool"), fs::Permissions::from_mode(0o755)).unwrap();
+    write(
+        root.path(),
+        ".please/providers/first.toml",
+        "command = './tool'\ntimeout_seconds = 5\n",
+    );
+    let result = execute(root.path());
+    assert_eq!(result.token_usage, Some(14));
+    fn keys(value: &serde_json::Value, found: &mut Vec<String>) {
+        match value {
+            serde_json::Value::Object(map) => {
+                for (key, value) in map {
+                    found.push(key.to_lowercase());
+                    keys(value, found);
+                }
+            }
+            serde_json::Value::Array(items) => items.iter().for_each(|item| keys(item, found)),
+            _ => {}
+        }
+    }
+    let mut found = Vec::new();
+    keys(&serde_json::to_value(&result).unwrap(), &mut found);
+    assert!(
+        !found
+            .iter()
+            .any(|key| ["cost", "price", "budget", "quota", "currency"]
+                .iter()
+                .any(|word| key.contains(word))),
+        "{found:?}"
+    );
+}
+#[test]
 fn completed_fail_and_error_respect_review_blocking() {
     let root = fixture();
     tool(root.path());

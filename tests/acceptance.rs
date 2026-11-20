@@ -2337,6 +2337,29 @@ fn invalid_configuration_does_not_replace_the_saved_report() {
 }
 
 #[test]
+// REQ-0253: every executing run replaces the saved report completely, including runs that end with FAIL or ERROR.
+fn executed_runs_replace_the_saved_report_and_leave_no_temporary_files() {
+    let d = project();
+    for (script, expected) in [
+        ("exit 0\n", Status::Pass),
+        ("exit 1\n", Status::Fail),
+        ("exit 7\n", Status::Error),
+        ("exit 0\n", Status::Pass),
+    ] {
+        support::check(d.path(), "outcome", &["check"], script);
+        synchronize(d.path());
+        cli(d.path(), &["run", "--checks-only", "--at", "check"]);
+        assert_eq!(report::read(d.path()).unwrap().overall, expected);
+        let files: Vec<_> = fs::read_dir(path(d.path(), "reports"))
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name())
+            .filter(|name| name != ".gitignore")
+            .collect();
+        assert_eq!(files, ["last.json"]);
+    }
+}
+
+#[test]
 // REQ-0256: the saved report identifies the input, repository, provider and UTC run time.
 // REQ-0257: the saved report retains results, elapsed durations, findings and configuration-error flags.
 // REQ-0258: the saved plan retains required rule IDs and their blocking policy.
