@@ -113,7 +113,7 @@ and packaging.
 
 ### CI proof and reruns
 
-The `required-jobs` input of the readiness job in `.github/workflows/release.yml` requires the `Check` job in
+The `required-jobs` input of the readiness job in `.github/workflows/release.yml` requires the `check / Check` job in
 `.github/workflows/ci.yml`, in `please-behave/cli`, for a push to main at the exact
 release SHA. Current CI has one Linux x64 job; four-platform coverage is supplied
 by Release Candidate. Consumers with a CI matrix must list every required entry

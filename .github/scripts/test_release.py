@@ -106,7 +106,7 @@ class ReleaseTests(unittest.TestCase):
         self.assertIn(dict(os="ubuntu-24.04-arm", target="aarch64-unknown-linux-gnu"), release)
         ci = (ROOT / ".github/workflows/ci.yml").read_text()
         self.assertNotIn("matrix:", ci)
-        self.assertIn("BUILD_TARGET: x86_64-unknown-linux-gnu", ci)
+        self.assertIn("BUILD_TARGET=x86_64-unknown-linux-gnu", ci)
 
     def test_release_job_contract_permissions_and_selection(self):
         workflow = (ROOT / ".github/workflows/release.yml").read_text()
@@ -115,7 +115,7 @@ class ReleaseTests(unittest.TestCase):
         self.assertEqual(set(jobs), {"plan", "release-readiness", "release-candidate", "publish"})
         self.assertIn(".github/workflows/release-plan.yml@", jobs["plan"])
         self.assertIn(".github/workflows/release-readiness.yml@", jobs["release-readiness"])
-        self.assertIn("required-jobs: Check", jobs["release-readiness"])
+        self.assertIn("required-jobs: check / Check", jobs["release-readiness"])
         for name in ("release-readiness", "release-candidate"):
             self.assertIn("needs: plan", jobs[name])
             self.assertIn("needs.plan.outputs.release == 'true'", jobs[name])

@@ -216,8 +216,8 @@ best effort: updates without a release timestamp may proceed.
 GitHub tag timestamps may not reflect republished content, and this policy does
 not guarantee the age of every transitive lockfile dependency.
 
-The [CI workflow](../.github/workflows/ci.yml) prepares dependencies, installs the
-released governor through mise, and invokes one published Action step to synchronize
+The [CI workflow](../.github/workflows/ci.yml) calls the shared `ci-check.yml` workflow of the governance repository. It prepares dependencies, installs the
+released governor through mise, trusts the governance repository, and invokes one published Action step to synchronize
 and run deterministic checks followed by applicable reviews at `check`.
 The Action establishes the GitHub event comparison base and produces generic
 review summaries. CI uploads `.please/reports/last.json`; provider failures remain

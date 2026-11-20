@@ -3,47 +3,14 @@ on:
   push:
     branches: [main]
   pull_request:
-  workflow_call:
-    secrets:
-      GEMINI_API_KEY:
-        required: false
 permissions:
   contents: read
-env:
-  MISE_AUTO_INSTALL: 'false' # Install tools explicitly before running tasks.
 jobs:
   check:
-    name: Check
-    runs-on: ubuntu-24.04
-    timeout-minutes: 90
-    env:
-      BUILD_TARGET: x86_64-unknown-linux-gnu
-      CARGO_BUILD_TARGET: x86_64-unknown-linux-gnu
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-          fetch-depth: 0
-      - name: Install project tools
-        uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
-      - name: Fetch locked dependencies
-        run: mise run setup
-      - name: Run Please Behave checks and applicable reviews
-        uses: please-behave/action@98c72fdf0ff5c1a9ec5b815c07b1a38745e50bc3 # v1.5.2
-        with:
-          install: 'false'
-          sync: 'true'
-          execution-point: check
-          summary: 'true'
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GITHUB_TOKEN: ${{ github.token }}
-      - name: Upload report
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: quality-check
-          path: .please/reports/last.json
-          include-hidden-files: true
-          if-no-files-found: ignore
-          retention-days: 7
+    uses: christianpflugradt/please-behave-governance/.github/workflows/ci-check.yml@8572daf10c4f05dfbded34301187e00134259864 # updates/workflows/ci
+    with:
+      env: |
+        BUILD_TARGET=x86_64-unknown-linux-gnu
+        CARGO_BUILD_TARGET=x86_64-unknown-linux-gnu
+    secrets:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}

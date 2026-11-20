@@ -38,7 +38,7 @@ jobs:
     uses: christianpflugradt/please-behave-governance/.github/workflows/release-readiness.yml@43e6e291453959dd37452a49673e228acd0b6cd0 # updates/workflows/release
     with:
       source-sha: ${{ needs.plan.outputs.source_sha }}
-      required-jobs: Check
+      required-jobs: check / Check
 
   release-candidate:
     name: Release Candidate (${{ matrix.target }})
