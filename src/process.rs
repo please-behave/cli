@@ -116,7 +116,7 @@ pub fn run(command: &mut Command, timeout: Duration) -> Result<Output> {
     run_with_stdout_limit(command, timeout, OUTPUT_LIMIT)
 }
 
-/// Capture bounded command data without changing diagnostic or provider limits.
+/// Capture bounded command data without changing diagnostic or adapter limits.
 pub(crate) fn run_with_stdout_limit(
     command: &mut Command,
     timeout: Duration,

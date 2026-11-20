@@ -1,10 +1,9 @@
 use anyhow::{Context, Result};
 use clap::{CommandFactory, Parser, error::ErrorKind};
 use please::{
+    adapter::Configured,
     cli::{Cli, Words},
-    config, git_snapshot,
-    provider::Configured,
-    report,
+    config, git_snapshot, report,
     terminal::{self, Tone},
 };
 use std::io::{IsTerminal, Write};

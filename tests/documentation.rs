@@ -1,8 +1,8 @@
 //! The public reference and executable examples must follow Serde's contract.
 mod support;
 use please::{
+    adapter::{Adapter, Request},
     config, planner,
-    provider::{Provider, Request},
     report::Status,
 };
 use serde::{Serialize, de::DeserializeOwned};
@@ -237,13 +237,13 @@ fn every_configuration_field_required_marker_and_default_is_documented() {
         "",
     );
     contract(
-        &please::external::ProviderImport {
+        &please::external::AdapterImport {
             id: "quality".into(),
-            git: "https://example.invalid/providers.git".into(),
-            path: "providers/quality".into(),
+            git: "https://example.invalid/adapters.git".into(),
+            path: "adapters/quality".into(),
             reference: "main".into(),
         },
-        section(CONFIGURATION, "Import providers from Git"),
+        section(CONFIGURATION, "Import adapter profiles from Git"),
         "",
     );
     // Enumerate both implementation tables for field/default comparison; raw documents are validated separately.
@@ -268,7 +268,7 @@ fn every_configuration_field_required_marker_and_default_is_documented() {
             trigger: Some(config::ReviewTrigger {
                 changed_files: vec!["docs/**".into()],
             }),
-            provider: None,
+            adapter: None,
             prompt: "prompt.md".into(),
             context: vec![config::ReviewContext {
                 path: "README.md".into(),
@@ -305,14 +305,14 @@ fn every_configuration_field_required_marker_and_default_is_documented() {
         ),
         "parameters.<name>.",
     );
-    let adapter: config::ProviderConfig = toml::from_str(block(
-        section(CONFIGURATION, "Configure the AI provider"),
+    let adapter: config::AdapterProfile = toml::from_str(block(
+        section(CONFIGURATION, "Configure the adapter profile"),
         "toml",
     ))
     .unwrap();
     contract(
         &adapter,
-        section(CONFIGURATION, "Configure the AI provider"),
+        section(CONFIGURATION, "Configure the adapter profile"),
         "",
     );
     contract(
@@ -541,12 +541,12 @@ fn parameter_schema_keeps_declaration_loading_and_resolution_separate() {
 fn documentation_contract_detects_missing_fields_and_wrong_defaults() {
     let root = project();
     let _p = config::load(root.path()).unwrap();
-    let adapter: config::ProviderConfig = toml::from_str(block(
-        section(CONFIGURATION, "Configure the AI provider"),
+    let adapter: config::AdapterProfile = toml::from_str(block(
+        section(CONFIGURATION, "Configure the adapter profile"),
         "toml",
     ))
     .unwrap();
-    let original = section(CONFIGURATION, "Configure the AI provider");
+    let original = section(CONFIGURATION, "Configure the adapter profile");
     for bad in [
         original
             .lines()
@@ -569,14 +569,14 @@ fn block<'a>(text: &'a str, kind: &str) -> &'a str {
         .0
 }
 struct Never;
-impl Provider for Never {
+impl Adapter for Never {
     fn review(&self, _: &Request<'_>) -> anyhow::Result<String> {
-        panic!("documentation tests must not call a provider")
+        panic!("documentation tests must not call an adapter")
     }
 }
 #[test]
 fn readme_examples_validate_and_plan_without_ai_or_check_execution() {
-    // REQ-0329: configuration examples load and produce an executable plan without a provider call.
+    // REQ-0329: configuration examples load and produce an executable plan without an adapter call.
     let root = project();
     assert_eq!(
         please::verify(root.path(), &Never).unwrap().overall,
@@ -620,8 +620,11 @@ fn readme_examples_validate_and_plan_without_ai_or_check_execution() {
     .unwrap();
     support::write(
         root.path(),
-        ".please/provider.toml",
-        block(section(CONFIGURATION, "Configure the AI provider"), "toml"),
+        ".please/adapter.toml",
+        block(
+            section(CONFIGURATION, "Configure the adapter profile"),
+            "toml",
+        ),
     );
     let p = config::load(root.path()).unwrap();
     let plan = planner::build(&p, Some("check"), false).unwrap().plan;
@@ -630,9 +633,9 @@ fn readme_examples_validate_and_plan_without_ai_or_check_execution() {
 }
 
 #[test]
-fn documented_adapter_configuration_is_valid() {
-    let example: config::ProviderConfig = toml::from_str(block(
-        section(CONFIGURATION, "Configure the AI provider"),
+fn documented_adapter_profileuration_is_valid() {
+    let example: config::AdapterProfile = toml::from_str(block(
+        section(CONFIGURATION, "Configure the adapter profile"),
         "toml",
     ))
     .unwrap();

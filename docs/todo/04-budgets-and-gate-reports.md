@@ -4,8 +4,8 @@ Status: TODO. Depends on [TODOs 1–3](README.md).
 
 ## Goal and decisions
 
-Bound waiting and provider activity, and make incomplete verification impossible
-to mistake for a complete gate. Extend existing command/provider deadlines and
+Bound waiting and adapter activity, and make incomplete verification impossible
+to mistake for a complete gate. Extend existing command/adapter deadlines and
 context/output limits rather than introducing an agent control loop.
 
 - Run budgets cover total elapsed run time, maximum model calls and prepared
@@ -18,7 +18,7 @@ context/output limits rather than introducing an agent control loop.
   groups, deduplicating within each group, with cross-group copies counted again.
 - The offline plan gives a conservative model-call upper bound after grouping.
   If the call/context plan already exceeds a hard budget, reject before checks.
-- Total elapsed time includes preparation, checks and provider discovery/calls.
+- Total elapsed time includes preparation, checks and adapter discovery/calls.
   Every child gets at most the remaining deadline. On exhaustion, terminate its
   process tree, preserve available evidence and mark remaining rules NOT_RUN.
   Report-writing cleanup has a separate bounded allowance.
@@ -26,7 +26,7 @@ context/output limits rather than introducing an agent control loop.
   A failed call still consumes the call allowance and retains available usage.
 - Never advertise an enforceable token ceiling based only on a prompt instruction
   or after-the-fact usage counter. A hard token cap is available only when the
-  provider demonstrably enforces it; otherwise reject that requested capability.
+  adapter demonstrably enforces it; otherwise reject that requested capability.
 - Measured token thresholds may warn and stop subsequent groups, but cannot
   guarantee the current call stayed below the threshold. Label them accordingly.
 - No currency/quota estimates without authoritative billing data. Cached input
@@ -34,7 +34,7 @@ context/output limits rather than introducing an agent control loop.
 
 ## Work
 
-- [ ] Implement the budget fields, units, defaults and provider capability checks.
+- [ ] Implement the budget fields, units, defaults and adapter capability checks.
 - [ ] Enforce admission checks and a shared deadline across all phases/groups.
 - [ ] Show immediate phase/rule progress and elapsed time during long calls,
       without dumping raw traces or source; preserve non-TTY readability.
@@ -50,10 +50,10 @@ context/output limits rather than introducing an agent control loop.
 ## Done when
 
 Execution succeeds only if all required Rules complete without ERROR or blocking FAIL, selection/execution are
-complete, and the verified input remains valid. Configuration, provider errors,
+complete, and the verified input remains valid. Configuration, adapter errors,
 missing findings, exhausted budgets and incomplete snapshots cannot become PASS.
 Partial runs remain inspectable with honest scope and one usage record per actual
-call. Status needs no new provider invocation. Tests verify strict call and time
+call. Status needs no new adapter invocation. Tests verify strict call and time
 limits without using a paid model.
 
 Implementation commits: none.

@@ -2,7 +2,7 @@
 
 This repository uses unversioned deterministic Rules with three pinned external
 Rule Sets: repository conventions, security and open-source software. The imported repository-conventions set also runs two advisory Reviews through the
-independently imported Gemini Flash-Lite provider: a header-only wording Review at
+independently imported Gemini Flash-Lite adapter profile: a header-only wording Review at
 commit-msg and a conditional AGENTS.md quality Review that runs only at check.
 Pre-commit, pre-push and release points select checks only.
 
@@ -22,7 +22,7 @@ evidence and publication guards are shared actions from please-behave-governance
 retain their existing dependencies and resource locking.
 
 `config.toml` declares only the custom `release` point. All three Rule Sets and
-the independent provider share the reviewed immutable revision in config.toml.
+the independent adapter profile share the reviewed immutable revision in config.toml.
 Imported checks use `@rule/` or `@source/` resources.
 Check/pre-push source-security snapshot semantics are unchanged.
 `commit-scopes.txt` supplies the commit-message import's required
@@ -62,7 +62,7 @@ AGENTS.md at check.
 GitHub Actions uses the shared release workflows and actions of please-behave-governance for
 planning, exact-source CI proof, candidate evidence and publication. The policy of the candidate
 files lives in `.github/release-artifacts.json`.
-Offline release tests require no external release cache or provider calls.
+Offline release tests require no external release cache or adapter calls.
 
 ## Published governor updates
 

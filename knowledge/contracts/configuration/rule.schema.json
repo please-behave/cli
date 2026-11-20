@@ -150,7 +150,7 @@
           "type": "string",
           "minLength": 1
         },
-        "provider": {
+        "adapter": {
           "type": "string",
           "minLength": 1,
           "default": null

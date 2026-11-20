@@ -4,7 +4,7 @@ area: reviews
 description: >-
   An adapter must be invoked using only its configured command and arguments,
   without a shell or any expansion other than the reference tokens of
-  independently imported providers. Dynamic review input must be delivered
+  independently imported adapter profiles. Dynamic review input must be delivered
   through the JSON request on standard input, not added to the invocation
   arguments.
 rationale: >-

@@ -5,7 +5,7 @@ purpose: >-
 scope:
   - >-
     Defines the configuration model: project settings, execution points, rule
-    sets, checks, reviews and providers.
+    sets, checks, reviews and adapter profiles.
   - >-
     Discovers and loads the local configuration documents below .please and
     rejects unknown fields, duplicate identities and invalid references.
@@ -31,7 +31,7 @@ out_of_scope:
     owner: COMP-0005
 must_not:
   - >-
-    Execute checks or provider adapters while loading or validating.
+    Execute checks or adapters while loading or validating.
   - >-
     Accept unknown fields, recursive TOML discovery or rule resources reached
     through symlinks.

@@ -1,7 +1,7 @@
 mod support;
 use please::{
+    adapter::{Adapter, Request},
     config, external, planner,
-    provider::{Provider, Request},
     report::Status,
 };
 use std::{
@@ -298,9 +298,9 @@ fn sync_output_tracks_import_state_and_cache_changes_without_hook_changes() {
 }
 
 struct Never;
-impl Provider for Never {
+impl Adapter for Never {
     fn review(&self, _: &Request<'_>) -> anyhow::Result<String> {
-        panic!("unexpected provider call")
+        panic!("unexpected adapter call")
     }
 }
 
@@ -632,7 +632,7 @@ fn retrieval_never_executes_rules_or_remote_hooks_and_errors_hide_credentials() 
 }
 
 struct ReviewMock;
-impl Provider for ReviewMock {
+impl Adapter for ReviewMock {
     fn review(&self, request: &Request<'_>) -> anyhow::Result<String> {
         assert_eq!(request.reviews.len(), 1);
         assert_eq!(request.reviews[0].text, "Judge consumer documentation.\n");
@@ -779,7 +779,7 @@ fn import_count_limit_fails_synchronization() {
     f.imports(&vec![("repository", "main"); please::limits::MAX_RULES + 1]);
     assert_sync_error(
         cli(&f, &["sync", "--yes"]),
-        "at most 256 external Rule Set and provider imports",
+        "at most 256 external Rule Set and adapter imports",
     );
     assert!(!f.root.join(".git/please/external-rule-sets.json").exists());
 }
@@ -2018,7 +2018,7 @@ printf '%s:%s\n' "$3" "$2"
     );
     fs::rename(&f.remote, f.remote.with_extension("offline")).unwrap();
     struct ParameterReview;
-    impl Provider for ParameterReview {
+    impl Adapter for ParameterReview {
         fn review(&self, request: &Request<'_>) -> anyhow::Result<String> {
             let label = &request.parameters["label"];
             let path = &request.parameters["scopes_file"];
@@ -2364,7 +2364,7 @@ printf '%s' "$point"
     );
     fs::rename(&f.remote, f.remote.with_extension("offline")).unwrap();
     let fake = tempfile::tempdir().unwrap();
-    support::context_provider(fake.path());
+    support::context_adapter(fake.path());
     let path = std::env::join_paths(
         std::iter::once(fake.path().to_path_buf())
             .chain(std::env::split_paths(&std::env::var_os("PATH").unwrap())),
@@ -2858,7 +2858,7 @@ rules = [
 #[cfg(unix)]
 #[test]
 fn coordinated_display_renames_preserve_local_and_imported_execution() {
-    // REQ-0137: labels cannot affect identity, selection, order, delivered parameters or providers.
+    // REQ-0137: labels cannot affect identity, selection, order, delivered parameters or adapters.
     let f = Fixture::new();
     fs::remove_dir_all(f.root.join(".please/checks")).unwrap();
     fs::remove_dir_all(f.root.join(".please/reviews")).unwrap();
@@ -2870,14 +2870,14 @@ fn coordinated_display_renames_preserve_local_and_imported_execution() {
     );
     fs::remove_dir_all(f.remote.join("repository/checks/required-files")).unwrap();
     let definitions = |root: &Path, directory: &str, label: &str, value: &str, imported: bool| {
-        let provider = if imported {
+        let adapter = if imported {
             "imported-chosen"
         } else {
             "local-chosen"
         };
         write(
             root,
-            &format!("{directory}/providers/{provider}.toml"),
+            &format!("{directory}/adapters/{adapter}.toml"),
             "command = 'fake-adapter'\ntimeout_seconds = 17\n[parameters]\nmodel = 'synthetic-model'\n",
         );
         let parameter = if imported {
@@ -2894,7 +2894,7 @@ fn coordinated_display_renames_preserve_local_and_imported_execution() {
             (
                 "reviews",
                 "a-review",
-                "[review]\nprovider = 'chosen'\nprompt = 'prompt.md'\n",
+                "[review]\nadapter = 'chosen'\nprompt = 'prompt.md'\n",
             ),
         ] {
             write(
@@ -2902,7 +2902,7 @@ fn coordinated_display_renames_preserve_local_and_imported_execution() {
                 &format!("{directory}/{kind}/{id}/rule.toml"),
                 &format!(
                     "id = {id:?}\nname = {label:?}\ndescription = 'Label fixture'\nrun_at = ['check']\n{body}[parameters.label]\ntype = 'string'\n{parameter}\n"
-                ).replace("provider = 'chosen'", &format!("provider = {provider:?}")),
+                ).replace("adapter = 'chosen'", &format!("adapter = {adapter:?}")),
             );
         }
         write(
@@ -2941,7 +2941,7 @@ fn coordinated_display_renames_preserve_local_and_imported_execution() {
         &[],
     );
     struct Inspect(std::sync::Mutex<Vec<(String, String, String)>>);
-    impl Provider for Inspect {
+    impl Adapter for Inspect {
         fn review(&self, request: &Request<'_>) -> anyhow::Result<String> {
             let review = request.reviews[0];
             let expected = if review.id.starts_with("git:") {
@@ -2951,22 +2951,22 @@ fn coordinated_display_renames_preserve_local_and_imported_execution() {
             };
             assert_eq!(request.parameters["label"], expected);
             assert_eq!(
-                request.provider_config()?.parameters["model"],
+                request.adapter_profile()?.parameters["model"],
                 "synthetic-model"
             );
             self.0.lock().unwrap().push((
                 review.id.clone(),
-                review.provider.clone().unwrap(),
+                review.adapter.clone().unwrap(),
                 request.parameters["label"].clone(),
             ));
             Ok(serde_json::json!({"reviews":[{"id":review.id,"status":"PASS","reason":"Evidence inspected","findings":[{"message":"Evidence", "path":"evidence", "line":1}]}]}).to_string())
         }
     }
     let run = || {
-        let provider = Inspect(std::sync::Mutex::new(Vec::new()));
+        let adapter = Inspect(std::sync::Mutex::new(Vec::new()));
         let report = please::verify_project_at(
             f.load(true).unwrap(),
-            &provider,
+            &adapter,
             please::VerificationMode::AllRules,
             Some("check"),
             &mut |_| {},
@@ -2992,8 +2992,8 @@ fn coordinated_display_renames_preserve_local_and_imported_execution() {
                     r.id.clone(),
                     r.kind.clone(),
                     r.selected_by.clone(),
-                    r.provider.clone(),
-                    serde_json::to_value(&r.provider_config).unwrap(),
+                    r.adapter.clone(),
+                    serde_json::to_value(&r.adapter_profile).unwrap(),
                 )
             })
             .collect();
@@ -3014,7 +3014,7 @@ fn coordinated_display_renames_preserve_local_and_imported_execution() {
                 }
             );
         }
-        let mut calls = provider.0.into_inner().unwrap();
+        let mut calls = adapter.0.into_inner().unwrap();
         calls.sort();
         assert_eq!(calls.len(), 2);
         (report.plan.required_ids, selection, outputs, calls)
@@ -3393,7 +3393,7 @@ fn trust_commands_grant_and_revoke_trust_for_the_whole_repository() {
 
 #[test]
 fn repositories_are_identified_by_lexically_normalized_location() {
-    // REQ-0338: spelling variants coincide; other aliases and providers' rules do not apply.
+    // REQ-0338: spelling variants coincide; other aliases and adapters' rules do not apply.
     use please::external::trust::identity;
     let https = identity("https://github.com/org/repo");
     for variant in [

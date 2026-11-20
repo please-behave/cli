@@ -1,9 +1,9 @@
 id: REQ-0214
-name: Named And Default Providers
+name: Named And Default Adapter Profiles
 area: reviews
 description: >-
-  A project must be able to declare named provider configurations and
-  optionally one explicit default provider, and a review must use the provider
+  A project must be able to declare named adapter profiles and
+  optionally one explicit default adapter profile, and a review must use the adapter profile
   it names or otherwise the default.
 rationale: >-
-  Most reviews can share one provider while a few use another model or tool.
+  Most reviews can share one adapter profile while a few use another model or tool.

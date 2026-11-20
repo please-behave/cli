@@ -186,7 +186,7 @@ Native downloads still need Git and, for enabled reviews, Codex CLI/login.
 
 ## Quality gates
 
-- Push/PR: Linux x64 formatting, Clippy, unit/acceptance tests, optimized build and smoke. Release: versioned builds and real CLI smoke on all four native hosts. Tests use fake providers,
+- Push/PR: Linux x64 formatting, Clippy, unit/acceptance tests, optimized build and smoke. Release: versioned builds and real CLI smoke on all four native hosts. Tests use fake adapters,
   never real Codex, credentials or paid APIs.
 - Linux: test Git hook integration offline.
 - Workflow syntax/expressions: pinned actionlint. Version stamping and

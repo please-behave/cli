@@ -1,8 +1,8 @@
 id: REQ-0217
-name: Provider Needs Command And Timeout
+name: Adapter Profile Needs Command And Timeout
 area: reviews
 description: >-
-  A provider must declare an adapter command and a timeout within the bounds
+  An adapter profile must declare an adapter command and a timeout within the bounds
   of the configuration reference, and a missing or invalid value must be
   rejected as a configuration error.
 rationale: >-

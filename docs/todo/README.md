@@ -23,7 +23,7 @@ specification alone does not complete an implementation.
 - Worktree, index and commit are different inputs. A PASS applies only to the
   selected rules, scope and recorded input; it does not prove arbitrary commits
   or deployment artifacts satisfy policy.
-- Checks run before reviews. Checks-only execution never starts provider
+- Checks run before reviews. Checks-only execution never starts adapter
   adapters or models. No paid calls in automated tests.
 - Compact output keeps verdicts and short AI summaries; full evidence belongs in
   saved details. Usage is measured per actual model call, never per duplicated row.

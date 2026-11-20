@@ -2,8 +2,9 @@
 #![cfg(unix)]
 mod support;
 use please::{
-    Progress, VerificationMode, config,
-    provider::{Provider, Request},
+    Progress, VerificationMode,
+    adapter::{Adapter, Request},
+    config,
     report::{self, Status},
 };
 use std::{fs, path::Path, sync::Mutex};
@@ -27,12 +28,12 @@ fn project() -> TempDir {
     root
 }
 
-fn review(root: &Path, id: &str, provider: &str, blocking: bool) {
+fn review(root: &Path, id: &str, adapter: &str, blocking: bool) {
     let rule = support::review_path(root, id);
-    fs::write(rule, format!("id = {id:?}\ndescription = 'Test review'\nblocking = {blocking}\nrun_at = ['check']\n[review]\nprompt = 'prompt.md'\nprovider = {provider:?}\n")).unwrap();
+    fs::write(rule, format!("id = {id:?}\ndescription = 'Test review'\nblocking = {blocking}\nrun_at = ['check']\n[review]\nprompt = 'prompt.md'\nadapter = {adapter:?}\n")).unwrap();
     support::write(
         root,
-        &format!(".please/providers/{provider}.toml"),
+        &format!(".please/adapters/{adapter}.toml"),
         "command = 'dummy-adapter'\ntimeout_seconds = 10\n",
     );
 }
@@ -41,7 +42,7 @@ struct Dummy {
     status: &'static str,
     calls: Mutex<Vec<Vec<String>>>,
 }
-impl Provider for Dummy {
+impl Adapter for Dummy {
     fn review(&self, request: &Request<'_>) -> anyhow::Result<String> {
         self.calls
             .lock()
@@ -59,13 +60,13 @@ impl Provider for Dummy {
         )
     }
 }
-fn run(root: &TempDir, provider: &Dummy, fail_fast: bool) -> (report::Report, Vec<String>) {
+fn run(root: &TempDir, adapter: &Dummy, fail_fast: bool) -> (report::Report, Vec<String>) {
     let mut project = config::load(root.path()).unwrap();
     project.config.execution.max_parallel = 1.try_into().unwrap();
     let mut started = Vec::new();
     let report = please::verify_project_with_fail_fast(
         project,
-        provider,
+        adapter,
         VerificationMode::AllRules,
         Some("check"),
         None,
@@ -197,10 +198,10 @@ fn only_fatal_review_results_stop_later_calls() {
                 review(root.path(), "a", "first", blocking);
                 review(root.path(), "b", "first", blocking);
                 review(root.path(), "c", "second", false);
-                let provider = dummy(status);
-                let (report, started) = run(&root, &provider, fail_fast);
+                let adapter = dummy(status);
+                let (report, started) = run(&root, &adapter, fail_fast);
                 let stop = fail_fast && blocking;
-                let calls = provider.calls.lock().unwrap().clone();
+                let calls = adapter.calls.lock().unwrap().clone();
                 assert_eq!(
                     calls,
                     if stop {
@@ -254,12 +255,12 @@ fn review_configuration_errors_stop_calls_even_for_advisory_rules() {
             )
             .unwrap();
         }
-        let provider = dummy("PASS");
-        let (report, started) = run(&root, &provider, true);
+        let adapter = dummy("PASS");
+        let (report, started) = run(&root, &adapter, true);
         assert_eq!(report.overall, Status::Error);
         assert!(report.results[0].configuration_error);
         assert_eq!(report.results[1].status, Status::NotRun);
-        assert!(provider.calls.lock().unwrap().is_empty());
+        assert!(adapter.calls.lock().unwrap().is_empty());
         assert!(started.is_empty());
     }
 }
@@ -339,8 +340,8 @@ fn termination_configuration_is_optional_strict_and_does_not_enable_fail_fast() 
                 "project = 'Example'\n[execution]\nmax_parallel = 1\nfail_fast_terminate_running_instances = true\nfail_fast_termination_grace_seconds = {grace}\n"
             ),
         );
-        let provider = dummy("PASS");
-        let (saved, started) = run(&root, &provider, false);
+        let adapter = dummy("PASS");
+        let (saved, started) = run(&root, &adapter, false);
         assert_eq!(saved.overall, Status::Fail);
         assert_eq!(saved.results[1].status, Status::Pass);
         assert_eq!(started, ["a", "b"]);
@@ -577,10 +578,10 @@ fn running_checks_finish_by_default_and_without_invocation_fail_fast() {
             &["check"],
             "touch .git/running\ni=0\nwhile [ ! -f .git/release ]; do i=$((i+1)); [ $i -lt 500 ] || exit 2; sleep 0.01; done\nprintf finished-normally",
         );
-        let provider = dummy("PASS");
+        let adapter = dummy("PASS");
         let result = please::verify_project_with_fail_fast(
             config::load(root.path()).unwrap(),
-            &provider,
+            &adapter,
             VerificationMode::AllRules,
             Some("check"),
             None,
@@ -614,7 +615,7 @@ fn reviews_wait_for_every_successful_check_to_finish() {
         finished: Mutex<Vec<String>>,
         calls: Mutex<usize>,
     }
-    impl Provider for AfterChecks {
+    impl Adapter for AfterChecks {
         fn review(&self, request: &Request<'_>) -> anyhow::Result<String> {
             let mut finished = self.finished.lock().unwrap().clone();
             finished.sort();
@@ -628,26 +629,26 @@ fn reviews_wait_for_every_successful_check_to_finish() {
         support::check(root.path(), id, &["check"], "printf finished");
     }
     review(root.path(), "later", "one", true);
-    let provider = AfterChecks {
+    let adapter = AfterChecks {
         finished: Mutex::new(Vec::new()),
         calls: Mutex::new(0),
     };
     let report = please::verify_project_at(
         config::load(root.path()).unwrap(),
-        &provider,
+        &adapter,
         VerificationMode::AllRules,
         Some("check"),
         &mut |event| {
             if let Progress::RuleFinished { item, .. } = event {
                 if item.kind == "check" {
                     assert_eq!(item.status, Status::Pass);
-                    provider.finished.lock().unwrap().push(item.id.clone());
+                    adapter.finished.lock().unwrap().push(item.id.clone());
                 }
             }
         },
     )
     .unwrap();
-    assert_eq!(*provider.calls.lock().unwrap(), 1);
+    assert_eq!(*adapter.calls.lock().unwrap(), 1);
     assert_eq!(report.overall, Status::Pass);
     assert_eq!(report.results.len(), 3);
     assert!(

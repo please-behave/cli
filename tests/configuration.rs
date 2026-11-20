@@ -1,7 +1,7 @@
 mod support;
 use please::{
+    adapter::{Adapter, Request},
     config, external, planner,
-    provider::{Provider, Request},
     report::{self, Status},
 };
 use std::{
@@ -80,20 +80,20 @@ fn error(root: &Path) -> String {
     format!("{:#}", config::load(root).unwrap_err())
 }
 struct Never;
-impl Provider for Never {
+impl Adapter for Never {
     fn review(&self, _: &Request<'_>) -> anyhow::Result<String> {
-        panic!("unexpected provider call")
+        panic!("unexpected adapter call")
     }
 }
 struct Mock(&'static str);
-impl Provider for Mock {
+impl Adapter for Mock {
     fn review(&self, request: &Request<'_>) -> anyhow::Result<String> {
         assert_eq!(
             request.reviews[0].text,
             "Inspect documented expectations.\n"
         );
         if self.0 == "unavailable" {
-            anyhow::bail!("provider unavailable");
+            anyhow::bail!("adapter unavailable");
         }
         if self.0 == "invalid" {
             return Ok("invalid JSON".into());
@@ -418,7 +418,7 @@ fn blocking_failures_errors_and_disabled_rules() {
 }
 
 #[test]
-fn reviews_preserve_provider_contract_and_nonblocking_failures() {
+fn reviews_preserve_adapter_contract_and_nonblocking_failures() {
     // REQ-0102: reviews block by default and explicit advisory configuration permits success.
     for (attributes, verdict, expected) in [
         ("", "PASS", Status::Pass),
@@ -718,7 +718,7 @@ fn initialization_is_one_time() {
 fn checks_only_reports_selected_reviews_as_not_run() {
     // REQ-0158, REQ-0159, REQ-0160: checks-only skips review execution and records the restriction.
     // A blocking review, with and without a trigger: checks-only needs no change base and
-    // makes no provider call; the review is NOT_RUN and the checks decide the result.
+    // makes no adapter call; the review is NOT_RUN and the checks decide the result.
     for trigger in [false, true] {
         let d = project();
         review(d.path(), "run_at = ['pre-push']\nblocking = true");
@@ -777,7 +777,7 @@ fn prepared_input_is_shared_without_rereading_resources() {
     fs::remove_file(d.path().join(".please/reviews/design/prompt.md")).unwrap();
     assert!(input.excerpts[0].text.contains("My_App"));
     assert_eq!(p.reviews[0].text, "Inspect documented expectations.\n");
-    let rendered = please::provider::prompt(&Request {
+    let rendered = please::adapter::prompt(&Request {
         execution_point: "pre-push",
         parameters: &Default::default(),
         project: &p,

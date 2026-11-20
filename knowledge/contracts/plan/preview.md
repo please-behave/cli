@@ -18,7 +18,7 @@ explanations are English; configured text and technical identifiers are preserve
 The human-readable rendering is not a machine-readable format.
 
 Preview uses the same selection and prepared review input as execution at the
-same point and mode. It runs no checks or adapters, checks no provider availability,
+same point and mode. It runs no checks or adapters, checks no adapter availability,
 uses no network, reconciles no hooks, prompts for no confirmation, changes no
 project or Git state and does not replace the saved report. It writes no run
 context. Previously synchronized imports are used offline; preview does not
@@ -49,9 +49,9 @@ New output uses the experimental API version in `plan_schema_version`. Readers
 accept both transition labels permitted by the schema with identical structural
 and semantic validation. Unsupported versions and non-integer JSON version
 representations are rejected without retry or fallback. Unknown structural fields
-are rejected; arbitrary keys inside provider `parameters` are data. Optional
+are rejected; arbitrary keys inside adapter profile `parameters` are data. Optional
 metadata can be absent in older documents: absent `disabled_rules` and
-`depends_on` mean empty lists; an absent or null default `provider` means none.
+`depends_on` mean empty lists; an absent or null default `adapter` means none.
 
 [DEC-0026](../../decisions/DEC-0026.yaml) governs compatibility independently of
 product releases. The report's version does not replace the embedded plan version.

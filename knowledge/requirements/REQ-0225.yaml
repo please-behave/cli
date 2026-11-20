@@ -2,10 +2,10 @@ id: REQ-0225
 name: Parameters Are Opaque
 area: reviews
 description: >-
-  Provider and review parameters may be arbitrary tables of JSON-compatible
+  Adapter profile and review parameters may be arbitrary tables of JSON-compatible
   values, and Please must validate only that they are JSON-compatible and pass
   them to the adapter without interpreting them.
 rationale: >-
-  New model settings and provider features need no release of Please.
+  New model settings and AI provider features need no release of Please.
 decisions:
   - DEC-0010

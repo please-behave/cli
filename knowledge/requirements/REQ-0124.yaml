@@ -1,8 +1,8 @@
 id: REQ-0124
-name: No Built-In Provider Or Model
+name: No Built-In Adapter Profile Or Model
 area: reviews
 description: >-
-  Please must not include a provider or model and must not select one
+  Please must not include an adapter profile or model and must not select one
   implicitly.
 rationale: >-
   Which model an organization relies on is its own decision, not the

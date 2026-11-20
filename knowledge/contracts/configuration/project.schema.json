@@ -137,7 +137,7 @@
       },
       "default": []
     },
-    "provider_imports": {
+    "adapter_imports": {
       "type": "array",
       "items": {
         "type": "object",

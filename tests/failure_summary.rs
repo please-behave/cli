@@ -7,9 +7,9 @@ use please::{
 };
 
 struct Never;
-impl please::provider::Provider for Never {
-    fn review(&self, _: &please::provider::Request<'_>) -> anyhow::Result<String> {
-        panic!("no provider expected")
+impl please::adapter::Adapter for Never {
+    fn review(&self, _: &please::adapter::Request<'_>) -> anyhow::Result<String> {
+        panic!("no adapter expected")
     }
 }
 

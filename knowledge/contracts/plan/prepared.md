@@ -49,7 +49,7 @@ Undeterminable changes block the plan rather than omitting a review as unchanged
 
 `checks_only` records the invocation mode. It keeps selected reviews visible but
 prepares no review input, evaluates no triggers and requires no change base or
-provider availability. Execution reports those reviews as NOT_RUN; success covers
+adapter availability. Execution reports those reviews as NOT_RUN; success covers
 checks alone. Configuration structure is still validated.
 
 ## Inputs and bounded review context
@@ -85,25 +85,25 @@ Prepared evidence is passed unchanged into execution rather than read again.
 Failed preparation stays visible as blocking reasons; zero sizes in a blocked
 plan do not establish that no evidence was needed.
 
-## Providers and planned calls
+## Adapter profiles and planned calls
 
-Top-level `provider` is the default adapter configuration, or absent/null when none
-is configured. A review with an explicit provider reference records the named ID
-in `provider` and its complete declared configuration in `provider_config`.
-These fields occur together and only on reviews. `provider_origin`, when present,
-identifies an independently imported named provider with the same provenance
+Top-level `adapter` is the default adapter profile, or absent/null when none
+is configured. A review with an explicit adapter profile reference records the named ID
+in `adapter` and its complete declared configuration in `adapter_profile`.
+These fields occur together and only on reviews. `adapter_origin`, when present,
+identifies an independently imported named adapter profile with the same provenance
 meaning as an imported Rule. Older plans may omit that provenance.
 
 Configuration includes literal arguments, runtime prerequisite declarations,
-timeout and arbitrary JSON-compatible provider parameters. This is declared
+timeout and arbitrary JSON-compatible adapter profile parameters. This is declared
 configuration, not a resolved executable or an availability check. Imported resource
 tokens remain portable tokens rather than cache paths. Review-level parameters
-are merged for the adapter request, not written back into this provider declaration.
-A selected review without a named or default provider blocks the plan.
+are merged for the adapter request, not written back into this adapter profile declaration.
+A selected review without a named or default adapter profile blocks the plan.
 
-`provider_availability_checked` is false: prerequisites are deferred until execution
+`adapter_availability_checked` is false: prerequisites are deferred until execution
 after checks. `planned_model_calls` estimates one separate adapter call per active
-review whose implementation and Rule parameters can be prepared. Shared providers
+review whose implementation and Rule parameters can be prepared. Shared adapter profiles
 never combine reviews into one call. Checks-only, omitted and disabled reviews
 contribute none. The estimate is neither an actual call count nor a token or cost
 promise; blocking conditions and execution outcomes can prevent calls.
@@ -112,7 +112,7 @@ promise; blocking conditions and execution outcomes can prevent calls.
 
 `plan_id` is the SHA-256 identity of normalized planning inputs. It includes the
 plan API version, verifier product version, project, execution point, mode,
-applicable check/review definitions, provider declarations and imported provider
+applicable check/review definitions, adapter profile declarations and imported adapter profile
 revisions, source HEAD, non-metadata snapshot file states, prepared evidence,
 commit message, completeness, resolved change base and selection/omission metadata.
 Consumers compare this opaque identity; they must not derive it by hashing the

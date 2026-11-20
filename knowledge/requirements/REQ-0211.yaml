@@ -1,12 +1,12 @@
 id: REQ-0211
-name: Provider Reference Tokens
+name: Adapter Profile Reference Tokens
 area: reviews
 description: >-
   The command, the arguments and the required executables of an
-  independently imported provider must be able to use the reserved tokens
-  `@provider/<path>` for a path inside the provider directory,
+  independently imported adapter profile must be able to use the reserved tokens
+  `@adapter/<path>` for a path inside the adapter profile directory,
   `@source/<path>` for a path inside the imported repository and
   `@repo/<path>` for a path inside the project repository.
 rationale: >-
-  An adapter that ships with its provider must run without copying files and
+  An adapter that ships with its adapter profile must run without copying files and
   wherever the revisions are stored.

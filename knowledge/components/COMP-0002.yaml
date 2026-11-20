@@ -10,7 +10,7 @@ scope:
     Applies invocation-level fail-fast and starts reviews only after the check
     phase succeeded.
   - >-
-    Compares working files before provider calls and at the end of the run to
+    Compares working files before adapter calls and at the end of the run to
     detect changes during execution.
   - >-
     Emits progress events while rules run, then assembles and saves the final
@@ -28,7 +28,7 @@ out_of_scope:
     owner: COMP-0015
 must_not:
   - >-
-    Start a provider adapter after a blocking check failed, a fail-fast stop
+    Start an adapter after a blocking check failed, a fail-fast stop
     or a blocked plan.
   - >-
     Treat an unstable or incomplete snapshot as PASS.

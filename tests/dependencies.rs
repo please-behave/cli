@@ -1,8 +1,8 @@
 //! DEC-0016/DEC-0018: dependencies constrain checks; aggregate checks gate reviews.
 mod support;
 use please::{
+    adapter::{Adapter, Request},
     config, planner,
-    provider::{Provider, Request},
     report::{self, Status},
 };
 use std::{
@@ -38,16 +38,16 @@ fn review(root: &TempDir) {
     fs::write(support::review_path(root.path(), "review"), "id = 'review'\ndescription = 'Review'\nrun_at = ['check']\n[review]\nprompt = 'prompt.md'\n").unwrap();
 }
 struct Mock(AtomicUsize);
-impl Provider for Mock {
+impl Adapter for Mock {
     fn review(&self, request: &Request<'_>) -> anyhow::Result<String> {
         self.0.fetch_add(1, Ordering::SeqCst);
         Ok(serde_json::json!({"reviews": request.reviews.iter().map(|r| serde_json::json!({"id": r.id, "status": "PASS", "reason": "Inspected", "findings": [{"message": "Evidence", "path": "evidence", "line": 1}]})).collect::<Vec<_>>()}).to_string())
     }
 }
-fn verify(root: &TempDir, provider: &Mock, fail_fast: bool) -> report::Report {
+fn verify(root: &TempDir, adapter: &Mock, fail_fast: bool) -> report::Report {
     please::verify_project_with_fail_fast(
         config::load(root.path()).unwrap(),
-        provider,
+        adapter,
         please::VerificationMode::AllRules,
         Some("check"),
         None,
@@ -132,8 +132,8 @@ fn chains_branching_and_resources_obey_pass_dependencies() {
         &["c-test", "b-test"],
         &format!("test -f '{dir}/b-test' && test -f '{dir}/c-test'"),
     );
-    let provider = Mock(AtomicUsize::new(0));
-    let report = verify(&root, &provider, false);
+    let adapter = Mock(AtomicUsize::new(0));
+    let report = verify(&root, &adapter, false);
     assert_eq!(report.overall, Status::Pass);
     assert!(report.results.iter().all(|r| r.status == Status::Pass));
     assert_eq!(report.results[0].id, "a-smoke");
@@ -171,10 +171,10 @@ fn originating_outcome_gates_reviews_and_skips_propagate_without_execution() {
         check(&root, "c", &["b"], "exit 99");
         check(&root, "d-independent", &[], "exit 0");
         review(&root);
-        let provider = Mock(AtomicUsize::new(0));
-        let report = verify(&root, &provider, fast);
+        let adapter = Mock(AtomicUsize::new(0));
+        let report = verify(&root, &adapter, fast);
         assert_eq!(report.overall, expected, "{exit} {fast}");
-        assert_eq!(provider.0.load(Ordering::SeqCst), 0);
+        assert_eq!(adapter.0.load(Ordering::SeqCst), 0);
         for (id, dependency) in [("b", "a"), ("c", "b")] {
             let item = report.results.iter().find(|r| r.id == id).unwrap();
             assert_eq!(item.status, Status::NotRun);

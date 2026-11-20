@@ -28,7 +28,7 @@ out_of_scope:
     owner: COMP-0015
 must_not:
   - >-
-    Execute checks, call providers or write a run context while planning.
+    Execute checks, call adapters or write a run context while planning.
   - >-
     Let an execution point override the parameters of a rule.
   - >-

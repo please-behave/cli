@@ -36,7 +36,7 @@ pub struct Config {
     #[serde(default)]
     pub imports: Vec<crate::external::Import>,
     #[serde(default)]
-    pub provider_imports: Vec<crate::external::ProviderImport>,
+    pub adapter_imports: Vec<crate::external::AdapterImport>,
 }
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(default, deny_unknown_fields)]
@@ -70,7 +70,7 @@ impl Default for ContextSettings {
 }
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
-pub struct ProviderConfig {
+pub struct AdapterProfile {
     pub command: String,
     #[serde(default)]
     pub args: Vec<String>,
@@ -148,7 +148,7 @@ pub struct Review {
     pub include_content: bool,
     pub include_change_set: bool,
     pub trigger: Option<ReviewTrigger>,
-    pub provider: Option<String>,
+    pub adapter: Option<String>,
     pub id: String,
     pub name: String,
     pub description: String,
@@ -214,7 +214,7 @@ pub struct ReviewDefinition {
     #[serde(default)]
     pub include_change_set: bool,
     pub trigger: Option<ReviewTrigger>,
-    pub provider: Option<String>,
+    pub adapter: Option<String>,
     pub prompt: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub context: Vec<ReviewContext>,
@@ -228,9 +228,9 @@ pub struct ReviewTrigger {
 pub struct Project {
     pub root: PathBuf,
     pub config: Config,
-    pub provider: Option<ProviderConfig>,
-    pub providers: BTreeMap<String, ProviderConfig>,
-    pub external_providers: BTreeMap<String, crate::external::ProviderSource>,
+    pub adapter: Option<AdapterProfile>,
+    pub adapters: BTreeMap<String, AdapterProfile>,
+    pub external_adapters: BTreeMap<String, crate::external::AdapterSource>,
     pub checks: Vec<Check>,
     pub reviews: Vec<Review>,
     pub rule_sets: Vec<RuleSet>,
@@ -449,26 +449,26 @@ pub(crate) fn validate(root: PathBuf, loaded: crate::discovery::Loaded) -> Resul
         (1..=MAX_DISPLAY_FILES).contains(&config.max_display_files),
         ".please/config.toml: max_display_files must be 1..={MAX_DISPLAY_FILES}"
     );
-    let provider = match root.join(self::path("provider.toml")).symlink_metadata() {
+    let adapter = match root.join(self::path("adapter.toml")).symlink_metadata() {
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => None,
         Err(e) => return Err(e.into()),
         Ok(_) => Some(crate::discovery::document(
             &root,
-            &self::path("provider.toml"),
+            &self::path("adapter.toml"),
         )?),
     };
-    if let Some(provider) = &provider {
-        validate_provider(provider).context("provider.toml")?;
+    if let Some(adapter) = &adapter {
+        validate_adapter(adapter).context("adapter.toml")?;
     }
-    let mut providers = BTreeMap::new();
-    for (path, id, config) in loaded.providers {
+    let mut adapters = BTreeMap::new();
+    for (path, id, config) in loaded.adapters {
         let mut ids = BTreeSet::new();
-        identity(&id, "provider configuration", &mut ids)
-            .and_then(|()| validate_provider(&config))
-            .with_context(|| format!("invalid provider {id:?} ({})", path.display()))?;
+        identity(&id, "adapter profile", &mut ids)
+            .and_then(|()| validate_adapter(&config))
+            .with_context(|| format!("invalid adapter profile {id:?} ({})", path.display()))?;
         ensure!(
-            providers.insert(id.clone(), config).is_none(),
-            "duplicate provider identifier {id:?}"
+            adapters.insert(id.clone(), config).is_none(),
+            "duplicate adapter profile identifier {id:?}"
         );
     }
     let mut ids = BTreeSet::new();
@@ -555,9 +555,9 @@ pub(crate) fn validate(root: PathBuf, loaded: crate::discovery::Loaded) -> Resul
     Ok(Project {
         root,
         config,
-        provider,
-        providers,
-        external_providers: BTreeMap::new(),
+        adapter,
+        adapters,
+        external_adapters: BTreeMap::new(),
         checks,
         reviews,
         rule_sets,
@@ -567,13 +567,13 @@ pub(crate) fn validate(root: PathBuf, loaded: crate::discovery::Loaded) -> Resul
 }
 
 /// Shared validation for legacy and named configurations.
-pub(crate) fn validate_provider(provider: &ProviderConfig) -> Result<()> {
-    nonempty(&provider.command, "adapter command")?;
+pub(crate) fn validate_adapter(adapter: &AdapterProfile) -> Result<()> {
+    nonempty(&adapter.command, "adapter command")?;
     ensure!(
-        provider.args.iter().all(|arg| !arg.contains('\0')),
+        adapter.args.iter().all(|arg| !arg.contains('\0')),
         "adapter args must contain no NUL"
     );
-    for name in &provider.requirements.env {
+    for name in &adapter.requirements.env {
         ensure!(
             !name.is_empty()
                 && name
@@ -585,26 +585,26 @@ pub(crate) fn validate_provider(provider: &ProviderConfig) -> Result<()> {
             "invalid required environment variable name"
         );
     }
-    for executable in &provider.requirements.executables {
+    for executable in &adapter.requirements.executables {
         ensure!(
             !executable.trim().is_empty() && !executable.contains('\0'),
             "invalid required executable"
         );
     }
-    if provider.timeout_seconds != 0 {
-        timeout(provider.timeout_seconds)?;
+    if adapter.timeout_seconds != 0 {
+        timeout(adapter.timeout_seconds)?;
     }
 
     Ok(())
 }
 
 impl Project {
-    pub(crate) fn resolve_providers(&self) -> Result<()> {
+    pub(crate) fn resolve_adapters(&self) -> Result<()> {
         for review in &self.reviews {
-            if let Some(id) = &review.provider {
+            if let Some(id) = &review.adapter {
                 ensure!(
-                    self.providers.contains_key(id),
-                    "review {:?}: unknown provider {id:?}",
+                    self.adapters.contains_key(id),
+                    "review {:?}: unknown adapter profile {id:?}",
                     review.id
                 );
             }
@@ -612,10 +612,10 @@ impl Project {
         Ok(())
     }
 
-    pub fn review_provider(&self, review: &Review) -> Option<&ProviderConfig> {
-        match &review.provider {
-            Some(id) => self.providers.get(id),
-            None => self.provider.as_ref(),
+    pub fn review_adapter(&self, review: &Review) -> Option<&AdapterProfile> {
+        match &review.adapter {
+            Some(id) => self.adapters.get(id),
+            None => self.adapter.as_ref(),
         }
     }
 }

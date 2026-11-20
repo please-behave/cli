@@ -6,7 +6,7 @@ use std::fs;
 use support::write;
 
 #[test]
-fn validated_execution_point_overrides_inherited_context_for_checks_and_provider_processes() {
+fn validated_execution_point_overrides_inherited_context_for_checks_and_adapter_processes() {
     // REQ-0012: @context, @param and @rule references reach the check.
     let root = tempfile::tempdir().unwrap();
     assert!(
@@ -78,7 +78,7 @@ printf '%s' "$point"
         "Inspect evidence.",
     );
     let fake = tempfile::tempdir().unwrap();
-    support::context_provider(fake.path());
+    support::context_adapter(fake.path());
     let path = std::env::join_paths(
         std::iter::once(fake.path().to_path_buf())
             .chain(std::env::split_paths(&std::env::var_os("PATH").unwrap())),

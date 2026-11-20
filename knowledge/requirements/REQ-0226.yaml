@@ -1,10 +1,10 @@
 id: REQ-0226
-name: Review Parameters Replace Provider Parameters
+name: Review Parameters Replace Adapter Profile Parameters
 area: reviews
 description: >-
   The parameters of a review must replace the matching top-level keys of the
-  provider parameters as a whole, with nested tables and arrays replaced and
-  not merged, and all other provider keys must be kept.
+  adapter profile parameters as a whole, with nested tables and arrays replaced and
+  not merged, and all other adapter profile keys must be kept.
 rationale: >-
-  A review can change one provider setting without surprises from partly
+  A review can change one adapter profile setting without surprises from partly
   merged nested values.

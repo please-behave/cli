@@ -24,34 +24,34 @@ pub struct Request<'a> {
     pub parameters: &'a crate::parameters::Environment,
 }
 impl Request<'_> {
-    /// Every invocation contains one provider configuration and parameter environment.
-    pub fn provider_config(&self) -> Result<&crate::config::ProviderConfig> {
+    /// Every invocation contains one adapter profile and parameter environment.
+    pub fn adapter_profile(&self) -> Result<&crate::config::AdapterProfile> {
         let first = self
             .reviews
             .first()
-            .context("provider request has no reviews")?;
+            .context("adapter request has no reviews")?;
         ensure!(
             self.reviews
                 .iter()
-                .all(|review| review.provider == first.provider),
-            "provider request mixes configurations"
+                .all(|review| review.adapter == first.adapter),
+            "adapter request mixes configurations"
         );
-        match &first.provider {
-            Some(id) => self
-                .project
-                .providers
-                .get(id)
-                .with_context(|| format!("review {:?}: unknown provider {id:?}", first.id)),
+        match &first.adapter {
+            Some(id) => {
+                self.project.adapters.get(id).with_context(|| {
+                    format!("review {:?}: unknown adapter profile {id:?}", first.id)
+                })
+            }
             None => self
                 .project
-                .provider
+                .adapter
                 .as_ref()
                 .context("no default adapter configured"),
         }
     }
 }
 
-pub trait Provider {
+pub trait Adapter {
     fn review(&self, request: &Request<'_>) -> Result<String>;
     fn review_with_usage(&self, request: &Request<'_>) -> Response {
         Response {
@@ -77,7 +77,7 @@ pub struct AdapterOutput {
 /// All adapters use this invocation path.
 #[derive(Default)]
 pub struct Configured;
-impl Provider for Configured {
+impl Adapter for Configured {
     fn review(&self, request: &Request<'_>) -> Result<String> {
         self.review_with_usage(request).verdict
     }
@@ -152,7 +152,7 @@ fn executable_available(command: &Command, root: &Path, executable: &str) -> boo
 fn requirements(
     command: &Command,
     root: &Path,
-    config: &crate::config::ProviderConfig,
+    config: &crate::config::AdapterProfile,
 ) -> Result<()> {
     for name in &config.requirements.env {
         ensure!(
@@ -173,12 +173,12 @@ fn requirements(
 const PROTOCOL_VERSION: u32 = 0;
 
 fn execute(request: &Request<'_>) -> Result<Response> {
-    let config = request.provider_config()?;
+    let config = request.adapter_profile()?;
     let resolved = request
         .reviews
         .first()
-        .and_then(|review| review.provider.as_ref())
-        .and_then(|id| request.project.external_providers.get(id))
+        .and_then(|review| review.adapter.as_ref())
+        .and_then(|id| request.project.external_adapters.get(id))
         .map(|source| source.resolve(config, &request.project.root))
         .transpose()?;
     let runtime = resolved.as_ref().unwrap_or(config);

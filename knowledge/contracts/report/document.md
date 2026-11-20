@@ -24,7 +24,7 @@ and semantic validation; unsupported versions and non-integer JSON version
 representations are rejected without retry or fallback. The embedded
 `plan_schema_version` is validated independently. Snapshot has no separate version.
 Compatibility follows [DEC-0026](../../decisions/DEC-0026.yaml), independently of
-CLI release numbers. Unknown structural fields are rejected; arbitrary provider
+CLI release numbers. Unknown structural fields are rejected; arbitrary adapter profile
 parameter keys in the embedded plan remain data. Older reports can omit
 `checks_only` (false) and usage metadata (unavailable). Absent optional result
 metadata means no explanation or dependency blocker and no configuration error.
@@ -35,7 +35,7 @@ The reader limits the report file to 128 MiB.
 `timestamp` is the run's UTC timestamp. `repository` is the canonical absolute
 repository root and must match the repository where the report is read.
 `project` preserves the configured project label. The report has no run-level
-provider: one run can use several provider entries, and a provider entry is a
+adapter: one run can use several adapter profiles, and an adapter profile is a
 configured adapter call whose AI service or model Please Behave does not know.
 Declarations and imported provenance are retained in the saved plan.
 
@@ -58,10 +58,10 @@ Each result's `duration_ms` measures its elapsed execution time; a review durati
 belongs to that review's adapter call. `reason` explains its outcome, with optional
 longer `explanation` and structured findings for review verdicts. `exit_code` is
 present when available and absent or null otherwise, including signal termination.
-A review result whose adapter call was made carries `provider`, the ID of the
-named provider entry that produced it, matching the provider of that review in
-the saved plan. The explicit default provider has no ID, so results of reviews
-that use it omit `provider`, as do reviews that made no adapter call (NOT_RUN,
+A review result whose adapter call was made carries `adapter`, the ID of the
+named adapter profile that produced it, matching the adapter profile of that review in
+the saved plan. The explicit default adapter profile has no ID, so results of reviews
+that use it omit `adapter`, as do reviews that made no adapter call (NOT_RUN,
 configuration errors, input changed before the call) and all non-review results.
 A source finding identifies a repository-relative path and optional source line.
 At `commit-msg`, a line without a path cites the saved commit message; a report
@@ -101,7 +101,7 @@ Overall ERROR takes precedence when an error prevents success; otherwise blockin
 FAIL takes precedence. Remaining unexecuted or cancelled required work makes
 the outcome ERROR, except dependency skips governed by their originating outcome.
 For checks-only reports, selected reviews are NOT_RUN by request and excluded
-from the overall calculation, with no provider usage. A checks-only PASS covers
+from the overall calculation, with no adapter usage. A checks-only PASS covers
 checks alone. `overall` must equal the outcome derived from these results.
 
 ## Captured output and usage
@@ -113,12 +113,12 @@ is available. Retained output is not automatically redacted; terminal presentati
 sanitizes untrusted text. `please status --details` makes retained output and
 findings available without running an adapter again.
 
-`provider_usage` holds available counters summed across all adapter calls. A
+`adapter_usage` holds available counters summed across all adapter calls. A
 counter is unavailable if any call did not report it as a positive number.
 Unavailable values remain null or absent, never a fabricated zero or partial sum.
 Cached input, cache writes and reasoning counters are subsets and are not added
 again. `token_usage` is input plus output when both are available and the total
-is representable. These are provider claims, not billing, remaining quota,
+is representable. These are AI provider claims, not billing, remaining quota,
 monetary estimates or a token budget. Missing telemetry does not invalidate an
 otherwise valid verdict.
 

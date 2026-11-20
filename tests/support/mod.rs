@@ -39,18 +39,18 @@ pub fn review_path(root: &Path, id: &str) -> std::path::PathBuf {
     directory.join("rule.toml")
 }
 
-/// Explicit test configuration; no executable is launched by in-memory providers.
+/// Explicit test configuration; no executable is launched by in-memory adapters.
 pub fn configure_adapter(root: &Path) {
     write(
         root,
-        ".please/provider.toml",
+        ".please/adapter.toml",
         "command = 'fake-adapter'\ntimeout_seconds = 180\n",
     );
 }
 
 /// Provider-neutral process fixture validating execution context.
 #[cfg(unix)]
-pub fn context_provider(directory: &Path) -> std::path::PathBuf {
+pub fn context_adapter(directory: &Path) -> std::path::PathBuf {
     use std::os::unix::fs::PermissionsExt;
     let script = directory.join("fake-adapter");
     fs::write(&script, r#"#!/usr/bin/env python3

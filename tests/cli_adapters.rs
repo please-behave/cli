@@ -1,8 +1,9 @@
 #![cfg(unix)]
 mod support;
 use please::{
-    VerificationMode, config, planner,
-    provider::Configured,
+    VerificationMode,
+    adapter::Configured,
+    config, planner,
     report::{self, Status},
 };
 use std::{fs, os::unix::fs::PermissionsExt, path::Path};
@@ -26,12 +27,12 @@ fn fixture() -> tempfile::TempDir {
     write(root.path(), "evidence", "Evidence\n");
     root
 }
-fn review(root: &Path, id: &str, provider: &str, point: &str) {
+fn review(root: &Path, id: &str, adapter: &str, point: &str) {
     write(
         root,
         &format!(".please/reviews/{id}/rule.toml"),
         &format!(
-            "id = {id:?}\ndescription = 'Inspect evidence'\nrun_at = [{point:?}]\n[review]\nprovider = {provider:?}\nprompt = 'prompt.md'\n"
+            "id = {id:?}\ndescription = 'Inspect evidence'\nrun_at = [{point:?}]\n[review]\nadapter = {adapter:?}\nprompt = 'prompt.md'\n"
         ),
     );
     write(
@@ -40,10 +41,10 @@ fn review(root: &Path, id: &str, provider: &str, point: &str) {
         "Unique review instructions\n",
     );
 }
-fn provider(root: &Path, id: &str, mode: &str, requirements: &str) {
+fn adapter(root: &Path, id: &str, mode: &str, requirements: &str) {
     write(
         root,
-        &format!(".please/providers/{id}.toml"),
+        &format!(".please/adapters/{id}.toml"),
         &format!(
             "command = './tool'\nargs = [{mode:?}, '$HOME', '$(false)', '|', '']\ntimeout_seconds = 1\n[parameters]\nlabel = {id:?}\n{requirements}"
         ),
@@ -110,7 +111,7 @@ fn knowledge_schemas_match_adapter_transport_and_generation_constraints() {
     // REQ-0222, REQ-0331, REQ-0332: actual version-zero messages and legacy labels.
     let root = fixture();
     tool(root.path());
-    provider(root.path(), "first", "ok", "");
+    adapter(root.path(), "first", "ok", "");
     review(root.path(), "a", "first", "check");
     let path = root.path().join("tool");
     fs::write(
@@ -219,18 +220,18 @@ print(json.dumps(response))"#,
 #[test]
 // REQ-0219: adapter arguments remain literal while review input arrives over stdin.
 // REQ-0220: a repository-relative adapter runs successfully from the project root.
-fn stdin_results_and_provider_isolation() {
+fn stdin_results_and_adapter_isolation() {
     // REQ-0092: selected reviews execute configured executable adapters and preserve isolated results.
-    // REQ-0125: each review has its own planned call and result, including shared providers.
+    // REQ-0125: each review has its own planned call and result, including shared adapters.
     let root = fixture();
     tool(root.path());
-    provider(
+    adapter(
         root.path(),
         "first",
         "ok",
         "[requirements]\nenv = ['PATH']\nexecutables = ['./tool', 'python3']\n",
     );
-    provider(root.path(), "second", "ok", "");
+    adapter(root.path(), "second", "ok", "");
     for (id, reference) in [("a", "first"), ("b", "first"), ("c", "second")] {
         review(root.path(), id, reference, "check");
     }
@@ -245,7 +246,7 @@ fn stdin_results_and_provider_isolation() {
     let result = execute(root.path());
     assert_eq!(result.overall, Status::Pass, "{:?}", result.results);
     assert_eq!(result.results.len(), 3);
-    assert!(result.provider_usage.is_none());
+    assert!(result.adapter_usage.is_none());
     assert_eq!(report::read(root.path()).unwrap().overall, Status::Pass);
 }
 #[test]
@@ -262,7 +263,7 @@ fn process_and_response_errors_never_pass_and_keep_original_output() {
     ] {
         let root = fixture();
         tool(root.path());
-        provider(root.path(), "first", mode, "");
+        adapter(root.path(), "first", mode, "");
         review(root.path(), "a", "first", "check");
         if mode == "unread" {
             // Larger than the pipe capacity: stdin must remain inside the deadline.
@@ -321,14 +322,14 @@ fn process_and_response_errors_never_pass_and_keep_original_output() {
 fn runtime_requirements_are_deferred_until_selected_after_checks() {
     let root = fixture();
     tool(root.path());
-    provider(
+    adapter(
         root.path(),
         "first",
         "ok",
         "[requirements]\nenv = ['TEST_MISSING_CREDENTIAL_71F52']\n",
     );
     review(root.path(), "a", "first", "pre-push");
-    // Unused and inapplicable providers do not require credentials, including plans.
+    // Unused and inapplicable adapters do not require credentials, including plans.
     let project = config::load(root.path()).unwrap();
     assert!(
         planner::build(&project, Some("pre-push"), false)
@@ -346,28 +347,28 @@ fn runtime_requirements_are_deferred_until_selected_after_checks() {
     let result = execute(root.path());
     assert_eq!(result.overall, Status::Error);
     assert!(format!("{:?}", result.results).contains("required environment variable"));
-    provider(
+    adapter(
         root.path(),
         "first",
         "ok",
         "[requirements]\nexecutables = ['please-missing-test-tool-71f52']\n",
     );
     assert!(format!("{:?}", execute(root.path()).results).contains("required executable"));
-    provider(root.path(), "first", "ok", "");
+    adapter(root.path(), "first", "ok", "");
     fs::remove_file(root.path().join("tool")).unwrap();
     assert_eq!(execute(root.path()).overall, Status::Error);
 }
 #[test]
-// REQ-0218: unknown provider fields are rejected.
-fn adapter_configuration_is_strict_and_defaults_are_explicit() {
+// REQ-0218: unknown adapter profile fields are rejected.
+fn adapter_profileuration_is_strict_and_defaults_are_explicit() {
     let root = fixture();
-    provider(root.path(), "first", "ok", "");
+    adapter(root.path(), "first", "ok", "");
     review(root.path(), "a", "first", "check");
-    let path = root.path().join(".please/providers/first.toml");
+    let path = root.path().join(".please/adapters/first.toml");
     let valid = fs::read_to_string(&path).unwrap();
     for invalid in [
         valid.replace("command = './tool'", "command = ''"),
-        format!("provider = 'unsupported'\n{valid}"),
+        format!("adapter = 'unsupported'\n{valid}"),
         format!("{valid}\n[requirements]\nenv = ['BAD=NAME']\n"),
         format!("unknown = true\n{valid}"),
         format!("api_key = 'forbidden'\n{valid}"),
@@ -383,40 +384,37 @@ fn adapter_configuration_is_strict_and_defaults_are_explicit() {
     assert_eq!(
         config::load(root.path())
             .unwrap()
-            .review_provider(&config::load(root.path()).unwrap().reviews[0])
+            .review_adapter(&config::load(root.path()).unwrap().reviews[0])
             .unwrap()
             .timeout_seconds,
         0
     );
     fs::write(path, valid).unwrap();
     let project = config::load(root.path()).unwrap();
-    assert!(project.provider.is_none());
+    assert!(project.adapter.is_none());
     assert_eq!(
-        project
-            .review_provider(&project.reviews[0])
-            .unwrap()
-            .command,
+        project.review_adapter(&project.reviews[0]).unwrap().command,
         "./tool"
     );
     fs::write(
-        root.path().join(".please/provider.toml"),
+        root.path().join(".please/adapter.toml"),
         "command = 'missing-but-valid'\ntimeout_seconds = 5\n",
     )
     .unwrap();
     assert_eq!(
-        config::load(root.path()).unwrap().provider.unwrap().command,
+        config::load(root.path()).unwrap().adapter.unwrap().command,
         "missing-but-valid"
     );
 }
 #[test]
-// REQ-0224: provider and review definitions have no authentication, model or tool settings outside the opaque parameters.
+// REQ-0224: adapter and review definitions have no authentication, model or tool settings outside the opaque parameters.
 fn authentication_model_and_tool_settings_exist_only_as_opaque_parameters() {
     let root = fixture();
-    provider(root.path(), "first", "ok", "");
+    adapter(root.path(), "first", "ok", "");
     review(root.path(), "a", "first", "check");
-    let provider_path = root.path().join(".please/providers/first.toml");
+    let adapter_path = root.path().join(".please/adapters/first.toml");
     let review_path = root.path().join(".please/reviews/a/rule.toml");
-    let provider_valid = fs::read_to_string(&provider_path).unwrap();
+    let adapter_valid = fs::read_to_string(&adapter_path).unwrap();
     let review_valid = fs::read_to_string(&review_path).unwrap();
     let settings = [
         "api_key = 'x'",
@@ -429,19 +427,19 @@ fn authentication_model_and_tool_settings_exist_only_as_opaque_parameters() {
     ];
     for setting in settings {
         for (path, rejected) in [
-            (&provider_path, format!("{setting}\n{provider_valid}")),
+            (&adapter_path, format!("{setting}\n{adapter_valid}")),
             (&review_path, format!("{setting}\n{review_valid}")),
             (&review_path, format!("{review_valid}{setting}\n")),
         ] {
             fs::write(path, rejected).unwrap();
             assert!(config::load(root.path()).is_err(), "{setting}");
-            fs::write(&provider_path, &provider_valid).unwrap();
+            fs::write(&adapter_path, &adapter_valid).unwrap();
             fs::write(&review_path, &review_valid).unwrap();
         }
     }
     fs::write(
-        &provider_path,
-        format!("{provider_valid}{}\n", settings.join("\n")),
+        &adapter_path,
+        format!("{adapter_valid}{}\n", settings.join("\n")),
     )
     .unwrap();
     fs::write(
@@ -458,11 +456,11 @@ fn authentication_model_and_tool_settings_exist_only_as_opaque_parameters() {
 // REQ-0123: no cost or total token budget setting exists and the report states neither.
 fn reviews_have_no_cost_estimate_or_token_budget() {
     let root = fixture();
-    provider(root.path(), "first", "ok", "");
+    adapter(root.path(), "first", "ok", "");
     review(root.path(), "a", "first", "check");
-    let provider_path = root.path().join(".please/providers/first.toml");
+    let adapter_path = root.path().join(".please/adapters/first.toml");
     let review_path = root.path().join(".please/reviews/a/rule.toml");
-    let provider_valid = fs::read_to_string(&provider_path).unwrap();
+    let adapter_valid = fs::read_to_string(&adapter_path).unwrap();
     let review_valid = fs::read_to_string(&review_path).unwrap();
     for setting in [
         "token_budget = 1",
@@ -471,12 +469,12 @@ fn reviews_have_no_cost_estimate_or_token_budget() {
         "price_per_token = 1",
     ] {
         for (path, rejected) in [
-            (&provider_path, format!("{setting}\n{provider_valid}")),
+            (&adapter_path, format!("{setting}\n{adapter_valid}")),
             (&review_path, format!("{review_valid}{setting}\n")),
         ] {
             fs::write(path, rejected).unwrap();
             assert!(config::load(root.path()).is_err(), "{setting}");
-            fs::write(&provider_path, &provider_valid).unwrap();
+            fs::write(&adapter_path, &adapter_valid).unwrap();
             fs::write(&review_path, &review_valid).unwrap();
         }
     }
@@ -494,7 +492,7 @@ print(json.dumps({'protocol_version':request['protocol_version'],'reason':'Evide
     fs::set_permissions(root.path().join("tool"), fs::Permissions::from_mode(0o755)).unwrap();
     write(
         root.path(),
-        ".please/providers/first.toml",
+        ".please/adapters/first.toml",
         "command = './tool'\ntimeout_seconds = 5\n",
     );
     let result = execute(root.path());
@@ -526,7 +524,7 @@ print(json.dumps({'protocol_version':request['protocol_version'],'reason':'Evide
 fn completed_fail_and_error_respect_review_blocking() {
     let root = fixture();
     tool(root.path());
-    provider(root.path(), "first", "fail", "");
+    adapter(root.path(), "first", "fail", "");
     review(root.path(), "a", "first", "check");
     let path = root.path().join(".please/reviews/a/rule.toml");
     fs::write(
@@ -538,7 +536,7 @@ fn completed_fail_and_error_respect_review_blocking() {
     .unwrap();
     assert_eq!(execute(root.path()).overall, Status::Pass);
     for mode in ["error", "nonzero", "malformed", "timeout"] {
-        provider(root.path(), "first", mode, "");
+        adapter(root.path(), "first", mode, "");
         let result = execute(root.path());
         assert_eq!(result.overall, Status::Pass);
         assert_eq!(
@@ -620,7 +618,7 @@ else: print(json.dumps(response))
         fs::set_permissions(root.path().join("tool"), fs::Permissions::from_mode(0o755)).unwrap();
         write(
             root.path(),
-            ".please/providers/first.toml",
+            ".please/adapters/first.toml",
             &format!("command = './tool'\nargs = [{mode:?}]\ntimeout_seconds = 5\n"),
         );
         review(root.path(), "a", "first", "check");
@@ -645,7 +643,7 @@ else: print(json.dumps(response))
         }
         if mode == "zero-usage" {
             assert_eq!(result.token_usage, None);
-            assert_eq!(result.provider_usage, None);
+            assert_eq!(result.adapter_usage, None);
         }
         if mode == "bad-usage" {
             assert_eq!(result.token_usage, Some(14));
@@ -655,7 +653,7 @@ else: print(json.dumps(response))
             assert_eq!(
                 report::read(root.path())
                     .unwrap()
-                    .provider_usage
+                    .adapter_usage
                     .unwrap()
                     .cached_input_tokens,
                 Some(3)
@@ -666,12 +664,12 @@ else: print(json.dumps(response))
 
 #[test]
 // REQ-0225: opaque mixed JSON values reach the adapter and non-JSON values are rejected.
-// REQ-0226: review keys replace provider keys and nested tables without changing unrelated keys.
-fn structured_parameters_merge_per_review_without_changing_provider_definition() {
+// REQ-0226: review keys replace adapter keys and nested tables without changing unrelated keys.
+fn structured_parameters_merge_per_review_without_changing_adapter_definition() {
     let root = fixture();
     write(
         root.path(),
-        ".please/provider.toml",
+        ".please/adapter.toml",
         "command = 'python3'\nargs = ['tool.py']\ntimeout_seconds = 5\n[parameters]\nvariant = 'quick'\nretained = [1, true, 'text']\n[parameters.tools]\nread = true\nsearch = true\n",
     );
     for id in ["a", "b"] {
@@ -722,7 +720,7 @@ print(json.dumps({'protocol_version':1, 'reason':'Parameters delivered', 'findin
     assert_eq!(
         config::load(root.path())
             .unwrap()
-            .provider
+            .adapter
             .unwrap()
             .parameters["tools"]["search"],
         true
@@ -730,7 +728,7 @@ print(json.dumps({'protocol_version':1, 'reason':'Parameters delivered', 'findin
     for value in ["nan", "inf", "2026-01-01"] {
         write(
             root.path(),
-            ".please/provider.toml",
+            ".please/adapter.toml",
             &format!(
                 "command = 'fake-adapter'\ntimeout_seconds = 1\n[parameters]\ninvalid = {value}\n"
             ),
@@ -740,13 +738,13 @@ print(json.dumps({'protocol_version':1, 'reason':'Parameters delivered', 'findin
 }
 
 #[test]
-// REQ-0290: initialization provides no provider configuration or default adapter.
-fn init_has_no_provider_and_selected_reviews_require_explicit_configuration() {
-    // REQ-0215: a selected review without a provider blocks execution; disabled and unselected reviews need none.
-    // REQ-0124: initialization supplies no provider and selected reviews need an explicit adapter.
+// REQ-0290: initialization provides no adapter profile or default adapter.
+fn init_has_no_adapter_and_selected_reviews_require_explicit_configuration() {
+    // REQ-0215: a selected review without an adapter blocks execution; disabled and unselected reviews need none.
+    // REQ-0124: initialization supplies no adapter and selected reviews need an explicit adapter.
     let root = fixture();
-    assert!(!root.path().join(".please/provider.toml").exists());
-    assert!(config::load(root.path()).unwrap().provider.is_none());
+    assert!(!root.path().join(".please/adapter.toml").exists());
+    assert!(config::load(root.path()).unwrap().adapter.is_none());
     support::check(root.path(), "must-not-start", &["check"], "touch executed");
     write(
         root.path(),
@@ -764,7 +762,7 @@ fn init_has_no_provider_and_selected_reviews_require_explicit_configuration() {
     assert!(
         plan.blocking_reasons
             .iter()
-            .any(|r| r.contains("no adapter configured"))
+            .any(|r| r.contains("no adapter profile configured"))
     );
     assert_eq!(execute(root.path()).overall, Status::Error);
     assert!(!root.path().join("executed").exists());
@@ -792,19 +790,19 @@ fn documented_dummy_runs_from_supporting_adapter_directory() {
     let root = fixture();
     write(
         root.path(),
-        ".please/providers/adapters/dummy.py",
+        ".please/adapters/adapters/dummy.py",
         include_str!("../examples/adapters/dummy.py"),
     );
-    // This supporting file must never be recursively interpreted as a provider.
+    // This supporting file must never be recursively interpreted as an adapter.
     write(
         root.path(),
-        ".please/providers/adapters/data.toml",
-        "not a provider definition",
+        ".please/adapters/adapters/data.toml",
+        "not an adapter definition",
     );
     write(
         root.path(),
-        ".please/providers/dummy.toml",
-        "command = 'python3'\nargs = ['.please/providers/adapters/dummy.py']\ntimeout_seconds = 5\n",
+        ".please/adapters/dummy.toml",
+        "command = 'python3'\nargs = ['.please/adapters/adapters/dummy.py']\ntimeout_seconds = 5\n",
     );
     review(root.path(), "a", "dummy", "check");
     let result = execute(root.path());
@@ -820,7 +818,7 @@ fn documented_dummy_runs_from_supporting_adapter_directory() {
 }
 
 #[test]
-// REQ-0216: unknown provider names fail configuration loading even on disabled reviews.
+// REQ-0216: unknown adapter profile names fail configuration loading even on disabled reviews.
 fn unknown_named_references_are_rejected_even_for_disabled_reviews() {
     let root = fixture();
     review(root.path(), "a", "missing", "check");
@@ -836,18 +834,18 @@ fn unknown_named_references_are_rejected_even_for_disabled_reviews() {
         }
         let error = format!("{:#}", config::load(root.path()).unwrap_err());
         assert!(
-            error.contains("unknown provider") && error.contains("missing"),
+            error.contains("unknown adapter profile") && error.contains("missing"),
             "{error}"
         );
     }
 }
 
 #[test]
-// REQ-0217: providers require a nonempty command and a timeout within the contract bounds.
-fn provider_command_and_timeout_are_required_and_bounded() {
+// REQ-0217: adapters require a nonempty command and a timeout within the contract bounds.
+fn adapter_command_and_timeout_are_required_and_bounded() {
     let root = fixture();
     review(root.path(), "a", "first", "check");
-    let path = root.path().join(".please/providers/first.toml");
+    let path = root.path().join(".please/adapters/first.toml");
     for invalid in [
         "timeout_seconds = 1\n",
         "command = ''\ntimeout_seconds = 1\n",
@@ -856,7 +854,7 @@ fn provider_command_and_timeout_are_required_and_bounded() {
         "command = 'fake-adapter'\ntimeout_seconds = 3601\n",
         "command = 'fake-adapter'\ntimeout_seconds = '1'\n",
     ] {
-        write(root.path(), ".please/providers/first.toml", invalid);
+        write(root.path(), ".please/adapters/first.toml", invalid);
         assert!(config::load(root.path()).is_err(), "accepted {invalid}");
     }
     for timeout in [0, 1, 3600] {
@@ -866,6 +864,6 @@ fn provider_command_and_timeout_are_required_and_bounded() {
         )
         .unwrap();
         let project = config::load(root.path()).unwrap();
-        assert_eq!(project.providers["first"].timeout_seconds, timeout);
+        assert_eq!(project.adapters["first"].timeout_seconds, timeout);
     }
 }

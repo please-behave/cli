@@ -36,15 +36,15 @@ Read the status and blocking reasons first. A planned preview describes what can
 be executed; it does not certify that the Rules pass. A blocked preview exits 2
 and explains what prevents preparation. Omitted reviews have no result; disabled
 Rules are shown separately. Checks-only execution leaves selected reviews NOT_RUN.
-Inspect context sizes, declared provider settings and the call estimate before
-running the full selection. Shared providers still make a separate call per review.
+Inspect context sizes, declared adapter profile settings and the call estimate before
+running the full selection. Shared adapter profiles still make a separate call per review.
 
 The binding [Execution Plan API](../knowledge/contracts/plan/api.yaml) defines:
 
 - [Preview, diagnostics and compatibility](../knowledge/contracts/plan/preview.md),
   with the structural JSON Schema.
 - [Prepared plan and identity](../knowledge/contracts/plan/prepared.md), including
-  selection, dependencies, input, provider provenance and identity semantics.
+  selection, dependencies, input, adapter profile provenance and identity semantics.
 
 For execution options and saved results, see [usage](usage.md).
 The repository's own published governor setup is described in

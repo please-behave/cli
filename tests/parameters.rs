@@ -1,8 +1,9 @@
 #![cfg(unix)]
 mod support;
 use please::{
-    VerificationMode, config, planner,
-    provider::{Provider, Request},
+    VerificationMode,
+    adapter::{Adapter, Request},
+    config, planner,
     report::{self, Status},
 };
 use std::{fs, path::Path, sync::Mutex};
@@ -10,9 +11,9 @@ use support::{check, write};
 use tempfile::TempDir;
 
 struct Never;
-impl Provider for Never {
+impl Adapter for Never {
     fn review(&self, _: &Request<'_>) -> anyhow::Result<String> {
-        panic!("unexpected provider call")
+        panic!("unexpected adapter call")
     }
 }
 fn project() -> TempDir {
@@ -302,10 +303,10 @@ fn outcomes_distinguish_violations_from_missing_processes_scripts_and_signals() 
 struct Reviews {
     calls: Mutex<Vec<please::parameters::Environment>>,
 }
-impl Provider for Reviews {
+impl Adapter for Reviews {
     fn review(&self, request: &Request<'_>) -> anyhow::Result<String> {
         self.calls.lock().unwrap().push(request.parameters.clone());
-        assert!(please::provider::prompt(request)?.contains("rule_parameters"));
+        assert!(please::adapter::prompt(request)?.contains("rule_parameters"));
         Ok(serde_json::json!({"reviews": request.reviews.iter().map(|r| serde_json::json!({
             "id":r.id, "status":"PASS", "reason":"Satisfied", "findings":[{"message":"Verified", "path":"evidence", "line":1}]
         })).collect::<Vec<_>>()}).to_string())
@@ -346,19 +347,19 @@ fn reviews_validate_and_call_by_resolved_environment() {
             .planned_model_calls,
         3
     );
-    let provider = Reviews {
+    let adapter = Reviews {
         calls: Mutex::new(vec![]),
     };
     let report = please::verify_project_at(
         project,
-        &provider,
+        &adapter,
         VerificationMode::AllRules,
         Some("check"),
         &mut |_| {},
     )
     .unwrap();
     assert_eq!(report.overall, Status::Pass);
-    let calls = provider.calls.lock().unwrap();
+    let calls = adapter.calls.lock().unwrap();
     assert_eq!(calls.len(), 3);
     assert_eq!(calls[0]["label"], "first");
     assert_eq!(calls[1]["label"], "second");
@@ -380,7 +381,7 @@ fn reviews_validate_and_call_by_resolved_environment() {
     );
     let report = please::verify_project_at(
         config::load(root.path()).unwrap(),
-        &provider,
+        &adapter,
         VerificationMode::AllRules,
         Some("check"),
         &mut |_| {},
@@ -396,14 +397,14 @@ fn reviews_validate_and_call_by_resolved_environment() {
 }
 
 #[test]
-fn provider_subprocess_receives_only_its_call_parameters_and_clears_inherited_values() {
+fn adapter_subprocess_receives_only_its_call_parameters_and_clears_inherited_values() {
     // REQ-0169: adapters receive each review's resolved rule parameters in their own request field.
     use std::os::unix::fs::PermissionsExt;
     let root = project();
     write(
         root.path(),
-        ".please/provider.toml",
-        "command = 'fake-adapter'\ntimeout_seconds = 5\n[parameters]\nlabel = 'provider setting'\n",
+        ".please/adapter.toml",
+        "command = 'fake-adapter'\ntimeout_seconds = 5\n[parameters]\nlabel = 'adapter setting'\n",
     );
     review(
         root.path(),
@@ -422,7 +423,7 @@ import json, os, sys
 assert not [name for name in os.environ if name.startswith("PLEASE_")]
 request = json.load(sys.stdin)
 assert request["execution_point"] == "check"
-assert request["reviews"][0]["parameters"]["label"] == "provider setting"
+assert request["reviews"][0]["parameters"]["label"] == "adapter setting"
 parameters = request["rule_parameters"]
 assert "undeclared" not in parameters and "optional" not in parameters
 if parameters["label"] == "first":
@@ -464,7 +465,7 @@ print(json.dumps({"protocol_version": 1, "reason": "Parameters delivered", "find
     let saved = report::read(root.path()).unwrap();
     assert_eq!(saved.results.len(), 2);
     assert_eq!(saved.plan.planned_model_calls, 2);
-    assert_eq!(saved.provider_usage.unwrap().input_tokens, Some(20));
+    assert_eq!(saved.adapter_usage.unwrap().input_tokens, Some(20));
     assert_eq!(saved.token_usage, Some(28));
 }
 

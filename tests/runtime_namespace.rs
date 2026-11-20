@@ -1,17 +1,18 @@
 #![cfg(unix)]
 mod support;
 use please::{
-    Progress, VerificationMode, config,
-    provider::{Provider, Request},
+    Progress, VerificationMode,
+    adapter::{Adapter, Request},
+    config,
     report::{self, Status},
 };
 use std::fs;
 use support::{check, write};
 
 struct Never;
-impl Provider for Never {
+impl Adapter for Never {
     fn review(&self, _: &Request<'_>) -> anyhow::Result<String> {
-        panic!("no provider call expected")
+        panic!("no adapter call expected")
     }
 }
 
@@ -33,8 +34,8 @@ fn fixture() -> tempfile::TempDir {
 }
 
 #[test]
-// REQ-0252: rule and provider IDs reject the reserved please- prefix.
-fn product_prefix_is_reserved_for_rules_and_providers() {
+// REQ-0252: rule and adapter IDs reject the reserved please- prefix.
+fn product_prefix_is_reserved_for_rules_and_adapters() {
     for id in ["please-plan", "please-snapshot", "please-tree-stability"] {
         let root = fixture();
         check(root.path(), id, &["check"], "exit 0");
@@ -46,7 +47,7 @@ fn product_prefix_is_reserved_for_rules_and_providers() {
     assert!(config::load(root.path()).is_ok());
     write(
         root.path(),
-        ".please/providers/please-provider.toml",
+        ".please/adapters/please-adapter.toml",
         "command = 'fake-adapter'\ntimeout_seconds = 5\n",
     );
     assert!(
@@ -82,7 +83,7 @@ fn library_phases_and_saved_integrity_results_use_product_namespace() {
         phases,
         [
             "Preparing execution plan and working files …",
-            "Checks only: reviews not run; no provider call.",
+            "Checks only: reviews not run; no adapter call.",
             "No active checks configured.",
             "Capturing working files …",
             "Checking final working file state …",

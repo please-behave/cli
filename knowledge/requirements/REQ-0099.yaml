@@ -7,7 +7,7 @@ description: >-
   content and change set of the files in its scope as selected and, at the
   commit-msg execution point, the commit message as a whole.
 rationale: >-
-  A provider serves many rules, so each rule must declare what its review
-  needs, and the provider decides how to use it.
+  An adapter profile serves many rules, so each rule must declare what its review
+  needs, and the adapter profile decides how to use it.
 decisions:
   - DEC-0022

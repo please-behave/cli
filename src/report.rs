@@ -5,7 +5,7 @@ use std::{io::Write, path::Path};
 
 pub use crate::limits::MAX_SUMMARY_CHARS;
 
-/// Provider-reported counters summed across review invocations. A counter is
+/// Adapter-reported counters summed across review invocations. A counter is
 /// `None` when any invocation did not report it as a positive number.
 /// Cache and reasoning counters are subsets, never added to the total again.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -76,9 +76,9 @@ pub struct Item {
     /// Immediate failed prerequisite; its originating outcome determines enforcement.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub blocked_by: Option<String>,
-    /// Named provider entry whose adapter call produced this review result.
+    /// Named adapter entry whose adapter call produced this review result.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub provider: Option<String>,
+    pub adapter: Option<String>,
     pub duration_ms: u64,
     pub reason: String,
     /// Optional longer explanation of an adapter verdict.
@@ -101,7 +101,7 @@ impl Item {
             blocking: true,
             configuration_error: false,
             blocked_by: None,
-            provider: None,
+            adapter: None,
             duration_ms: 0,
             reason,
             explanation: None,
@@ -127,7 +127,7 @@ pub struct Report {
     pub max_display_files: usize,
     pub token_usage: Option<u64>,
     #[serde(default)]
-    pub provider_usage: Option<TokenUsage>,
+    pub adapter_usage: Option<TokenUsage>,
     #[serde(default)]
     pub checks_only: bool,
     pub plan: crate::planner::Plan,
@@ -225,17 +225,16 @@ pub fn read(root: &Path) -> Result<Report> {
         .chain(plan.omitted.iter().map(|o| &o.rule))
     {
         ensure!(
-            rule.provider.is_some() == rule.provider_config.is_some()
-                && (rule.provider.is_none() || rule.kind == "review"),
-            "inconsistent report provider metadata"
+            rule.adapter.is_some() == rule.adapter_profile.is_some()
+                && (rule.adapter.is_none() || rule.kind == "review"),
+            "inconsistent report adapter metadata"
         );
         ensure!(
-            rule.provider_origin.is_none() || (rule.kind == "review" && rule.provider.is_some()),
-            "inconsistent external provider provenance"
+            rule.adapter_origin.is_none() || (rule.kind == "review" && rule.adapter.is_some()),
+            "inconsistent external adapter provenance"
         );
-        if let Some(config) = &rule.provider_config {
-            crate::config::validate_provider(config)
-                .context("invalid report provider configuration")?;
+        if let Some(config) = &rule.adapter_profile {
+            crate::config::validate_adapter(config).context("invalid report adapter profile")?;
         }
     }
     let expected: std::collections::BTreeSet<_> =
@@ -278,14 +277,14 @@ pub fn read(root: &Path) -> Result<Report> {
         "inconsistent review configuration error"
     );
     for item in &report.results {
-        if let Some(provider) = &item.provider {
+        if let Some(adapter) = &item.adapter {
             ensure!(
                 item.kind == "review"
                     && plan
                         .scheduled
                         .iter()
-                        .any(|r| r.id == item.id && r.provider.as_ref() == Some(provider)),
-                "inconsistent review provider"
+                        .any(|r| r.id == item.id && r.adapter.as_ref() == Some(adapter)),
+                "inconsistent review adapter"
             );
         }
         for finding in &item.findings {
@@ -370,7 +369,7 @@ pub fn read(root: &Path) -> Result<Report> {
     );
     ensure!(
         !report.checks_only
-            || (report.provider_usage.is_none()
+            || (report.adapter_usage.is_none()
                 && report.token_usage.is_none()
                 && report
                     .results

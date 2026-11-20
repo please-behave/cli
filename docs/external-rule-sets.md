@@ -131,27 +131,27 @@ imports execute separately and retain distinguishable IDs in plans and reports;
 repeated references within one binding execute once. See
 [parameter declarations and delivery](../knowledge/contracts/configuration/parameters.md).
 
-## Named provider configurations
+## Named adapter profiles
 
-A selected directory may distribute complete named configurations in
-`providers/<id>.toml` beside its `ruleset.toml`. They use the same adapter fields,
-defaults and limits as [local provider configurations](configuration.md#configure-the-ai-provider).
-All provider files in that directory are validated, including unused definitions.
-A review selects one with `provider = "quality"` in its `[review]` table.
+A selected directory may distribute complete named adapter profiles in
+`adapters/<id>.toml` beside its `ruleset.toml`. They use the same adapter fields,
+defaults and limits as [local adapter profiles](configuration.md#configure-the-adapter-profile).
+All adapter profile files in that directory are validated, including unused definitions.
+A review selects one with `adapter = "quality"` in its `[review]` table.
 
-Provider IDs are global across local files and all explicitly imported sets.
+Adapter profile IDs are global across local files and all explicitly imported sets.
 Cross-import references resolve after loading all imports, independently of order.
 A definition that differs from an existing one with the same ID fails, and so
-does an ID that a local file or an independent provider import already uses;
+does an ID that a local file or an independent adapter profile import already uses;
 consumer overrides are unsupported. Rule sets that ship identical definitions of
-one ID, also from different commits of one repository, share that provider. A provider-only set may use `rules = []`, with the usual
+one ID, also from different commits of one repository, share that adapter profile. An adapter-profile-only set may use `rules = []`, with the usual
 required `id`, `description` and nonempty `run_at`. No extra imports are inferred
 or downloaded. Reviews without references keep the consumer's explicit default adapter.
 
-Provider files follow the existing source-boundary, integrity and atomic state
+Adapter profile files follow the existing source-boundary, integrity and atomic state
 publication checks. All configurations identify executable adapters; runtime
 requirements may name environment variables and executables. No credential values
-belong in provider files. Please Behave ships no provider implementation.
+belong in adapter profile files. Please Behave ships no adapter implementation.
 
 ## Refresh, storage and provenance
 
@@ -178,7 +178,7 @@ Project resolution state lives at `please/external-rule-sets.json` inside the
 project's Git directory (per worktree). It records repository digest, configured
 ref, selected directory and resolved commit. It stays outside tracked files and
 working-tree snapshots. Refresh atomically replaces complete state after all
-local and imported rules, provider definitions and references validate. Removed references are dropped. Cached
+local and imported rules, adapter profile definitions and references validate. Removed references are dropped. Cached
 revisions remain available; no automatic eviction is performed.
 
 OS locks serialize writers, including different projects sharing a cache. Locks
@@ -227,16 +227,16 @@ helpers and SSH configuration remain trusted integrations.
 Checks execute with the Please Behave user's permissions. Resource confinement does not
 prevent scripts from accessing other paths, credentials or the network. Import
 executable Rules only from repositories you trust; see [Trusting repositories](#trusting-repositories).
-Imported generic CLI provider commands
+Imported generic CLI adapter commands
 use this same trust boundary and execute from the consumer root with its inherited
 environment. They may reference installed programs or consumer-provided wrappers;
-Legacy Rule Set-provider command arguments stay literal; independent provider
+Rule Set adapter profile command arguments stay literal; independent adapter profile
 packages below add explicit cached-resource references. Review every
-imported provider definition before trusting its repository. There is no process sandbox.
+imported adapter profile definition before trusting its repository. There is no process sandbox.
 
 ## Trusting repositories
 
-Every Git repository a project imports from, for Rule Sets and providers alike, must
+Every Git repository a project imports from, for Rule Sets and adapter profiles alike, must
 be trusted by the user. Without trust, `sync`, `run` and `run --plan` fail before
 anything is retrieved, loaded or executed, naming the repository and the command to run:
 
@@ -263,35 +263,35 @@ are lowercase, default ports, trailing slashes and a `.git` suffix are dropped, 
 repository is identified by its absolute path. Other aliases, such as an SSH and an HTTPS
 location of one repository, are separate and must each be trusted.
 
-## Independent provider packages
+## Independent adapter profile packages
 
-`[[provider_imports]]` selects a named provider independently of any Rule Set,
-using `id`, `git`, `path` and `ref`. The selected directory contains `provider.toml`
-and adapter resources. Rulesets and providers may come from separate repositories;
+`[[adapter_imports]]` selects a named adapter profile independently of any Rule Set,
+using `id`, `git`, `path` and `ref`. The selected directory contains `adapter.toml`
+and adapter resources. Rulesets and adapter profiles may come from separate repositories;
 sharing a source revision still reuses the same immutable checkout. No empty
-provider-only Rule Set or execution point is required. Existing Rule Set-bundled
-providers above remain compatible. See the
-[provider import reference](configuration.md#import-providers-from-git) for a
+adapter-profile-only Rule Set or execution point is required. Existing Rule Set-bundled
+adapter profiles above remain compatible. See the
+[adapter profile import reference](configuration.md#import-adapter-profiles-from-git) for a
 complete consumer and package example.
 
-No provider files are copied into the consumer. Imported command/args and
-executable requirements can use `@provider/` for the selected directory,
+No adapter profile files are copied into the consumer. Imported command/args and
+executable requirements can use `@adapter/` for the selected directory,
 `@source/` for its repository and `@repo/` for the consumer. Path confinement,
 symlink rejection and cache receipts apply. `@@` escapes a literal @. Plain
 arguments keep their existing consumer-root semantics. These references are
-specific to independent packages; existing local/Rule Set-provider arguments
+specific to independent packages; existing local/Rule Set adapter profile arguments
 retain their literal behavior. This makes adapter distribution explicit without
-adding provider-specific code to Please Behave.
+adding AI-provider-specific code to Please Behave.
 
-Both import kinds publish one resolution state atomically. Provider IDs must be
+Both import kinds publish one resolution state atomically. Adapter profile IDs must be
 unique across local files, Rule Set exports and independent packages, except that
-identical Rule Set exports share one provider. Repeated
+identical Rule Set exports share one adapter profile. Repeated
 IDs in independent imports fail even when selected content is identical. References
-resolve after loading all declared sources. Plans/reports retain provider origin
+resolve after loading all declared sources. Plans/reports retain adapter profile origin
 metadata and stable raw reference tokens; resolved machine-specific cache paths
-are runtime details. An unavailable/corrupt imported provider blocks execution,
+are runtime details. An unavailable/corrupt imported adapter profile blocks execution,
 even for an advisory review. Adapter authentication and tools are still checked
-only when a selected review reaches its provider call.
+only when a selected review reaches its adapter call.
 
 ## Recovery and limits
 
@@ -304,6 +304,6 @@ comes from host Git/SSH; Git stderr is suppressed to avoid credential disclosure
 Fetches have a 60-second deadline; local Git operations and lock waits have
 30-second deadlines. Cached repositories allow 8 MiB/file, 128 MiB total,
 100,000 entries and 128 directory levels. Metadata is limited to 64 KiB/file;
-the combined configuration allows 256 Rules, 256 Rule Sets and 256 named providers. Resolution state
+the combined configuration allows 256 Rules, 256 Rule Sets and 256 named adapter profiles. Resolution state
 is limited to 64 KiB; refs to 1024 bytes. Shared-cache locking currently uses Unix
 OS locks; external imports on Windows remain unsupported.

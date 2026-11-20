@@ -30,17 +30,17 @@ pub struct Import {
     pub rule_parameters: BTreeMap<String, BTreeMap<String, toml::Value>>,
 }
 
-/// A named provider package selected independently of Rule Sets.
+/// A named adapter package selected independently of Rule Sets.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
-pub struct ProviderImport {
+pub struct AdapterImport {
     pub id: String,
     pub git: String,
     pub path: String,
     #[serde(rename = "ref")]
     pub reference: String,
 }
-impl ProviderImport {
+impl AdapterImport {
     fn selector(&self) -> Import {
         Import {
             git: self.git.clone(),
@@ -54,27 +54,27 @@ impl ProviderImport {
 
 /// Runtime cache location stays private; public provenance contains no cache paths.
 #[derive(Debug)]
-pub struct ProviderSource {
+pub struct AdapterSource {
     pub origin: Origin,
     root: PathBuf,
 }
-impl ProviderSource {
+impl AdapterSource {
     pub(crate) fn resolve(
         &self,
-        provider: &config::ProviderConfig,
+        adapter: &config::AdapterProfile,
         repo: &Path,
-    ) -> Result<config::ProviderConfig> {
+    ) -> Result<config::AdapterProfile> {
         cache::validate_revision(
             self.root
                 .parent()
-                .context("missing provider cache revision")?,
+                .context("missing adapter cache revision")?,
             &self.origin.commit,
         )
-        .context("external provider cache unavailable or corrupt; run please sync")?;
-        let mut provider = provider.clone();
-        for token in std::iter::once(&mut provider.command)
-            .chain(&mut provider.args)
-            .chain(&mut provider.requirements.executables)
+        .context("external adapter profile cache unavailable or corrupt; run please sync")?;
+        let mut adapter = adapter.clone();
+        for token in std::iter::once(&mut adapter.command)
+            .chain(&mut adapter.args)
+            .chain(&mut adapter.requirements.executables)
         {
             if let Some(literal) = token.strip_prefix("@@") {
                 *token = format!("@{literal}");
@@ -83,25 +83,25 @@ impl ProviderSource {
             if !token.starts_with('@') {
                 continue;
             }
-            let (prefix, suffix) = token
-                .split_once('/')
-                .context("external provider references require @provider/, @source/ or @repo/")?;
+            let (prefix, suffix) = token.split_once('/').context(
+                "external adapter profile references require @adapter/, @source/ or @repo/",
+            )?;
             config::relative(Path::new(suffix))
-                .context("unsafe external provider resource path")?;
+                .context("unsafe external adapter profile resource path")?;
             let (root, relative): (&Path, PathBuf) = match prefix {
-                "@provider" => (&self.root, Path::new(&self.origin.path).join(suffix)),
+                "@adapter" => (&self.root, Path::new(&self.origin.path).join(suffix)),
                 "@source" => (&self.root, PathBuf::from(suffix)),
                 "@repo" => (repo, PathBuf::from(suffix)),
                 _ => anyhow::bail!(
-                    "unknown external provider path reference; escape a literal @ with @@"
+                    "unknown external adapter path reference; escape a literal @ with @@"
                 ),
             };
             *token = config::source_path(root, &relative)?
                 .to_str()
-                .context("provider resource path must be UTF-8")?
+                .context("adapter resource path must be UTF-8")?
                 .to_owned();
         }
-        Ok(provider)
+        Ok(adapter)
     }
 }
 
@@ -252,27 +252,27 @@ pub(crate) fn load_with_changes(
         .cloned()
         .map(|import| (import, None))
         .collect();
-    let mut provider_ids = std::collections::BTreeSet::new();
-    for provider in &loaded.config.provider_imports {
-        config::identity(&provider.id, "external provider", &mut provider_ids)?;
-        imports.push((provider.selector(), Some(provider.id.clone())));
+    let mut adapter_ids = std::collections::BTreeSet::new();
+    for adapter in &loaded.config.adapter_imports {
+        config::identity(&adapter.id, "external adapter profile", &mut adapter_ids)?;
+        imports.push((adapter.selector(), Some(adapter.id.clone())));
     }
     for (import, _) in &mut imports {
         import.validate(&root)?;
     }
     trust::require(imports.iter().map(|(import, _)| import.git.as_str()))?;
-    imports.sort_by_key(|(import, provider)| {
+    imports.sort_by_key(|(import, adapter)| {
         (
             import.key(),
-            provider.clone(),
+            adapter.clone(),
             serde_json::to_string(&import.rule_parameters).unwrap(),
         )
     });
     ensure!(
         imports.len() <= MAX_RULES,
-        "at most {MAX_RULES} external Rule Set and provider imports"
+        "at most {MAX_RULES} external Rule Set and adapter imports"
     );
-    // Validate scope-local semantics first; provider references resolve after merging imports.
+    // Validate scope-local semantics first; adapter references resolve after merging imports.
     let mut project = config::validate(root.clone(), loaded)?;
     for (import, _) in &imports {
         for (source, target) in &import.execution_points {
@@ -297,7 +297,7 @@ pub(crate) fn load_with_changes(
         }
     }
     if imports.is_empty() && !refresh {
-        project.resolve_providers()?;
+        project.resolve_adapters()?;
         return Ok(project);
     }
     let state_directory = PathBuf::from(cache::git(
@@ -309,7 +309,7 @@ pub(crate) fn load_with_changes(
     .join("please");
     let state_path = state_directory.join("external-rule-sets.json");
     if imports.is_empty() {
-        project.resolve_providers()?;
+        project.resolve_adapters()?;
         if state_path.try_exists()? {
             let _lock = cache::Lock::acquire(&state_directory.join("resolution.lock"))?;
             fs::remove_file(&state_path)?;
@@ -364,11 +364,11 @@ pub(crate) fn load_with_changes(
     let mut resolved: BTreeMap<(String, String), String> = BTreeMap::new();
     let mut checkouts: BTreeMap<(String, String), PathBuf> = BTreeMap::new();
     let mut bindings: BTreeMap<String, usize> = BTreeMap::new();
-    let mut provider_definitions: BTreeMap<String, serde_json::Value> = BTreeMap::new();
-    for (import, provider_id) in imports {
+    let mut adapter_definitions: BTreeMap<String, serde_json::Value> = BTreeMap::new();
+    for (import, adapter_id) in imports {
         let repository = import.repository();
-        let key = match &provider_id {
-            Some(id) => hash(serde_json::to_vec(&("provider", id, import.key()))?),
+        let key = match &adapter_id {
+            Some(id) => hash(serde_json::to_vec(&("adapter", id, import.key()))?),
             None => import.key(),
         };
         let origin = if refresh {
@@ -431,31 +431,31 @@ pub(crate) fn load_with_changes(
                 )
             })?;
         ensure!(boundary.is_dir(), "external import path is not a directory");
-        if let Some(id) = provider_id {
+        if let Some(id) = adapter_id {
             ensure!(
-                !project.providers.contains_key(&id),
-                "duplicate provider identifier {id:?}; provider overrides are unsupported"
+                !project.adapters.contains_key(&id),
+                "duplicate adapter profile identifier {id:?}; adapter profile overrides are unsupported"
             );
             ensure!(
-                project.providers.len() < MAX_RULES,
-                "at most {MAX_RULES} named providers including imports"
+                project.adapters.len() < MAX_RULES,
+                "at most {MAX_RULES} named adapter profiles including imports"
             );
-            let provider: config::ProviderConfig = crate::discovery::document(
+            let adapter: config::AdapterProfile = crate::discovery::document(
                 &checkout,
-                &Path::new(&import.path).join("provider.toml"),
+                &Path::new(&import.path).join("adapter.toml"),
             )
-            .with_context(|| format!("invalid external provider {id:?}"))?;
-            config::validate_provider(&provider)
-                .with_context(|| format!("invalid external provider {id:?}"))?;
-            let source = ProviderSource {
+            .with_context(|| format!("invalid external adapter profile {id:?}"))?;
+            config::validate_adapter(&adapter)
+                .with_context(|| format!("invalid external adapter profile {id:?}"))?;
+            let source = AdapterSource {
                 origin: origin.clone(),
                 root: checkout,
             };
-            source
-                .resolve(&provider, &root)
-                .with_context(|| format!("invalid external provider resources for {id:?}"))?;
-            project.providers.insert(id.clone(), provider);
-            project.external_providers.insert(id, source);
+            source.resolve(&adapter, &root).with_context(|| {
+                format!("invalid external adapter profile resources for {id:?}")
+            })?;
+            project.adapters.insert(id.clone(), adapter);
+            project.external_adapters.insert(id, source);
             next.resolutions.insert(key, origin);
             continue;
         }
@@ -505,29 +505,29 @@ pub(crate) fn load_with_changes(
             .cloned()
             .collect();
         let ids: Vec<_> = definitions
-            .providers
+            .adapters
             .iter()
             .map(|(_, id, _)| id.clone())
             .collect();
         let mut external = config::validate(root.clone(), definitions)
             .with_context(|| format!("invalid external rule set {:?}", import.path))?;
         for id in ids {
-            let provider = external.providers.remove(&id).unwrap();
-            let definition = serde_json::to_value(&provider)?;
-            if provider_definitions.get(&id) == Some(&definition) {
+            let adapter = external.adapters.remove(&id).unwrap();
+            let definition = serde_json::to_value(&adapter)?;
+            if adapter_definitions.get(&id) == Some(&definition) {
                 continue;
             }
             ensure!(
-                !project.providers.contains_key(&id),
-                "duplicate provider identifier {id:?} in import {:?}; provider overrides are unsupported",
+                !project.adapters.contains_key(&id),
+                "duplicate adapter profile identifier {id:?} in import {:?}; adapter profile overrides are unsupported",
                 import.path
             );
             ensure!(
-                project.providers.len() < MAX_RULES,
-                "at most {MAX_RULES} named providers including imports"
+                project.adapters.len() < MAX_RULES,
+                "at most {MAX_RULES} named adapter profiles including imports"
             );
-            project.providers.insert(id.clone(), provider);
-            provider_definitions.insert(id, definition);
+            project.adapters.insert(id.clone(), adapter);
+            adapter_definitions.insert(id, definition);
         }
         ensure!(
             project.checks.len()
@@ -642,7 +642,7 @@ pub(crate) fn load_with_changes(
         project.rule_sets.extend(external.rule_sets);
         next.resolutions.insert(key, origin);
     }
-    project.resolve_providers()?;
+    project.resolve_adapters()?;
     crate::review_context::collect(&root, &project.reviews.iter().collect::<Vec<_>>())?;
     project.checks.sort_by(|a, b| a.id.cmp(&b.id));
     project.reviews.sort_by(|a, b| a.id.cmp(&b.id));

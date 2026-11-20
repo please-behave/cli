@@ -1,9 +1,10 @@
-//! EXT-002: independently distributed named provider packages.
+//! EXT-002: independently distributed named adapter packages.
 #![cfg(unix)]
 mod support;
 use please::{
-    VerificationMode, config, external, planner,
-    provider::Configured,
+    VerificationMode,
+    adapter::Configured,
+    config, external, planner,
     report::{self, Status},
 };
 use std::{
@@ -42,20 +43,20 @@ fn commit(root: &Path) -> String {
 struct Fixture {
     _temporary: tempfile::TempDir,
     rules: PathBuf,
-    providers: PathBuf,
+    adapters: PathBuf,
     consumer: PathBuf,
     cache: PathBuf,
     rules_ref: String,
-    provider_ref: String,
+    adapter_ref: String,
 }
 impl Fixture {
     fn new() -> Self {
         let temporary = tempfile::tempdir().unwrap();
         let root = temporary.path().canonicalize().unwrap();
         let rules = root.join("Rules Repo");
-        let providers = root.join("Provider Repo");
+        let adapters = root.join("Adapter Repo");
         let consumer = root.join("Consumer Repo");
-        for path in [&rules, &providers, &consumer] {
+        for path in [&rules, &adapters, &consumer] {
             fs::create_dir(path).unwrap();
             git(path, &["init", "--quiet"]);
         }
@@ -67,7 +68,7 @@ impl Fixture {
         support::write(
             &rules,
             "rules/reviews/evidence/rule.toml",
-            "id = 'evidence'\ndescription = 'Inspect evidence'\n[review]\nprovider = 'quality'\nprompt = 'prompt.md'\n",
+            "id = 'evidence'\ndescription = 'Inspect evidence'\n[review]\nadapter = 'quality'\nprompt = 'prompt.md'\n",
         );
         support::write(
             &rules,
@@ -75,26 +76,26 @@ impl Fixture {
             "Inspect the provided evidence.\n",
         );
         support::write(
-            &providers,
-            "packages/quality/provider.toml",
-            "command = 'python3'\nargs = ['@provider/adapter.py', '@source/shared message.txt']\ntimeout_seconds = 5\n[parameters]\nmodel = 'offline-fixture'\n[requirements]\nexecutables = ['python3']\n",
+            &adapters,
+            "packages/quality/adapter.toml",
+            "command = 'python3'\nargs = ['@adapter/adapter.py', '@source/shared message.txt']\ntimeout_seconds = 5\n[parameters]\nmodel = 'offline-fixture'\n[requirements]\nexecutables = ['python3']\n",
         );
-        support::write(&providers, "shared message.txt", "shared resource\n");
+        support::write(&adapters, "shared message.txt", "shared resource\n");
         support::write(
-            &providers,
+            &adapters,
             "packages/quality/adapter.py",
             r#"import json, pathlib, sys
 request = json.load(sys.stdin)
 assert pathlib.Path(sys.argv[1]).read_text() == 'shared resource\n'
 assert request['reviews'][0]['parameters']['model'] == 'offline-fixture'
-pathlib.Path('.git/provider-called').write_text('called')
+pathlib.Path('.git/adapter-called').write_text('called')
 if len(sys.argv) > 2 and sys.argv[2] == 'tamper':
     pathlib.Path(__file__).write_text('# modified during invocation\n')
 print(json.dumps({'protocol_version':1, 'reason':'Evidence inspected', 'findings':[{'message':'File inspected','path':'evidence','line':1}]}))
 "#,
         );
         let rules_ref = commit(&rules);
-        let provider_ref = commit(&providers);
+        let adapter_ref = commit(&adapters);
         please::init::init(&consumer).unwrap();
         support::commit_all(&consumer);
         support::use_head_as_change_base();
@@ -105,19 +106,19 @@ print(json.dumps({'protocol_version':1, 'reason':'Evidence inspected', 'findings
         let fixture = Self {
             _temporary: temporary,
             rules,
-            providers,
+            adapters,
             consumer,
             cache: root.join("cache"),
             rules_ref,
-            provider_ref,
+            adapter_ref,
         };
         fixture.configure(true, true);
         fixture
     }
-    fn configure(&self, rules: bool, provider: bool) {
-        let mut text = "project = 'Provider consumer'\n".to_owned();
+    fn configure(&self, rules: bool, adapter: bool) {
+        let mut text = "project = 'Adapter consumer'\n".to_owned();
         support::trust(&self.rules);
-        support::trust(&self.providers);
+        support::trust(&self.adapters);
         if rules {
             text += &format!(
                 "[[imports]]\ngit = {:?}\npath = 'policy'\nref = {:?}\n",
@@ -125,11 +126,11 @@ print(json.dumps({'protocol_version':1, 'reason':'Evidence inspected', 'findings
                 self.rules_ref
             );
         }
-        if provider {
+        if adapter {
             text += &format!(
-                "[[provider_imports]]\nid = 'quality'\ngit = {:?}\npath = 'packages/quality'\nref = {:?}\n",
-                self.providers.to_str().unwrap(),
-                self.provider_ref
+                "[[adapter_imports]]\nid = 'quality'\ngit = {:?}\npath = 'packages/quality'\nref = {:?}\n",
+                self.adapters.to_str().unwrap(),
+                self.adapter_ref
             );
         }
         support::write(&self.consumer, ".please/config.toml", &text);
@@ -148,7 +149,7 @@ print(json.dumps({'protocol_version':1, 'reason':'Evidence inspected', 'findings
         .unwrap()
     }
     fn cached(&self, project: &config::Project) -> PathBuf {
-        let origin = &project.external_providers["quality"].origin;
+        let origin = &project.external_adapters["quality"].origin;
         self.cache
             .join("git")
             .join(&origin.repository)
@@ -158,24 +159,24 @@ print(json.dumps({'protocol_version':1, 'reason':'Evidence inspected', 'findings
 }
 
 #[test]
-fn separate_provider_and_ruleset_repositories_run_offline() {
-    // REQ-0196: serialized plans and reports retain sanitized rule and provider provenance without source selectors or cache paths.
-    // REQ-0206, REQ-0208: independently imported providers and rules execute from the offline cache.
+fn separate_adapter_and_ruleset_repositories_run_offline() {
+    // REQ-0196: serialized plans and reports retain sanitized rule and adapter provenance without source selectors or cache paths.
+    // REQ-0206, REQ-0208: independently imported adapters and rules execute from the offline cache.
     let f = Fixture::new();
     let project = f.load(true).unwrap();
-    assert_eq!(project.providers.len(), 1);
+    assert_eq!(project.adapters.len(), 1);
     let plan = planner::build(&project, Some("check"), false).unwrap().plan;
     support::assert_plan_contract(&serde_json::to_value(&plan).unwrap());
     assert_eq!(
-        plan.scheduled[0].provider_origin.as_ref().unwrap().commit,
-        f.provider_ref
+        plan.scheduled[0].adapter_origin.as_ref().unwrap().commit,
+        f.adapter_ref
     );
     assert_eq!(
-        plan.scheduled[0].provider_config.as_ref().unwrap().args[0],
-        "@provider/adapter.py"
+        plan.scheduled[0].adapter_profile.as_ref().unwrap().args[0],
+        "@adapter/adapter.py"
     );
     fs::rename(&f.rules, f.rules.with_extension("offline")).unwrap();
-    fs::rename(&f.providers, f.providers.with_extension("offline")).unwrap();
+    fs::rename(&f.adapters, f.adapters.with_extension("offline")).unwrap();
     let report = f.execute(f.load(false).unwrap());
     support::assert_report_contract(&serde_json::to_value(&report).unwrap());
     assert_eq!(report.overall, Status::Pass, "{:?}", report.results);
@@ -189,9 +190,9 @@ fn separate_provider_and_ruleset_repositories_run_offline() {
                 &f.rules_ref,
             ),
             (
-                rule.provider_origin.as_ref().unwrap(),
+                rule.adapter_origin.as_ref().unwrap(),
                 "packages/quality",
-                &f.provider_ref,
+                &f.adapter_ref,
             ),
         ] {
             assert_eq!(origin.path, selected_path);
@@ -211,46 +212,49 @@ fn separate_provider_and_ruleset_repositories_run_offline() {
         serde_json::to_string(&report).unwrap(),
     ] {
         assert!(!serialized.contains(f.cache.to_str().unwrap()));
-        for selector in [&f.rules, &f.providers] {
+        for selector in [&f.rules, &f.adapters] {
             assert!(!serialized.contains(selector.to_str().unwrap()));
         }
     }
-    assert!(f.consumer.join(".git/provider-called").is_file());
-    assert!(!f.consumer.join(".please/providers/quality.toml").exists());
+    assert!(f.consumer.join(".git/adapter-called").is_file());
+    assert!(!f.consumer.join(".please/adapters/quality.toml").exists());
     assert!(!f.consumer.join(".please/adapters").exists());
     assert_eq!(report::read(&f.consumer).unwrap().overall, Status::Pass);
-    assert!(please::terminal::render_details(&report, false).contains("Provider source: quality"));
+    assert!(
+        please::terminal::render_details(&report, false)
+            .contains("Adapter profile source: quality")
+    );
 }
 
 #[test]
 fn shared_repository_and_independent_revisions_are_supported() {
-    // REQ-0213: changing the selected provider revision changes the plan identity.
+    // REQ-0213: changing the selected adapter revision changes the plan identity.
     let mut f = Fixture::new();
     support::write(
         &f.rules,
-        "packages/quality/provider.toml",
-        &fs::read_to_string(f.providers.join("packages/quality/provider.toml")).unwrap(),
+        "packages/quality/adapter.toml",
+        &fs::read_to_string(f.adapters.join("packages/quality/adapter.toml")).unwrap(),
     );
     support::write(
         &f.rules,
         "packages/quality/adapter.py",
-        &fs::read_to_string(f.providers.join("packages/quality/adapter.py")).unwrap(),
+        &fs::read_to_string(f.adapters.join("packages/quality/adapter.py")).unwrap(),
     );
     support::write(&f.rules, "shared message.txt", "shared resource\n");
     f.rules_ref = commit(&f.rules);
-    f.providers = f.rules.clone();
-    f.provider_ref = f.rules_ref.clone();
+    f.adapters = f.rules.clone();
+    f.adapter_ref = f.rules_ref.clone();
     f.configure(true, true);
     let before = f.execute(f.load(true).unwrap());
     assert_eq!(before.overall, Status::Pass);
     assert_eq!(fs::read_dir(f.cache.join("git")).unwrap().count(), 1);
-    let path = f.providers.join("packages/quality/provider.toml");
+    let path = f.adapters.join("packages/quality/adapter.toml");
     fs::write(
         &path,
         fs::read_to_string(&path).unwrap() + "\n# A separately selected revision\n",
     )
     .unwrap();
-    f.provider_ref = commit(&f.providers);
+    f.adapter_ref = commit(&f.adapters);
     f.configure(true, true);
     let after = f.execute(f.load(true).unwrap());
     assert_eq!(after.overall, Status::Pass);
@@ -265,7 +269,7 @@ fn shared_repository_and_independent_revisions_are_supported() {
             .unwrap()
             .commit,
         after.plan.scheduled[0]
-            .provider_origin
+            .adapter_origin
             .as_ref()
             .unwrap()
             .commit
@@ -273,15 +277,15 @@ fn shared_repository_and_independent_revisions_are_supported() {
 }
 
 #[test]
-fn provider_only_imports_need_no_rules_and_never_invoke_adapters() {
-    // REQ-0209: a rule cannot infer an independent provider import from its provider name.
+fn adapter_only_imports_need_no_rules_and_never_invoke_adapters() {
+    // REQ-0209: a rule cannot infer an independent adapter import from its adapter name.
     let f = Fixture::new();
     f.configure(false, true);
     let project = f.load(true).unwrap();
-    assert_eq!(project.providers.len(), 1);
+    assert_eq!(project.adapters.len(), 1);
     assert!(project.rule_sets.is_empty());
     assert!(project.reviews.is_empty());
-    assert!(!f.consumer.join(".git/provider-called").exists());
+    assert!(!f.consumer.join(".git/adapter-called").exists());
     f.configure(false, false);
     f.load(true).unwrap();
     assert!(
@@ -290,22 +294,22 @@ fn provider_only_imports_need_no_rules_and_never_invoke_adapters() {
             .exists()
     );
     f.configure(true, false);
-    assert!(format!("{:#}", f.load(true).unwrap_err()).contains("unknown provider"));
+    assert!(format!("{:#}", f.load(true).unwrap_err()).contains("unknown adapter profile"));
 }
 
 #[test]
 fn collisions_and_unsafe_resources_fail_without_publishing_state() {
-    // REQ-0210: duplicate independent provider imports and local-provider collisions fail without replacing state.
+    // REQ-0210: duplicate independent adapter imports and local-adapter collisions fail without replacing state.
     let f = Fixture::new();
     f.load(true).unwrap();
     let state = f.consumer.join(".git/please/external-rule-sets.json");
     let previous = fs::read(&state).unwrap();
     let central = f.consumer.join(".please/config.toml");
     let original = fs::read_to_string(&central).unwrap();
-    let repeated = original.split_once("[[provider_imports]]").unwrap().1;
+    let repeated = original.split_once("[[adapter_imports]]").unwrap().1;
     fs::write(
         &central,
-        format!("{original}\n[[provider_imports]]{repeated}"),
+        format!("{original}\n[[adapter_imports]]{repeated}"),
     )
     .unwrap();
     assert!(f.load(true).is_err());
@@ -313,63 +317,63 @@ fn collisions_and_unsafe_resources_fail_without_publishing_state() {
     fs::write(&central, original).unwrap();
     support::write(
         &f.consumer,
-        ".please/providers/quality.toml",
+        ".please/adapters/quality.toml",
         "command = 'unused'\ntimeout_seconds = 5\n",
     );
-    assert!(format!("{:#}", f.load(true).unwrap_err()).contains("duplicate provider"));
-    fs::remove_file(f.consumer.join(".please/providers/quality.toml")).unwrap();
+    assert!(format!("{:#}", f.load(true).unwrap_err()).contains("duplicate adapter"));
+    fs::remove_file(f.consumer.join(".please/adapters/quality.toml")).unwrap();
     for token in [
-        "@provider/../adapter.py",
+        "@adapter/../adapter.py",
         "@source/../adapter.py",
-        "@provider//absolute",
+        "@adapter//absolute",
         "@unknown/adapter.py",
-        "@provider/missing",
-        "@provider",
+        "@adapter/missing",
+        "@adapter",
     ] {
-        let path = f.providers.join("packages/quality/provider.toml");
+        let path = f.adapters.join("packages/quality/adapter.toml");
         fs::write(
             &path,
             format!("command = 'python3'\nargs = [{token:?}]\ntimeout_seconds = 5\n"),
         )
         .unwrap();
-        let revision = commit(&f.providers);
+        let revision = commit(&f.adapters);
         let text = fs::read_to_string(&central)
             .unwrap()
-            .replace(&f.provider_ref, &revision);
+            .replace(&f.adapter_ref, &revision);
         fs::write(&central, &text).unwrap();
         assert!(f.load(true).is_err(), "accepted {token}");
         assert_eq!(fs::read(&state).unwrap(), previous);
-        fs::write(&central, text.replace(&revision, &f.provider_ref)).unwrap();
+        fs::write(&central, text.replace(&revision, &f.adapter_ref)).unwrap();
     }
     assert!(f.load(false).is_ok());
-    assert!(!f.consumer.join(".git/provider-called").exists());
+    assert!(!f.consumer.join(".git/adapter-called").exists());
 }
 
 #[test]
-fn unused_imported_providers_still_validate_every_resource_reference() {
+fn unused_imported_adapters_still_validate_every_resource_reference() {
     // REQ-0212: malformed, missing and symlink resources fail even without a consuming review.
     for token in [
         "@unknown/adapter.py",
-        "@provider//absolute",
+        "@adapter//absolute",
         "@source/../adapter.py",
-        "@provider/missing",
-        "@provider/link.py",
+        "@adapter/missing",
+        "@adapter/link.py",
     ] {
         let mut f = Fixture::new();
-        std::os::unix::fs::symlink("adapter.py", f.providers.join("packages/quality/link.py"))
+        std::os::unix::fs::symlink("adapter.py", f.adapters.join("packages/quality/link.py"))
             .unwrap();
         support::write(
-            &f.providers,
-            "packages/quality/provider.toml",
+            &f.adapters,
+            "packages/quality/adapter.toml",
             &format!("command = 'python3'\nargs = [{token:?}]\ntimeout_seconds = 5\n"),
         );
-        f.provider_ref = commit(&f.providers);
+        f.adapter_ref = commit(&f.adapters);
         f.configure(false, true);
         assert!(
             f.load(true).is_err(),
-            "accepted unused provider reference {token}"
+            "accepted unused adapter reference {token}"
         );
-        assert!(!f.consumer.join(".git/provider-called").exists());
+        assert!(!f.consumer.join(".git/adapter-called").exists());
         assert!(
             !f.consumer
                 .join(".git/please/external-rule-sets.json")
@@ -379,7 +383,7 @@ fn unused_imported_providers_still_validate_every_resource_reference() {
 }
 
 #[test]
-fn cached_provider_tampering_is_fatal_even_for_advisory_reviews() {
+fn cached_adapter_tampering_is_fatal_even_for_advisory_reviews() {
     // REQ-0207: cached adapter tampering after loading prevents launch even for advisory reviews.
     let f = Fixture::new();
     let project = f.load(true).unwrap();
@@ -396,66 +400,66 @@ fn cached_provider_tampering_is_fatal_even_for_advisory_reviews() {
             .iter()
             .any(|r| r.configuration_error && r.status == Status::Error)
     );
-    assert!(!f.consumer.join(".git/provider-called").exists());
+    assert!(!f.consumer.join(".git/adapter-called").exists());
 }
 
 #[test]
-fn provider_changes_during_execution_invalidate_the_verdict() {
+fn adapter_changes_during_execution_invalidate_the_verdict() {
     let mut f = Fixture::new();
-    let path = f.providers.join("packages/quality/provider.toml");
+    let path = f.adapters.join("packages/quality/adapter.toml");
     let text = fs::read_to_string(&path).unwrap().replace(
         "'@source/shared message.txt'",
         "'@source/shared message.txt', 'tamper'",
     );
     fs::write(path, text).unwrap();
-    f.provider_ref = commit(&f.providers);
+    f.adapter_ref = commit(&f.adapters);
     f.configure(true, true);
     let mut project = f.load(true).unwrap();
     project.reviews[0].blocking = false;
     let report = f.execute(project);
-    assert!(f.consumer.join(".git/provider-called").exists());
+    assert!(f.consumer.join(".git/adapter-called").exists());
     assert_eq!(report.overall, Status::Error);
     assert!(report.results.iter().any(|r| r.configuration_error));
 }
 
 #[test]
-fn imported_provider_symlinks_are_rejected() {
+fn imported_adapter_symlinks_are_rejected() {
     let mut f = Fixture::new();
-    std::os::unix::fs::symlink("adapter.py", f.providers.join("packages/quality/link.py")).unwrap();
-    let path = f.providers.join("packages/quality/provider.toml");
+    std::os::unix::fs::symlink("adapter.py", f.adapters.join("packages/quality/link.py")).unwrap();
+    let path = f.adapters.join("packages/quality/adapter.toml");
     fs::write(
         &path,
         fs::read_to_string(&path)
             .unwrap()
-            .replace("@provider/adapter.py", "@provider/link.py"),
+            .replace("@adapter/adapter.py", "@adapter/link.py"),
     )
     .unwrap();
-    f.provider_ref = commit(&f.providers);
+    f.adapter_ref = commit(&f.adapters);
     f.configure(true, true);
     assert!(f.load(true).is_err());
-    assert!(!f.consumer.join(".git/provider-called").exists());
+    assert!(!f.consumer.join(".git/adapter-called").exists());
 }
 
 #[test]
 fn executable_references_and_literal_arguments_preserve_token_boundaries() {
-    // REQ-0211: provider, source and repository references resolve in adapter commands, arguments and executable requirements.
-    // REQ-0015: @@ arguments of a provider stay literal with one @ removed.
+    // REQ-0211: adapter, source and repository references resolve in adapter commands, arguments and executable requirements.
+    // REQ-0015: @@ arguments of an adapter stay literal with one @ removed.
     use std::os::unix::fs::PermissionsExt;
     let mut f = Fixture::new();
-    let adapter = f.providers.join("packages/quality/adapter.py");
+    let adapter = f.adapters.join("packages/quality/adapter.py");
     let text = fs::read_to_string(&adapter).unwrap().replace(
         "request = json.load(sys.stdin)",
-        "assert sys.argv[2:5] == ['@literal', '--value=@provider/not-a-reference', '$HOME']\nassert pathlib.Path(sys.argv[5]).read_text() == 'consumer data\\n'\nrequest = json.load(sys.stdin)",
+        "assert sys.argv[2:5] == ['@literal', '--value=@adapter/not-a-reference', '$HOME']\nassert pathlib.Path(sys.argv[5]).read_text() == 'consumer data\\n'\nrequest = json.load(sys.stdin)",
     );
     fs::write(&adapter, format!("#!/usr/bin/env python3\n{text}")).unwrap();
     fs::set_permissions(&adapter, fs::Permissions::from_mode(0o755)).unwrap();
     support::write(&f.consumer, "consumer data.txt", "consumer data\n");
     support::write(
-        &f.providers,
-        "packages/quality/provider.toml",
-        "command = '@provider/adapter.py'\nargs = ['@source/shared message.txt', '@@literal', '--value=@provider/not-a-reference', '$HOME', '@repo/consumer data.txt']\ntimeout_seconds = 5\n[parameters]\nmodel = 'offline-fixture'\n[requirements]\nexecutables = ['@provider/adapter.py', 'python3']\n",
+        &f.adapters,
+        "packages/quality/adapter.toml",
+        "command = '@adapter/adapter.py'\nargs = ['@source/shared message.txt', '@@literal', '--value=@adapter/not-a-reference', '$HOME', '@repo/consumer data.txt']\ntimeout_seconds = 5\n[parameters]\nmodel = 'offline-fixture'\n[requirements]\nexecutables = ['@adapter/adapter.py', 'python3']\n",
     );
-    f.provider_ref = commit(&f.providers);
+    f.adapter_ref = commit(&f.adapters);
     f.configure(true, true);
     let report = f.execute(f.load(true).unwrap());
     assert_eq!(report.overall, Status::Pass, "{:?}", report.results);
@@ -472,10 +476,10 @@ fn imported_message_review_uses_an_independent_cached_adapter() {
     support::write(
         &f.rules,
         "rules/reviews/evidence/rule.toml",
-        "id = 'evidence'\ndescription = 'Inspect message'\n[review]\nprovider = 'quality'\nprompt = 'prompt.md'\n",
+        "id = 'evidence'\ndescription = 'Inspect message'\n[review]\nadapter = 'quality'\nprompt = 'prompt.md'\n",
     );
     support::write(
-        &f.providers,
+        &f.adapters,
         "packages/quality/adapter.py",
         r#"import json, sys
 request = json.load(sys.stdin)
@@ -484,7 +488,7 @@ print(json.dumps({'protocol_version':1,'reason':'Message inspected','findings':[
 "#,
     );
     f.rules_ref = commit(&f.rules);
-    f.provider_ref = commit(&f.providers);
+    f.adapter_ref = commit(&f.adapters);
     f.configure(true, true);
     let project = f.load(true).unwrap();
     please::reconciliation::reconcile(&project, &mut |_| Ok(true)).unwrap();
@@ -516,7 +520,7 @@ print(json.dumps({'protocol_version':1,'reason':'Message inspected','findings':[
     )
     .unwrap();
     assert_eq!(report.overall, Status::Pass, "{:?}", report.results);
-    assert!(report.plan.scheduled[0].provider_origin.is_some());
+    assert!(report.plan.scheduled[0].adapter_origin.is_some());
     assert_eq!(
         report.plan.input.commit_message.as_deref(),
         Some("fix: preserve focus\n\nUnsent body")

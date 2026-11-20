@@ -3,7 +3,7 @@ name: Preview Does Nothing
 area: rules
 description: >-
   A plan preview must not run checks or adapters, must not use the network or
-  check the availability of providers, must not reconcile or prompt for Git
+  check the availability of adapter profiles, must not reconcile or prompt for Git
   hooks, must not change the project or Git state and must not replace the
   saved report.
 rationale: >-

@@ -46,7 +46,7 @@ pub fn init(root: &Path) -> Result<usize> {
         context: Default::default(),
         execution_points: Default::default(),
         imports: vec![],
-        provider_imports: vec![],
+        adapter_imports: vec![],
     };
     let (runner, entrypoint, pass, fail) = if cfg!(windows) {
         (
@@ -98,7 +98,7 @@ pub fn init(root: &Path) -> Result<usize> {
             include_content: true,
             include_change_set: false,
             trigger: None,
-            provider: None,
+            adapter: None,
             prompt: "prompt.md".into(),
             context: vec![],
         }),

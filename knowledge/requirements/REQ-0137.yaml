@@ -3,6 +3,6 @@ name: Display Names Are Labels Only
 area: rules
 description: >-
   A display name must not change the identity, the selection, the order, the
-  parameters or the provider references of a rule.
+  parameters or the adapter profile references of a rule.
 rationale: >-
   Renaming a label must never change what runs or how it is configured.

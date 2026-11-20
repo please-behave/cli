@@ -69,5 +69,5 @@ internal recursion guard.
 
 Each review adapter receives all its resolved Rule values as `rule_parameters`
 under the [Adapter Request contract](../adapter/request.md). They remain separate
-from effective provider/review adapter settings. A review has its own adapter call
-and parameter environment; sharing a provider never combines Rule inputs or calls.
+from effective adapter profile/review adapter settings. A review has its own adapter call
+and parameter environment; sharing an adapter profile never combines Rule inputs or calls.

@@ -60,7 +60,7 @@ Downloads are not signed or notarized. Linux binaries are built on Ubuntu
 
 The executable needs Git and the tools your rules invoke. It needs no Rust,
 Python or Node runtime of its own. AI reviews additionally require an adapter
-and its provider setup; no provider is bundled or selected implicitly.
+and its adapter profile setup; no adapter profile is bundled or selected implicitly.
 
 ### Initialize your project
 

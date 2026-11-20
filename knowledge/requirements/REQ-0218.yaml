@@ -1,8 +1,8 @@
 id: REQ-0218
-name: Unknown Provider Fields Are Rejected
+name: Unknown Adapter Profile Fields Are Rejected
 area: reviews
 description: >-
-  A provider definition with a field outside the set the configuration
+  An adapter profile definition with a field outside the set the configuration
   reference defines must be rejected as a configuration error.
 rationale: >-
   A mistyped setting must fail loudly instead of being ignored.

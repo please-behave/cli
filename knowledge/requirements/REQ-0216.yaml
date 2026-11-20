@@ -1,9 +1,9 @@
 id: REQ-0216
-name: Unknown Provider References Are Rejected
+name: Unknown Adapter Profile References Are Rejected
 area: reviews
 description: >-
-  A review that names an unknown provider must be rejected as a configuration
+  A review that names an unknown adapter profile must be rejected as a configuration
   error, also when the review is disabled.
 rationale: >-
-  A typo in a provider name must fail at once and not when the review is
+  A typo in an adapter profile name must fail at once and not when the review is
   enabled later.

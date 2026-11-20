@@ -1,8 +1,8 @@
 id: REQ-0213
-name: Provider Revision Is Part Of The Plan Identity
+name: Adapter Profile Revision Is Part Of The Plan Identity
 area: reviews
 description: >-
-  The revision of an imported provider must be part of the identity of an
+  The revision of an imported adapter profile must be part of the identity of an
   execution plan.
 rationale: >-
   A saved plan must never be mistaken for the plan of a different adapter

@@ -3,7 +3,7 @@ name: Adapters Receive Resolved Parameters
 area: reviews
 description: >-
   An adapter must receive every resolved parameter value of its review, kept
-  apart from the parameters of the provider.
+  apart from the parameters of the adapter profile.
 rationale: >-
-  A shared review needs the values its project configured, and provider
+  A shared review needs the values its project configured, and adapter profile
   settings must not be confused with them.

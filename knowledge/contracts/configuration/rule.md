@@ -18,7 +18,7 @@ The schema describes parsed TOML, not null-filled internal serialization; an abs
 optional field is not an explicit null configuration value.
 
 The check and review table structures participate in the same configuration API.
-Their command, resource, prompt, provider, trigger and context semantics are defined
+Their command, resource, prompt, adapter profile, trigger and context semantics are defined
 by the [check reference](../../../docs/configuration.md#add-a-check) and
 [review reference](../../../docs/configuration.md#add-a-review). Structural schema
 validation alone does not validate a command grammar, file path, trigger or evidence.
@@ -34,7 +34,7 @@ definitions. Rule Set IDs use their own uniqueness scope.
 
 `name` is an optional display label. Without it, the Rule's source-local ID is the
 label, including for imported Rules. Labels do not change Rule identity, references,
-selection, parameters, ordering or provider references. Display names that collide
+selection, parameters, ordering or adapter profile references. Display names that collide
 are distinguished by an origin suffix and an occurrence number when still needed.
 Plans and reports retain labels and provenance so saved status remains readable
 after configuration changes. `description` explains the expectation and must be

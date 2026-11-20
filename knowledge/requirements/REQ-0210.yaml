@@ -1,16 +1,16 @@
 id: REQ-0210
-name: Provider Identifiers Are Unique
+name: Adapter Profile Identifiers Are Unique
 area: reviews
 description: >-
-  Provider identifiers must be unique across local, rule-set-provided and
-  independently imported providers, and a collision must be rejected as a
-  configuration error without any override. A provider shipped by several
+  Adapter profile identifiers must be unique across local, rule-set-provided and
+  independently imported adapter profiles, and a collision must be rejected as a
+  configuration error without any override. An adapter profile shipped by several
   rule-set imports, including imports at different revisions of one
-  repository, is one provider when its definitions are identical; differing
+  repository, is one adapter profile when its definitions are identical; differing
   definitions collide.
 rationale: >-
-  A review must name exactly one provider, and no import may silently replace
-  another adapter. Unchanged providers must not force all imports of a
+  A review must name exactly one adapter profile, and no import may silently replace
+  another adapter. Unchanged adapter profiles must not force all imports of a
   repository onto one commit.
 decisions:
   - DEC-0029

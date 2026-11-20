@@ -54,13 +54,13 @@ fn review(root: &Path, trigger: &str, extra: &str) {
         root,
         ".please/reviews/test/rule.toml",
         &format!(
-            "id = 'review'\ndescription = 'Review evidence'\nrun_at = ['check']\n{extra}\n[review]\nprovider = 'fixture'\nprompt = 'prompt.md'\n{trigger}"
+            "id = 'review'\ndescription = 'Review evidence'\nrun_at = ['check']\n{extra}\n[review]\nadapter = 'fixture'\nprompt = 'prompt.md'\n{trigger}"
         ),
     );
     write(root, ".please/reviews/test/prompt.md", "Inspect evidence\n");
     write(
         root,
-        ".please/providers/fixture.toml",
+        ".please/adapters/fixture.toml",
         "command = 'missing-trigger-test-tool'\ntimeout_seconds = 5\n[requirements]\nenv = ['MISSING_TRIGGER_TEST_CREDENTIAL_15821']\n",
     );
 }
@@ -171,7 +171,7 @@ fn net_comparison_covers_commits_worktree_add_delete_rename_and_unusual_names() 
     review(root.path(), "", "");
     write(
         root.path(),
-        ".please/adapters/__pycache__/adapter.pyc",
+        ".please/bin/__pycache__/adapter.pyc",
         "bytecode\n",
     );
     write(root.path(), ".please/reports/private", "excluded\n");
@@ -194,12 +194,12 @@ fn net_comparison_covers_commits_worktree_add_delete_rename_and_unusual_names() 
     assert!(!paths.contains_key("ignored"));
     assert!(!paths.contains_key("reverted"));
     assert!(!paths.contains_key(".please/rubric.md"));
-    assert!(!paths.contains_key(".please/adapters/__pycache__/adapter.pyc"));
+    assert!(!paths.contains_key(".please/bin/__pycache__/adapter.pyc"));
     assert!(!paths.contains_key(".please/reports/private"));
     let (_, head_paths) = git_snapshot::changed_paths(root.path(), "HEAD").unwrap();
     assert!(!head_paths.contains_key("earlier"));
     assert!(!head_paths.contains_key(".please/config.toml"));
-    assert!(!head_paths.contains_key(".please/provider.toml"));
+    assert!(!head_paths.contains_key(".please/adapter.toml"));
 }
 
 #[test]
@@ -267,7 +267,7 @@ fn equal_base_trees_keep_distinct_resolved_commits_in_plan_identity() {
 }
 
 #[test]
-fn preview_and_execution_agree_and_nonmatches_need_no_provider_or_context() {
+fn preview_and_execution_agree_and_nonmatches_need_no_adapter_or_context() {
     // REQ-0153, REQ-0177: preview and execution agree; nonmatching reviews need no setup.
     let root = fixture();
     review(
@@ -352,7 +352,7 @@ fn missing_invalid_and_shallow_bases_block_but_disabled_and_other_points_do_not(
 }
 
 #[test]
-fn matched_reviews_preserve_provider_grouping_and_global_check_gate() {
+fn matched_reviews_preserve_adapter_grouping_and_global_check_gate() {
     let root = fixture();
     review(
         root.path(),
@@ -384,7 +384,7 @@ fn matched_reviews_preserve_provider_grouping_and_global_check_gate() {
         &file,
         fs::read_to_string(&file)
             .unwrap()
-            .replace("provider = 'fixture'\n", ""),
+            .replace("adapter = 'fixture'\n", ""),
     )
     .unwrap();
     assert_eq!(plan(root.path(), None).planned_model_calls, 1);
@@ -463,12 +463,12 @@ fn matched_triggers_execute_through_adapter_boundary() {
         );
         write(root.path(), "evidence", "Changed\n");
         let log = root.path().join(".please/reports/calls");
-        let tool = support::context_provider(root.path());
-        let provider = format!(
+        let tool = support::context_adapter(root.path());
+        let adapter = format!(
             "command = {:?}\ntimeout_seconds = 5\n",
             tool.to_str().unwrap()
         );
-        write(root.path(), ".please/providers/fixture.toml", &provider);
+        write(root.path(), ".please/adapters/fixture.toml", &adapter);
         let preview = plan(root.path(), Some("HEAD"));
         assert!(preview.executable());
         assert_eq!(preview.planned_model_calls, 2);

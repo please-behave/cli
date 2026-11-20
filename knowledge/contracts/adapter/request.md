@@ -40,13 +40,13 @@ argument in the adapter invocation or top-level request.
 [delivery and lifetime](../run-context/delivery.md) defined by the Run Context API.
 It is a separate document, not the snapshot or the adapter request itself.
 `prompt` contains the common review instructions, criteria and prepared evidence.
-An adapter may use it directly or construct its own provider input while preserving
+An adapter may use it directly or construct its own AI provider input while preserving
 the configured criteria, supplied evidence and result obligations. Evidence is
 prepared once and passed unchanged from planning to execution.
 
 ## Adapter settings and response instructions
 
-`reviews[0].parameters` is the effective adapter settings table. Provider and
+`reviews[0].parameters` is the effective adapter settings table. Adapter profile and
 review values are JSON-compatible; review values replace matching top-level keys,
 including nested tables or arrays as whole values. No deep merge occurs. Please
 does not interpret model, reasoning, tools or MCP settings. They remain distinct
@@ -56,5 +56,5 @@ appear in version-controlled configuration, plans and reports.
 `response_schema` describes the response body required for generation, excluding
 `protocol_version` and `usage`. It is derived from the
 [response schema](response.schema.json). The adapter adds the protocol envelope
-and optional telemetry after interpreting the provider's answer. Structural schema
+and optional telemetry after interpreting the AI provider's answer. Structural schema
 compliance does not replace byte limits, evidence validation or input stability.

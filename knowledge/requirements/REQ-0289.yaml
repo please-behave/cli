@@ -1,9 +1,9 @@
 id: REQ-0289
-name: Starter Configuration Runs Without A Provider
+name: Starter Configuration Runs Without An Adapter Profile
 area: setup
 description: >-
   The configuration that initialization creates must be valid and must run
-  successfully without any provider: it contains an enabled passing check and,
+  successfully without any adapter profile: it contains an enabled passing check and,
   disabled, a failing check and an AI review, and the report that the
   first run writes must be ignored by Git.
 rationale: >-

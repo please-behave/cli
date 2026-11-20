@@ -9,4 +9,4 @@ description: >-
 rationale: >-
   ERROR means the review could not take place and FAIL means it found a
   problem or could not justify PASS, which tells owners whether to fix the
-  project or the provider setup.
+  project or the adapter profile setup.

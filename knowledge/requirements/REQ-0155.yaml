@@ -4,7 +4,7 @@ area: rules
 description: >-
   A plan preview must show the order of the selected rules, why each is
   selected, which rules are omitted and why, the required rules, the input
-  identity, the declared provider settings and the bounded sizes of the
+  identity, the declared adapter profile settings and the bounded sizes of the
   context.
 rationale: >-
   Before a run, a developer can see what would happen and what it would cost.

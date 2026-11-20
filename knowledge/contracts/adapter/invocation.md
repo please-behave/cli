@@ -10,19 +10,19 @@ share the compatibility version in [api.yaml](api.yaml).
 Please invokes the configured executable and literal arguments without a shell
 or argument expansion. The working directory is the consuming repository root.
 An executable name is resolved through PATH; relative executable paths use that
-root and absolute executable paths are supported. Independently imported provider
-resource tokens are resolved before invocation according to provider configuration.
-Local and Rule Set-bundled provider arguments remain literal.
+root and absolute executable paths are supported. Independently imported adapter profile
+resource tokens are resolved before invocation according to the adapter profile.
+Local and Rule Set-bundled adapter profile arguments remain literal.
 
 The child inherits the environment after removal of inherited `PLEASE_*` variables.
 Execution point, resolved Rule parameters and the run-context path are request
-data, not additional command arguments or exported variables. Provider executable
+data, not additional command arguments or exported variables. Adapter profile executable
 and environment prerequisites are checked after deterministic checks, immediately
 before the selected adapter is called.
 
 Please writes one UTF-8 JSON request to stdin, closes stdin and reads the result.
 At exit 0 or 1, stdout must contain exactly one JSON response object, with no
-Markdown fences, provider envelope or progress text. An adapter reports its own
+Markdown fences, AI provider envelope or progress text. An adapter reports its own
 technical failure using another exit status and diagnostic text on stderr.
 
 | Exit status | Result |
@@ -33,13 +33,13 @@ technical failure using another exit status and diagnostic text on stderr.
 
 Failure to start, timeout, signal termination, missing or invalid output and
 exceeded output limits are ERROR. No retry or alternate-version call is made
-by Please. Adapters control their own provider communication and retry behavior.
+by Please. Adapters control their own AI provider communication and retry behavior.
 Review enforcement remains separate: an advisory review ERROR stays visible and
 can permit overall success; configuration and integrity errors remain fatal.
 
 ## Bounds and diagnostics
 
-The configured provider deadline covers the whole invocation, including request
+The configured adapter deadline covers the whole invocation, including request
 delivery; zero disables the deadline. On timeout Please terminates the process
 tree. Stdout and stderr each retain at most 64 KiB, with total byte counts and
 truncation flags. Truncated stdout cannot establish a verdict. An ERROR retains
@@ -49,8 +49,8 @@ credentials. Routine output is not a substitute for the structured response.
 ## Trust
 
 Adapters have the invoking user's permissions. Please supplies no sandbox,
-provider tools, safety instructions or privileged system prompt. Adapters own
-authentication, model settings, permissions and provider response extraction.
+AI provider tools, safety instructions or privileged system prompt. Adapters own
+authentication, model settings, permissions and AI provider response extraction.
 They may inspect further repository files; initial evidence is not an access
 boundary. Protecting the project from adapter actions belongs to the adapter
-and its provider. Input stability is checked locally around execution.
+and the AI provider it calls. Input stability is checked locally around execution.

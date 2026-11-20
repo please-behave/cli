@@ -2,15 +2,15 @@
 mod support;
 use clap::Parser;
 use please::{
+    adapter::{Adapter, Request},
     cli::{Cli, Words},
     config, planner,
-    provider::{Provider, Request},
     report::{self, Status},
 };
 use std::fs;
 use tempfile::TempDir;
 struct Never;
-impl Provider for Never {
+impl Adapter for Never {
     fn review(&self, _: &Request<'_>) -> anyhow::Result<String> {
         panic!("unexpected review");
     }

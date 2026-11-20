@@ -18,8 +18,8 @@ Use this fixed layout at the Git working-tree root:
 ```text
 .please/
   config.toml
-  provider.toml
-  providers/
+  adapter.toml
+  adapters/
     quality.toml
   checks/readme/
     rule.toml
@@ -31,12 +31,12 @@ Use this fixed layout at the Git working-tree root:
   reports/last.json
 ```
 
-Start with `config.toml` and add Rule, Rule Set and provider documents as needed.
+Start with `config.toml` and add Rule, Rule Set and adapter profile documents as needed.
 Supporting files belong beside the Rules that use them. The binding
 [Configuration Discovery and Validation contract](../knowledge/contracts/configuration/discovery.md)
 defines the recognized locations, safe paths, document limits and validation rules.
 
-Run `please sync` after editing. Validation runs no checks or providers.
+Run `please sync` after editing. Validation runs no checks or adapters.
 Required Git hooks are derived from effective Rule assignments and reconciled
 after confirmation; use `--yes` for unattended reconciliation. New projects initialized by `please init` include
 one enabled passing check, one disabled failing check and one disabled review.
@@ -81,7 +81,7 @@ Declare additional execution points under `execution_points.custom`. Invoke
 Use `context` settings to control stored run contexts and section sizes, and
 `max_display_files` to limit changed paths shown by status. Add external sources
 through [Rule Set imports](#import-rule-sets-from-git) and
-[provider imports](#import-providers-from-git).
+[adapter profile imports](#import-adapter-profiles-from-git).
 
 Checks sharing mutable state must declare the same `resource` inside `[check]`:
 
@@ -163,7 +163,7 @@ value = ".commit-scopes"
 
 The [Rule Parameters contract](../knowledge/contracts/configuration/parameters.md)
 and its schema define declaration fields, local and imported binding, resolution
-and delivery. This is separate from provider/review adapter settings.
+and delivery. This is separate from adapter profile and review adapter settings.
 
 ### Add a check
 
@@ -302,16 +302,16 @@ execution prevent PASS.
 | --- | --- | --- | --- |
 | `PASS` | The rule ran and its expectation holds. | Check exit 0 or review verdict | None |
 | `FAIL` | The rule ran and found a violation. | Check exit 1 or review verdict | Always blocks for a check; blocks for a review only when the review is blocking |
-| `ERROR` | The rule could not complete or produce a trustworthy result, such as a crash, missing tool, timeout or invalid provider response. | Any other check exit status or Please Behave | A check ERROR always blocks; a review ERROR blocks only when the review is blocking |
+| `ERROR` | The rule could not complete or produce a trustworthy result, such as a crash, missing tool, timeout or invalid adapter response. | Any other check exit status or Please Behave | A check ERROR always blocks; a review ERROR blocks only when the review is blocking |
 | `NOT_RUN` | The selected rule was not executed because of a failed prerequisite, fail-fast or check-phase gating. | Please Behave | A dependency skip inherits the originating outcome; fail-fast and gating skips follow the originating failure |
 | `CANCELLED` | A running check was interrupted by fail-fast termination. | Please Behave | Blocks success |
 
-### Configure the AI provider
+### Configure the adapter profile
 
 Please Behave executes external adapters through a versioned JSON protocol. It
-ships no providers and chooses none implicitly. Install or write an adapter, then
-configure `.please/provider.toml` as the project default, or
-`.please/providers/quality.toml` as a named configuration:
+ships no adapter profiles and chooses none implicitly. Install or write an adapter, then
+configure `.please/adapter.toml` as the project default, or
+`.please/adapters/quality.toml` as a named configuration:
 
 ```toml
 command = "python3"
@@ -334,26 +334,26 @@ root and inherit the environment except `PLEASE_*` variables, which are removed.
 get the execution point, the Rule parameters and the context file path in the request
 JSON. Configure authentication and tool permissions in the
 adapter. Trust adapters as you trust checks: they have Please Behave's permissions.
-Please installs no adapter dependencies and provides no provider sandbox. The
+Please installs no adapter dependencies and provides no adapter sandbox. The
 prompt carries no safety, permission or role instructions; protecting the project
-from an adapter's actions is the responsibility of the adapter and its provider.
+from an adapter's actions is the responsibility of the adapter and the AI provider it calls.
 
 A named configuration uses its filename stem as its ID: 1–80 ASCII letters,
 digits, hyphens or underscores, excluding the reserved `please-` prefix. Select it
-with `provider = "quality"` in `[review]`. Omission uses the explicit project
+with `adapter = "quality"` in `[review]`. Omission uses the explicit project
 default; a selected enabled review without either is blocked. Disabled reviews
 need no default. Unknown explicit references fail even when disabled. Adding named
 configurations never changes the default.
 
-External Rule Sets can distribute `providers/<id>.toml` beside their selected
+External Rule Sets can distribute `adapters/<id>.toml` beside their selected
 `ruleset.toml`. Existing import boundaries, immutable caches and offline execution
 apply. Repeated imports of the same immutable file share one definition; distinct
 definitions with the same ID fail. Local overrides are unsupported.
 
-Adapter settings may be supplied in `[parameters]` in a provider definition and
-`[review.parameters]` in a Rule. Review values override matching provider keys;
+Adapter settings may be supplied in `[parameters]` in an adapter profile and
+`[review.parameters]` in a Rule. Review values override matching profile keys;
 nested tables and arrays replace the entire value at that key. Settings are
-JSON-compatible TOML values, with no provider-specific validation in Please.
+JSON-compatible TOML values, with no AI-provider-specific validation in Please.
 This is separate from typed Rule parameters, which adapters receive as `rule_parameters`.
 Every review carries its own merged settings.
 
@@ -396,8 +396,8 @@ consumer through the adapter, one call per review, after deterministic checks.
 
 | Field | Required / default | Meaning |
 | --- | --- | --- |
-| `review.provider` | Optional; `null` (omitted in TOML) | Named provider ID; omission requires an explicit default for selected reviews. |
-| `review.parameters` | Optional; `{}` | Structured adapter settings overriding provider keys. |
+| `review.adapter` | Optional; `null` (omitted in TOML) | Named adapter profile ID; omission requires an explicit default for selected reviews. |
+| `review.parameters` | Optional; `{}` | Structured adapter settings overriding adapter profile keys. |
 | `review.trigger` | Optional; `null` (omitted in TOML) | Select this review only for matching changed files; the matching files are its scope. Without it any change selects the review and all changed files are in scope. |
 | `review.trigger.changed_files` | Required | 1–64 repository-relative patterns, each at most 1024 UTF-8 bytes; any match selects the review. |
 | `review.include_content` | Optional; `true` | Include the current content of the files in scope. Binary and deleted files have none. Content above 256 KiB ends the review as ERROR before any adapter call instead of being truncated. |
@@ -418,7 +418,7 @@ description = "Require a specific English imperative commit summary"
 run_at = ["commit-msg"]
 
 [review]
-provider = "commit-quality"
+adapter = "commit-quality"
 prompt = "prompt.md"
 include_content = false
 ```
@@ -492,7 +492,7 @@ never a successful skip. Disabled reviews, checks-only runs and reviews at other
 changed files. At most 200 files may be in the scope of one review.
 
 Reviews without matching changed files appear in preview and saved report plans under `omitted` with reason
-`trigger_not_matched`, or `no_changes` when the review has no triggers and nothing changed; they have no result or required ID, need no provider runtime
+`trigger_not_matched`, or `no_changes` when the review has no triggers and nothing changed; they have no result or required ID, need no adapter runtime
 credentials/executables, and contribute no context or planned model calls. Scheduled
 reviews still wait for the global deterministic-check gate. Snapshot and context
 limits remain unchanged.
@@ -501,7 +501,7 @@ The adapter's exit status is the verdict: 0 is PASS and 1 is FAIL, each only wit
 valid response. A cited file must exist in the snapshot and a cited line be positive
 for worktree reviews. At commit-msg, `path = null` with a `line` cites that
 line of the commit message. Any other exit status, malformed JSON, invalid evidence
-and provider failures produce ERROR. Summaries are single lines up to 120 characters;
+and adapter failures produce ERROR. Summaries are single lines up to 120 characters;
 an optional longer explanation has up to 8000 bytes; at most 20 findings per review,
 2000 bytes each. FAIL and ERROR of a non-blocking review stay visible; configuration errors and
 damaged imports still prevent success.
@@ -559,8 +559,8 @@ please run --at release --plan --json
 ```
 
 Checks finish before reviews; reports retain ID order within each kind. Empty points succeed. Every scheduled rule
-must execute unless dependencies or fail-fast prevent it; `--checks-only` reports selected reviews as `NOT_RUN` without calling a provider. An offline plan
-prepares the same selection without rules, provider calls or reconciliation.
+must execute unless dependencies or fail-fast prevent it; `--checks-only` reports selected reviews as `NOT_RUN` without calling an adapter. An offline plan
+prepares the same selection without rules, adapter calls or reconciliation.
 
 ### Import rule sets from Git
 
@@ -676,31 +676,31 @@ one checkout. Full hashes pin content; branches/tags can move when refreshed.
 
 See [external source structure, cache and trust](https://github.com/please-behave/cli/blob/main/docs/external-rule-sets.md).
 
-### Import providers from Git
+### Import adapter profiles from Git
 
-Providers can be distributed independently of Rule Sets. Add an explicit,
+Adapter profiles can be distributed independently of Rule Sets. Add an explicit,
 independently pinned import to the consumer's `.please/config.toml`:
 
 ```toml
-[[provider_imports]]
+[[adapter_imports]]
 id = "quality"
-git = "https://github.com/company/governance-providers.git"
-path = "providers/quality"
+git = "https://github.com/company/governance-adapters.git"
+path = "adapters/quality"
 ref = "v1.2.0"
 ```
 
 | Field | Required / default | Meaning |
 | --- | --- | --- |
-| `id` | Required | Named provider exposed to reviews; the ordinary provider ID rules apply. |
+| `id` | Required | Named adapter profile exposed to reviews; the ordinary adapter profile ID rules apply. |
 | `git` | Required | Git repository selector, with the same authentication and trust rules as Rule Set imports. |
-| `path` | Required | Repository-relative directory containing `provider.toml` and adapter resources. |
+| `path` | Required | Repository-relative directory containing `adapter.toml` and adapter resources. |
 | `ref` | Required | Exact branch, tag or full commit hash; full hashes pin reviewed content. |
 
-The selected directory contains a normal `provider.toml`, for example:
+The selected directory contains a normal `adapter.toml`, for example:
 
 ```toml
 command = "python3"
-args = ["@provider/adapter.py"]
+args = ["@adapter/adapter.py"]
 timeout_seconds = 70
 
 [requirements]
@@ -708,23 +708,23 @@ executables = ["python3"]
 env = ["QUALITY_API_KEY"]
 ```
 
-The consumer needs no matching `.please/providers/quality.toml` or adapter copy.
-A local or imported Review selects it using `provider = "quality"`. Rule Set
-and provider imports may name the same repository or separate repositories,
+The consumer needs no matching `.please/adapters/quality.toml` or adapter copy.
+A local or imported Review selects it using `adapter = "quality"`. Rule Set
+and adapter profile imports may name the same repository or separate repositories,
 with independently selected paths/revisions. No imports are inferred, nested
-or fetched during execution. Provider packages need no Rule Set or execution point.
-All imports share the 256-import bound; named provider IDs are global. Duplicate
+or fetched during execution. Adapter profile packages need no Rule Set or execution point.
+All imports share the 256-import bound; named adapter profile IDs are global. Duplicate
 IDs, including local/imported collisions, fail; there is no implicit override.
-Only Rule Sets that ship identical definitions of one ID share that provider.
-Existing providers distributed inside Rule Sets remain supported.
+Only Rule Sets that ship identical definitions of one ID share that adapter profile.
+Adapter profiles distributed inside Rule Sets remain supported.
 
-Only independent provider packages resolve explicit tokens in `command`, `args`
-and `requirements.executables`: `@provider/` selects the package directory,
+Only independent adapter profile packages resolve explicit tokens in `command`, `args`
+and `requirements.executables`: `@adapter/` selects the package directory,
 `@source/` its repository root and `@repo/` the consumer root. `@@` escapes one
 leading @; other unknown @ prefixes fail. Referenced paths must exist and cannot
 use absolute suffixes, parent traversal or symlinks. Resolved paths remain single
 literal arguments, including spaces. Ordinary tokens still use PATH or the
-consumer root. Local and legacy Rule Set-provider arguments keep their literal
+consumer root. Local and legacy Rule Set adapter profile arguments keep their literal
 behavior. There is no shell expansion, dependency installation or sandbox.
 
 Run `please sync` to resolve and validate both import kinds, without executing
@@ -732,9 +732,9 @@ adapters. A failed sync preserves the previous combined state. Later plans,
 hooks and execution use verified immutable cached revisions offline; corrupt or
 missing resources fail. Cache integrity failures are fatal even for advisory
 reviews. Runtime PATH/environment requirements are checked only for selected
-reviews, after deterministic checks. Plans/reports retain `provider_origin`
+reviews, after deterministic checks. Plans/reports retain `adapter_origin`
 (repository hash, selected path/ref and resolved commit), which participates in
-plan identity. Provider resources stay in the cache; removing the import stops
+plan identity. Adapter profile resources stay in the cache; removing the import stops
 using them without deleting the shared cache.
 
 ### Run context

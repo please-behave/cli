@@ -2,11 +2,11 @@ id: REQ-0224
 name: Authentication Belongs To The Adapter
 area: reviews
 description: >-
-  Please must not authenticate with providers or store provider credentials,
+  Please must not authenticate with AI providers or store AI provider credentials,
   and must offer no setting for authentication, model selection or tool use
   outside the opaque parameters.
 rationale: >-
-  Credentials and provider details stay out of the product, its configuration
+  Credentials and AI provider details stay out of the product, its configuration
   and its reports.
 decisions:
   - DEC-0010

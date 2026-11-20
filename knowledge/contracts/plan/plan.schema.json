@@ -39,7 +39,7 @@
         }
       }
     },
-    "provider": {
+    "adapter_profile": {
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -164,14 +164,14 @@
             "minLength": 1
           }
         },
-        "provider": {
+        "adapter": {
           "type": "string",
           "minLength": 1
         },
-        "provider_config": {
-          "$ref": "#/$defs/provider"
+        "adapter_profile": {
+          "$ref": "#/$defs/adapter_profile"
         },
-        "provider_origin": {
+        "adapter_origin": {
           "$ref": "#/$defs/origin"
         }
       }
@@ -406,7 +406,7 @@
         "scheduled",
         "omitted",
         "required_ids",
-        "provider_availability_checked",
+        "adapter_availability_checked",
         "planned_model_calls",
         "context"
       ],
@@ -470,17 +470,17 @@
             "minLength": 1
           }
         },
-        "provider": {
+        "adapter": {
           "anyOf": [
             {
-              "$ref": "#/$defs/provider"
+              "$ref": "#/$defs/adapter_profile"
             },
             {
               "type": "null"
             }
           ]
         },
-        "provider_availability_checked": {
+        "adapter_availability_checked": {
           "const": false
         },
         "planned_model_calls": {

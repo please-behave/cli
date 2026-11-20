@@ -2,7 +2,7 @@ id: REQ-0252
 name: Reserved Identifier Prefix
 area: rules
 description: >-
-  Rule and provider IDs must not begin with `please-`, which Please reserves
+  Rule and adapter profile IDs must not begin with `please-`, which Please reserves
   for results it generates itself, such as integrity failures.
 rationale: >-
   A generated result must never be confused with, or replaced by, a rule of

@@ -1,6 +1,6 @@
 use crate::report::{Item, Report, Status};
 use crate::{
-    checks, config, context, git_snapshot, planner, process, provider, reconciliation, report,
+    adapter, checks, config, context, git_snapshot, planner, process, reconciliation, report,
     reviews, scheduling,
 };
 use anyhow::Result;
@@ -42,62 +42,59 @@ pub enum Progress<'a> {
     },
 }
 
-pub fn verify(root: &Path, provider: &dyn provider::Provider) -> Result<Report> {
-    verify_project(config::load(root)?, provider)
+pub fn verify(root: &Path, adapter: &dyn adapter::Adapter) -> Result<Report> {
+    verify_project(config::load(root)?, adapter)
 }
 
 /// Verify an already validated project without loading configuration twice.
-pub fn verify_project(
-    project: config::Project,
-    provider: &dyn provider::Provider,
-) -> Result<Report> {
-    verify_project_with_progress(project, provider, &mut |_| {})
+pub fn verify_project(project: config::Project, adapter: &dyn adapter::Adapter) -> Result<Report> {
+    verify_project_with_progress(project, adapter, &mut |_| {})
 }
 
 /// Report execution events immediately, without coupling verification to terminal I/O.
 pub fn verify_project_with_progress(
     project: config::Project,
-    provider: &dyn provider::Provider,
+    adapter: &dyn adapter::Adapter,
     progress: &mut dyn FnMut(Progress<'_>),
 ) -> Result<Report> {
-    verify_project_with_mode(project, provider, VerificationMode::AllRules, progress)
+    verify_project_with_mode(project, adapter, VerificationMode::AllRules, progress)
 }
 
 pub fn verify_project_with_mode(
     project: config::Project,
-    provider: &dyn provider::Provider,
+    adapter: &dyn adapter::Adapter,
     mode: VerificationMode,
     progress: &mut dyn FnMut(Progress<'_>),
 ) -> Result<Report> {
-    verify_project_at(project, provider, mode, None, progress)
+    verify_project_at(project, adapter, mode, None, progress)
 }
 
 pub fn verify_project_at(
     project: config::Project,
-    provider: &dyn provider::Provider,
+    adapter: &dyn adapter::Adapter,
     mode: VerificationMode,
     at: Option<&str>,
     progress: &mut dyn FnMut(Progress<'_>),
 ) -> Result<Report> {
-    verify_project_with_context(project, provider, mode, at, None, progress)
+    verify_project_with_context(project, adapter, mode, at, None, progress)
 }
 
 /// Execute rules after the command lifecycle has validated and reconciled the project.
 pub fn verify_project_with_context(
     project: config::Project,
-    provider: &dyn provider::Provider,
+    adapter: &dyn adapter::Adapter,
     mode: VerificationMode,
     at: Option<&str>,
     hook: Option<&reconciliation::HookContext>,
     progress: &mut dyn FnMut(Progress<'_>),
 ) -> Result<Report> {
-    verify_project_with_fail_fast(project, provider, mode, at, hook, false, progress)
+    verify_project_with_fail_fast(project, adapter, mode, at, hook, false, progress)
 }
 
 /// Execute with invocation-only fail-fast scheduling; existing entry points run all rules.
 pub fn verify_project_with_fail_fast(
     mut project: config::Project,
-    provider: &dyn provider::Provider,
+    adapter: &dyn adapter::Adapter,
     mode: VerificationMode,
     at: Option<&str>,
     hook: Option<&reconciliation::HookContext>,
@@ -128,7 +125,7 @@ pub fn verify_project_with_fail_fast(
     progress(Progress::Plan { total });
     if checks_only {
         progress(Progress::Phase(
-            "Checks only: reviews not run; no provider call.",
+            "Checks only: reviews not run; no adapter call.",
         ));
         if check_count == 0 {
             progress(Progress::Phase("No active checks configured."));
@@ -136,7 +133,7 @@ pub fn verify_project_with_fail_fast(
     }
     progress(Progress::Phase("Capturing working files …"));
     let mut items = Vec::new();
-    let mut provider_usage = None;
+    let mut adapter_usage = None;
     if !plan.executable() {
         items.push(Item::simple(
             "please-plan",
@@ -232,20 +229,20 @@ pub fn verify_project_with_fail_fast(
         ));
     }
     if checks_only {
-        // Every selected review is reported as requested-not-run and never reaches a provider.
+        // Every selected review is reported as requested-not-run and never reaches an adapter.
         for review in plan.scheduled.iter().filter(|r| r.kind == "review") {
             items.push(Item::simple(
                 &review.id,
                 "review",
                 Status::NotRun,
-                "Checks only requested; no provider call made".into(),
+                "Checks only requested; no adapter call made".into(),
             ));
         }
     }
     if !active.is_empty() {
         if report::overall(&items) == Status::Pass {
             progress(Progress::Phase(
-                "Comparing working files before the provider call …",
+                "Comparing working files before the adapter call …",
             ));
             if let Some(error) = stability_error(&project.root, &snapshot) {
                 items.push(error);
@@ -260,7 +257,7 @@ pub fn verify_project_with_fail_fast(
                 review_input.as_ref().ok_or_else(|| {
                     anyhow::anyhow!("executable review plan has no prepared input")
                 })?,
-                provider,
+                adapter,
                 &plan.at,
                 &mut |review, completed| {
                     // Publish the previous call before starting another one so
@@ -292,7 +289,7 @@ pub fn verify_project_with_fail_fast(
                     true
                 },
             );
-            provider_usage = usage;
+            adapter_usage = usage;
             for (offset, item) in results.iter().enumerate() {
                 if reported_reviews.contains(&item.id) {
                     continue;
@@ -318,9 +315,9 @@ pub fn verify_project_with_fail_fast(
                     "review",
                     Status::NotRun,
                     if fail_fast && items.iter().any(report::prevents_success) {
-                        "Fail-fast triggered by deterministic checks or snapshot; no provider call made".into()
+                        "Fail-fast triggered by deterministic checks or snapshot; no adapter call made".into()
                     } else {
-                        "Deterministic check phase or snapshot failed; no provider call made".into()
+                        "Deterministic check phase or snapshot failed; no adapter call made".into()
                     },
                 );
                 progress(Progress::RuleFinished {
@@ -371,8 +368,8 @@ pub fn verify_project_with_fail_fast(
         snapshot,
         results: items,
         max_display_files: project.config.max_display_files,
-        token_usage: provider_usage.and_then(report::TokenUsage::total),
-        provider_usage,
+        token_usage: adapter_usage.and_then(report::TokenUsage::total),
+        adapter_usage,
         checks_only,
         plan,
     };

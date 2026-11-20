@@ -1,9 +1,9 @@
 id: REQ-0215
-name: Review Without Provider Is Blocked
+name: Review Without Adapter Profile Is Blocked
 area: reviews
 description: >-
-  A selected, enabled review that names no provider while no default provider
+  A selected, enabled review that names no adapter profile while no default adapter profile
   is declared must block the run before anything is executed, and a disabled
-  or unselected review must need no provider.
+  or unselected review must need no adapter profile.
 rationale: >-
-  A review must never run against a provider the owner did not choose.
+  A review must never run against an adapter profile the owner did not choose.

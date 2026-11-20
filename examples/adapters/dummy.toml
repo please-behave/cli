@@ -1,5 +1,5 @@
 # Copy the script to tools/dummy-adapter.py in the consumer repository.
-# Save this definition as .please/providers/dummy.toml; select provider = "dummy".
+# Save this definition as .please/adapters/dummy.toml; select adapter = "dummy".
 command = "python3"
 args = ["tools/dummy-adapter.py"]
 timeout_seconds = 10

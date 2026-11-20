@@ -1,7 +1,7 @@
 mod support;
 use please::{
+    adapter::{Adapter, Request},
     config, external, planner,
-    provider::{Provider, Request},
     report::{self, Status},
 };
 use std::{fs, path::Path, sync::Mutex};
@@ -42,10 +42,10 @@ fn project() -> tempfile::TempDir {
     write(root.path(), "evidence", "Evidence\n");
     root
 }
-fn provider(root: &Path, directory: &str, id: &str, model: &str) {
+fn adapter(root: &Path, directory: &str, id: &str, model: &str) {
     write(
         root,
-        &format!("{directory}/providers/{id}.toml"),
+        &format!("{directory}/adapters/{id}.toml"),
         &format!(
             "command = 'fake-adapter'\ntimeout_seconds = 17\n[parameters]\nlabel = {model:?}\n"
         ),
@@ -53,7 +53,7 @@ fn provider(root: &Path, directory: &str, id: &str, model: &str) {
 }
 fn review(root: &Path, directory: &str, id: &str, reference: Option<&str>, parameters: &str) {
     let reference = reference
-        .map(|id| format!("provider = {id:?}\n"))
+        .map(|id| format!("adapter = {id:?}\n"))
         .unwrap_or_default();
     write(
         root,
@@ -71,42 +71,42 @@ fn review(root: &Path, directory: &str, id: &str, reference: Option<&str>, param
 
 #[test]
 fn named_references_load_without_changing_legacy_defaults() {
-    // REQ-0214: explicit provider references and the optional default resolve independently.
+    // REQ-0214: explicit adapter references and the optional default resolve independently.
     let root = project();
-    provider(root.path(), ".please", "quality", "quality-model");
-    provider(root.path(), ".please", "fast", "fast-model");
+    adapter(root.path(), ".please", "quality", "quality-model");
+    adapter(root.path(), ".please", "fast", "fast-model");
     review(root.path(), ".please", "named", Some("quality"), "");
     review(root.path(), ".please", "legacy", None, "");
     let p = config::load(root.path()).unwrap();
-    assert_eq!(p.providers.len(), 2);
+    assert_eq!(p.adapters.len(), 2);
     assert_eq!(
-        p.review_provider(&p.reviews[0]).unwrap().parameters,
-        p.provider.as_ref().unwrap().parameters
+        p.review_adapter(&p.reviews[0]).unwrap().parameters,
+        p.adapter.as_ref().unwrap().parameters
     );
     assert_eq!(
-        p.review_provider(&p.reviews[1]).unwrap().parameters["label"].as_str(),
+        p.review_adapter(&p.reviews[1]).unwrap().parameters["label"].as_str(),
         Some("quality-model")
     );
     let plan = planner::build(&p, Some("check"), false).unwrap().plan;
     assert_eq!(plan.planned_model_calls, 2);
-    assert!(plan.scheduled[0].provider_config.is_none());
-    assert_eq!(plan.scheduled[1].provider.as_deref(), Some("quality"));
+    assert!(plan.scheduled[0].adapter_profile.is_none());
+    assert_eq!(plan.scheduled[1].adapter.as_deref(), Some("quality"));
     assert_eq!(
         plan.scheduled[1]
-            .provider_config
+            .adapter_profile
             .as_ref()
             .unwrap()
             .timeout_seconds,
         17
     );
-    fs::remove_file(root.path().join(".please/provider.toml")).unwrap();
-    assert!(config::load(root.path()).unwrap().provider.is_none());
+    fs::remove_file(root.path().join(".please/adapter.toml")).unwrap();
+    assert!(config::load(root.path()).unwrap().adapter.is_none());
 }
 
 struct Recording(Mutex<Vec<(String, Vec<String>)>>);
-impl Provider for Recording {
+impl Adapter for Recording {
     fn review(&self, request: &Request<'_>) -> anyhow::Result<String> {
-        let config = request.provider_config()?;
+        let config = request.adapter_profile()?;
         self.0.lock().unwrap().push((
             config
                 .parameters
@@ -120,10 +120,10 @@ impl Provider for Recording {
     }
 }
 #[test]
-fn calls_and_saved_reports_keep_provider_and_parameter_boundaries() {
+fn calls_and_saved_reports_keep_adapter_and_parameter_boundaries() {
     let root = project();
-    provider(root.path(), ".please", "first", "first-model");
-    provider(root.path(), ".please", "second", "second-model");
+    adapter(root.path(), ".please", "first", "first-model");
+    adapter(root.path(), ".please", "second", "second-model");
     for (id, reference, parameters) in [
         ("a", Some("first"), ""),
         ("b", Some("first"), ""),
@@ -146,17 +146,17 @@ fn calls_and_saved_reports_keep_provider_and_parameter_boundaries() {
             .planned_model_calls,
         6
     );
-    let provider = Recording(Mutex::new(vec![]));
+    let adapter = Recording(Mutex::new(vec![]));
     let result = please::verify_project_at(
         p,
-        &provider,
+        &adapter,
         please::VerificationMode::AllRules,
         Some("check"),
         &mut |_| {},
     )
     .unwrap();
     assert_eq!(result.overall, Status::Pass);
-    let calls = provider.0.lock().unwrap();
+    let calls = adapter.0.lock().unwrap();
     assert_eq!(calls.len(), 6);
     assert!(calls.iter().all(|(_, ids)| ids.len() == 1));
     assert!(
@@ -167,14 +167,14 @@ fn calls_and_saved_reports_keep_provider_and_parameter_boundaries() {
     assert!(calls.iter().any(|(_, ids)| ids == &["d"]));
     assert!(calls.iter().any(|(_, ids)| ids == &["e"]));
     let saved = report::read(root.path()).unwrap();
-    // REQ-0339: each result names the provider entry that produced it; the default has no ID.
-    let providers: Vec<_> = saved
+    // REQ-0339: each result names the adapter entry that produced it; the default has no ID.
+    let adapters: Vec<_> = saved
         .results
         .iter()
-        .map(|item| (item.id.as_str(), item.provider.as_deref()))
+        .map(|item| (item.id.as_str(), item.adapter.as_deref()))
         .collect();
     assert_eq!(
-        providers,
+        adapters,
         [
             ("a", Some("first")),
             ("b", Some("first")),
@@ -184,10 +184,10 @@ fn calls_and_saved_reports_keep_provider_and_parameter_boundaries() {
             ("f", Some("first")),
         ]
     );
-    assert_eq!(saved.plan.scheduled[2].provider.as_deref(), Some("second"));
+    assert_eq!(saved.plan.scheduled[2].adapter.as_deref(), Some("second"));
     assert_eq!(
         saved.plan.scheduled[2]
-            .provider_config
+            .adapter_profile
             .as_ref()
             .unwrap()
             .parameters["label"]
@@ -197,14 +197,14 @@ fn calls_and_saved_reports_keep_provider_and_parameter_boundaries() {
     let path = root.path().join(".please/reports/last.json");
     let mut json: serde_json::Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
     let valid = serde_json::to_vec(&json).unwrap();
-    json["results"][0]["provider"] = "second".into();
+    json["results"][0]["adapter"] = "second".into();
     fs::write(&path, serde_json::to_vec(&json).unwrap()).unwrap();
     assert!(report::read(root.path()).is_err());
     fs::write(&path, valid).unwrap();
     json["plan"]["scheduled"][2]
         .as_object_mut()
         .unwrap()
-        .remove("provider_config");
+        .remove("adapter_profile");
     fs::write(&path, serde_json::to_vec(&json).unwrap()).unwrap();
     assert!(report::read(root.path()).is_err());
 }
@@ -235,24 +235,24 @@ fn commit(root: &Path) {
 }
 
 #[test]
-fn imported_providers_resolve_across_sets_offline_and_reconcile_atomically() {
-    // REQ-0210: rule-set providers cannot override local or other imported provider definitions.
+fn imported_adapters_resolve_across_sets_offline_and_reconcile_atomically() {
+    // REQ-0210: rule-set adapters cannot override local or other imported adapter definitions.
     let root = project();
     let remote = tempfile::tempdir().unwrap();
     let cache = tempfile::tempdir().unwrap();
     git(remote.path(), &["init", "--quiet", "--initial-branch=main"]);
     set(remote.path(), "definitions", &[]);
-    provider(remote.path(), "definitions", "central", "central-model");
+    adapter(remote.path(), "definitions", "central", "central-model");
     set(remote.path(), "reviews", &["rules/reviews/external"]);
     review(remote.path(), "rules", "external", Some("central"), "");
     commit(remote.path());
     review(root.path(), ".please", "local", Some("central"), "");
     imports(root.path(), remote.path(), &["reviews", "definitions"]);
     let p = external::load(root.path(), true, Some(cache.path())).unwrap();
-    assert_eq!(p.providers.len(), 1);
+    assert_eq!(p.adapters.len(), 1);
     assert_eq!(p.reviews.len(), 2);
     assert!(p.reviews.iter().all(
-        |r| p.review_provider(r).unwrap().parameters["label"].as_str() == Some("central-model")
+        |r| p.review_adapter(r).unwrap().parameters["label"].as_str() == Some("central-model")
     ));
     let original = planner::build(&p, Some("check"), false).unwrap().plan;
     let state_path = root.path().join(".git/please/external-rule-sets.json");
@@ -289,48 +289,48 @@ fn imported_providers_resolve_across_sets_offline_and_reconcile_atomically() {
     assert_eq!(
         external::load(root.path(), true, Some(cache.path()))
             .unwrap()
-            .providers
+            .adapters
             .len(),
         1
     );
     let repeated_state = fs::read(&state_path).unwrap();
     assert_eq!(state, repeated_state);
     // A local declaration cannot override centrally distributed settings.
-    provider(root.path(), ".please", "central", "central-model");
+    adapter(root.path(), ".please", "central", "central-model");
     let error = format!(
         "{:#}",
         external::load(root.path(), true, Some(cache.path())).unwrap_err()
     );
     assert!(
-        error.contains("duplicate provider") && error.contains("central"),
+        error.contains("duplicate adapter") && error.contains("central"),
         "{error}"
     );
     assert_eq!(fs::read(&state_path).unwrap(), state);
-    fs::remove_dir_all(root.path().join(".please/providers")).unwrap();
-    // Distinct imported files with identical definitions share one provider.
-    provider(remote.path(), "reviews", "central", "central-model");
+    fs::remove_dir_all(root.path().join(".please/adapters")).unwrap();
+    // Distinct imported files with identical definitions share one adapter.
+    adapter(remote.path(), "reviews", "central", "central-model");
     commit(remote.path());
     assert_eq!(
         external::load(root.path(), true, Some(cache.path()))
             .unwrap()
-            .providers
+            .adapters
             .len(),
         1
     );
     let state = fs::read(&state_path).unwrap();
     // A differing definition with the same identifier is rejected.
-    provider(remote.path(), "reviews", "central", "other-model");
+    adapter(remote.path(), "reviews", "central", "other-model");
     commit(remote.path());
     assert!(
         format!(
             "{:#}",
             external::load(root.path(), true, Some(cache.path())).unwrap_err()
         )
-        .contains("duplicate provider")
+        .contains("duplicate adapter")
     );
     assert_eq!(fs::read(&state_path).unwrap(), state);
-    fs::remove_dir_all(remote.path().join("reviews/providers")).unwrap();
-    fs::remove_dir_all(remote.path().join("definitions/providers")).unwrap();
+    fs::remove_dir_all(remote.path().join("reviews/adapters")).unwrap();
+    fs::remove_dir_all(remote.path().join("definitions/adapters")).unwrap();
     commit(remote.path());
     let error = format!(
         "{:#}",
@@ -346,15 +346,15 @@ fn imported_providers_resolve_across_sets_offline_and_reconcile_atomically() {
 }
 
 #[test]
-fn identical_providers_of_different_revisions_coexist() {
-    // REQ-0210: a provider shipped by rule sets pinned at different commits of one repository is one provider while its definition is unchanged.
+fn identical_adapters_of_different_revisions_coexist() {
+    // REQ-0210: an adapter shipped by rule sets pinned at different commits of one repository is one adapter while its definition is unchanged.
     let root = project();
     let remote = tempfile::tempdir().unwrap();
     let cache = tempfile::tempdir().unwrap();
     git(remote.path(), &["init", "--quiet", "--initial-branch=main"]);
     for directory in ["first", "second"] {
         set(remote.path(), directory, &[]);
-        provider(remote.path(), directory, "central", "central-model");
+        adapter(remote.path(), directory, "central", "central-model");
     }
     commit(remote.path());
     git(remote.path(), &["tag", "v1"]);
@@ -381,30 +381,30 @@ fn identical_providers_of_different_revisions_coexist() {
     assert_eq!(
         external::load(root.path(), true, Some(cache.path()))
             .unwrap()
-            .providers
+            .adapters
             .len(),
         1
     );
-    provider(remote.path(), "second", "central", "other-model");
+    adapter(remote.path(), "second", "central", "other-model");
     commit(remote.path());
     let error = format!(
         "{:#}",
         external::load(root.path(), true, Some(cache.path())).unwrap_err()
     );
-    assert!(error.contains("duplicate provider"), "{error}");
+    assert!(error.contains("duplicate adapter"), "{error}");
 }
 
 #[cfg(unix)]
 #[test]
-fn provider_files_preserve_source_boundaries() {
+fn adapter_files_preserve_source_boundaries() {
     use std::os::unix::fs::symlink;
     let root = project();
     let outside = tempfile::tempdir().unwrap();
-    provider(outside.path(), ".please", "quality", "model");
-    fs::create_dir(root.path().join(".please/providers")).unwrap();
+    adapter(outside.path(), ".please", "quality", "model");
+    fs::create_dir(root.path().join(".please/adapters")).unwrap();
     symlink(
-        outside.path().join(".please/providers/quality.toml"),
-        root.path().join(".please/providers/quality.toml"),
+        outside.path().join(".please/adapters/quality.toml"),
+        root.path().join(".please/adapters/quality.toml"),
     )
     .unwrap();
     assert!(config::load(root.path()).is_err());
@@ -422,7 +422,7 @@ fn imported_cli_commands_follow_existing_explicit_import_trust() {
     review(remote.path(), "rules", "external", Some("central"), "");
     write(
         remote.path(),
-        "quality/providers/central.toml",
+        "quality/adapters/central.toml",
         "command = './tool'\ntimeout_seconds = 5\n[parameters]\nlabel = 'central-model'\n[requirements]\nexecutables = ['./tool']\n",
     );
     commit(remote.path());
@@ -443,7 +443,7 @@ print(json.dumps({'protocol_version':1,'reason':'Evidence inspected','findings':
     let p = external::load(root.path(), false, Some(cache.path())).unwrap();
     let result = please::verify_project_at(
         p,
-        &please::provider::Configured,
+        &please::adapter::Configured,
         please::VerificationMode::AllRules,
         Some("check"),
         &mut |_| {},

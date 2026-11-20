@@ -60,7 +60,7 @@ pub fn render_help(text: &str, color: bool) -> String {
 pub fn use_color(no_color: bool) -> bool {
     !no_color && std::env::var_os("NO_COLOR").is_none() && std::io::stdout().is_terminal()
 }
-// Repository and provider strings cannot inject terminal escapes or forge table rows.
+// Repository and adapter strings cannot inject terminal escapes or forge table rows.
 pub fn clean(text: &str) -> String {
     text.chars()
         .map(|c| if c.is_control() { ' ' } else { c })
@@ -705,7 +705,7 @@ pub fn render_plan(plan: &crate::planner::Plan, color: bool) -> String {
         text.push_str(&format!("Change base: {}\n", clean(base)));
     }
     if plan.checks_only {
-        text.push_str("Mode: Checks only · no provider calls\n");
+        text.push_str("Mode: Checks only · no adapter calls\n");
     }
     let names = plan.display_names();
     for (index, rule) in plan.scheduled.iter().enumerate() {
@@ -747,7 +747,7 @@ pub fn render_plan(plan: &crate::planner::Plan, color: bool) -> String {
             text.push_str(&format!("  {}\n", clean(line)));
         }
     }
-    if let Some(config) = &plan.provider {
+    if let Some(config) = &plan.adapter {
         text.push_str(&format!(
             "Default adapter: {} · Timeout: {} s\n",
             clean(&config.command),
@@ -759,17 +759,17 @@ pub fn render_plan(plan: &crate::planner::Plan, color: bool) -> String {
         plan.planned_model_calls, plan.context.selected_bytes, plan.context.byte_limit
     ));
     for rule in &plan.scheduled {
-        if let Some(origin) = &rule.provider_origin {
+        if let Some(origin) = &rule.adapter_origin {
             text.push_str(&format!(
-                "Provider source: {} · {} @ {}\n",
-                clean(rule.provider.as_deref().unwrap_or_default()),
+                "Adapter profile source: {} · {} @ {}\n",
+                clean(rule.adapter.as_deref().unwrap_or_default()),
                 clean(&origin.path),
                 clean(&origin.commit)
             ));
         }
-        if let (Some(id), Some(config)) = (&rule.provider, &rule.provider_config) {
+        if let (Some(id), Some(config)) = (&rule.adapter, &rule.adapter_profile) {
             text.push_str(&format!(
-                "Review {} · Provider configuration: {} · Adapter: {} · Timeout: {} s\n",
+                "Review {} · Adapter profile: {} · Adapter: {} · Timeout: {} s\n",
                 clean(&names[&rule.id]),
                 clean(id),
                 clean(&config.command),
@@ -848,7 +848,7 @@ pub fn render(report: &Report, color: bool) -> String {
     }
     if report.checks_only {
         text.push_str(&paint(
-            "Mode: Checks only · Reviews not run · no provider calls\n",
+            "Mode: Checks only · Reviews not run · no adapter calls\n",
             Tone::Accent,
             color,
         ));
@@ -892,7 +892,7 @@ pub fn render(report: &Report, color: bool) -> String {
         "\nOverall: {}\nReport: .please/reports/last.json\nDetails: please status --details\n",
         status(report.overall, color)
     ));
-    if let Some(usage) = report.provider_usage {
+    if let Some(usage) = report.adapter_usage {
         text.push_str(&format!(
             "Adapter tokens: {} total · {} input ({} cached) · {} output\n",
             count(usage.total()),
@@ -915,7 +915,7 @@ pub fn render(report: &Report, color: bool) -> String {
 fn count(value: Option<u64>) -> String {
     value.map_or_else(|| "unavailable".into(), |n| n.to_string())
 }
-/// Render the saved report only; this never executes commands or invokes a provider.
+/// Render the saved report only; this never executes commands or invokes an adapter.
 pub fn render_details(report: &Report, color: bool) -> String {
     let mut text = render(report, color);
     {
@@ -936,10 +936,10 @@ pub fn render_details(report: &Report, color: bool) -> String {
         }
     }
     for rule in &report.plan.scheduled {
-        if let Some(origin) = &rule.provider_origin {
+        if let Some(origin) = &rule.adapter_origin {
             text.push_str(&format!(
-                "Provider source: {} · {} @ {}\n",
-                clean(rule.provider.as_deref().unwrap_or_default()),
+                "Adapter profile source: {} · {} @ {}\n",
+                clean(rule.adapter.as_deref().unwrap_or_default()),
                 clean(&origin.path),
                 clean(&origin.commit)
             ));
@@ -957,7 +957,7 @@ pub fn render_details(report: &Report, color: bool) -> String {
             ));
         }
     }
-    if let Some(usage) = report.provider_usage {
+    if let Some(usage) = report.adapter_usage {
         text.push_str(&format!(
             "Reasoning tokens (included in output): {} · Cache write tokens (included in input): {}\n",
             count(usage.reasoning_output_tokens),
@@ -980,8 +980,8 @@ pub fn render_details(report: &Report, color: bool) -> String {
             status(item.status, color),
             clean(&item_reason(item))
         ));
-        if let Some(provider) = &item.provider {
-            text.push_str(&format!("Provider: {}\n", clean(provider)));
+        if let Some(adapter) = &item.adapter {
+            text.push_str(&format!("Adapter: {}\n", clean(adapter)));
         }
         if let Some(explanation) = &item.explanation {
             // Keep the line breaks of the explanation; terminal control characters stay neutralized.

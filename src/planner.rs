@@ -16,16 +16,16 @@ pub const PLAN_SCHEMA_VERSION: u32 = 0;
 #[serde(deny_unknown_fields)]
 pub struct Rule {
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub provider_origin: Option<crate::external::Origin>,
+    pub adapter_origin: Option<crate::external::Origin>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub depends_on: Vec<String>,
     pub id: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub provider: Option<String>,
+    pub adapter: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub provider_config: Option<crate::config::ProviderConfig>,
+    pub adapter_profile: Option<crate::config::AdapterProfile>,
     pub kind: String,
     pub description: String,
     pub blocking: bool,
@@ -101,8 +101,8 @@ pub struct Plan {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub disabled_rules: Vec<Rule>,
     pub required_ids: Vec<String>,
-    pub provider: Option<crate::config::ProviderConfig>,
-    pub provider_availability_checked: bool,
+    pub adapter: Option<crate::config::AdapterProfile>,
+    pub adapter_availability_checked: bool,
     pub planned_model_calls: usize,
     pub context: ContextPlan,
 }
@@ -157,9 +157,9 @@ pub struct PreparedPlan {
 fn metadata_path(path: &str) -> bool {
     let parts: Vec<_> = path.split('/').collect();
     match parts.as_slice() {
-        [".please", "config.toml" | "provider.toml"] => true,
+        [".please", "config.toml" | "adapter.toml"] => true,
         [".please", "checks" | "reviews", _, "rule.toml"] => true,
-        [".please", "rule-sets" | "providers", filename] => filename.ends_with(".toml"),
+        [".please", "rule-sets" | "adapters", filename] => filename.ends_with(".toml"),
         _ => false,
     }
 }
@@ -232,12 +232,12 @@ pub fn build_with_context(
             vec![]
         };
         let review = project.reviews.iter().find(|r| r.id == *id);
-        let provider = review.and_then(|r| r.provider.clone());
-        let provider_config = provider.as_ref().map(|id| project.providers[id].clone());
+        let adapter = review.and_then(|r| r.adapter.clone());
+        let adapter_profile = adapter.as_ref().map(|id| project.adapters[id].clone());
         let rule = Rule {
-            provider_origin: provider
+            adapter_origin: adapter
                 .as_ref()
-                .and_then(|id| project.external_providers.get(id))
+                .and_then(|id| project.external_adapters.get(id))
                 .map(|source| source.origin.clone()),
             depends_on: project
                 .checks
@@ -245,8 +245,8 @@ pub fn build_with_context(
                 .find(|r| r.id == *id)
                 .map(|r| r.depends_on.clone())
                 .unwrap_or_default(),
-            provider,
-            provider_config,
+            adapter,
+            adapter_profile,
             id: id.clone(),
             name: Some(display_name.clone()),
             kind: kind.into(),
@@ -370,11 +370,11 @@ pub fn build_with_context(
         }
     }
     for review in &active {
-        if project.review_provider(review).is_none() {
-            blocking_reasons.push(format!("Review {}: no adapter configured; configure .please/provider.toml or select a named provider", review.id));
+        if project.review_adapter(review).is_none() {
+            blocking_reasons.push(format!("Review {}: no adapter profile configured; configure .please/adapter.toml or select a named adapter profile", review.id));
         }
     }
-    let provider = project.provider.clone();
+    let adapter = project.adapter.clone();
     let mut plan = Plan {
         change_base: changes
             .as_ref()
@@ -405,8 +405,8 @@ pub fn build_with_context(
         omitted,
         disabled_rules,
         required_ids,
-        provider,
-        provider_availability_checked: false,
+        adapter,
+        adapter_availability_checked: false,
         planned_model_calls: active
             .iter()
             .filter(|review| review.execution_error.is_none())
@@ -469,14 +469,14 @@ pub fn build_with_context(
             })
             .collect()
     });
-    let named_providers = project.providers.clone();
+    let named_adapters = project.adapters.clone();
     let identity = serde_json::json!({
         "plan_schema_version": PLAN_SCHEMA_VERSION, "verifier_version": env!("CARGO_PKG_VERSION"),
         "project": project.config.project,
         "at": name, "checks_only": checks_only, "checks": checks, "reviews": reviews,
-        "provider": plan.provider, "named_providers": named_providers, "head": snapshot.head, "files": files, "context": excerpts, "scopes": scopes,
+        "adapter": plan.adapter, "named_adapters": named_adapters, "head": snapshot.head, "files": files, "context": excerpts, "scopes": scopes,
         "commit_message": plan.input.commit_message,
-        "provider_origins": project.external_providers.iter().map(|(id, source)| (id, &source.origin)).collect::<std::collections::BTreeMap<_,_>>(),
+        "adapter_origins": project.external_adapters.iter().map(|(id, source)| (id, &source.origin)).collect::<std::collections::BTreeMap<_,_>>(),
         "complete": snapshot.complete, "change_base": plan.change_base, "scheduled": plan.scheduled, "omitted": plan.omitted,
     });
     plan.plan_id = format!("{:x}", Sha256::digest(serde_json::to_vec(&identity)?));

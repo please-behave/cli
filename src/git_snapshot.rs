@@ -48,7 +48,7 @@ pub(crate) fn git(root: &Path) -> Command {
     c
 }
 // These outputs are repository data, not logs. Use the snapshot byte budget;
-// stderr and every ordinary process/provider capture retain their smaller bound.
+// stderr and every ordinary process/adapter capture retain their smaller bound.
 pub(crate) fn path_output(
     command: &mut Command,
     timeout: Duration,

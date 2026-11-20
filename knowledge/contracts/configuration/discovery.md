@@ -16,15 +16,15 @@ these locations only:
 | Location | Meaning |
 | --- | --- |
 | `.please/config.toml` | Required project document. |
-| `.please/provider.toml` | Optional default adapter configuration. |
-| `.please/providers/*.toml` | Named provider configurations, identified by filename stem. |
+| `.please/adapter.toml` | Optional default adapter profile. |
+| `.please/adapters/*.toml` | Named adapter profiles, identified by filename stem. |
 | `.please/checks/*/rule.toml` | Check definition in each immediate Rule directory. |
 | `.please/reviews/*/rule.toml` | Review definition in each immediate Rule directory. |
 | `.please/rule-sets/*.toml` | Local Rule Set definitions. |
 
-Provider, Rule and Rule Set directories are optional. Each entry in `checks/`
+Adapter profile, Rule and Rule Set directories are optional. Each entry in `checks/`
 or `reviews/` must be a Rule directory containing its own `rule.toml`; each entry
-in `rule-sets/` must be a TOML file. In `providers/`, TOML files are definitions
+in `rule-sets/` must be a TOML file. In `adapters/`, TOML files are definitions
 and directories may hold supporting resources without recursive discovery.
 Supporting files inside a Rule directory, such as a tool's own TOML configuration,
 are data: Please never interprets them as governance configuration. Arbitrary or
@@ -33,10 +33,10 @@ nested files cannot introduce extra definitions.
 Explicit Git imports select source directories under the
 [external Rule Set reference](../../../docs/external-rule-sets.md). Each selected
 directory defines exactly one Rule Set in its `ruleset.toml`, with optional named
-provider configurations in `providers/*.toml` beside it; a directory without
+adapter profiles in `adapters/*.toml` beside it; a directory without
 `ruleset.toml` fails validation. Imports do not extend local recursive
-discovery. Named provider packages follow the
-[independent provider import reference](../../../docs/configuration.md#import-providers-from-git).
+discovery. Named adapter profile packages follow the
+[independent adapter profile import reference](../../../docs/configuration.md#import-adapter-profiles-from-git).
 These definitions belong to this same configuration compatibility boundary.
 
 ## Documents and safe resources
@@ -64,12 +64,12 @@ rejected while loading, but absence becomes an error only for an enabled Rule
 selected by that run.
 Inactive Rules need no runtime implementation. A selected review's missing prompt
 is a configuration error that prevents success even when the review is advisory.
-Detailed Rule, provider and import validation follows the
+Detailed Rule, adapter profile and import validation follows the
 [configuration reference](../../../docs/configuration.md).
 
 ## Validation and reconciliation
 
-Loading and validation execute no check or provider adapter and change no Git
+Loading and validation execute no check or adapter and change no Git
 objects, index or configuration. `please sync` validates the configuration and
 reconciles its declared external state after confirmation; `--yes` supplies
 unattended confirmation. Hook requirements derive from effective assignments,

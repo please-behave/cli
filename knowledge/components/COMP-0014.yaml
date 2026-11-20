@@ -22,7 +22,7 @@ out_of_scope:
     owner: COMP-0002
 must_not:
   - >-
-    Treat a provider failure, invalid JSON or incomplete coverage as PASS.
+    Treat an adapter failure, invalid JSON or incomplete coverage as PASS.
   - >-
     Accept reports or plans of unsupported schema versions or of another repository.
   - >-

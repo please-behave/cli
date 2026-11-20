@@ -269,7 +269,7 @@ fn filesystem_permission_failure_applies_no_hooks() {
 }
 
 #[test]
-fn obsolete_hooks_are_rejected_and_provider_validation_is_preserved() {
+fn obsolete_hooks_are_rejected_and_adapter_validation_is_preserved() {
     let root = project(&["pre-commit"]);
     let path = root.path().join(".please/config.toml");
     let original = fs::read_to_string(&path).unwrap();
@@ -291,14 +291,14 @@ fn obsolete_hooks_are_rejected_and_provider_validation_is_preserved() {
         assert!(!hook(root.path(), "pre-commit").exists());
     }
     fs::write(path, original).unwrap();
-    let provider = root.path().join(".please/provider.toml");
-    let original = fs::read_to_string(&provider).unwrap();
+    let adapter = root.path().join(".please/adapter.toml");
+    let original = fs::read_to_string(&adapter).unwrap();
     for bad in [
         format!("{original}unsupported = true\n"),
         original.replace("180", "3601"),
         original.replace("fake-adapter", ""),
     ] {
-        fs::write(&provider, bad).unwrap();
+        fs::write(&adapter, bad).unwrap();
         assert_eq!(cli(root.path(), &["sync"]).status.code(), Some(2));
     }
 }

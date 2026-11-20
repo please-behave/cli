@@ -83,7 +83,7 @@ impl Fixture {
         );
         support::write(
             &root,
-            ".please/provider.toml",
+            ".please/adapter.toml",
             "command = 'python3'\nargs = ['.git/adapter.py']\ntimeout_seconds = 5\n",
         );
         support::check_args(

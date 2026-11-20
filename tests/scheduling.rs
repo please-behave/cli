@@ -1,14 +1,15 @@
 //! History changes dispatch, never plan identity or verification results.
 mod support;
 use please::{
-    Progress, config, planner,
-    provider::{Provider, Request},
+    Progress,
+    adapter::{Adapter, Request},
+    config, planner,
     report::Status,
 };
 use std::fs;
 
 struct NoReviews;
-impl Provider for NoReviews {
+impl Adapter for NoReviews {
     fn review(&self, _: &Request<'_>) -> anyhow::Result<String> {
         panic!("no reviews selected")
     }
@@ -114,7 +115,7 @@ fn corrupt_and_unwritable_cache_never_change_verification() {
 #[test]
 fn review_history_orders_calls_and_preserves_result_order() {
     struct Mock;
-    impl Provider for Mock {
+    impl Adapter for Mock {
         fn review(&self, request: &Request<'_>) -> anyhow::Result<String> {
             assert_eq!(request.reviews.len(), 1);
             Ok(serde_json::json!({"reviews": request.reviews.iter().map(|r| serde_json::json!({"id": r.id, "status": "PASS", "reason": "Inspected", "findings": [{"message": "Evidence", "path": "evidence", "line": 1}]})).collect::<Vec<_>>()}).to_string())

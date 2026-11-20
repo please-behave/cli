@@ -4,9 +4,9 @@ use clap::{CommandFactory, Parser};
 #[cfg(unix)]
 use please::process;
 use please::{
+    adapter::{Adapter, Request},
     cli::Cli,
     config, git_snapshot,
-    provider::{Provider, Request},
     report::{self, Status},
     terminal,
 };
@@ -59,9 +59,9 @@ fn enable(root: &Path) {
     );
 }
 struct Never;
-impl Provider for Never {
+impl Adapter for Never {
     fn review(&self, _: &Request<'_>) -> Result<String> {
-        panic!("provider must not be called")
+        panic!("adapter must not be called")
     }
 }
 struct Mock {
@@ -69,7 +69,7 @@ struct Mock {
     payload: String,
     error: bool,
 }
-impl Provider for Mock {
+impl Adapter for Mock {
     fn review(&self, request: &Request<'_>) -> Result<String> {
         self.calls.set(self.calls.get() + 1);
         assert!(!request.reviews.is_empty());
@@ -276,7 +276,7 @@ fn plan_contract_covers_review_context_and_rejects_malformed_documents() {
     support::check(d.path(), "prerequisite", &["check"], "exit 0");
     support::write(
         d.path(),
-        ".please/providers/quality.toml",
+        ".please/adapters/quality.toml",
         "command = 'unavailable-adapter'\ntimeout_seconds = 30\n[parameters]\nmodel = 'synthetic'\n",
     );
     support::write(
@@ -287,7 +287,7 @@ id = "quality"
 description = "Inspect changed evidence"
 run_at = ["check"]
 [review]
-provider = "quality"
+adapter = "quality"
 prompt = "prompt.md"
 include_content = true
 include_change_set = true
@@ -316,7 +316,7 @@ context = [{path = "evidence.md"}]
     support::assert_plan_contract(&plan);
     assert!(!plan["context"]["sections"].as_array().unwrap().is_empty());
     assert!(!plan["context"]["scopes"].as_array().unwrap().is_empty());
-    assert_eq!(plan["scheduled"][1]["provider"], "quality");
+    assert_eq!(plan["scheduled"][1]["adapter"], "quality");
     assert_eq!(plan["planned_model_calls"], 1);
     assert!(!d.path().join(".git/please/context").exists());
 
@@ -327,7 +327,7 @@ context = [{path = "evidence.md"}]
         let mut compatible = plan.clone();
         compatible["plan_schema_version"] = serde_json::json!(version);
         support::assert_plan_contract(&compatible);
-        // The named provider and disabled metadata remain readable by the existing consumer.
+        // The named adapter and disabled metadata remain readable by the existing consumer.
         serde_json::from_value::<please::planner::Plan>(compatible).unwrap();
     }
     for (pointer, value) in [
@@ -341,7 +341,7 @@ context = [{path = "evidence.md"}]
         ("/input/complete", serde_json::json!(false)),
         ("/context/sections/0/bytes", serde_json::json!(-1)),
         (
-            "/scheduled/1/provider_config/timeout_seconds",
+            "/scheduled/1/adapter_profile/timeout_seconds",
             serde_json::json!("30"),
         ),
     ] {
@@ -372,8 +372,8 @@ context = [{path = "evidence.md"}]
 
 #[test]
 fn human_plan_uses_english_and_preserves_layout_and_values() {
-    // REQ-0155: rendered plans show ordered selection, omissions, required rules, input, providers and context bounds.
-    // Fixed metadata exercises optional display sections without invoking rules or providers.
+    // REQ-0155: rendered plans show ordered selection, omissions, required rules, input, adapters and context bounds.
+    // Fixed metadata exercises optional display sections without invoking rules or adapters.
     let mut plan: please::planner::Plan = serde_json::from_value(serde_json::json!({
         "plan_schema_version": 1,
         "plan_id": "plan-123",
@@ -385,13 +385,13 @@ fn human_plan_uses_english_and_preserves_layout_and_values() {
         "checks_only": false,
         "scheduled": [{"id": "architecture", "name": "Architektur", "kind": "review",
             "description": "Prüft das Design", "blocking": true, "selected_by": ["at:check"],
-            "provider": "reviewer", "provider_config": {
+            "adapter": "reviewer", "adapter_profile": {
                 "command": "review-adapter", "timeout_seconds": 60}}],
         "omitted": [{"rule": {"id": "unchanged", "kind": "review", "description": "Unused",
             "blocking": true, "selected_by": ["at:check"]}, "reason": "trigger_not_matched"}],
         "required_ids": ["architecture"],
-        "provider": {"command": "fake-adapter", "timeout_seconds": 180},
-        "provider_availability_checked": false,
+        "adapter": {"command": "fake-adapter", "timeout_seconds": 180},
+        "adapter_availability_checked": false,
         "planned_model_calls": 1,
         "change_base": "base-789",
         "context": {"scopes": [{"review": "architecture", "files": ["src/lib.rs"], "content_bytes": 30, "change_set_bytes": 40}],
@@ -416,7 +416,7 @@ fn human_plan_uses_english_and_preserves_layout_and_values() {
             "Default adapter: fake-adapter · Timeout: 180 s\n",
             "Adapter availability not checked · Planned model calls: 1\n",
             "Context: 120 / 1000 bytes\n",
-            "Review Architektur · Provider configuration: reviewer · Adapter: review-adapter · Timeout: 60 s\n",
+            "Review Architektur · Adapter profile: reviewer · Adapter: review-adapter · Timeout: 60 s\n",
             "Scope of architecture: 1 files · Content: 30 bytes · Change set: 40 bytes\n",
             "Review criteria: 80 / 500 bytes\n",
             "Requirements: knowledge/requirements/README.md · entire file\n",
@@ -450,7 +450,7 @@ fn human_plan_uses_english_and_preserves_layout_and_values() {
     for expected in [
         "Please Behave execution plan · BLOCKED\n",
         "HEAD: unborn\nSnapshot: snapshot-456 · UNKNOWN\n",
-        "Mode: Checks only · no provider calls\n",
+        "Mode: Checks only · no adapter calls\n",
         "No active rules selected; no rule PASS established.\n",
         "Omitted: review architecture · trigger_not_matched\n",
         "Context: 120 / 1000 bytes\n",
@@ -529,7 +529,7 @@ fn init_exact_paths_and_repeated_initialization_rejected() {
     );
     assert!(!path(root, "reports/last.json").exists());
     fs::write(path(root, "config.toml"), "personal edits").unwrap();
-    assert!(!path(root, "provider.toml").exists());
+    assert!(!path(root, "adapter.toml").exists());
     let output = cli(root, &["init"]);
     assert_eq!(output.status.code(), Some(2));
     assert!(output.stdout.is_empty());
@@ -537,7 +537,7 @@ fn init_exact_paths_and_repeated_initialization_rejected() {
         output.stderr,
         b"Please Behave: ERROR: Already initialized (.please/ exists).\n"
     );
-    assert!(!path(root, "provider.toml").exists());
+    assert!(!path(root, "adapter.toml").exists());
     assert_eq!(
         fs::read_to_string(path(root, "config.toml")).unwrap(),
         "personal edits"
@@ -638,7 +638,7 @@ fn predecessor_configuration_is_not_loaded_or_modified() {
 }
 
 #[test]
-fn validation_does_not_execute_checks_or_provider() {
+fn validation_does_not_execute_checks_or_adapter() {
     let d = project();
     enable(d.path());
     replace(
@@ -782,7 +782,7 @@ fn report_schema_rejects_malformed_snapshot_results_and_embedded_plan() {
 }
 
 #[test]
-fn failing_check_runs_remaining_and_blocks_provider() {
+fn failing_check_runs_remaining_and_blocks_adapter() {
     let d = project();
     enable(d.path());
     replace(
@@ -833,7 +833,7 @@ fn every_review_gets_its_own_call_with_exact_coverage_pass_fail() {
         calls: Cell<u32>,
         status: &'static str,
     }
-    impl Provider for Answering {
+    impl Adapter for Answering {
         fn review(&self, request: &Request<'_>) -> Result<String> {
             self.calls.set(self.calls.get() + 1);
             assert_eq!(request.reviews.len(), 1);
@@ -866,7 +866,7 @@ fn every_review_gets_its_own_call_with_exact_coverage_pass_fail() {
     }
 }
 #[test]
-fn malformed_missing_extra_duplicate_provider_outputs_fail_closed() {
+fn malformed_missing_extra_duplicate_adapter_outputs_fail_closed() {
     let mut invalid_line = verdict("product-consistency", "PASS");
     invalid_line["findings"][0]["line"] = serde_json::json!(999999);
     let mut invalid_path = verdict("product-consistency", "PASS");
@@ -902,7 +902,7 @@ fn malformed_missing_extra_duplicate_provider_outputs_fail_closed() {
     }
 }
 #[test]
-fn provider_error_and_timeout_are_errors() {
+fn adapter_error_and_timeout_are_errors() {
     let d = project();
     enable(d.path());
     let mock = Mock {
@@ -976,14 +976,14 @@ fn ignored_artifacts_do_not_change_verification_inputs() {
     let root = d.path();
     fs::write(root.join(".gitignore"), ".please/\n*.cache\n").unwrap();
     let before = git_snapshot::capture(root).unwrap();
-    support::write(root, ".please/adapters/__pycache__/adapter.pyc", "bytecode");
+    support::write(root, ".please/bin/__pycache__/adapter.pyc", "bytecode");
     support::write(root, ".please/generated/output.cache", "generated");
     support::write(root, "build.cache", "generated");
     let after = git_snapshot::capture(root).unwrap();
     assert!(before.complete && after.complete);
     assert_eq!(before.fingerprint, after.fingerprint);
     fs::write(root.join("build.cache"), "changed").unwrap();
-    fs::remove_dir_all(path(root, "adapters/__pycache__")).unwrap();
+    fs::remove_dir_all(path(root, "bin/__pycache__")).unwrap();
     assert_eq!(
         before.fingerprint,
         git_snapshot::capture(root).unwrap().fingerprint
@@ -1007,18 +1007,18 @@ fn ignored_governance_inputs_remain_fingerprinted() {
     let root = d.path();
     fs::write(root.join(".gitignore"), ".please/\nprivate/\n").unwrap();
     support::check(root, "referenced", &["check"], "exit 0\n");
-    support::write(root, ".please/adapters/adapter.py", "# adapter\n");
+    support::write(root, ".please/bin/adapter.py", "# adapter\n");
     support::write(
         root,
-        ".please/provider.toml",
-        "command = 'python3'\nargs = ['.please/adapters/adapter.py']\ntimeout_seconds = 30\n",
+        ".please/adapter.toml",
+        "command = 'python3'\nargs = ['.please/bin/adapter.py']\ntimeout_seconds = 30\n",
     );
     support::write(
         root,
-        ".please/providers/named.toml",
-        "command = '.please/adapters/named'\ntimeout_seconds = 30\n",
+        ".please/adapters/named.toml",
+        "command = '.please/bin/named'\ntimeout_seconds = 30\n",
     );
-    support::write(root, ".please/adapters/named", "# adapter\n");
+    support::write(root, ".please/bin/named", "# adapter\n");
     support::write(
         root,
         ".please/rule-sets/quality.toml",
@@ -1056,10 +1056,10 @@ fn ignored_governance_inputs_remain_fingerprinted() {
         ".please/checks/referenced/entrypoint",
         ".please/reviews/product-consistency/prompt.md",
         ".please/rule-sets/quality.toml",
-        ".please/provider.toml",
-        ".please/providers/named.toml",
-        ".please/adapters/adapter.py",
-        ".please/adapters/named",
+        ".please/adapter.toml",
+        ".please/adapters/named.toml",
+        ".please/bin/adapter.py",
+        ".please/bin/named",
         "private/parameter.txt",
         "private/repo.txt",
         "private/source.txt",
@@ -1088,7 +1088,7 @@ fn checks_can_generate_ignored_bytecode_without_invalidating_verification() {
         d.path(),
         "bytecode",
         &["pre-push"],
-        "mkdir -p .please/adapters/__pycache__\nprintf bytecode > .please/adapters/__pycache__/adapter.pyc\n",
+        "mkdir -p .please/bin/__pycache__\nprintf bytecode > .please/bin/__pycache__/adapter.pyc\n",
     );
     let report = please::verify(d.path(), &Never).unwrap();
     assert_eq!(report.overall, Status::Pass);
@@ -1096,7 +1096,7 @@ fn checks_can_generate_ignored_bytecode_without_invalidating_verification() {
         !report
             .snapshot
             .files
-            .contains_key(".please/adapters/__pycache__/adapter.pyc")
+            .contains_key(".please/bin/__pycache__/adapter.pyc")
     );
     assert_eq!(
         git_snapshot::compare(
@@ -1245,7 +1245,7 @@ fn timeout_output_capture_and_shell_are_explicit() {
 
 #[cfg(unix)]
 #[test]
-// REQ-0236: a check that changes input blocks the enabled review before its provider call.
+// REQ-0236: a check that changes input blocks the enabled review before its adapter call.
 // REQ-0262: tree stability errors remain explicit results even when the check succeeds.
 fn changing_files_during_checks_blocks_pass() {
     // REQ-0237: a check that changes project files prevents a successful result.
@@ -1330,7 +1330,7 @@ fn prompt_has_no_safety_instructions() {
         snapshot: &snapshot,
         input: &input,
     };
-    let text = please::provider::prompt(&request).unwrap();
+    let text = please::adapter::prompt(&request).unwrap();
     assert!(!text.contains("Truncated"));
     assert!(text.contains("<change-set>"));
     for forbidden in ["untrusted", "read-only", "privileged", "Do not edit"] {
@@ -1346,14 +1346,14 @@ fn prompt_has_no_safety_instructions() {
         reviews: &active,
         ..request
     };
-    let text = please::provider::prompt(&request).unwrap();
+    let text = please::adapter::prompt(&request).unwrap();
     assert!(!text.contains("malicious change set content"));
     assert!(!text.contains("<change-set>"));
 }
 
 #[test]
 fn oversized_change_set_ends_the_review_as_error_without_an_adapter_call() {
-    // REQ-0097: an oversized change set produces ERROR before the provider is invoked.
+    // REQ-0097: an oversized change set produces ERROR before the adapter is invoked.
     let d = project();
     enable(d.path());
     fs::write(d.path().join("big.txt"), "x\n".repeat(20 * 1024)).unwrap();
@@ -1548,9 +1548,9 @@ fn review_summary_is_visible_for_pass_and_fail_while_details_stay_separate() {
         value["findings"][0]["message"] = serde_json::json!(
             "DETAIL_ONLY: Full explanation of a concrete trigger, consequence, and inspected evidence."
         );
-        let provider = mock(vec![value]);
-        let report = please::verify(d.path(), &provider).unwrap();
-        assert_eq!(provider.calls.get(), 1);
+        let adapter = mock(vec![value]);
+        let report = please::verify(d.path(), &adapter).unwrap();
+        assert_eq!(adapter.calls.get(), 1);
         let short = terminal::render(&report, false);
         assert!(short.contains("SUMMARY"));
         assert!(short.contains("Settings navigation exposes labels and keyboard focus."));
@@ -1566,7 +1566,7 @@ fn review_summary_is_visible_for_pass_and_fail_while_details_stay_separate() {
     }
 }
 #[test]
-fn provider_summary_must_be_short_nonempty_and_single_line() {
+fn adapter_summary_must_be_short_nonempty_and_single_line() {
     let d = project();
     enable(d.path());
     let project = config::load(d.path()).unwrap();
@@ -1605,17 +1605,17 @@ fn detailed_status_reads_saved_findings_without_another_adapter_call() {
     value["reason"] = serde_json::json!("One keyboard accessibility issue found.");
     value["findings"][0]["message"] =
         serde_json::json!("DETAIL_ONLY: keyboard focus skips a visible control.");
-    let provider = mock(vec![value]);
-    please::verify(d.path(), &provider).unwrap();
+    let adapter = mock(vec![value]);
+    please::verify(d.path(), &adapter).unwrap();
     let bytes_before = fs::read(path(d.path(), "reports/last.json")).unwrap();
     let fake = tempdir().unwrap();
     let executable = fake.path().join("fake-adapter");
     write_executable(
         &executable,
-        "#!/bin/sh\nprintf 'called' > \"$TEST_PROVIDER_MARKER\"\nexit 90\n",
+        "#!/bin/sh\nprintf 'called' > \"$TEST_ADAPTER_MARKER\"\nexit 90\n",
     )
     .unwrap();
-    let marker = fake.path().join("provider-called");
+    let marker = fake.path().join("adapter-called");
     let env_path = std::env::join_paths(
         std::iter::once(fake.path().to_path_buf())
             .chain(std::env::split_paths(&std::env::var_os("PATH").unwrap())),
@@ -1630,7 +1630,7 @@ fn detailed_status_reads_saved_findings_without_another_adapter_call() {
         let output = command
             .current_dir(d.path())
             .env("PATH", &env_path)
-            .env("TEST_PROVIDER_MARKER", &marker)
+            .env("TEST_ADAPTER_MARKER", &marker)
             .env("NO_COLOR", "1")
             .output()
             .unwrap();
@@ -1675,7 +1675,7 @@ fn progress_numbers_only_enabled_rules_and_runs_one_review_per_call() {
         events: &'a RefCell<Vec<String>>,
         calls: Cell<u32>,
     }
-    impl Provider for Observing<'_> {
+    impl Adapter for Observing<'_> {
         fn review(&self, request: &Request<'_>) -> Result<String> {
             self.calls.set(self.calls.get() + 1);
             assert_eq!(request.reviews.len(), 1);
@@ -1716,13 +1716,13 @@ fn progress_numbers_only_enabled_rules_and_runs_one_review_per_call() {
     )
     .unwrap();
     let events = RefCell::new(Vec::new());
-    let provider = Observing {
+    let adapter = Observing {
         events: &events,
         calls: Cell::new(0),
     };
     let report = please::verify_project_with_progress(
         config::load(d.path()).unwrap(),
-        &provider,
+        &adapter,
         &mut |event| {
             events
                 .borrow_mut()
@@ -1731,7 +1731,7 @@ fn progress_numbers_only_enabled_rules_and_runs_one_review_per_call() {
     )
     .unwrap();
     assert_eq!(report.overall, Status::Fail);
-    assert_eq!(provider.calls.get(), 2);
+    assert_eq!(adapter.calls.get(), 2);
     let output = events.borrow().concat();
     for number in 1..=4 {
         assert!(output.contains(&format!("[{number}/4] RUNNING")));
@@ -1739,7 +1739,7 @@ fn progress_numbers_only_enabled_rules_and_runs_one_review_per_call() {
     assert!(output.contains("[1/4] PASS    · always-ok"));
     assert!(output.contains("[4/4] FAIL    · second"));
     assert!(output.contains("Second deterministic check"));
-    assert!(!output.contains("provider call"));
+    assert!(!output.contains("adapter call"));
     assert!(!output.contains("deliberately-failing"));
     assert!(output.contains("Documented expectations inspected"));
 }
@@ -1875,11 +1875,11 @@ fn progress_uses_semantic_colors_and_sanitizes_rule_descriptions() {
 #[test]
 fn usage_is_summed_across_review_calls() {
     // REQ-0121: usage from two adapter calls is summed and persisted.
-    use please::{provider::Response, report::TokenUsage};
+    use please::{adapter::Response, report::TokenUsage};
     struct Metered {
         calls: Cell<u32>,
     }
-    impl Provider for Metered {
+    impl Adapter for Metered {
         fn review(&self, _: &Request<'_>) -> Result<String> {
             panic!("the usage-aware entry point must be used")
         }
@@ -1906,11 +1906,11 @@ fn usage_is_summed_across_review_calls() {
         metadata.replace("id = \"product-consistency\"", "id = \"second\""),
     )
     .unwrap();
-    let provider = Metered {
+    let adapter = Metered {
         calls: Cell::new(0),
     };
-    let r = please::verify(d.path(), &provider).unwrap();
-    assert_eq!(provider.calls.get(), 2);
+    let r = please::verify(d.path(), &adapter).unwrap();
+    assert_eq!(adapter.calls.get(), 2);
     assert_eq!(r.overall, Status::Pass);
     assert_eq!(r.token_usage, Some(2400));
     assert_eq!(
@@ -1920,8 +1920,8 @@ fn usage_is_summed_across_review_calls() {
         1
     );
     assert_eq!(
-        report::read(d.path()).unwrap().provider_usage,
-        r.provider_usage
+        report::read(d.path()).unwrap().adapter_usage,
+        r.adapter_usage
     );
 }
 
@@ -1957,7 +1957,7 @@ fn write_executable(path: &Path, contents: impl AsRef<[u8]>) -> std::io::Result<
 }
 
 #[test]
-fn checks_only_never_calls_provider_and_counts_only_checks_even_on_failure() {
+fn checks_only_never_calls_adapter_and_counts_only_checks_even_on_failure() {
     use please::{Progress, VerificationMode, verify_project_with_mode};
     for case in ["pass", "fail", "error", "no-checks"] {
         let d = project();
@@ -2027,10 +2027,10 @@ fn checks_only_never_calls_provider_and_counts_only_checks_even_on_failure() {
             })
         );
         assert_eq!(report.token_usage, None);
-        assert_eq!(report.provider_usage, None);
+        assert_eq!(report.adapter_usage, None);
         assert!(report::read(d.path()).unwrap().checks_only);
         let text = terminal::render(&report, false);
-        assert!(text.contains("Checks only") && text.contains("no provider calls"));
+        assert!(text.contains("Checks only") && text.contains("no adapter calls"));
         if case == "no-checks" {
             assert!(text.contains("No active checks"));
         }
@@ -2068,7 +2068,7 @@ fn checks_only_cli_skips_enabled_adapter_reviews_and_status_keeps_the_scope() {
     let marker = fake.path().join("called");
     write_executable(
         &executable,
-        "#!/bin/sh\nprintf called > \"$TEST_PROVIDER_MARKER\"\nexit 23\n",
+        "#!/bin/sh\nprintf called > \"$TEST_ADAPTER_MARKER\"\nexit 23\n",
     )
     .unwrap();
     let search_path = std::env::join_paths(
@@ -2081,7 +2081,7 @@ fn checks_only_cli_skips_enabled_adapter_reviews_and_status_keeps_the_scope() {
             .args(args)
             .current_dir(d.path())
             .env("PATH", &search_path)
-            .env("TEST_PROVIDER_MARKER", &marker)
+            .env("TEST_ADAPTER_MARKER", &marker)
             .env("NO_COLOR", "1")
             .output()
             .unwrap()
@@ -2151,7 +2151,7 @@ fn review_context_sections_keep_source_lines_merge_overlap_and_ignore_code_headi
 }
 
 #[test]
-fn review_context_rejects_escaping_missing_and_excessive_sources_without_a_provider() {
+fn review_context_rejects_escaping_missing_and_excessive_sources_without_an_adapter() {
     for extra in [
         "files = [\"../outside.swift\"]",
         "files = [\"missing.swift\"]",
@@ -2214,7 +2214,7 @@ fn triggers_limit_the_scope_of_content_and_change_set() {
     assert_eq!(paths, ["entry.swift", "new.swift"]);
     let change_set = scope.change_set.as_deref().unwrap();
     assert!(change_set.contains("new entry") && !change_set.contains("UNRELATED_SECRET"));
-    let prompt = please::provider::prompt(&request).unwrap();
+    let prompt = please::adapter::prompt(&request).unwrap();
     assert!(prompt.contains("new staged entry") && prompt.contains("Relevant requirement"));
     assert!(!prompt.contains("UNRELATED_POLICY_SECRET") && !prompt.contains("unrelated.swift"));
     assert!(prompt.contains("not an exhaustive boundary"));
@@ -2248,9 +2248,9 @@ fn yes_is_explicit_and_scoped_to_sync() {
 
 #[test]
 fn a_counter_missing_from_any_call_stays_unavailable() {
-    use please::{provider::Response, report::TokenUsage};
+    use please::{adapter::Response, report::TokenUsage};
     struct Partial;
-    impl Provider for Partial {
+    impl Adapter for Partial {
         fn review(&self, _: &Request<'_>) -> Result<String> {
             panic!("the usage-aware entry point must be used")
         }
@@ -2366,8 +2366,8 @@ fn executed_runs_replace_the_saved_report_and_leave_no_temporary_files() {
 fn saved_report_preserves_run_identity_results_and_required_plan() {
     let d = project();
     enable(d.path());
-    let provider = mock(vec![verdict("product-consistency", "FAIL")]);
-    let run = please::verify(d.path(), &provider).unwrap();
+    let adapter = mock(vec![verdict("product-consistency", "FAIL")]);
+    let run = please::verify(d.path(), &adapter).unwrap();
     let saved = report::read(d.path()).unwrap();
     assert_eq!(saved.overall, Status::Fail);
     assert_eq!(
@@ -2508,8 +2508,8 @@ fn project_commands_preserve_git_state() {
 
 #[test]
 // REQ-0288: initialization changes only .please and leaves the Git hooks directory untouched.
-// REQ-0289: the starter enables only its passing check, runs without a provider and ignores its report.
-fn starter_is_confined_and_runs_without_a_provider() {
+// REQ-0289: the starter enables only its passing check, runs without an adapter and ignores its report.
+fn starter_is_confined_and_runs_without_an_adapter() {
     let root = tempdir().unwrap();
     git(root.path(), &["init", "--quiet"]);
     let hooks = root.path().join(".git/hooks");
@@ -2548,7 +2548,7 @@ fn starter_is_confined_and_runs_without_a_provider() {
         .collect();
     assert_eq!(before, after);
     let config = config::load(root.path()).unwrap();
-    assert!(config.provider.is_none());
+    assert!(config.adapter.is_none());
     assert_eq!(config.checks.len(), 2);
     assert!(
         config

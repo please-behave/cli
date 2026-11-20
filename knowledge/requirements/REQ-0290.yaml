@@ -1,8 +1,8 @@
 id: REQ-0290
-name: Please Ships No Provider
+name: Please Ships No Adapter Profile
 area: reviews
 description: >-
-  Please must supply no provider configuration and no adapter.
+  Please must supply no adapter profile and no adapter.
 rationale: >-
   Please stays independent of any model vendor, and every review runs with an
   adapter that the project configures itself.

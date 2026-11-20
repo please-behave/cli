@@ -3,9 +3,9 @@ mod support;
 use clap::Parser;
 use please::{
     Progress,
+    adapter::{Adapter, Request},
     cli::{Cli, ProgressMode},
     config,
-    provider::{Provider, Request},
     report::{self, Status},
     terminal,
 };
@@ -13,9 +13,9 @@ use std::fs;
 use tempfile::TempDir;
 
 struct Never;
-impl Provider for Never {
+impl Adapter for Never {
     fn review(&self, _: &Request<'_>) -> anyhow::Result<String> {
-        panic!("no provider expected")
+        panic!("no adapter expected")
     }
 }
 fn project() -> TempDir {
@@ -198,7 +198,7 @@ fn concise_cli_keeps_diagnostics_and_avoids_duplicate_results() {
             "TYPE",
             "SUMMARY",
             "Report:",
-            "no provider call",
+            "no adapter call",
         ] {
             assert!(
                 !format!("{progress}{summary}").contains(unwanted),

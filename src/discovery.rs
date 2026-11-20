@@ -32,10 +32,10 @@ pub(crate) fn snapshot_inputs(root: &Path) -> Result<BTreeSet<PathBuf>> {
             }
         }
     }
-    fn provider(root: &Path, path: &Path, paths: &mut BTreeSet<PathBuf>) -> Result<()> {
-        let provider: config::ProviderConfig = document(root, path)?;
+    fn adapter(root: &Path, path: &Path, paths: &mut BTreeSet<PathBuf>) -> Result<()> {
+        let adapter: config::AdapterProfile = document(root, path)?;
         paths.insert(path.to_owned());
-        for value in std::iter::once(&provider.command).chain(&provider.args) {
+        for value in std::iter::once(&adapter.command).chain(&adapter.args) {
             argument(root, Path::new(value), paths);
         }
         Ok(())
@@ -62,13 +62,13 @@ pub(crate) fn snapshot_inputs(root: &Path) -> Result<BTreeSet<PathBuf>> {
     for path in entries(root, &directory.join("rule-sets"))? {
         paths.insert(path);
     }
-    let legacy = directory.join("provider.toml");
+    let legacy = directory.join("adapter.toml");
     if root.join(&legacy).try_exists()? {
-        provider(root, &legacy, &mut paths)?;
+        adapter(root, &legacy, &mut paths)?;
     }
-    for path in entries(root, &directory.join("providers"))? {
+    for path in entries(root, &directory.join("adapters"))? {
         if !root.join(&path).is_dir() {
-            provider(root, &path, &mut paths)?;
+            adapter(root, &path, &mut paths)?;
         }
     }
     for kind in ["checks", "reviews"] {
@@ -100,7 +100,7 @@ pub(crate) fn snapshot_inputs(root: &Path) -> Result<BTreeSet<PathBuf>> {
 
 pub(crate) struct Loaded {
     pub config: Config,
-    pub providers: Vec<(PathBuf, String, config::ProviderConfig)>,
+    pub adapters: Vec<(PathBuf, String, config::AdapterProfile)>,
     pub checks: Vec<(PathBuf, Check)>,
     pub reviews: Vec<(PathBuf, Review)>,
     pub rule_sets: Vec<(PathBuf, RuleSet)>,
@@ -126,7 +126,7 @@ pub(crate) fn load(root: &Path) -> Result<Loaded> {
         }
     }
     let mut loaded = load_rules(root, config, sets, directories)?;
-    loaded.providers = providers(root, &directory.join("providers"))?;
+    loaded.adapters = adapters(root, &directory.join("adapters"))?;
     Ok(loaded)
 }
 pub(crate) fn load_external(root: &Path, selected: &Path, consumer: Config) -> Result<Loaded> {
@@ -180,15 +180,15 @@ pub(crate) fn load_external(root: &Path, selected: &Path, consumer: Config) -> R
         let directory = source_path(root, Path::new(reference.id()))?;
         *reference.id_mut() = ids[directory.strip_prefix(root)?].clone();
     }
-    loaded.providers = providers(root, &selected.join("providers"))?;
+    loaded.adapters = adapters(root, &selected.join("adapters"))?;
     loaded.rule_sets.push((central, set));
     Ok(loaded)
 }
-fn providers(
+fn adapters(
     root: &Path,
     directory: &Path,
-) -> Result<Vec<(PathBuf, String, config::ProviderConfig)>> {
-    let mut providers = Vec::new();
+) -> Result<Vec<(PathBuf, String, config::AdapterProfile)>> {
+    let mut adapters = Vec::new();
     for path in entries(root, directory)? {
         // Supporting adapter directories are data, never recursively discovered.
         if source_path(root, &path)?.is_dir() {
@@ -196,18 +196,19 @@ fn providers(
         }
         ensure!(
             path.extension().is_some_and(|e| e == "toml"),
-            "{}: expected a provider TOML file",
+            "{}: expected an adapter profile TOML file",
             path.display()
         );
         let id = path
             .file_stem()
             .and_then(|s| s.to_str())
-            .context("provider ID must be UTF-8")?
+            .context("adapter profile ID must be UTF-8")?
             .to_owned();
-        let provider = document(root, &path).with_context(|| format!("invalid provider {id:?}"))?;
-        providers.push((path, id, provider));
+        let adapter =
+            document(root, &path).with_context(|| format!("invalid adapter profile {id:?}"))?;
+        adapters.push((path, id, adapter));
     }
-    Ok(providers)
+    Ok(adapters)
 }
 
 pub(crate) fn document<T: serde::de::DeserializeOwned>(root: &Path, path: &Path) -> Result<T> {
@@ -281,7 +282,7 @@ fn load_rules(
 ) -> Result<Loaded> {
     let mut loaded = Loaded {
         config,
-        providers: vec![],
+        adapters: vec![],
         rule_sets,
         checks: vec![],
         reviews: vec![],
@@ -388,7 +389,7 @@ fn load_rules(
                         include_content: review.include_content,
                         include_change_set: review.include_change_set,
                         trigger: review.trigger,
-                        provider: review.provider,
+                        adapter: review.adapter,
                         adapter_parameters: review.parameters,
                         id: rule.id.clone(),
                         name,

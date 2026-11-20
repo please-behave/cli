@@ -9,7 +9,7 @@ context: >-
   would unnecessarily limit the usefulness of AI-based governance.
 decision: >-
   Please determines when an AI review is triggered, prepares its
-  initial context, and delegates execution to the configured provider
+  initial context, and delegates execution to the configured adapter
   adapter. Adapters independently control their internal execution,
   including agentic loops, additional repository exploration, tool
   usage, and execution permissions. Please does not restrict adapter

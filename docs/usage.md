@@ -30,7 +30,7 @@ prevent review token spending; those reviews are `NOT_RUN`. Disabled rules never
 enter results.
 
 `please run --checks-only` runs the checks of an execution point without calling any
-provider. Selected reviews are reported `NOT_RUN`. Reports and `status` identify the
+adapter. Selected reviews are reported `NOT_RUN`. Reports and `status` identify the
 limited scope: PASS then means the selected checks passed, not that reviews did. Use it
 for local development, never in workflows.
 
@@ -53,15 +53,15 @@ state.
 A valid run writes `.please/reports/last.json` atomically, including on FAIL or ERROR.
 The [Verification Report API](../knowledge/contracts/report/api.yaml) defines its
 format and [snapshot freshness](../knowledge/contracts/report/snapshot.md).
-Each review result names the provider entry that produced it; reviews using the default
-provider or making no adapter call name none. Invalid configuration leaves the previous report untouched. Reports are ignored and
+Each review result names the adapter profile that produced it; reviews using the default
+adapter profile or making no adapter call name none. Invalid configuration leaves the previous report untouched. Reports are ignored and
 stay local.
 
 Progress appears on stderr: each rule shows its display name (optional `name` in
 `rule.toml`, default the rule ID), then its result and duration. `--progress=auto`
 redraws in an interactive terminal and appends plain logs in CI (`CI=true` or `1`, or GitHub Actions), with `TERM=dumb` or
 with redirected stderr; `plain` and `tty` select a mode explicitly. Each review is one
-provider call. A final line
+adapter call. A final line
 summarizes status, counts and duration, for example
 `FAIL · 3 rules · 1 failed · 1 not executed · 2.0 s`. Unless the run passes, a short
 failure summary follows: the number of rules that prevented success and up to three
@@ -85,8 +85,8 @@ ERROR; signals, missing scripts and launch failures are ERROR. A check FAIL prev
 evaluated files during a run prevents PASS.
 
 For an optional AI review, configure an external adapter, customize the disabled
-example review, then enable it. Please Behave ships no provider and supplies no
-default. See [provider configuration](configuration.md#configure-the-ai-provider)
+example review, then enable it. Please Behave ships no adapter profile and supplies no
+default. See [adapter profile configuration](configuration.md#configure-the-adapter-profile)
 and the [adapter protocol](adapter-protocol.md).
 
 ## Exit codes
@@ -95,7 +95,7 @@ and the [adapter protocol](adapter-protocol.md).
 | --- | --- |
 | 0 | Initialization/validation/help succeeded, plan preview is executable, or all required results PASS and status CURRENT |
 | 1 | Verification FAIL, or status STALE |
-| 2 | Configuration/reconciliation/execution/provider/report ERROR, plan preview blocked by a configuration or selection error, declined or unavailable confirmation, status UNKNOWN, or invalid CLI arguments |
+| 2 | Configuration/reconciliation/execution/adapter/report ERROR, plan preview blocked by a configuration or selection error, declined or unavailable confirmation, status UNKNOWN, or invalid CLI arguments |
 | 3 | Status requested before any report exists |
 
 Status preserves a CURRENT report's original FAIL/ERROR exit code. UNKNOWN takes

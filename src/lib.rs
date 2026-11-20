@@ -1,3 +1,4 @@
+pub mod adapter;
 pub mod change_set;
 pub mod check_command;
 pub mod checks;
@@ -13,7 +14,6 @@ pub mod limits;
 pub mod parameters;
 pub mod planner;
 pub mod process;
-pub mod provider;
 pub mod reconciliation;
 pub mod report;
 pub mod review_context;

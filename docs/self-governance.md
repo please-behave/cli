@@ -5,11 +5,11 @@ This document describes its `.please/` development configuration.
 Builds under target/ are candidates under test and never become the governor.
 The repository uses local Checks and three pinned external Rule Sets. A conditional
 AGENTS.md quality Review uses Gemini at check. Commit-msg imports an advisory
-header-only wording Review and an independent Gemini Flash-Lite provider package.
+header-only wording Review and an independent Gemini Flash-Lite adapter profile package.
 Pre-commit, pre-push and native release builds select checks only.
 
 The exact published governor pin is recorded in [mise.toml](../mise.toml).
-It must support named CLI providers, runtime requirements and file-change triggers,
+It must support named CLI adapter profiles, runtime requirements and file-change triggers,
 as well as direct commands and unattended hook reconciliation.
 
 ## Local setup
@@ -161,12 +161,12 @@ pinned to the full commit in `.please/config.toml`. It receives
 Check validates header syntax, type and scope using the managed commit-msg argument.
 The advisory `commit-message-quality` Review evaluates only the first header line
 for specific English imperative wording, without the change set, body or repository files.
-The `gemini-flash-lite` provider is independently imported from
+The `gemini-flash-lite` adapter profile is independently imported from
 `providers/gemini-flash-lite` in the same repository; no adapter is copied locally.
-Export GEMINI_API_KEY in the shell running Git. Missing credentials, provider
+Export GEMINI_API_KEY in the shell running Git. Missing credentials, adapter
 errors and wording failures remain visible without blocking the commit.
 The adapter uses at most three requests, 1/3-second retry waits, a 20-second
-request timeout and a 70-second provider deadline. No local commit policy,
+request timeout and a 70-second adapter deadline. No local commit policy,
 commit-range or PR-title checks remain.
 `sync` retrieves and validates imports during setup; checks use the immutable
 cache. A fresh clone needs source repository access during setup; the selected
@@ -220,7 +220,7 @@ The [CI workflow](../.github/workflows/ci.yml) calls the shared `ci-check.yml` w
 released governor through mise, trusts the governance repository, and invokes one published Action step to synchronize
 and run deterministic checks followed by applicable reviews at `check`.
 The Action establishes the GitHub event comparison base and produces generic
-review summaries. CI uploads `.please/reports/last.json`; provider failures remain
+review summaries. CI uploads `.please/reports/last.json`; adapter failures remain
 errors. CI uses the CLI report and Action Summary instead of `execution.json`.
 Local wrapper runs still record governor version/digest, execution point, checked
 commit and exit code in that companion file.

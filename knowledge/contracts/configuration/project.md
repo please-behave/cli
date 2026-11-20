@@ -10,7 +10,7 @@ Schema defaults describe behavior; validation does not rewrite configuration.
 ## Compatibility and representation
 
 All governance configuration shares the compatibility version in [api.yaml](api.yaml),
-including project settings, Rules, Rule Sets, provider declarations and imports.
+including project settings, Rules, Rule Sets, adapter profile declarations and imports.
 Separate TOML documents do not have separate API versions. Version 0 is experimental
 under [DEC-0026](../../decisions/DEC-0026.yaml), independently of CLI releases.
 The API version is contract metadata: configuration declares no version field.
@@ -28,7 +28,7 @@ an empty table behaves the same way. A missing field is not an explicit null.
 ## Project label and presentation
 
 `project` is the configured display label, preserved in plans and reports. It is
-not a Rule identity, import binding or provider reference. `max_display_files`
+not a Rule identity, import binding or adapter profile reference. `max_display_files`
 bounds the changed paths shown by status. This presentation setting does not
 weaken snapshot coverage or turn incomplete comparisons into exact totals; the
 [Snapshot and Freshness contract](../report/snapshot.md) defines those guarantees.
@@ -87,10 +87,10 @@ and validates no CI integration. Custom names such as `release` carry no special
 behavior. A run without `--at` selects `pre-push`.
 
 `imports` declares explicit external Rule Set sources and their integration
-settings only at project level. `provider_imports` independently selects named
-provider packages; these imports select no Rules or execution points. Both arrays
-are empty by default; Please adds no implicit sources or providers. Their fields
+settings only at project level. `adapter_imports` independently selects named
+adapter profile packages; these imports select no Rules or execution points. Both arrays
+are empty by default; Please adds no implicit sources or adapter profiles. Their fields
 are represented in the project schema, with source selection, parameter binding,
 authentication, integrity and refresh semantics defined by the
 [Rule Set import reference](../../../docs/configuration.md#import-rule-sets-from-git)
-and [provider import reference](../../../docs/configuration.md#import-providers-from-git).
+and [adapter profile import reference](../../../docs/configuration.md#import-adapter-profiles-from-git).

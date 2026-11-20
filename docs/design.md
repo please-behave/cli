@@ -9,7 +9,7 @@ define behavior; this file explains how the code is organized to deliver it.
 `discovery` reads only the fixed configuration paths and resolves Rule resources within
 their source boundaries. Local discovery and explicit external references share Rule
 loading. `rules` resolves effective assignments; `planner` prepares selection and review
-context; `checks` uses the shared process runner; `reviews` validates provider verdicts;
+context; `checks` uses the shared process runner; `reviews` validates adapter verdicts;
 `report` persists results; `terminal` renders them. There are no alternative
 configuration loaders or execution engines.
 
@@ -33,7 +33,7 @@ stages replacements and uses per-file atomic renames with best-effort rollback; 
 not promise multi-file atomicity or protection from hostile concurrent replacement.
 Ownership markers bind managed sections to the common Git directory, so default hooks
 serve linked worktrees. Composition only inserts a section before existing POSIX sh
-commands; no shell parser or rewriting is used. No provider or network participates.
+commands; no shell parser or rewriting is used. No adapter or network participates.
 See [usage and recovery](usage.md#optional-git-hook).
 
 ## Snapshots
@@ -54,16 +54,16 @@ Report persistence, result semantics and usage follow the
 [Report Document and Lifecycle contract](../knowledge/contracts/report/document.md).
 The writer uses a temporary file and atomic rename for `last.json`.
 
-## Providers
+## Adapters
 
 The planner prepares provider-neutral review input once; execution passes that exact
-preparation to the provider, and rendering does no filesystem or Git work. Every review
+preparation to the adapter, and rendering does no filesystem or Git work. Every review
 is one adapter call and reuses the prepared context. Adapters receive evidence and the common verdict schema through the
 [versioned protocol](adapter-protocol.md); the core supervises processes and validates
-coverage, evidence paths, line ranges and input stability. No provider or default is
+coverage, evidence paths, line ranges and input stability. No adapter profile or default is
 supplied.
 
-The provider trait returns a raw document so tests can inject successful, failed or
+The adapter trait returns a raw document so tests can inject successful, failed or
 malformed responses without credentials. Serde types reject unknown fields, wrong types
 and duplicate keys, and an invalid document makes its review ERROR. Grounded references are necessary, not proof of accurate conclusions.
 
@@ -96,8 +96,8 @@ by resolved commit; no URL is persisted, and Git plumbing materializes commits w
 hooks, global filters or submodules. See
 [storage, trust and recovery](external-rule-sets.md).
 
-Named and independently imported provider configurations reuse `ProviderConfig` and the
-bounded TOML loader and share cache retrieval and resolution state. Provider origins
+Named and independently imported adapter profiles reuse `AdapterProfile` and the
+bounded TOML loader and share cache retrieval and resolution state. Adapter profile origins
 enter plan identity, and references resolve after merging all explicit imports.
 
 The repository is governed by a separately installed published release; candidate

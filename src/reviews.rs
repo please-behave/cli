@@ -1,8 +1,8 @@
 use crate::review_contract::{ReviewResponse, VERDICTS, valid_summary};
 use crate::{
+    adapter::{Adapter, Request},
     config::{Project, Review},
     git_snapshot::Snapshot,
-    provider::{Provider, Request},
     report::{Item, MAX_SUMMARY_CHARS, Status, TokenUsage},
 };
 use anyhow::{Result, ensure};
@@ -28,9 +28,9 @@ fn parse_with_message(
     message_lines: Option<usize>,
 ) -> Result<Vec<Item>> {
     ensure!(
-        json.len() as u64 <= crate::limits::MAX_PROVIDER_RESPONSE_BYTES,
-        "provider JSON exceeds {} bytes",
-        crate::limits::MAX_PROVIDER_RESPONSE_BYTES
+        json.len() as u64 <= crate::limits::MAX_ADAPTER_RESPONSE_BYTES,
+        "adapter JSON exceeds {} bytes",
+        crate::limits::MAX_ADAPTER_RESPONSE_BYTES
     );
     // Options are nullable, but must still be present as required by the output schema.
     let value: serde_json::Value = serde_json::from_str(json)?;
@@ -122,29 +122,21 @@ pub fn execute(
     active: &[&Review],
     snapshot: &Snapshot,
     changes: &crate::change_set::ChangeSet,
-    provider: &dyn Provider,
+    adapter: &dyn Adapter,
     execution_point: &str,
 ) -> Vec<Item> {
-    execute_with_usage(
-        project,
-        active,
-        snapshot,
-        changes,
-        provider,
-        execution_point,
-    )
-    .0
+    execute_with_usage(project, active, snapshot, changes, adapter, execution_point).0
 }
 pub fn execute_with_usage(
     project: &Project,
     active: &[&Review],
     snapshot: &Snapshot,
     changes: &crate::change_set::ChangeSet,
-    provider: &dyn Provider,
+    adapter: &dyn Adapter,
     execution_point: &str,
 ) -> (Vec<Item>, Option<TokenUsage>) {
     match crate::review_input::PreparedReviewInput::prepare(project, active, snapshot, changes) {
-        Ok(input) => execute_prepared(project, active, snapshot, &input, provider, execution_point),
+        Ok(input) => execute_prepared(project, active, snapshot, &input, adapter, execution_point),
         Err(error) => (
             active
                 .iter()
@@ -159,7 +151,7 @@ pub fn execute_prepared(
     active: &[&Review],
     snapshot: &Snapshot,
     input: &crate::review_input::PreparedReviewInput,
-    provider: &dyn Provider,
+    adapter: &dyn Adapter,
     execution_point: &str,
 ) -> (Vec<Item>, Option<TokenUsage>) {
     execute_prepared_observed(
@@ -167,7 +159,7 @@ pub fn execute_prepared(
         active,
         snapshot,
         input,
-        provider,
+        adapter,
         execution_point,
         &mut |_, _| true,
     )
@@ -179,7 +171,7 @@ pub(crate) fn execute_prepared_observed(
     active: &[&Review],
     snapshot: &Snapshot,
     input: &crate::review_input::PreparedReviewInput,
-    provider: &dyn Provider,
+    adapter: &dyn Adapter,
     execution_point: &str,
     before_call: &mut dyn FnMut(&Review, &[Item]) -> bool,
 ) -> (Vec<Item>, Option<TokenUsage>) {
@@ -221,7 +213,7 @@ pub(crate) fn execute_prepared_observed(
                 &review.id,
                 "review",
                 Status::NotRun,
-                "Fail-fast triggered; no provider call made".into(),
+                "Fail-fast triggered; no adapter call made".into(),
             );
             item.blocking = review.blocking;
             items.push(item);
@@ -229,28 +221,28 @@ pub(crate) fn execute_prepared_observed(
         }
         // REQ-0125: one review per adapter call.
         let reviews = [review];
-        // A snapshot check is required before every provider invocation. Never
+        // A snapshot check is required before every adapter invocation. Never
         // reuse prepared evidence after edits.
         let stable = input.ensure_stable().is_ok()
             && crate::git_snapshot::capture(&project.root).is_ok_and(|current| {
                 crate::git_snapshot::compare(snapshot, &current, 0).state == "CURRENT"
             });
-        let provider_integrity = || -> Result<()> {
-            if let Some((source, config)) = review.provider.as_ref().and_then(|id| {
+        let adapter_integrity = || -> Result<()> {
+            if let Some((source, config)) = review.adapter.as_ref().and_then(|id| {
                 project
-                    .external_providers
+                    .external_adapters
                     .get(id)
-                    .zip(project.providers.get(id))
+                    .zip(project.adapters.get(id))
             }) {
                 source.resolve(config, &project.root)?;
             }
             Ok(())
         };
-        let invalid_provider = provider_integrity().err();
-        let called = stable && invalid_provider.is_none();
+        let invalid_adapter = adapter_integrity().err();
+        let called = stable && invalid_adapter.is_none();
         let start = Instant::now();
         let response = if called {
-            provider.review_with_usage(&Request {
+            adapter.review_with_usage(&Request {
                 project,
                 reviews: &reviews,
                 snapshot,
@@ -259,9 +251,9 @@ pub(crate) fn execute_prepared_observed(
                 execution_point,
             })
         } else {
-            crate::provider::Response {
+            crate::adapter::Response {
                 verdict: Err(anyhow::anyhow!(
-                    "Working files or commit message changed, or input is incomplete; no provider call made"
+                    "Working files or commit message changed, or input is incomplete; no adapter call made"
                 )),
                 usage: None,
                 output: None,
@@ -269,10 +261,10 @@ pub(crate) fn execute_prepared_observed(
         };
         usages.push(response.usage);
         let output = response.output;
-        let invalid_provider = invalid_provider.or_else(|| provider_integrity().err());
-        let result = if let Some(error) = &invalid_provider {
+        let invalid_adapter = invalid_adapter.or_else(|| adapter_integrity().err());
+        let result = if let Some(error) = &invalid_adapter {
             Err(anyhow::anyhow!(
-                "Invalid external provider resources: {error:#}"
+                "Invalid external adapter profile resources: {error:#}"
             ))
         } else {
             response
@@ -294,8 +286,8 @@ pub(crate) fn execute_prepared_observed(
         for item in &mut results {
             item.duration_ms = start.elapsed().as_millis() as u64;
             item.blocking = review.blocking;
-            item.provider = called.then(|| review.provider.clone()).flatten();
-            item.configuration_error = invalid_provider.is_some();
+            item.adapter = called.then(|| review.adapter.clone()).flatten();
+            item.configuration_error = invalid_adapter.is_some();
             // REQ-0131: an adapter ERROR keeps the call's output for diagnosis.
             if let (Status::Error, Some(output)) = (item.status, &output) {
                 item.exit_code = output.exit_code;

@@ -67,7 +67,7 @@ pub enum Words {
         at: Option<String>,
         #[arg(
             long,
-            help = "Show the execution plan without running rules or providers"
+            help = "Show the execution plan without running rules or adapters"
         )]
         plan: bool,
         #[arg(

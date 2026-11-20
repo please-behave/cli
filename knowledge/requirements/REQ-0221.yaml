@@ -1,8 +1,8 @@
 id: REQ-0221
-name: Provider Requirements Are Checked Late
+name: Adapter Profile Requirements Are Checked Late
 area: reviews
 description: >-
-  The environment variables and executables that a provider declares as
+  The environment variables and executables that an adapter profile declares as
   required must be checked only for the reviews selected in a run, after the
   deterministic checks and immediately before the adapter call.
 rationale: >-

@@ -1,8 +1,8 @@
 id: REQ-0208
-name: Providers Are Imported Independently
+name: Adapter Profiles Are Imported Independently
 area: reviews
 description: >-
-  A project must be able to import a named provider from a Git repository
+  A project must be able to import a named adapter profile from a Git repository
   independently of any rule set and at its own pinned reference, and such an
   import must need no rules, rule sets or execution points.
 rationale: >-
