@@ -1,0 +1,40 @@
+id: DEC-0028
+name: Repository-Level Trust Outside The Project
+context: >-
+  Imported checks and adapter commands execute with the permissions of the
+  user and without a sandbox. A trust declaration inside the project cannot
+  protect against this, because the import and its approval can be changed
+  together in one commit. A developer who pulls such a commit would run
+  foreign code. Trust must also work in non-interactive CI, stay independent
+  of Git hosting providers and remain separate from revision selection
+  (DEC-0012) and from hook-change confirmation (DEC-0020).
+decision: >-
+  Every Git repository that a project imports from must be trusted by the
+  user before Please Behave uses it. Trust applies to the whole repository,
+  including future revisions, and is stored in a user-level trust store
+  outside every project, never in project files or the repository's Git
+  directory. The user adds and removes trust through an explicit trust
+  command. Synchronization and the unattended confirmation flag never
+  establish trust; synchronization with an untrusted repository fails and
+  names the command to run. CI establishes trust with the same command in a
+  workflow step. A repository is identified by its lexically normalized
+  location only, without provider-specific rules, so equivalent aliases such
+  as SSH and HTTPS locations are separate identities, and local
+  repositories are identified by their canonical absolute path. Trust is
+  checked before any fetch and again before an imported check or adapter
+  command executes, offline against the local trust store. Trust approves a
+  source; it does not pin a revision, does not narrow what an imported
+  command may do and does not sandbox it. Trust for a group of repositories,
+  such as all repositories of an organization, is not part of this decision.
+rationale: >-
+  Storing trust per user outside the project is the only placement that a
+  change to the project cannot grant itself, and it is the model Homebrew
+  taps and mise trust follow. Repository-level trust keeps routine updates of
+  moving references free of confirmations, which matches consumer-controlled
+  versioning. An explicit command is smaller and more predictable than an
+  interactive prompt and needs no terminal detection. A CI workflow is part
+  of the repository and so only as strong as its branch protection; the model
+  mainly protects developer machines, where it matters most. Checking again at
+  execution makes revocation effective immediately without network access.
+  Lexical identities avoid provider coupling at the price of trusting each
+  alias once; group trust can be added later without changing stored entries.
