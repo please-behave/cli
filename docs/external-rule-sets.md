@@ -141,9 +141,10 @@ A review selects one with `provider = "quality"` in its `[review]` table.
 
 Provider IDs are global across local files and all explicitly imported sets.
 Cross-import references resolve after loading all imports, independently of order.
-A distinct definition with an existing ID fails, even with identical settings;
-consumer overrides are unsupported. Repeated imports of the same immutable file
-share its configuration. A provider-only set may use `rules = []`, with the usual
+A definition that differs from an existing one with the same ID fails, and so
+does an ID that a local file or an independent provider import already uses;
+consumer overrides are unsupported. Rule sets that ship identical definitions of
+one ID, also from different commits of one repository, share that provider. A provider-only set may use `rules = []`, with the usual
 required `id`, `description` and nonempty `run_at`. No extra imports are inferred
 or downloaded. Reviews without references keep the consumer's explicit default adapter.
 
@@ -283,7 +284,8 @@ retain their literal behavior. This makes adapter distribution explicit without
 adding provider-specific code to Please Behave.
 
 Both import kinds publish one resolution state atomically. Provider IDs must be
-unique across local files, Rule Set exports and independent packages. Repeated
+unique across local files, Rule Set exports and independent packages, except that
+identical Rule Set exports share one provider. Repeated
 IDs in independent imports fail even when selected content is identical. References
 resolve after loading all declared sources. Plans/reports retain provider origin
 metadata and stable raw reference tokens; resolved machine-specific cache paths

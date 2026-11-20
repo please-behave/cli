@@ -715,6 +715,7 @@ with independently selected paths/revisions. No imports are inferred, nested
 or fetched during execution. Provider packages need no Rule Set or execution point.
 All imports share the 256-import bound; named provider IDs are global. Duplicate
 IDs, including local/imported collisions, fail; there is no implicit override.
+Only Rule Sets that ship identical definitions of one ID share that provider.
 Existing providers distributed inside Rule Sets remain supported.
 
 Only independent provider packages resolve explicit tokens in `command`, `args`

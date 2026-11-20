@@ -285,8 +285,19 @@ fn imported_providers_resolve_across_sets_offline_and_reconcile_atomically() {
     );
     assert_eq!(fs::read(&state_path).unwrap(), state);
     fs::remove_dir_all(root.path().join(".please/providers")).unwrap();
-    // Distinct imported files collide even when their settings are identical.
+    // Distinct imported files with identical definitions share one provider.
     provider(remote.path(), "reviews", "central", "central-model");
+    commit(remote.path());
+    assert_eq!(
+        external::load(root.path(), true, Some(cache.path()))
+            .unwrap()
+            .providers
+            .len(),
+        1
+    );
+    let state = fs::read(&state_path).unwrap();
+    // A differing definition with the same identifier is rejected.
+    provider(remote.path(), "reviews", "central", "other-model");
     commit(remote.path());
     assert!(
         format!(
@@ -310,6 +321,55 @@ fn imported_providers_resolve_across_sets_offline_and_reconcile_atomically() {
     assert_eq!(fs::read(&state_path).unwrap(), state);
     // Offline resolution retains the previously validated revision.
     assert!(external::load(root.path(), false, Some(cache.path())).is_ok());
+}
+
+#[test]
+fn identical_providers_of_different_revisions_coexist() {
+    // REQ-0210: a provider shipped by rule sets pinned at different commits of one repository is one provider while its definition is unchanged.
+    let root = project();
+    let remote = tempfile::tempdir().unwrap();
+    let cache = tempfile::tempdir().unwrap();
+    git(remote.path(), &["init", "--quiet", "--initial-branch=main"]);
+    for directory in ["first", "second"] {
+        set(remote.path(), directory, &[]);
+        provider(remote.path(), directory, "central", "central-model");
+    }
+    commit(remote.path());
+    git(remote.path(), &["tag", "v1"]);
+    write(remote.path(), "second/NOTES.md", "Unrelated change\n");
+    commit(remote.path());
+    support::trust(remote.path());
+    let configure = |first: &str, second: &str| {
+        let text: String = [("first", first), ("second", second)]
+            .iter()
+            .map(|(path, reference)| {
+                format!(
+                    "[[imports]]\ngit = {:?}\npath = {path:?}\nref = {reference:?}\n",
+                    remote.path().to_str().unwrap()
+                )
+            })
+            .collect();
+        write(
+            root.path(),
+            ".please/config.toml",
+            &format!("project = 'My_App'\n{text}"),
+        );
+    };
+    configure("v1", "main");
+    assert_eq!(
+        external::load(root.path(), true, Some(cache.path()))
+            .unwrap()
+            .providers
+            .len(),
+        1
+    );
+    provider(remote.path(), "second", "central", "other-model");
+    commit(remote.path());
+    let error = format!(
+        "{:#}",
+        external::load(root.path(), true, Some(cache.path())).unwrap_err()
+    );
+    assert!(error.contains("duplicate provider"), "{error}");
 }
 
 #[cfg(unix)]

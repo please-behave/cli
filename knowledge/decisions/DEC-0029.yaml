@@ -1,0 +1,28 @@
+id: DEC-0029
+name: Provider Identity Is Its Identifier And Definition
+context: >-
+  Provider identifiers are global per project. An organization may keep all
+  rule sets and their providers in one central repository and pin different
+  rule sets at different commits of it. Comparing the source of a provider
+  (repository, commit and directory) rejects such a project as a duplicate
+  although the provider definition did not change between the commits.
+  Consumers choose their own revisions (DEC-0012), so the commits of one
+  repository cannot be forced to move together.
+decision: >-
+  A provider shipped by a rule set is identified by its identifier and its
+  validated definition, not by the commit it was read from. The same
+  identifier shipped by several imports is one provider when the definitions
+  are identical; a differing definition is a duplicate and a configuration
+  error without any override. The identifier of a local or independently
+  imported provider is never shared: a rule-set provider with the same
+  identifier is a duplicate even when the definitions are identical.
+  Plans identify the definition of every named provider, so a saved plan
+  still cannot be mistaken for the plan of a different adapter version.
+rationale: >-
+  The definition is what makes one adapter differ from another, so it is the
+  smallest identity that tolerates unchanged providers across revisions
+  without letting one import silently replace another. Rule-set providers
+  carry only literal adapter settings and no resources, so the definition
+  fully describes the adapter. Independent imports stay exclusive because
+  they exist to version an adapter on its own (REQ-0208). The identity of
+  imported rules is a separate question and is not decided here.

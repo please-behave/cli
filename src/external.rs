@@ -364,7 +364,7 @@ pub(crate) fn load_with_changes(
     let mut resolved: BTreeMap<(String, String), String> = BTreeMap::new();
     let mut checkouts: BTreeMap<(String, String), PathBuf> = BTreeMap::new();
     let mut bindings: BTreeMap<String, usize> = BTreeMap::new();
-    let mut provider_sources = BTreeMap::new();
+    let mut provider_definitions: BTreeMap<String, serde_json::Value> = BTreeMap::new();
     for (import, provider_id) in imports {
         let repository = import.repository();
         let key = match &provider_id {
@@ -504,20 +504,17 @@ pub(crate) fn load_with_changes(
             .filter(|point| !crate::rules::BUILTIN_POINTS.contains(&point.as_str()))
             .cloned()
             .collect();
-        let sources: Vec<_> = definitions
+        let ids: Vec<_> = definitions
             .providers
             .iter()
-            .map(|(path, id, _)| {
-                (
-                    id.clone(),
-                    (repository.clone(), origin.commit.clone(), path.clone()),
-                )
-            })
+            .map(|(_, id, _)| id.clone())
             .collect();
         let mut external = config::validate(root.clone(), definitions)
             .with_context(|| format!("invalid external rule set {:?}", import.path))?;
-        for (id, source) in sources {
-            if provider_sources.get(&id) == Some(&source) {
+        for id in ids {
+            let provider = external.providers.remove(&id).unwrap();
+            let definition = serde_json::to_value(&provider)?;
+            if provider_definitions.get(&id) == Some(&definition) {
                 continue;
             }
             ensure!(
@@ -529,10 +526,8 @@ pub(crate) fn load_with_changes(
                 project.providers.len() < MAX_RULES,
                 "at most {MAX_RULES} named providers including imports"
             );
-            project
-                .providers
-                .insert(id.clone(), external.providers.remove(&id).unwrap());
-            provider_sources.insert(id, source);
+            project.providers.insert(id.clone(), provider);
+            provider_definitions.insert(id, definition);
         }
         ensure!(
             project.checks.len()

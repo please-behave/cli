@@ -4,7 +4,13 @@ area: reviews
 description: >-
   Provider identifiers must be unique across local, rule-set-provided and
   independently imported providers, and a collision must be rejected as a
-  configuration error without any override.
+  configuration error without any override. A provider shipped by several
+  rule-set imports, including imports at different revisions of one
+  repository, is one provider when its definitions are identical; differing
+  definitions collide.
 rationale: >-
   A review must name exactly one provider, and no import may silently replace
-  another adapter.
+  another adapter. Unchanged providers must not force all imports of a
+  repository onto one commit.
+decisions:
+  - DEC-0029
