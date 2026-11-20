@@ -11,7 +11,7 @@ env:
 jobs:
   audit:
     name: Audit
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -21,8 +21,12 @@ jobs:
         uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
         with:
           install_args: python rust cargo:cargo-audit
-      - name: Audit the dependencies
-        uses: christianpflugradt/please-behave-governance/actions/dependency-audit@ef32fb94723c4e10822ef56c7fef36615d983f58 # updates/actions/dependency-audit
+      - name: Audit the Cargo dependencies
+        uses: christianpflugradt/please-behave-governance/actions/dependency-audit/cargo@59733eeb16cb063211bd27db3a57ab95f720a1db # updates/actions/dependency-audit
         with:
-          cargo: .
+          directory: .
+      - name: Report the findings
+        if: ${{ !cancelled() }}
+        uses: christianpflugradt/please-behave-governance/actions/dependency-audit/report@59733eeb16cb063211bd27db3a57ab95f720a1db # updates/actions/dependency-audit
+        with:
           fail-on: ${{ env.AUDIT_FAIL_ON }}
