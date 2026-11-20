@@ -24,7 +24,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     permissions:
       contents: write
-    uses: christianpflugradt/please-behave-governance/.github/workflows/release-plan.yml@f214b49bd33bf21fbea5c4a9a3214fa83df6fa1d # updates/workflows/release
+    uses: christianpflugradt/please-behave-governance/.github/workflows/release-plan.yml@d28b1d300f7054efc70a50bd6641c43fb611a338 # updates/workflows/release
     with:
       force: ${{ inputs.force }}
 
@@ -35,7 +35,7 @@ jobs:
     permissions:
       contents: read
       actions: read
-    uses: christianpflugradt/please-behave-governance/.github/workflows/release-readiness.yml@f214b49bd33bf21fbea5c4a9a3214fa83df6fa1d # updates/workflows/release
+    uses: christianpflugradt/please-behave-governance/.github/workflows/release-readiness.yml@d28b1d300f7054efc70a50bd6641c43fb611a338 # updates/workflows/release
     with:
       source-sha: ${{ needs.plan.outputs.source_sha }}
       required-jobs: Check
@@ -75,13 +75,13 @@ jobs:
       - name: Build native candidate
         run: mise run build --offline
       - name: Validate native candidate behavior
-        uses: christianpflugradt/please-behave-governance/actions/release/governance@ddb176f80831329b2328b9cf0c976f4e6f634c31 # updates/actions/release
+        uses: christianpflugradt/please-behave-governance/actions/release/governance@18cc081af6ac3b3d76a55856b6de3fad62b1725a # updates/actions/release
         with:
           target: ${{ matrix.target }}
       - name: Package smoke-tested candidate
         run: mise run package
       - name: Record release candidate evidence
-        uses: christianpflugradt/please-behave-governance/actions/release/evidence@ddb176f80831329b2328b9cf0c976f4e6f634c31 # updates/actions/release
+        uses: christianpflugradt/please-behave-governance/actions/release/evidence@18cc081af6ac3b3d76a55856b6de3fad62b1725a # updates/actions/release
         with:
           operation: record
           version: ${{ needs.plan.outputs.version }}
@@ -109,7 +109,7 @@ jobs:
         with:
           install_args: python node
       - name: Verify complete release candidate evidence
-        uses: christianpflugradt/please-behave-governance/actions/release/evidence@ddb176f80831329b2328b9cf0c976f4e6f634c31 # updates/actions/release
+        uses: christianpflugradt/please-behave-governance/actions/release/evidence@18cc081af6ac3b3d76a55856b6de3fad62b1725a # updates/actions/release
         with:
           operation: verify
           version: ${{ needs.plan.outputs.version }}
@@ -117,7 +117,7 @@ jobs:
         working-directory: dist
         run: sha256sum -- *.tar.gz > SHA256SUMS
       - name: Publish versioned CLI archives and release notes
-        uses: christianpflugradt/please-behave-governance/actions/release/publish-release@ddb176f80831329b2328b9cf0c976f4e6f634c31 # updates/actions/release
+        uses: christianpflugradt/please-behave-governance/actions/release/publish-release@18cc081af6ac3b3d76a55856b6de3fad62b1725a # updates/actions/release
         with:
           version: ${{ needs.plan.outputs.version }}
           force: ${{ inputs.force }}
