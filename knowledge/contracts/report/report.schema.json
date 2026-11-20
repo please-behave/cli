@@ -9,7 +9,6 @@
     "timestamp",
     "repository",
     "project",
-    "provider",
     "overall",
     "snapshot",
     "results",
@@ -36,9 +35,6 @@
     "project": {
       "type": "string",
       "minLength": 1
-    },
-    "provider": {
-      "type": "string"
     },
     "overall": {
       "enum": [
@@ -322,6 +318,10 @@
           "type": "boolean"
         },
         "blocked_by": {
+          "type": "string",
+          "minLength": 1
+        },
+        "provider": {
           "type": "string",
           "minLength": 1
         },

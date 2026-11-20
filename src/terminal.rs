@@ -966,10 +966,9 @@ pub fn render_details(report: &Report, color: bool) -> String {
         text.push_str("Usage reported by adapters for the entire review call; not a billing or quota statement.\n");
     }
     text.push_str(&format!(
-        "\n{}\nRepository: {}\nProvider: {}\nHEAD: {}\nSnapshot: {}\n{}\n",
+        "\n{}\nRepository: {}\nHEAD: {}\nSnapshot: {}\n{}\n",
         paint("Details", Tone::Heading, color),
         clean(&report.repository),
-        clean(&report.provider),
         clean(report.snapshot.head.as_deref().unwrap_or("unborn")),
         clean(&report.snapshot.fingerprint),
         clean(&report.git_summary)
@@ -981,6 +980,9 @@ pub fn render_details(report: &Report, color: bool) -> String {
             status(item.status, color),
             clean(&item_reason(item))
         ));
+        if let Some(provider) = &item.provider {
+            text.push_str(&format!("Provider: {}\n", clean(provider)));
+        }
         if let Some(explanation) = &item.explanation {
             // Keep the line breaks of the explanation; terminal control characters stay neutralized.
             let lines = explanation.lines().map(clean).collect::<Vec<_>>();

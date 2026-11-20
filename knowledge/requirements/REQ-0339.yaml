@@ -1,0 +1,10 @@
+id: REQ-0339
+name: Review Result Records Its Provider
+area: reporting
+description: >-
+  The result of a review whose adapter call was made must record the ID of the
+  named provider entry that produced it, and omit the provider when the review
+  used the default provider or made no adapter call.
+rationale: >-
+  One run can use several provider entries, so only the individual result can
+  say which entry produced it; the default provider has no ID to record.

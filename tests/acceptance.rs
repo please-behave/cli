@@ -2360,7 +2360,7 @@ fn executed_runs_replace_the_saved_report_and_leave_no_temporary_files() {
 }
 
 #[test]
-// REQ-0256: the saved report identifies the input, repository, provider and UTC run time.
+// REQ-0256: the saved report identifies the input, repository and UTC run time.
 // REQ-0257: the saved report retains results, elapsed durations, findings and configuration-error flags.
 // REQ-0258: the saved plan retains required rule IDs and their blocking policy.
 fn saved_report_preserves_run_identity_results_and_required_plan() {
@@ -2374,7 +2374,6 @@ fn saved_report_preserves_run_identity_results_and_required_plan() {
         saved.repository,
         d.path().canonicalize().unwrap().to_string_lossy()
     );
-    assert_eq!(saved.provider, "adapter");
     let time = chrono::DateTime::parse_from_rfc3339(&saved.timestamp).unwrap();
     assert_eq!(time.offset().local_minus_utc(), 0);
     assert_eq!(

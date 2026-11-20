@@ -360,7 +360,6 @@ pub fn verify_project_with_fail_fast(
         timestamp: chrono::Utc::now().to_rfc3339(),
         repository: project.root.to_string_lossy().into_owned(),
         project: project.config.project,
-        provider: "adapter".into(),
         overall: report::overall_of(&items, checks_only),
         git_summary: format!(
             "{} working files fingerprinted; HEAD {}; {}",

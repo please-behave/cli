@@ -40,6 +40,7 @@ contracts:
       - REQ-0275
       - REQ-0331
       - REQ-0332
+      - REQ-0339
   - id: CON-0009
     name: Snapshot and Freshness
     document: snapshot.md

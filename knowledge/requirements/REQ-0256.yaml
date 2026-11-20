@@ -3,6 +3,6 @@ name: Report Identifies Its Input
 area: reporting
 description: >-
   The report must record the identity of the input it refers to, the
-  repository, the provider and the UTC time of the run.
+  repository and the UTC time of the run.
 rationale: >-
   A result is only evidence when it says what it judged, where and when.

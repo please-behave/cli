@@ -53,7 +53,8 @@ state.
 A valid run writes `.please/reports/last.json` atomically, including on FAIL or ERROR.
 The [Verification Report API](../knowledge/contracts/report/api.yaml) defines its
 format and [snapshot freshness](../knowledge/contracts/report/snapshot.md).
-Invalid configuration leaves the previous report untouched. Reports are ignored and
+Each review result names the provider entry that produced it; reviews using the default
+provider or making no adapter call name none. Invalid configuration leaves the previous report untouched. Reports are ignored and
 stay local.
 
 Progress appears on stderr: each rule shows its display name (optional `name` in

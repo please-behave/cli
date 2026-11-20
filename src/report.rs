@@ -76,6 +76,9 @@ pub struct Item {
     /// Immediate failed prerequisite; its originating outcome determines enforcement.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub blocked_by: Option<String>,
+    /// Named provider entry whose adapter call produced this review result.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider: Option<String>,
     pub duration_ms: u64,
     pub reason: String,
     /// Optional longer explanation of an adapter verdict.
@@ -98,6 +101,7 @@ impl Item {
             blocking: true,
             configuration_error: false,
             blocked_by: None,
+            provider: None,
             duration_ms: 0,
             reason,
             explanation: None,
@@ -116,7 +120,6 @@ pub struct Report {
     pub timestamp: String,
     pub repository: String,
     pub project: String,
-    pub provider: String,
     pub overall: Status,
     pub snapshot: Snapshot,
     pub results: Vec<Item>,
@@ -275,6 +278,16 @@ pub fn read(root: &Path) -> Result<Report> {
         "inconsistent review configuration error"
     );
     for item in &report.results {
+        if let Some(provider) = &item.provider {
+            ensure!(
+                item.kind == "review"
+                    && plan
+                        .scheduled
+                        .iter()
+                        .any(|r| r.id == item.id && r.provider.as_ref() == Some(provider)),
+                "inconsistent review provider"
+            );
+        }
         for finding in &item.findings {
             if finding.path.is_none() && finding.line.is_some() {
                 ensure!(

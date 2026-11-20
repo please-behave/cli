@@ -247,8 +247,9 @@ pub(crate) fn execute_prepared_observed(
             Ok(())
         };
         let invalid_provider = provider_integrity().err();
+        let called = stable && invalid_provider.is_none();
         let start = Instant::now();
-        let response = if stable && invalid_provider.is_none() {
+        let response = if called {
             provider.review_with_usage(&Request {
                 project,
                 reviews: &reviews,
@@ -293,6 +294,7 @@ pub(crate) fn execute_prepared_observed(
         for item in &mut results {
             item.duration_ms = start.elapsed().as_millis() as u64;
             item.blocking = review.blocking;
+            item.provider = called.then(|| review.provider.clone()).flatten();
             item.configuration_error = invalid_provider.is_some();
             // REQ-0131: an adapter ERROR keeps the call's output for diagnosis.
             if let (Status::Error, Some(output)) = (item.status, &output) {

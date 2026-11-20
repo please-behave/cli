@@ -167,6 +167,23 @@ fn calls_and_saved_reports_keep_provider_and_parameter_boundaries() {
     assert!(calls.iter().any(|(_, ids)| ids == &["d"]));
     assert!(calls.iter().any(|(_, ids)| ids == &["e"]));
     let saved = report::read(root.path()).unwrap();
+    // REQ-0339: each result names the provider entry that produced it; the default has no ID.
+    let providers: Vec<_> = saved
+        .results
+        .iter()
+        .map(|item| (item.id.as_str(), item.provider.as_deref()))
+        .collect();
+    assert_eq!(
+        providers,
+        [
+            ("a", Some("first")),
+            ("b", Some("first")),
+            ("c", Some("second")),
+            ("d", None),
+            ("e", None),
+            ("f", Some("first")),
+        ]
+    );
     assert_eq!(saved.plan.scheduled[2].provider.as_deref(), Some("second"));
     assert_eq!(
         saved.plan.scheduled[2]
@@ -179,6 +196,11 @@ fn calls_and_saved_reports_keep_provider_and_parameter_boundaries() {
     );
     let path = root.path().join(".please/reports/last.json");
     let mut json: serde_json::Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+    let valid = serde_json::to_vec(&json).unwrap();
+    json["results"][0]["provider"] = "second".into();
+    fs::write(&path, serde_json::to_vec(&json).unwrap()).unwrap();
+    assert!(report::read(root.path()).is_err());
+    fs::write(&path, valid).unwrap();
     json["plan"]["scheduled"][2]
         .as_object_mut()
         .unwrap()

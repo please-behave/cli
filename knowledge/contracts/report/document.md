@@ -34,9 +34,10 @@ The reader limits the report file to 128 MiB.
 
 `timestamp` is the run's UTC timestamp. `repository` is the canonical absolute
 repository root and must match the repository where the report is read.
-`project` preserves the configured project label. `provider` identifies the
-adapter mechanism, not the model or every named provider; declarations and
-imported provenance are retained in the saved plan.
+`project` preserves the configured project label. The report has no run-level
+provider: one run can use several provider entries, and a provider entry is a
+configured adapter call whose AI service or model Please Behave does not know.
+Declarations and imported provenance are retained in the saved plan.
 
 The saved `snapshot` identifies evaluated inputs. Plan input HEAD, fingerprint
 and completeness must agree with it; the plan and report also agree on
@@ -57,6 +58,11 @@ Each result's `duration_ms` measures its elapsed execution time; a review durati
 belongs to that review's adapter call. `reason` explains its outcome, with optional
 longer `explanation` and structured findings for review verdicts. `exit_code` is
 present when available and absent or null otherwise, including signal termination.
+A review result whose adapter call was made carries `provider`, the ID of the
+named provider entry that produced it, matching the provider of that review in
+the saved plan. The explicit default provider has no ID, so results of reviews
+that use it omit `provider`, as do reviews that made no adapter call (NOT_RUN,
+configuration errors, input changed before the call) and all non-review results.
 A source finding identifies a repository-relative path and optional source line.
 At `commit-msg`, a line without a path cites the saved commit message; a report
 with such evidence must contain that message in its plan. Review evidence and
