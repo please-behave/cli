@@ -584,6 +584,7 @@ fn imported_patterns_share_validation_and_consumer_paths() {
     let rule = "id = 'quality'\ndescription = 'Review consumer'\n[review]\nprompt = 'prompt.md'\n[review.trigger]\nchanged_files = ['../outside']\n";
     write(remote.path(), "rules/reviews/quality/rule.toml", rule);
     let invalid = commit(remote.path());
+    support::trust(remote.path());
     let imports = |revision: &str| {
         format!(
             "project = 'My_App'\n[[imports]]\ngit = {:?}\npath = 'rules'\nref = {revision:?}\n",

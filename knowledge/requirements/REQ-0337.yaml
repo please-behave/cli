@@ -1,0 +1,12 @@
+id: REQ-0337
+name: Trust Needs An Explicit Command
+area: setup
+description: >-
+  A repository must become trusted or untrusted only through the explicit trust
+  command, and neither synchronization nor its unattended confirmation option
+  may establish trust.
+rationale: >-
+  A flag that approves planned changes must never also approve running
+  someone else's code.
+decisions:
+  - DEC-0028

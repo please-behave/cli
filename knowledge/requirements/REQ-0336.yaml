@@ -1,0 +1,11 @@
+id: REQ-0336
+name: Trust Covers The Whole Repository
+area: setup
+description: >-
+  A trust decision must apply to every import from that Git repository,
+  independently of the selected reference, directory and revision.
+rationale: >-
+  Projects keep choosing their own pinning strategy without confirming every
+  update of a repository they already trust.
+decisions:
+  - DEC-0028

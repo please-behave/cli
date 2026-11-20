@@ -1,0 +1,14 @@
+id: REQ-0338
+name: Repository Identity Is Normalized
+area: setup
+description: >-
+  Trust must identify a repository by its Git location after lexical
+  normalization alone, applying no provider-specific rules, so that spelling
+  variants of the same location are one repository while other aliases such as
+  SSH and HTTPS locations are separate repositories, and a local repository is
+  identified by its absolute path.
+rationale: >-
+  Trust stays independent of Git hosting providers and never extends to a
+  location the user did not name.
+decisions:
+  - DEC-0028

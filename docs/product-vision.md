@@ -171,7 +171,7 @@ Its primary capabilities are:
 - CLI integration with Git hooks and CI pipelines.
 
 The executable is `please`, with English commands and user-facing output:
-`init`, `sync`, `run`, `status` and `help`.
+`init`, `sync`, `trust`, `run`, `status` and `help`.
 
 ## Long-Term Direction
 

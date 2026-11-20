@@ -1,0 +1,12 @@
+id: REQ-0335
+name: Trust Lives Outside The Project
+area: setup
+description: >-
+  Trust decisions must be stored in a user-level store outside every project,
+  and no project file, imported content or Git directory of a project may grant
+  or widen trust.
+rationale: >-
+  A trust declaration that a project can change together with its imports
+  would approve itself.
+decisions:
+  - DEC-0028

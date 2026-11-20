@@ -568,6 +568,7 @@ impl External {
     }
     fn imports(&self, selections: &[(&str, &str)]) {
         let mut text = "project = 'My_App'\n[execution_points]\ncustom = []\n".to_string();
+        support::trust(&self.remote);
         for (path, reference) in selections {
             text += &format!(
                 "[[imports]]\ngit = {:?}\npath = {path:?}\nref = {reference:?}\n",

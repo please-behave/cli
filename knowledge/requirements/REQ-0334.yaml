@@ -1,0 +1,13 @@
+id: REQ-0334
+name: Untrusted Repositories Block Imports
+area: setup
+description: >-
+  Synchronization, planning and execution must fail for a project that imports
+  from a Git repository the user does not trust, before retrieving, loading or
+  executing anything from it, and the error must name the repository and the
+  command that trusts it.
+rationale: >-
+  Imported checks and adapters run with the user's permissions, so a project
+  must not be able to make a developer run foreign code without a decision.
+decisions:
+  - DEC-0028

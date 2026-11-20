@@ -293,7 +293,7 @@ failures. A check FAIL or ERROR prevents reviews and overall success.
 
 Resource confinement is not process sandboxing. Checks execute with Please Behave's
 permissions and can access files, credentials and the network. Only import
-executable checks from trusted sources. Changes to evaluated files during
+executable checks from [trusted repositories](external-rule-sets.md#trusting-repositories). Changes to evaluated files during
 execution prevent PASS.
 
 ### Result statuses

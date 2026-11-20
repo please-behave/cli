@@ -58,6 +58,39 @@ fn execute(cli: Cli) -> Result<i32> {
             );
             Ok(0)
         }
+        Words::Trust {
+            repository,
+            remove,
+            list,
+        } => {
+            if list {
+                for repository in please::external::trust::list()? {
+                    println!("{}", terminal::clean(&repository));
+                }
+                return Ok(0);
+            }
+            let selector = please::external::repository_selector(
+                &repository.context("missing repository")?,
+                &root,
+            )?;
+            let identity = please::external::trust::identity(&selector);
+            let changed = if remove {
+                please::external::trust::remove(&selector)?
+            } else {
+                please::external::trust::add(&selector)?
+            };
+            let message = match (remove, changed) {
+                (false, true) => format!("Trusted {identity}."),
+                (false, false) => format!("Already trusted {identity}."),
+                (true, true) => format!("No longer trusting {identity}."),
+                (true, false) => format!("Was not trusted: {identity}."),
+            };
+            println!(
+                "{}",
+                terminal::paint(&terminal::clean(&message), Tone::Success, color)
+            );
+            Ok(0)
+        }
         Words::Run {
             progress,
             checks_only,

@@ -463,7 +463,16 @@ fn human_plan_uses_english_and_preserves_layout_and_values() {
 #[test]
 fn all_command_paths_and_standard_help() {
     // REQ-0276, REQ-0278: supported commands and the standard help/version options parse.
-    for words in ["init", "sync", "run", "status", "help"] {
+    for words in [
+        "init",
+        "sync",
+        "trust some/repository",
+        "trust --remove some/repository",
+        "trust --list",
+        "run",
+        "status",
+        "help",
+    ] {
         let argv: Vec<_> = std::iter::once("please")
             .chain(words.split_whitespace())
             .collect();
@@ -1422,7 +1431,7 @@ fn help_lists_only_supported_commands_without_redundant_examples() {
             .lines()
             .filter(|line| !line.trim().is_empty())
             .collect();
-        let phrases = ["init", "sync", "run", "status", "help"];
+        let phrases = ["init", "sync", "trust", "run", "status", "help"];
         assert_eq!(rows.len(), phrases.len());
         assert_eq!(rows.last(), Some(&"  help    Show help"));
         for (row, phrase) in rows.iter().zip(phrases) {

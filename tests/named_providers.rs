@@ -198,6 +198,7 @@ fn set(root: &Path, directory: &str, rules: &[&str]) {
 }
 fn imports(root: &Path, remote: &Path, selections: &[&str]) {
     let mut text = "project = 'My_App'\n".to_owned();
+    support::trust(remote);
     for path in selections {
         text += &format!(
             "[[imports]]\ngit = {:?}\npath = {path:?}\nref = 'main'\n",

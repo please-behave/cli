@@ -225,12 +225,42 @@ helpers and SSH configuration remain trusted integrations.
 
 Checks execute with the Please Behave user's permissions. Resource confinement does not
 prevent scripts from accessing other paths, credentials or the network. Import
-executable Rules only from trusted sources. Imported generic CLI provider commands
+executable Rules only from repositories you trust; see [Trusting repositories](#trusting-repositories).
+Imported generic CLI provider commands
 use this same trust boundary and execute from the consumer root with its inherited
 environment. They may reference installed programs or consumer-provided wrappers;
 Legacy Rule Set-provider command arguments stay literal; independent provider
 packages below add explicit cached-resource references. Review every
-imported provider definition before approving source refresh. There is no process sandbox.
+imported provider definition before trusting its repository. There is no process sandbox.
+
+## Trusting repositories
+
+Every Git repository a project imports from, for Rule Sets and providers alike, must
+be trusted by the user. Without trust, `sync`, `run` and `run --plan` fail before
+anything is retrieved, loaded or executed, naming the repository and the command to run:
+
+```sh
+please trust https://github.com/company/governance-rules.git
+please trust --list
+please trust --remove https://github.com/company/governance-rules.git
+```
+
+Trust applies to the whole repository, so another reference, directory or revision of a
+trusted repository needs no further decision. It is not a pin and not a sandbox:
+keep pinning the revisions you import, and remember that trusted checks run with your
+permissions. Trust is checked again before every run, offline, so removing it takes effect
+immediately.
+
+The decisions live in `please/trust.toml` below `XDG_CONFIG_HOME`, or `$HOME/.config`, outside
+every project. No project file, imported content or Git directory can grant trust, and
+neither `sync` nor `sync --yes` establishes it; only `please trust` does. In CI, run
+`please trust` in a workflow step before `please sync`; the workflow is then as strongly
+protected as the repository that contains it.
+
+A repository is identified by its location after lexical normalization only: scheme and host
+are lowercase, default ports, trailing slashes and a `.git` suffix are dropped, and a local
+repository is identified by its absolute path. Other aliases, such as an SSH and an HTTPS
+location of one repository, are separate and must each be trusted.
 
 ## Independent provider packages
 

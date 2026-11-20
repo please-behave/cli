@@ -4,6 +4,7 @@
 Commands:
   init    Initialize a new .please/ configuration once
   sync    Validate configuration and synchronize declared state (--yes)
+  trust   Trust a Git repository for imports (--remove, --list)
   run     Execute rules (--at, --plan; --checks-only: deterministic checks only)
   status  Show the last saved report (--details for full findings)
   help    Show help

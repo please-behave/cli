@@ -32,6 +32,19 @@ pub enum Words {
         #[arg(long, help = "Approve planned integration changes without prompting")]
         yes: bool,
     },
+    /// Trust a Git repository for imports, or list the trusted ones.
+    Trust {
+        #[arg(required_unless_present = "list", help = "Git location to trust")]
+        repository: Option<String>,
+        #[arg(long, requires = "repository", help = "Stop trusting the repository")]
+        remove: bool,
+        #[arg(
+            long,
+            conflicts_with_all = ["repository", "remove"],
+            help = "List trusted repositories"
+        )]
+        list: bool,
+    },
     /// Execute selected rules and save results.
     Run {
         #[arg(

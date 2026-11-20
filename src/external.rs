@@ -1,5 +1,6 @@
 //! Git distribution and isolated loading; semantics remain in config and rules.
 mod cache;
+pub mod trust;
 
 use crate::{
     config::{self, Project},
@@ -217,6 +218,19 @@ impl Import {
     }
 }
 
+/// Validates a Git location as an import would and returns it as the import resolves it.
+pub fn repository_selector(git: &str, root: &Path) -> Result<String> {
+    let mut import = Import {
+        git: git.to_owned(),
+        path: ".".into(),
+        reference: "HEAD".into(),
+        execution_points: BTreeMap::new(),
+        rule_parameters: BTreeMap::new(),
+    };
+    import.validate(root)?;
+    Ok(import.git)
+}
+
 /// Explicit cache selection supports embedders and offline integration tests.
 pub fn load(root: &Path, refresh: bool, cache_directory: Option<&Path>) -> Result<Project> {
     load_with_changes(root, refresh, cache_directory, &mut false)
@@ -246,6 +260,7 @@ pub(crate) fn load_with_changes(
     for (import, _) in &mut imports {
         import.validate(&root)?;
     }
+    trust::require(imports.iter().map(|(import, _)| import.git.as_str()))?;
     imports.sort_by_key(|(import, provider)| {
         (
             import.key(),

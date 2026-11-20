@@ -116,6 +116,8 @@ print(json.dumps({'protocol_version':1, 'reason':'Evidence inspected', 'findings
     }
     fn configure(&self, rules: bool, provider: bool) {
         let mut text = "project = 'Provider consumer'\n".to_owned();
+        support::trust(&self.rules);
+        support::trust(&self.providers);
         if rules {
             text += &format!(
                 "[[imports]]\ngit = {:?}\npath = 'policy'\nref = {:?}\n",

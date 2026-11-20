@@ -168,6 +168,10 @@ custom = []
         }
     }
     fn imports(&self, selections: &[(&str, &str)]) {
+        support::trust(&self.remote);
+        self.untrusted_imports(selections);
+    }
+    fn untrusted_imports(&self, selections: &[(&str, &str)]) {
         let base = r#"project = "My_App"
 max_display_files = 5
 [execution_points]
@@ -1365,6 +1369,7 @@ fn authentication_failure_hides_helper_diagnostics() {
         "ssh://git@example.invalid/rules.git",
     );
     fs::write(path, text).unwrap();
+    support::trust_location("ssh://git@example.invalid/rules.git");
     let ssh = f.root.with_file_name("fake-ssh");
     fs::write(
         &ssh,
@@ -1437,6 +1442,7 @@ fn ssh_ports_and_ipv6_authorities_reach_host_git_without_password_confusion() {
         "ssh://[::1]:2222/rules.git",
     ] {
         fs::write(&path, text.replace(f.remote.to_str().unwrap(), url)).unwrap();
+        support::trust_location(url);
         let output = support::command(env!("CARGO_BIN_EXE_please"))
             .current_dir(&f.root)
             .env("XDG_CACHE_HOME", &f.cache)
@@ -1462,6 +1468,7 @@ fn separate_repositories_with_identical_paths_and_ids_remain_distinct() {
     definitions(&other, "repository", "git --version");
     commit(&other);
     f.imports(&[("repository", "main")]);
+    support::trust(&other);
     let path = f.root.join(".please/config.toml");
     let text = fs::read_to_string(&path).unwrap();
     fs::write(
@@ -1516,6 +1523,7 @@ fn moved_tags_refresh_but_cached_execution_remains_on_the_validated_commit() {
 
 fn mapped_imports(f: &Fixture, mappings: &[(&str, &str)], custom: &[&str]) {
     let mut text = format!("project = 'My_App'\n[execution_points]\ncustom = {custom:?}\n");
+    support::trust(&f.remote);
     for (path, mapping) in mappings {
         text += &format!(
             "[[imports]]\ngit = {:?}\npath = {path:?}\nref = 'main'\n{mapping}\n",
@@ -3307,4 +3315,110 @@ fn coordinated_sync_preserves_governed_files_through_hook_lifecycle_and_failure(
     let output = sync(false);
     assert!(String::from_utf8_lossy(&output.stderr).contains("hook"));
     assert_eq!(fs::read_to_string(hook).unwrap(), foreign);
+}
+
+/// Runs the executable with an empty user trust store of its own, outside the project.
+fn please_with_own_trust(f: &Fixture, args: &[&str]) -> std::process::Output {
+    support::command(env!("CARGO_BIN_EXE_please"))
+        .args(args)
+        .current_dir(&f.root)
+        .env("XDG_CACHE_HOME", &f.cache)
+        .env("XDG_CONFIG_HOME", f.root.parent().unwrap().join("config"))
+        .env("NO_COLOR", "1")
+        .output()
+        .unwrap()
+}
+
+#[test]
+fn untrusted_repositories_block_sync_plan_and_run_before_retrieval() {
+    // REQ-0334: no retrieval happens and the error names the repository and the trust command.
+    // REQ-0337: the unattended confirmation option does not establish trust.
+    let f = Fixture::new();
+    f.untrusted_imports(&[("repository", "main")]);
+    for args in [&["sync", "--yes"][..], &["run", "--plan"], &["run"]] {
+        let output = please_with_own_trust(&f, args);
+        assert_eq!(output.status.code(), Some(2), "{args:?}: {output:?}");
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(stderr.contains("is not trusted"), "{stderr}");
+        assert!(
+            stderr.contains(&format!("please trust {}", f.remote.display())),
+            "{stderr}"
+        );
+        assert!(!f.cache.join("please").exists(), "{args:?} retrieved");
+    }
+    let listed = please_with_own_trust(&f, &["trust", "--list"]);
+    assert_eq!(listed.status.code(), Some(0));
+    assert!(listed.stdout.is_empty(), "{listed:?}");
+}
+
+#[test]
+fn trust_commands_grant_and_revoke_trust_for_the_whole_repository() {
+    // REQ-0334: revocation blocks execution without network access.
+    // REQ-0335: the decision lives in the user store, not in the project.
+    // REQ-0336: references, directories and later revisions need no further decision.
+    // REQ-0337: only the explicit commands change trust.
+    let f = Fixture::new();
+    f.untrusted_imports(&[("repository", "main")]);
+    let granted = please_with_own_trust(&f, &["trust", f.remote.to_str().unwrap()]);
+    assert_eq!(granted.status.code(), Some(0), "{granted:?}");
+    assert!(String::from_utf8_lossy(&granted.stdout).starts_with("Trusted "));
+    let again = please_with_own_trust(&f, &["trust", f.remote.to_str().unwrap()]);
+    assert!(String::from_utf8_lossy(&again.stdout).starts_with("Already trusted "));
+    let store = f.root.parent().unwrap().join("config/please/trust.toml");
+    assert!(store.is_file());
+    assert!(!f.root.join(".please/trust.toml").exists());
+    assert!(!f.root.join(".git/please/trust.toml").exists());
+
+    let first = please_with_own_trust(&f, &["sync", "--yes"]);
+    assert_eq!(first.status.code(), Some(0), "{first:?}");
+    git(&f.remote, &["tag", "v1"]);
+    write(&f.remote, "repository/new-resource", "later revision\n");
+    commit(&f.remote);
+    f.untrusted_imports(&[("repository", "main"), ("software", "v1")]);
+    let output = please_with_own_trust(&f, &["sync", "--yes"]);
+    assert_eq!(output.status.code(), Some(0), "{output:?}");
+    let plan = please_with_own_trust(&f, &["run", "--plan"]);
+    assert_eq!(plan.status.code(), Some(0), "{plan:?}");
+
+    let revoked = please_with_own_trust(&f, &["trust", "--remove", f.remote.to_str().unwrap()]);
+    assert_eq!(revoked.status.code(), Some(0), "{revoked:?}");
+    for args in [&["run", "--plan"][..], &["run"], &["sync", "--yes"]] {
+        let output = please_with_own_trust(&f, args);
+        assert_eq!(output.status.code(), Some(2), "{args:?}: {output:?}");
+        assert!(String::from_utf8_lossy(&output.stderr).contains("is not trusted"));
+    }
+    let listed = please_with_own_trust(&f, &["trust", "--list"]);
+    assert!(listed.stdout.is_empty(), "{listed:?}");
+}
+
+#[test]
+fn repositories_are_identified_by_lexically_normalized_location() {
+    // REQ-0338: spelling variants coincide; other aliases and providers' rules do not apply.
+    use please::external::trust::identity;
+    let https = identity("https://github.com/org/repo");
+    for variant in [
+        "HTTPS://GitHub.com/org/repo.git",
+        "https://github.com:443/org/repo/",
+        "https://github.com/org/repo.git/",
+    ] {
+        assert_eq!(identity(variant), https, "{variant}");
+    }
+    assert_ne!(identity("https://github.com/org/Repo"), https);
+    assert_ne!(identity("git@github.com:org/repo.git"), https);
+    assert_ne!(identity("ssh://git@github.com/org/repo"), https);
+    assert_eq!(
+        identity("git@GitHub.com:org/repo.git"),
+        identity("git@github.com:org/repo")
+    );
+    let f = Fixture::new();
+    let canonical = identity(f.remote.to_str().unwrap());
+    assert_eq!(canonical, f.remote.to_str().unwrap());
+    assert_eq!(identity(&format!("{canonical}/")), canonical);
+    assert_eq!(identity(&format!("file://{canonical}")), canonical);
+    #[cfg(unix)]
+    {
+        let alias = f.remote.with_file_name("alias");
+        std::os::unix::fs::symlink(&f.remote, &alias).unwrap();
+        assert_eq!(identity(alias.to_str().unwrap()), canonical);
+    }
 }

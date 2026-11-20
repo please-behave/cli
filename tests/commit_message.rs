@@ -370,6 +370,7 @@ fn imported_message_reviews_use_the_same_hook_contract() {
     ));
     let revision = String::from_utf8(ok(git(&source, &["rev-parse", "HEAD"])).stdout).unwrap();
     fs::remove_dir_all(f.root.join(".please/reviews")).unwrap();
+    support::trust(&source);
     support::write(
         &f.root,
         ".please/config.toml",

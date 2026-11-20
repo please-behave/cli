@@ -11,6 +11,9 @@ scope:
     Caches fetched sources locally and records the origin of every imported
     rule.
   - >-
+    Requires the user's trust in every imported Git repository and keeps the
+    user-level trust store.
+  - >-
     Loads imported definitions in isolation and combines them with the local
     configuration into one project.
 out_of_scope:
@@ -19,6 +22,9 @@ out_of_scope:
   - description: Executing imported rules.
     owner: COMP-0002
 must_not:
+  - >-
+    Read trust decisions from project files, imported content or the Git
+    directory of a project.
   - >-
     Let a consumer override properties of an imported rule such as its
     blocking behavior.
@@ -29,6 +35,7 @@ must_not:
 files:
   - src/external.rs
   - src/external/cache.rs
+  - src/external/trust.rs
 depends_on:
   - COMP-0003
   - COMP-0006
@@ -67,3 +74,8 @@ requirements:
   - REQ-0230
   - REQ-0331
   - REQ-0332
+  - REQ-0334
+  - REQ-0335
+  - REQ-0336
+  - REQ-0337
+  - REQ-0338

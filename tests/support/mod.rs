@@ -86,6 +86,23 @@ pub fn command(program: impl AsRef<std::ffi::OsStr>) -> Command {
     command
 }
 
+/// Trust a repository for imports in an isolated, process-wide user trust store.
+///
+/// The store location is the same for every test of a binary, so the process-wide variable
+/// cannot make tests disagree; subprocesses inherit it.
+pub fn trust(repository: &Path) {
+    trust_location(repository.to_str().unwrap());
+}
+
+/// Like [`trust`] for a Git location that is not a local path.
+pub fn trust_location(location: &str) {
+    static ONCE: std::sync::Once = std::sync::Once::new();
+    ONCE.call_once(|| unsafe {
+        std::env::set_var("XDG_CONFIG_HOME", tempfile::tempdir().unwrap().keep());
+    });
+    please::external::trust::add(location).unwrap();
+}
+
 /// Commit everything so that the unpushed history is a change set for reviews at pre-push.
 pub fn commit_all(root: &Path) {
     for args in [

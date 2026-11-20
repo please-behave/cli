@@ -116,6 +116,10 @@ confirmation in a terminal. Declining, a missing terminal, conflicts or failures
 and preserve the previous report. Inside a hook, reconciliation is read-only: drift
 fails with an instruction to run `please sync`. `--plan` never synchronizes.
 
+Importing from a Git repository additionally requires that you trust it with
+`please trust REPOSITORY`; `--yes` never grants trust. See
+[Trusting repositories](external-rule-sets.md#trusting-repositories).
+
 For unattended setup, `please sync --yes` approves the displayed plan without a
 terminal, manages declared integration state only and is a no-op when synchronized:
 
