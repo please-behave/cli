@@ -2,7 +2,7 @@
 
 ## Why and changes
 
-- `why/` is the source of truth for product behavior, responsibilities and decisions. Read `why/README.md` and the artifacts relevant to the task before implementation. Consult `docs/product-vision.md` for direction.
+- `why/` is the source of truth for product behavior, responsibilities and decisions. Read `why/README.md` and the artifacts relevant to the task before implementation. Consult the central Why repository (https://github.com/please-behave/why) for purpose, principles and direction.
 - Define the contract and acceptance criteria before changing behavior. If Why artifacts conflict or code differs from them, investigate before proceeding. Ask the owner whether to correct the Why or track the required implementation in an issue; never silently redefine behavior.
 - Every change includes a targeted consistency review of affected Why artifacts, code, tests, configuration and user documentation. Update affected artifacts and examples in the same change.
 - README stays a concise entry point; user documentation explains usage and never overrides the Why. Follow DEC-0026 for format versioning.
