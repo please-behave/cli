@@ -10,11 +10,11 @@ import unittest
 from pathlib import Path
 
 SCRIPT = Path(__file__).resolve().with_name("check.py")
-SCHEMA = SCRIPT.parents[3] / "knowledge/components/schema.json"
-REQUIREMENT_SCHEMA = SCRIPT.parents[3] / "knowledge/requirements/schema.json"
-API_SCHEMA = SCRIPT.parents[3] / "knowledge/contracts/schema.json"
-DECISION_SCHEMA = SCRIPT.parents[3] / "knowledge/decisions/schema.json"
-spec = importlib.util.spec_from_file_location("knowledge_check", SCRIPT)
+SCHEMA = SCRIPT.parents[3] / "why/components/schema.json"
+REQUIREMENT_SCHEMA = SCRIPT.parents[3] / "why/requirements/schema.json"
+API_SCHEMA = SCRIPT.parents[3] / "why/contracts/schema.json"
+DECISION_SCHEMA = SCRIPT.parents[3] / "why/decisions/schema.json"
+spec = importlib.util.spec_from_file_location("why_check", SCRIPT)
 check = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(check)
 
@@ -71,8 +71,8 @@ class RepositoryTests(unittest.TestCase):
         (self.root / "src/lib.rs").write_text("pub mod a;\npub mod b;\n")
         (self.root / "src/a.rs").write_text("use crate::b;\n")
         (self.root / "src/b.rs").write_text("")
-        (self.root / "knowledge/components").mkdir(parents=True)
-        shutil.copy(SCHEMA, self.root / "knowledge/components/schema.json")
+        (self.root / "why/components").mkdir(parents=True)
+        shutil.copy(SCHEMA, self.root / "why/components/schema.json")
         self.write(component("COMP-0001", ["src/lib.rs", "src/a.rs"], ["COMP-0002"]))
         self.write(component("COMP-0002", ["src/b.rs"]))
 
@@ -80,7 +80,7 @@ class RepositoryTests(unittest.TestCase):
         self.directory.cleanup()
 
     def write(self, value):
-        (self.root / f"knowledge/components/{value['id']}.yaml").write_text(json.dumps(value))
+        (self.root / f"why/components/{value['id']}.yaml").write_text(json.dumps(value))
 
     def errors(self):
         return check.check(self.root)[2]
@@ -114,7 +114,7 @@ class RepositoryTests(unittest.TestCase):
         self.assertEqual(self.errors(), [])
 
     def write_requirement(self, **changes):
-        requirements = self.root / "knowledge/requirements"
+        requirements = self.root / "why/requirements"
         requirements.mkdir(exist_ok=True)
         shutil.copy(REQUIREMENT_SCHEMA, requirements / "schema.json")
         value = {
@@ -128,7 +128,7 @@ class RepositoryTests(unittest.TestCase):
 
     def write_api(self, folder="adapter", **changes):
         self.write_requirement()
-        directory = self.root / "knowledge/contracts"
+        directory = self.root / "why/contracts"
         directory.mkdir(exist_ok=True)
         shutil.copy(API_SCHEMA, directory / "schema.json")
         directory = directory / folder
@@ -170,7 +170,7 @@ class RepositoryTests(unittest.TestCase):
 
     def test_contract_requirement_references_must_resolve(self):
         self.write_api()
-        (self.root / "knowledge/requirements/REQ-0001.yaml").unlink()
+        (self.root / "why/requirements/REQ-0001.yaml").unlink()
         self.assertTrue(any("unknown requirement REQ-0001" in error for error in self.errors()))
 
     def test_contract_resources_must_exist_and_stay_local(self):
@@ -219,7 +219,7 @@ class RepositoryTests(unittest.TestCase):
         self.assertEqual(self.errors(), [])
 
     def write_decision(self, **changes):
-        decisions = self.root / "knowledge/decisions"
+        decisions = self.root / "why/decisions"
         decisions.mkdir(exist_ok=True)
         shutil.copy(DECISION_SCHEMA, decisions / "schema.json")
         value = {"id": "DEC-0001", "name": "Name", "context": "Why.", "decision": "What.", "rationale": "Because."} | changes
@@ -243,7 +243,7 @@ class RepositoryTests(unittest.TestCase):
 class ExitTests(unittest.TestCase):
     def test_a_missing_repository_is_an_error(self):
         with tempfile.TemporaryDirectory() as directory:
-            copy = Path(directory) / ".please/checks/knowledge/check.py"
+            copy = Path(directory) / ".please/checks/why/check.py"
             copy.parent.mkdir(parents=True)
             copy.write_text(SCRIPT.read_text())
             result = subprocess.run([sys.executable, str(copy)], capture_output=True, text=True)

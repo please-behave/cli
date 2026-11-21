@@ -1,6 +1,6 @@
 # Implementation design
 
-This document records architectural decisions. The [requirements](../knowledge/requirements/README.md)
+This document records architectural decisions. The [requirements](../why/requirements/README.md)
 define behavior; this file explains how the code is organized to deliver it.
 
 ## Modules
@@ -38,7 +38,7 @@ See [usage and recovery](usage.md#optional-git-hook).
 
 ## Snapshots
 
-The [Snapshot and Freshness contract](../knowledge/contracts/report/snapshot.md)
+The [Snapshot and Freshness contract](../why/contracts/report/snapshot.md)
 defines covered inputs, completeness, stability and comparison. The implementation
 captures manifests before and after execution and compares their file states;
 snapshots are not filesystem transactions.
@@ -51,7 +51,7 @@ the first bytes of each stream with full totals, runs POSIX processes in separat
 and kills descendants on timeout or fail-fast. It is not a hostile-process sandbox.
 
 Report persistence, result semantics and usage follow the
-[Report Document and Lifecycle contract](../knowledge/contracts/report/document.md).
+[Report Document and Lifecycle contract](../why/contracts/report/document.md).
 The writer uses a temporary file and atomic rename for each numbered report.
 
 ## Adapters

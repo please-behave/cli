@@ -157,7 +157,7 @@ The resulting executable is `target/release/please`.
 ## Development
 
 Coding agents follow [AGENTS.md](AGENTS.md).
-[Knowledge](knowledge/README.md) defines the product's binding behavior,
+[Why](why/README.md) defines the product's binding behavior,
 responsibilities and decisions.
 
 Development uses the tools pinned in `mise.toml`. With

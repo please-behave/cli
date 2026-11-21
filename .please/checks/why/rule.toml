@@ -1,0 +1,9 @@
+id = "why"
+name = "Why"
+description = "Why artifacts and references are valid and component ownership and dependencies match the code"
+enabled = true
+run_at = ["pre-commit", "pre-push", "check"]
+
+[check]
+command = "python3 @rule/check.py"
+timeout_seconds = 60

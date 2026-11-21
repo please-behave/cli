@@ -5,7 +5,7 @@ purpose: >-
 scope:
   - >-
     Writes one JSON context document per executed run that follows
-    knowledge/contracts/run-context/context.schema.json.
+    why/contracts/run-context/context.schema.json.
   - >-
     Describes repository, HEAD and workspace always, and commit message,
     pushed references or net changes when the run applies.

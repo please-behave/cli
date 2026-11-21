@@ -12,7 +12,7 @@ conditions:
     rationale: The ID is the key by which tests cite requirements.
   - statement: Every requirement ID cited in a test comment is defined.
     rationale: A citation without a requirement is a typo or outdated.
-  - statement: Active requirements satisfy the verification contract in knowledge/requirements/README.md.
+  - statement: Active requirements satisfy the verification contract in why/requirements/README.md.
     rationale: Verification gaps and contradictory exemptions must not accumulate.
 success_criteria:
   - A broken link, a missing anchor or an unknown requirement ID fails and the message names the file.

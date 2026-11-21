@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/please-behave/cli/knowledge/contracts/rule-knowledge/rule.schema.json",
+  "$id": "https://github.com/please-behave/cli/why/contracts/rule-knowledge/rule.schema.json",
   "title": "Rule knowledge",
   "description": "Guiding question: Why does this Rule exist and what must it achieve?\n\nRule knowledge is the structured companion of a Rule definition. It records the purpose, the problem the Rule prevents, the conditions it enforces with their reasons, and the measure by which its implementation is judged. It never repeats what rule.toml already defines.",
   "type": "object",

@@ -13,4 +13,4 @@ rationale: >-
   structure. It offers a practical balance between the verbosity of JSON
   and the structural flexibility of YAML, particularly for relatively small
   configuration files. YAML remains appropriate where its characteristics
-  are advantageous, such as the project's knowledge documents.
+  are advantageous, such as the project's Why documents.

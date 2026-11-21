@@ -321,7 +321,7 @@ context = [{path = "evidence.md"}]
     assert!(!d.path().join(".git/please/context").exists());
 
     let schema: serde_json::Value =
-        serde_json::from_str(include_str!("../knowledge/contracts/plan/plan.schema.json")).unwrap();
+        serde_json::from_str(include_str!("../why/contracts/plan/plan.schema.json")).unwrap();
     let validator = jsonschema::validator_for(&schema).unwrap();
     for version in [0, 1] {
         let mut compatible = plan.clone();
@@ -407,9 +407,9 @@ fn human_plan_uses_english_and_preserves_layout_and_values() {
         "planned_model_calls": 1,
         "change_base": "base-789",
         "context": {"scopes": [{"review": "architecture", "files": ["src/lib.rs"], "content_bytes": 30, "change_set_bytes": 40}],
-            "selections": [{"path": "knowledge/requirements/README.md", "headings": []},
+            "selections": [{"path": "why/requirements/README.md", "headings": []},
                 {"path": "DESIGN.md", "headings": ["Architecture", "Boundaries"]}],
-            "sections": [{"path": "knowledge/requirements/README.md", "start_line": 2, "end_line": 7, "bytes": 120}],
+            "sections": [{"path": "why/requirements/README.md", "start_line": 2, "end_line": 7, "bytes": 120}],
             "selected_bytes": 120, "byte_limit": 1000, "instruction_bytes": 80,
             "instruction_byte_limit": 500}
     }))
@@ -431,9 +431,9 @@ fn human_plan_uses_english_and_preserves_layout_and_values() {
             "Review Architektur · Adapter profile: reviewer · Adapter: review-adapter · Timeout: 60 s\n",
             "Scope of architecture: 1 files · Content: 30 bytes · Change set: 40 bytes\n",
             "Review criteria: 80 / 500 bytes\n",
-            "Requirements: knowledge/requirements/README.md · entire file\n",
+            "Requirements: why/requirements/README.md · entire file\n",
             "Requirements: DESIGN.md · Architecture, Boundaries\n",
-            "Context section: knowledge/requirements/README.md:2–7 · 120 bytes\n",
+            "Context section: why/requirements/README.md:2–7 · 120 bytes\n",
             "Preview: no rules executed, no tokens consumed, no report overwritten.\n",
         )
     );

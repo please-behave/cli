@@ -129,7 +129,7 @@ values. External declarations omit `value`. File parameters refer to existing
 files in the consumer; bundled assets still belong to the source rule. Repeated
 imports execute separately and retain distinguishable IDs in plans and reports;
 repeated references within one binding execute once. See
-[parameter declarations and delivery](../knowledge/contracts/configuration/parameters.md).
+[parameter declarations and delivery](../why/contracts/configuration/parameters.md).
 
 ## Named adapter profiles
 

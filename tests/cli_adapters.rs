@@ -107,7 +107,7 @@ fn execute(root: &Path) -> report::Report {
 #[test]
 // REQ-0223: requests contain review instructions and the exact response generation schema.
 // REQ-0242: requests name an existing absolute run context file.
-fn knowledge_schemas_match_adapter_transport_and_generation_constraints() {
+fn why_schemas_match_adapter_transport_and_generation_constraints() {
     // REQ-0222, REQ-0331, REQ-0332: actual version-zero messages and legacy labels.
     let root = fixture();
     tool(root.path());
@@ -132,12 +132,10 @@ print(json.dumps(response))"#,
     };
     let request = load(".please/reports/adapter-request.json");
     let response = load(".please/reports/adapter-response.json");
-    let request_schema: serde_json::Value = serde_json::from_str(include_str!(
-        "../knowledge/contracts/adapter/request.schema.json"
-    ))
-    .unwrap();
+    let request_schema: serde_json::Value =
+        serde_json::from_str(include_str!("../why/contracts/adapter/request.schema.json")).unwrap();
     let response_schema: serde_json::Value = serde_json::from_str(include_str!(
-        "../knowledge/contracts/adapter/response.schema.json"
+        "../why/contracts/adapter/response.schema.json"
     ))
     .unwrap();
     let requests = jsonschema::validator_for(&request_schema).unwrap();

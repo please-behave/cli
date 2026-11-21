@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate knowledge artifacts, references and compiled component ownership."""
+"""Validate Why artifacts, references and compiled component ownership."""
 
 import json
 import re
@@ -19,7 +19,7 @@ def load_yaml(path):
 
 
 def validate(schema, value, where="$"):
-    """Validate the JSON Schema subset used by the knowledge schemas and return the violations."""
+    """Validate the JSON Schema subset used by the Why schemas and return the violations."""
     errors = []
     kind = schema.get("type")
     checks = {
@@ -61,8 +61,8 @@ def validate(schema, value, where="$"):
 
 
 def load_artifacts(root, folder, prefix):
-    """Load every `<prefix>-NNNN.yaml` file of a knowledge folder and validate it against the folder schema."""
-    directory = root / "knowledge" / folder
+    """Load every `<prefix>-NNNN.yaml` file of a Why folder and validate it against the folder schema."""
+    directory = root / "why" / folder
     if not directory.is_dir():
         return {}, []
     schema = json.loads((directory / "schema.json").read_text())
@@ -80,7 +80,7 @@ def load_artifacts(root, folder, prefix):
 
 def check_contracts(root, requirements):
     """Validate API indices and resolve their local resources and requirement links."""
-    directory = root / "knowledge/contracts"
+    directory = root / "why/contracts"
     if not directory.is_dir():
         return []
     schema = json.loads((directory / "schema.json").read_text())
@@ -184,7 +184,7 @@ def check(root):
     errors += load_artifacts(root, "decisions", "DEC")[1]
     for identifier, requirement in requirements.items():
         for reference in requirement.get("decisions", []):
-            if not (root / f"knowledge/decisions/{reference}.yaml").is_file():
+            if not (root / f"why/decisions/{reference}.yaml").is_file():
                 errors.append(f"{identifier}: unknown decision {reference}")
     owner = {}
     for identifier, component in components.items():
@@ -230,15 +230,13 @@ def main():
     assert not errors, "\n".join(errors)
     for note in notes:
         print(f"NOTE: mutual dependency {note}")
-    print(
-        f"Knowledge passed: {len(components)} components cover every compiled file exactly once; {len(requirements)} requirements checked."
-    )
+    print(f"Why passed: {len(components)} components cover every compiled file exactly once; {len(requirements)} requirements checked.")
 
 
 if __name__ == "__main__":
     try:
         main()
-    except AssertionError as error:  # A verdict about the knowledge.
+    except AssertionError as error:  # A verdict about the Why.
         print(f"FAIL: {error}", file=sys.stderr)
         sys.exit(1)
     except Exception as error:  # A crash is a technical failure, never a FAIL verdict.

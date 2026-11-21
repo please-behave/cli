@@ -33,7 +33,7 @@ Use this fixed layout at the Git working-tree root:
 
 Start with `config.toml` and add Rule, Rule Set and adapter profile documents as needed.
 Supporting files belong beside the Rules that use them. The binding
-[Configuration Discovery and Validation contract](../knowledge/contracts/configuration/discovery.md)
+[Configuration Discovery and Validation contract](../why/contracts/configuration/discovery.md)
 defines the recognized locations, safe paths, document limits and validation rules.
 
 Run `please sync` after editing. Validation runs no checks or adapters.
@@ -58,8 +58,8 @@ fail_fast_termination_grace_seconds = 5
 custom = ["release"]
 ```
 
-The [Project Configuration contract](../knowledge/contracts/configuration/project.md)
-explains every project option. Its [schema](../knowledge/contracts/configuration/project.schema.json)
+The [Project Configuration contract](../why/contracts/configuration/project.md)
+explains every project option. Its [schema](../why/contracts/configuration/project.schema.json)
 defines fields, defaults and bounds; the TOML format has no version field.
 
 Use `execution.max_parallel` to cap concurrent checks, or `--max-parallel` for one
@@ -98,15 +98,15 @@ execution slots; later independent checks can start first. Failures and timeouts
 do not stop remaining checks. Results retain canonical ID order. Checks that
 rely on serial execution need resources or a limit of 1.
 
-The [execution settings contract](../knowledge/contracts/configuration/project.md#execution-settings)
+The [execution settings contract](../why/contracts/configuration/project.md#execution-settings)
 defines fail-fast termination, grace periods and platform requirements. Inspect
 partial output after cancellation and clean up interrupted builds before retrying.
 
 ### Fields shared by checks and reviews
 
-The binding [Rule Definition contract](../knowledge/contracts/configuration/rule.md)
+The binding [Rule Definition contract](../why/contracts/configuration/rule.md)
 and its schema define shared fields, identity, labels, enabled state, enforcement
-and execution-point assignment. [Rule Parameters](../knowledge/contracts/configuration/parameters.md)
+and execution-point assignment. [Rule Parameters](../why/contracts/configuration/parameters.md)
 defines declared inputs and their validation and delivery.
 
 Checks can declare top-level prerequisites independently of execution points:
@@ -159,7 +159,7 @@ description = "Allowed commit scopes"
 value = ".commit-scopes"
 ```
 
-The [Rule Parameters contract](../knowledge/contracts/configuration/parameters.md)
+The [Rule Parameters contract](../why/contracts/configuration/parameters.md)
 and its schema define declaration fields, local and imported binding, resolution
 and delivery. This is separate from adapter profile and review adapter settings.
 
@@ -741,9 +741,9 @@ Each executed run supplies Git facts to checks through the `@context` argument
 and to adapters through `context_file` in the request. Use that supplied absolute
 path and treat the context and its patch files as read-only.
 
-The [Run Context API](../knowledge/contracts/run-context/api.yaml) defines
-[delivery and lifetime](../knowledge/contracts/run-context/delivery.md) and the
-[document and patches](../knowledge/contracts/run-context/document.md), including
+The [Run Context API](../why/contracts/run-context/api.yaml) defines
+[delivery and lifetime](../why/contracts/run-context/delivery.md) and the
+[document and patches](../why/contracts/run-context/document.md), including
 their structural schema. Inspect its truncation indicators before relying on
 complete evidence; obtain missing facts from Git or fail the rule.
 Configure retention and section limits through the `context` settings above.
@@ -759,7 +759,7 @@ the managed section of a composed hook do not receive it.
 
 A saved report identifies the evaluated working files, including declared local
 governance inputs even when ignored. Files that cannot be covered completely
-prevent PASS. See the binding [Snapshot and Freshness contract](../knowledge/contracts/report/snapshot.md)
+prevent PASS. See the binding [Snapshot and Freshness contract](../why/contracts/report/snapshot.md)
 and its schema for coverage, exclusions and limits. Script dependencies are not
 inferred; declare the inputs your Rules rely on.
 
@@ -776,7 +776,7 @@ that is not saved exits 3), and `please status --details` to inspect results, fi
 and captured output. Keep reports and credentials
 local, and avoid printing secrets: captured output is not automatically redacted.
 
-The [Verification Report API](../knowledge/contracts/report/api.yaml) defines the
-[document and lifecycle](../knowledge/contracts/report/document.md), including
+The [Verification Report API](../why/contracts/report/api.yaml) defines the
+[document and lifecycle](../why/contracts/report/document.md), including
 versions, statuses, enforcement, output, usage and reader validation. Its schema
-references the independent [Execution Plan API](../knowledge/contracts/plan/api.yaml).
+references the independent [Execution Plan API](../why/contracts/plan/api.yaml).

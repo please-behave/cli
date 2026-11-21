@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/please-behave/cli/knowledge/contracts/plan/plan.schema.json",
+  "$id": "https://github.com/please-behave/cli/why/contracts/plan/plan.schema.json",
   "title": "Please Behave execution plan",
   "oneOf": [
     {

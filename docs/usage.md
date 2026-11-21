@@ -1,6 +1,6 @@
 # Usage
 
-[Knowledge](../knowledge/README.md) defines binding behavior and API contracts.
+[Why](../why/README.md) defines binding behavior and API contracts.
 The [configuration guide](configuration.md) explains setup and links to exact field
 definitions, defaults and bounds.
 
@@ -51,8 +51,8 @@ state.
 ## Run results
 
 A valid run atomically saves a new numbered report `.please/reports/<number>.json`, including on FAIL or ERROR, and names its number in the summary line. `report.retain_runs` (default 10) keeps the newest reports; numbering continues after removal.
-The [Verification Report API](../knowledge/contracts/report/api.yaml) defines its
-format and [snapshot freshness](../knowledge/contracts/report/snapshot.md).
+The [Verification Report API](../why/contracts/report/api.yaml) defines its
+format and [snapshot freshness](../why/contracts/report/snapshot.md).
 Each review result names the adapter profile that produced it; reviews using the default
 adapter profile or making no adapter call name none. Invalid configuration saves no report and leaves saved reports untouched. Reports are ignored and
 stay local.

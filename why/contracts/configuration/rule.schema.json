@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/please-behave/cli/knowledge/contracts/configuration/rule.schema.json",
+  "$id": "https://github.com/please-behave/cli/why/contracts/configuration/rule.schema.json",
   "title": "Governance Rule definition",
   "type": "object",
   "additionalProperties": false,

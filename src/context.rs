@@ -1,6 +1,6 @@
 //! Structured run context: Git facts for the execution point, written once per run.
 //!
-//! The read-only JSON document follows `knowledge/contracts/run-context/context.schema.json`.
+//! The read-only JSON document follows `why/contracts/run-context/context.schema.json`.
 //! Checks receive its path as the `@context` argument and review adapters as `context_file`.
 //! It never contains file contents, only paths, states and patches.
 use crate::{config::Project, git_snapshot, process, reconciliation::HookContext};

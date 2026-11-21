@@ -42,7 +42,7 @@ def check_links(root, files):
 
 
 def check_requirements(root):
-    directory = root / "knowledge/requirements"
+    directory = root / "why/requirements"
     definitions = sorted(directory.glob("REQ-*.yaml"))
     assert definitions, "no requirement definitions found"
     result = subprocess.run(["yq", "eval-all", "-o=json", "-I=0", "[.]", *map(str, definitions)], capture_output=True, text=True)

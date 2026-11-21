@@ -1,6 +1,6 @@
-purpose: Keep the Knowledge artifacts valid and the component map consistent with the source code.
+purpose: Keep the Why artifacts valid and the component map consistent with the source code.
 problem: >-
-  Knowledge is the source of truth for product behavior. Without a check,
+  The Why is the source of truth for product behavior. Without a check,
   components, declared dependencies and code drift apart unnoticed.
 value: The component map stays complete and current, and references between artifacts resolve.
 conditions:
@@ -21,4 +21,4 @@ out_of_scope:
   - description: Code outside src.
 limitations:
   - Dependencies are derived from crate and library path references with regular expressions, and test code after the first test configuration attribute is ignored.
-placement: Local, because it covers the Knowledge layout and source structure of this repository only.
+placement: Local, because it covers the Why layout and source structure of this repository only.

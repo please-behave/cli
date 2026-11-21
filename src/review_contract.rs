@@ -45,7 +45,7 @@ pub fn valid_summary(reason: &str) -> bool {
 /// ranges still require local validation.
 pub fn schema() -> Value {
     let mut schema: Value = serde_json::from_str(include_str!(
-        "../knowledge/contracts/adapter/response.schema.json"
+        "../why/contracts/adapter/response.schema.json"
     ))
     .expect("embedded adapter response schema is valid JSON");
     let object = schema

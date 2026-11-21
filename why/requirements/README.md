@@ -106,7 +106,7 @@ no decision. The need that triggered a decision stays in its `context`.
 
 ## How it stays current
 
-The `knowledge` rule in [`.please/checks/knowledge`](../../.please/checks/knowledge/check.py)
+The `why` rule in [`.please/checks/why`](../../.please/checks/why/check.py)
 fails when a requirement does not follow the schema, uses an unknown area, or
 cites a decision that does not exist. Component references to requirements must
 resolve as well.

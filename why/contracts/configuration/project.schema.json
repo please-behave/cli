@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/please-behave/cli/knowledge/contracts/configuration/project.schema.json",
+  "$id": "https://github.com/please-behave/cli/why/contracts/configuration/project.schema.json",
   "title": "Please Behave project configuration",
   "description": "JSON-compatible representation of the parsed project config.toml. TOML parsing and semantic validation are additional obligations.",
   "type": "object",

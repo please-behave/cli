@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/please-behave/cli/knowledge/contracts/report/report.schema.json",
+  "$id": "https://github.com/please-behave/cli/why/contracts/report/report.schema.json",
   "title": "Please Behave saved report",
   "type": "object",
   "additionalProperties": false,

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/please-behave/cli/knowledge/contracts/configuration/parameters.schema.json",
+  "$id": "https://github.com/please-behave/cli/why/contracts/configuration/parameters.schema.json",
   "title": "Rule parameter declarations",
   "type": "object",
   "additionalProperties": {

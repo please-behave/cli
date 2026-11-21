@@ -7,16 +7,16 @@ only bounds one adapter invocation by its configured deadline and output limits.
 Configure it as an [adapter profile](configuration.md#configure-the-adapter-profile); select it in a review
 or use an explicit project default.
 
-The binding [Adapter Protocol](../knowledge/contracts/adapter/api.yaml) is defined
-in Knowledge:
+The binding [Adapter Protocol](../why/contracts/adapter/api.yaml) is defined
+in Why:
 
-- [Invocation](../knowledge/contracts/adapter/invocation.md): process, streams,
+- [Invocation](../why/contracts/adapter/invocation.md): process, streams,
   exit status, deadlines and trust.
-- [Request](../knowledge/contracts/adapter/request.md) and its
-  [JSON schema](../knowledge/contracts/adapter/request.schema.json): review input
+- [Request](../why/contracts/adapter/request.md) and its
+  [JSON schema](../why/contracts/adapter/request.schema.json): review input
   and adapter settings.
-- [Response](../knowledge/contracts/adapter/response.md) and its
-  [JSON schema](../knowledge/contracts/adapter/response.schema.json): verdict
+- [Response](../why/contracts/adapter/response.md) and its
+  [JSON schema](../why/contracts/adapter/response.schema.json): verdict
   evidence, local validation and optional telemetry.
 
 The [dummy script](../examples/adapters/dummy.py) and accompanying

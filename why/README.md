@@ -1,8 +1,8 @@
-# Knowledge Model
+# Why
 
-This directory contains the authoritative knowledge about Please Behave.
+This directory holds the Why of the CLI: the authoritative requirements, decisions, components and contracts that say what the product is and why. It follows the [Why documentation approach](https://github.com/please-behave/why).
 
-The knowledge model records **agreed-upon product knowledge**, including retained historical knowledge. It describes the product specification, not implementation progress or validation results. It is neither a backlog nor a roadmap.
+The Why records **agreed-upon product statements**, including retained history. It describes the product specification, not implementation progress or validation results. It is neither a backlog nor a roadmap; direction belongs in the vision.
 
 ## Artifacts
 
@@ -30,14 +30,14 @@ to use these interfaces without redefining them.
 The [configuration contracts](contracts/configuration/api.yaml) define discovery,
 project settings, shared Rule definitions and parameters. The configuration and
 external rule set references also contain detailed interface definitions. Their
-definitions must remain consistent with Knowledge.
+definitions must remain consistent with the Why.
 
 Requirements and detailed references must agree. Resolve any contradiction
 explicitly before implementation and update the affected sources together.
 
 ## Principles
 
-- Only agreed-upon knowledge is recorded. No drafts, proposals, roadmaps, or implementation statuses.
+- Only agreed-upon content is recorded. No drafts, proposals, roadmaps, or implementation statuses.
 - Artifacts complement rather than duplicate one another.
 - Requirements describe observable behavior or properties, not unnecessary implementation details.
 - Relationships are recorded in one direction; reverse relationships are derived.

@@ -7,7 +7,7 @@ artifact exists and how to keep it true.
 
 ## Why components exist
 
-The other knowledge artifacts say what the product must do and why it is built
+The other Why artifacts say what the product must do and why it is built
 that way. None of them says where anything lives. Without that link an agent has
 to discover the structure by reading code every time it starts a task, and a
 reviewer cannot tell whether a change belongs where it was made.
@@ -78,7 +78,7 @@ could ever see violated does not belong here.
 
 ## How it stays current
 
-The `knowledge` rule in [`.please/checks/knowledge`](../../.please/checks/knowledge/check.py)
+The `why` rule in [`.please/checks/why`](../../.please/checks/why/check.py)
 runs at pre-commit, pre-push and in CI. It fails when
 
 - a component file does not follow the schema, or a reference does not resolve,

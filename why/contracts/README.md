@@ -54,7 +54,7 @@ adapter requests and plan previews are produced by the CLI for external consumer
 who own their own version handling. Structural schemas accept the number `1.0` as an
 integer version, so the CLI readers, not the schemas, reject it.
 
-The `knowledge` check validates index structure, unique IDs, requirement references
+The `why` check validates index structure, unique IDs, requirement references
 and document/schema paths. Contract tests check structural schemas against actual
 requests, responses, run-context documents, plan previews, saved reports and parsed
 project configuration. Semantic validation, byte limits and evidence checks remain

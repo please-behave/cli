@@ -39,11 +39,11 @@ Rules are shown separately. Checks-only execution leaves selected reviews NOT_RU
 Inspect context sizes, declared adapter profile settings and the call estimate before
 running the full selection. Shared adapter profiles still make a separate call per review.
 
-The binding [Execution Plan API](../knowledge/contracts/plan/api.yaml) defines:
+The binding [Execution Plan API](../why/contracts/plan/api.yaml) defines:
 
-- [Preview, diagnostics and compatibility](../knowledge/contracts/plan/preview.md),
+- [Preview, diagnostics and compatibility](../why/contracts/plan/preview.md),
   with the structural JSON Schema.
-- [Prepared plan and identity](../knowledge/contracts/plan/prepared.md), including
+- [Prepared plan and identity](../why/contracts/plan/prepared.md), including
   selection, dependencies, input, adapter profile provenance and identity semantics.
 
 For execution options and saved results, see [usage](usage.md).

@@ -152,10 +152,9 @@ pub fn use_head_as_change_base() {
 pub fn assert_plan_contract(value: &serde_json::Value) {
     static VALIDATOR: std::sync::OnceLock<jsonschema::Validator> = std::sync::OnceLock::new();
     let validator = VALIDATOR.get_or_init(|| {
-        let schema: serde_json::Value = serde_json::from_str(include_str!(
-            "../../knowledge/contracts/plan/plan.schema.json"
-        ))
-        .unwrap();
+        let schema: serde_json::Value =
+            serde_json::from_str(include_str!("../../why/contracts/plan/plan.schema.json"))
+                .unwrap();
         jsonschema::validator_for(&schema).unwrap()
     });
     let errors: Vec<_> = validator
@@ -169,12 +168,11 @@ pub fn assert_plan_contract(value: &serde_json::Value) {
 pub fn report_contract_validator() -> &'static jsonschema::Validator {
     static VALIDATOR: std::sync::OnceLock<jsonschema::Validator> = std::sync::OnceLock::new();
     VALIDATOR.get_or_init(|| {
-        let plan: serde_json::Value = serde_json::from_str(include_str!(
-            "../../knowledge/contracts/plan/plan.schema.json"
-        ))
-        .unwrap();
+        let plan: serde_json::Value =
+            serde_json::from_str(include_str!("../../why/contracts/plan/plan.schema.json"))
+                .unwrap();
         let schema: serde_json::Value = serde_json::from_str(include_str!(
-            "../../knowledge/contracts/report/report.schema.json"
+            "../../why/contracts/report/report.schema.json"
         ))
         .unwrap();
         let registry = jsonschema::Registry::new()
@@ -202,11 +200,11 @@ pub fn rule_contract_validator() -> &'static jsonschema::Validator {
     static VALIDATOR: std::sync::OnceLock<jsonschema::Validator> = std::sync::OnceLock::new();
     VALIDATOR.get_or_init(|| {
         let schema: serde_json::Value = serde_json::from_str(include_str!(
-            "../../knowledge/contracts/configuration/rule.schema.json"
+            "../../why/contracts/configuration/rule.schema.json"
         ))
         .unwrap();
         let parameters: serde_json::Value = serde_json::from_str(include_str!(
-            "../../knowledge/contracts/configuration/parameters.schema.json"
+            "../../why/contracts/configuration/parameters.schema.json"
         ))
         .unwrap();
         let registry = jsonschema::Registry::new()

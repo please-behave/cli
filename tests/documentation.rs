@@ -126,7 +126,7 @@ fn contract<T: Serialize + DeserializeOwned>(sample: &T, text: &str, prefix: &st
 }
 fn project_schema() -> Value {
     serde_json::from_str(include_str!(
-        "../knowledge/contracts/configuration/project.schema.json"
+        "../why/contracts/configuration/project.schema.json"
     ))
     .unwrap()
 }
@@ -280,7 +280,7 @@ fn every_configuration_field_required_marker_and_default_is_documented() {
         "{}\n{}\n{}",
         schema_rows(
             &serde_json::from_str::<Value>(include_str!(
-                "../knowledge/contracts/configuration/rule.schema.json"
+                "../why/contracts/configuration/rule.schema.json"
             ))
             .unwrap(),
             ""
@@ -298,7 +298,7 @@ fn every_configuration_field_required_marker_and_default_is_documented() {
         },
         &schema_rows(
             &serde_json::from_str::<Value>(include_str!(
-                "../knowledge/contracts/configuration/parameters.schema.json"
+                "../why/contracts/configuration/parameters.schema.json"
             ))
             .unwrap()["$defs"]["declaration"],
             "parameters.<name>.",
@@ -498,7 +498,7 @@ fn parameter_schema_keeps_declaration_loading_and_resolution_separate() {
     let root = project();
     support::write(root.path(), "scopes.txt", "cli\n");
     let mut active: Value = serde_json::from_str(include_str!(
-        "../knowledge/contracts/configuration/parameters.schema.json"
+        "../why/contracts/configuration/parameters.schema.json"
     ))
     .unwrap();
     active["$ref"] = serde_json::json!("#/$defs/activeDeclarations");

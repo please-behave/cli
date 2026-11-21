@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/please-behave/cli/knowledge/contracts/rule-knowledge/ruleset.schema.json",
+  "$id": "https://github.com/please-behave/cli/why/contracts/rule-knowledge/ruleset.schema.json",
   "title": "Rule Set knowledge",
   "description": "Guiding question: What do these Rules have in common and which Rules belong here?\n\nRule Set knowledge is the structured companion of a Rule Set definition. It records for whom the bundle exists, what binds its Rules together and the criteria for admitting a further Rule. It never repeats the membership or execution points that the set's configuration defines, only their reasons.",
   "type": "object",
