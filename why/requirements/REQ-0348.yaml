@@ -1,0 +1,12 @@
+id: REQ-0348
+name: Publish Uses a Remote Repository Identity
+area: configuration
+description: >-
+  Please must use the configured repository identity or the normalized network
+  Git origin host and path, and must refuse delivery when neither provides an
+  identity.
+rationale: >-
+  Recipients need a repository identifier that is portable across local
+  checkouts.
+decisions:
+  - DEC-0033

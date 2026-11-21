@@ -40,6 +40,7 @@ def main():
         run("sync --yes")
         run("sync")
         run("status", 3)
+        run("publish", 2)
         run("run")
         report_path = root / ".please/reports/1.json"
         report = json.loads(report_path.read_text())

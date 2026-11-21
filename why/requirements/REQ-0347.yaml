@@ -1,0 +1,11 @@
+id: REQ-0347
+name: Publish Requires Current Committed Evidence
+area: integrity
+description: >-
+  Please must deliver only when the newest report has a saved HEAD and passes
+  the same freshness comparison used by status under REQ-0238 and REQ-0342.
+rationale: >-
+  A report whose evaluated input can no longer be confirmed would misrepresent
+  the current working tree.
+decisions:
+  - DEC-0033

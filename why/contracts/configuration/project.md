@@ -22,8 +22,8 @@ JSON types. TOML parsing and semantic validation remain necessary: null is not a
 TOML configuration value, integers must fit TOML and the target representation,
 and floating-point or date/time values do not substitute for the declared types.
 Object-field order has no meaning. Unknown fields are rejected, including inside
-optional tables. An omitted table applies the defaults of its child fields;
-an empty table behaves the same way. A missing field is not an explicit null.
+optional tables. For tables with defaulted child fields, omission and an empty table behave
+identically. An optional table with required fields must supply them when present. A missing field is not an explicit null.
 
 ## Project label and presentation
 
@@ -83,6 +83,21 @@ remain visibly incomplete rather than silently trusted. The
 run, counting the report just saved. It is independent of `context.retain_runs`.
 Its default and permitted values are defined in [project.schema.json](project.schema.json).
 The [Report API](../report/document.md) defines numbering and removal.
+
+## Publish settings
+
+The optional `[publish]` table enables the explicit `please publish` command.
+`gateway_url` is the HTTP or HTTPS origin of the gateway, with an optional port
+and trailing slash. Credentials, paths other than `/`, queries and fragments
+are invalid. The command sends to `/v0/attestations` on that origin.
+`key_env` names the environment variable that supplies the bearer credential.
+The variable is read only for delivery. An optional `repository` supplies the
+exact attestation repository identity, overriding derivation from Git's
+`origin` remote. Changing these fields changes a governed file and requires a
+new run before publication.
+
+These fields extend the experimental configuration API at version 0. They add
+no version declaration in TOML.
 
 ## Execution points and explicit imports
 

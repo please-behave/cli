@@ -763,6 +763,28 @@ prevent PASS. See the binding [Snapshot and Freshness contract](../why/contracts
 and its schema for coverage, exclusions and limits. Script dependencies are not
 inferred; declare the inputs your Rules rely on.
 
+### Publish settings
+
+Add this optional table to `.please/config.toml` for [`please publish`](usage.md#publish-a-report).
+
+```toml
+[publish]
+gateway_url = "https://gateway.example.invalid"
+key_env = "PLEASE_GATEWAY_KEY"
+# repository = "github.com/owner/repository"
+```
+
+| Field | Required | Usage |
+| --- | --- | --- |
+| `publish.gateway_url` | Yes | Gateway origin. Use HTTPS for a remote gateway. |
+| `publish.key_env` | Yes | Name of the environment variable holding the API key. Store the value in your secret store. |
+| `publish.repository` | No | Exact repository identity. The default derives the host and path from Git's `origin` fetch URL. |
+
+The command posts to `/v0/attestations`. For example,
+`git@github.com:owner/repository.git` becomes `github.com/owner/repository`.
+Set the override if you have no network `origin`. Run again after editing the
+configuration so the report reflects the current files.
+
 ### Reports and other files
 
 Each run saves local evidence as a new numbered report in `.please/reports/<number>.json`
@@ -773,8 +795,8 @@ retention is independent of `context.retain_runs`, and reports do not need run c
 Use `please status` to show the newest report and compare its saved input with your
 current files, `please status --report 17` to show an earlier retained one (a number
 that is not saved exits 3), and `please status --details` to inspect results, findings
-and captured output. Keep reports and credentials
-local, and avoid printing secrets: captured output is not automatically redacted.
+and captured output. Keep raw reports local and avoid printing secrets. Captured
+output is not automatically redacted.
 
 The [Verification Report API](../why/contracts/report/api.yaml) defines the
 [document and lifecycle](../why/contracts/report/document.md), including

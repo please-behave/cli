@@ -1,0 +1,13 @@
+id: REQ-0349
+name: Publish Credentials Come From the Environment
+area: configuration
+description: >-
+  Please must take the gateway origin and API key variable name from the
+  project's publish settings, refuse delivery if the key is unavailable, and
+  send the key only in the bearer authorization header without disclosing it
+  in output.
+rationale: >-
+  A project can configure delivery without storing the credential in version
+  control or exposing it in logs.
+decisions:
+  - DEC-0033

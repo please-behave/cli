@@ -222,9 +222,9 @@ fn execute(cli: Cli) -> Result<i32> {
                     terminal::render(&report, color)
                 }
             );
-            match git_snapshot::capture(&root) {
-                Ok(now) => {
-                    for reason in &now.limitations {
+            match git_snapshot::compare_current(&root, &report.snapshot, report.max_display_files) {
+                Ok((changes, limitations)) => {
+                    for reason in &limitations {
                         println!(
                             "{}",
                             terminal::paint(
@@ -237,8 +237,6 @@ fn execute(cli: Cli) -> Result<i32> {
                             )
                         );
                     }
-                    let changes =
-                        git_snapshot::compare(&report.snapshot, &now, report.max_display_files);
                     print!("{}", terminal::render_changes(&changes, color));
                     Ok(match changes.state.as_str() {
                         "CURRENT" => report.overall.exit_code(),
@@ -260,6 +258,14 @@ fn execute(cli: Cli) -> Result<i32> {
                     Ok(2)
                 }
             }
+        }
+        Words::Publish => {
+            please::publish::send(&root)?;
+            println!(
+                "{}",
+                terminal::paint("Attestation accepted.", Tone::Success, color)
+            );
+            Ok(0)
         }
         Words::Help => {
             print!(

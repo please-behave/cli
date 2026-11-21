@@ -115,6 +115,7 @@ run the same rules.
 | `please sync` | Validate configuration and synchronize declared integrations. |
 | `please run` | Run selected rules and save their results. |
 | `please status` | Inspect the newest report, or one chosen with `--report <number>`, and its freshness. |
+| `please publish` | Send an attestation from the newest current report to the configured gateway. |
 | `please help` | Show commands and options. |
 
 `run` uses the `pre-push` execution point by default. Preview its selection

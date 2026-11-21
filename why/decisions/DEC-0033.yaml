@@ -1,0 +1,14 @@
+id: DEC-0033
+name: Attestation Delivery Is Explicit
+context: >-
+  The gateway accepts evidence of completed CLI runs. A project's workflow
+  needs to distinguish the governance verdict from whether evidence reached
+  the gateway.
+decision: >-
+  Publish is an explicit command with its own delivery outcome. It sends a
+  minimal projection of the newest current report under the gateway ingest
+  contract. The local report and its verdict are preserved. A workflow can
+  decide how to act on each outcome independently.
+rationale: >-
+  Independent delivery keeps gateway availability from changing governance
+  verdicts and lets projects choose when to share run evidence.

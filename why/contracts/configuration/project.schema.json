@@ -80,6 +80,30 @@
       },
       "default": {}
     },
+    "publish": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["gateway_url", "key_env"],
+      "properties": {
+        "gateway_url": {
+          "type": "string",
+          "pattern": "^https?://[^/@?#\\s]+/?$"
+        },
+        "key_env": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+        },
+        "repository": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048,
+          "pattern": "^\\S(?:.*\\S)?$",
+          "not": {
+            "pattern": "[\\u0000-\\u001f\\u007f-\\u009f]"
+          }
+        }
+      }
+    },
     "execution_points": {
       "type": "object",
       "additionalProperties": false,

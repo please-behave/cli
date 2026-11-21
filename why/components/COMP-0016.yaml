@@ -1,0 +1,29 @@
+id: COMP-0016
+name: Attestation Publishing
+purpose: >-
+  Delivers a projection of current saved evidence to the configured gateway.
+scope:
+  - Selects the newest saved report and checks its eligibility for delivery.
+  - Projects the attestation and derives the remote repository identity.
+  - Authenticates the request and maps the delivery outcome to a diagnostic.
+out_of_scope:
+  - description: Calculating and persisting the verification verdict.
+    owner: COMP-0014
+  - description: Determining the coverage and freshness of the saved input.
+    owner: COMP-0011
+must_not:
+  - Modify the report or include captured evidence and secrets in diagnostics.
+files:
+  - src/publish.rs
+depends_on:
+  - COMP-0003
+  - COMP-0008
+  - COMP-0011
+  - COMP-0014
+requirements:
+  - REQ-0345
+  - REQ-0346
+  - REQ-0347
+  - REQ-0348
+  - REQ-0349
+  - REQ-0350

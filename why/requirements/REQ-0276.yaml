@@ -2,8 +2,8 @@ id: REQ-0276
 name: Command Set
 area: cli
 description: >-
-  Please must offer exactly the commands init, sync, trust, run, status and help, and
+  Please must offer exactly the commands init, sync, trust, run, status, publish and help, and
   its help must list exactly these commands without command or option aliases.
 rationale: >-
-  A small fixed set of six commands is easy to learn and lets hooks, CI and
+  A small fixed set of seven commands is easy to learn and lets hooks, CI and
   agents rely on the same words.

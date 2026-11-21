@@ -14,6 +14,7 @@ pub mod limits;
 pub mod parameters;
 pub mod planner;
 pub mod process;
+pub mod publish;
 pub mod reconciliation;
 pub mod report;
 pub mod review_context;

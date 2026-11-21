@@ -233,6 +233,16 @@ pub fn capture(root: &Path) -> Result<Snapshot> {
         limitations,
     })
 }
+/// Compare the saved input with the current working tree, retaining diagnostic limitations.
+pub fn compare_current(
+    root: &Path,
+    before: &Snapshot,
+    limit: usize,
+) -> Result<(Changes, Vec<String>)> {
+    let now = capture(root)?;
+    Ok((compare(before, &now, limit), now.limitations))
+}
+
 pub fn compare(before: &Snapshot, after: &Snapshot, limit: usize) -> Changes {
     let paths: BTreeSet<_> = before.files.keys().chain(after.files.keys()).collect();
     let changed: Vec<_> = paths

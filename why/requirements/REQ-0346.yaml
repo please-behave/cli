@@ -1,0 +1,12 @@
+id: REQ-0346
+name: Minimal Attestation Projection
+area: reporting
+description: >-
+  Please must send an attestation matching the gateway ingest contract with
+  the saved report version, commit, execution point, overall verdict and each
+  result's ID, kind and mapped status, excluding all result detail.
+rationale: >-
+  The gateway needs portable run evidence without exposing local tools' output
+  or review content.
+decisions:
+  - DEC-0033

@@ -1,6 +1,6 @@
 # Report document and lifecycle
 
-Producer: Please Behave execution. Consumers: `please status` and tools reading
+Producer: Please Behave execution. Consumers: `please status`, `please publish` and tools reading
 saved verification evidence. [api.yaml](api.yaml) identifies this API and its
 requirements. [report.schema.json](report.schema.json) defines structure, types
 and permitted values, including the [snapshot](snapshot.md). The embedded `plan`
@@ -146,3 +146,31 @@ A missing report, including a requested number that is not saved, exits 3; an un
 A CURRENT report preserves its saved outcome's exit code (PASS 0, FAIL 1, ERROR 2).
 STALE exits 1; UNKNOWN exits 2 and takes precedence over known differences or an
 otherwise successful saved outcome. Freshness does not rewrite the saved verdict.
+
+## Publishing evidence
+
+`please publish` reads the newest report using the same selection and freshness
+check as `please status` ([REQ-0342](../../requirements/REQ-0342.yaml),
+[REQ-0238](../../requirements/REQ-0238.yaml)). Delivery requires CURRENT and a
+saved HEAD, regardless of the report's overall verdict.
+
+The [gateway ingest contract](https://github.com/please-behave/gateway/tree/main/why/contracts/ingest)
+defines the attestation. The projection uses the report's `schema_version`,
+`snapshot.head` as `commit`, the saved plan's execution point as the sole
+`execution_points` entry, and the saved `overall`. Each result, including an
+integrity result, contributes its `id`, `kind` and `status`. A non-blocking
+review's FAIL or ERROR maps to WARN and CANCELLED maps to NOT_RUN. All other
+statuses pass through. The projection excludes the local repository path and
+all captured output, messages, findings and explanations.
+
+The repository identity is the configured override or Git's fetch URL for
+`origin`, normalized as host and path. Normalization preserves path case and
+removes the transport scheme, user information, port, URL query and fragment,
+surrounding path slashes and a terminal `.git`. The hostname is lowercased.
+SCP-style locations are supported. A local origin requires an override.
+
+Delivery uses a single POST with bearer authorization from the configured
+environment variable. The command succeeds on HTTP 201 and reports credential
+rejection, rate limiting, document rejection, other gateway responses and
+transport failures distinctly. It follows no redirects and leaves the report
+and its verdict intact.

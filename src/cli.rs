@@ -94,6 +94,8 @@ pub enum Words {
         )]
         report: Option<u64>,
     },
+    /// Publish an attestation from the newest current report.
+    Publish,
     /// Show help.
     Help,
 }

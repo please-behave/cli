@@ -1,0 +1,12 @@
+id: REQ-0345
+name: Explicit Attestation Delivery
+area: cli
+description: >-
+  Please must offer a separate publish command for the newest saved report,
+  including a current report with a FAIL or ERROR verdict, while preserving
+  the saved report and verification verdict.
+rationale: >-
+  Projects need to control when they share evidence and handle delivery
+  separately from governance.
+decisions:
+  - DEC-0033

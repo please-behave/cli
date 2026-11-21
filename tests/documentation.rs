@@ -184,7 +184,13 @@ fn project_contract(schema: &Value, config: &config::Config) {
             Ok(parsed) => {
                 assert!(!required, "optional field {pointer}");
                 let restored = serde_json::to_value(parsed).unwrap();
-                let actual = restored.pointer(&pointer).unwrap();
+                let Some(actual) = restored.pointer(&pointer) else {
+                    assert!(
+                        declaration.get("default").is_none(),
+                        "default for {pointer}"
+                    );
+                    continue;
+                };
                 if actual.is_object() {
                     assert_eq!(declaration["default"], serde_json::json!({}), "{pointer}");
                 } else {
@@ -224,7 +230,14 @@ fn every_configuration_field_required_marker_and_default_is_documented() {
             &fs::read_to_string(root.path().join(".please").join(rule)).unwrap(),
         );
     }
-    project_contract(&project_schema(), &p.config);
+    let mut config = p.config;
+    assert!(config.publish.is_none());
+    config.publish = Some(config::PublishSettings {
+        gateway_url: "https://gateway.example.invalid".into(),
+        key_env: "PLEASE_GATEWAY_KEY".into(),
+        repository: Some("example.invalid/owner/repo".into()),
+    });
+    project_contract(&project_schema(), &config);
     contract(
         &please::external::Import {
             git: "https://example.invalid/rules.git".into(),
@@ -370,6 +383,27 @@ fn project_schema_and_loader_agree_on_types_bounds_and_unknown_fields() {
         (
             "project = 'Example'\n[execution]\n[context]\n[execution_points]",
             true,
+        ),
+        ("project = 'Example'\n[publish]", false),
+        (
+            "project = 'Example'\n[publish]\ngateway_url = 'https://gateway.example.invalid'\nkey_env = 'PLEASE_GATEWAY_KEY'",
+            true,
+        ),
+        (
+            "project = 'Example'\n[publish]\ngateway_url = 'https://user:secret@gateway.example.invalid'\nkey_env = 'PLEASE_GATEWAY_KEY'",
+            false,
+        ),
+        (
+            "project = 'Example'\n[publish]\ngateway_url = 'https://gateway.example.invalid'\nkey_env = 'KEY=VALUE'",
+            false,
+        ),
+        (
+            "project = 'Example'\n[publish]\ngateway_url = 'https://gateway.example.invalid'\nkey_env = 'KEY'\nrepository = ' padded '",
+            false,
+        ),
+        (
+            "project = 'Example'\n[publish]\ngateway_url = 'https://gateway.example.invalid'\nkey_env = 'KEY'\napi_key = 'fixture'",
+            false,
         ),
         ("project = 'Example'\nversion = 0", false),
         ("project = 'Example'\nschema_version = 0", false),

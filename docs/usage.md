@@ -75,6 +75,20 @@ Line deltas are unavailable because only hashes are stored. `--details` adds ful
 findings, captured output (bounded per stream and not redacted, so avoid printing
 secrets), selection, required rule IDs, external sources and token usage.
 
+## Publish a report
+
+Set up [publishing](configuration.md#publish-settings) and supply the configured
+environment variable through your secret store. Run `please publish` from the
+repository root after a run. The newest report must have a commit and show
+CURRENT in `please status`. A current report from a failed run can be published.
+
+The gateway receives the repository identity, commit, execution point, report
+schema version, overall verdict and each result's ID, kind and status. Captured
+output, findings and explanations stay local. The command exits according to
+delivery and preserves the report. In CI, run publication explicitly after
+capturing the run's exit status, including when the run fails. Your workflow
+decides how to handle a delivery failure.
+
 ## Configure checks and reviews
 
 A Check lives in `.please/checks/<name>/rule.toml`. Prefer a command string such as
@@ -96,7 +110,10 @@ and the [adapter protocol](adapter-protocol.md).
 | 0 | Initialization/validation/help succeeded, plan preview is executable, or all required results PASS and status CURRENT |
 | 1 | Verification FAIL, or status STALE |
 | 2 | Configuration/reconciliation/execution/adapter/report ERROR, plan preview blocked by a configuration or selection error, declined or unavailable confirmation, status UNKNOWN, or invalid CLI arguments |
-| 3 | Status requested before any report exists |
+| 3 | Status requested for a report that does not exist |
+
+For `please publish`, exit 0 means the gateway accepted the attestation and exit
+2 means delivery did not succeed, including failed local prerequisites.
 
 Status preserves a CURRENT report's original FAIL/ERROR exit code. UNKNOWN takes
 precedence if snapshot coverage is incomplete.

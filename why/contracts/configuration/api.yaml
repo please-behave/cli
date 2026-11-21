@@ -43,6 +43,8 @@ contracts:
       - REQ-0328
       - REQ-0329
       - REQ-0341
+      - REQ-0348
+      - REQ-0349
   - id: CON-0012
     name: Rule Definition
     document: rule.md

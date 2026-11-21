@@ -1,0 +1,12 @@
+id: REQ-0350
+name: Publish Exit Status Reports Delivery
+area: reporting
+description: >-
+  Please publish must exit successfully only on gateway acceptance and
+  distinguish credential rejection, rate limiting, invalid documents, gateway
+  errors and transport failures in its diagnostics.
+rationale: >-
+  Workflows need an independent exit status and enough detail to diagnose a
+  failed delivery.
+decisions:
+  - DEC-0033
