@@ -1,17 +1,17 @@
 include = [
-  "git::https://github.com/christianpflugradt/please-behave-governance.git//rulesets/repository-conventions/mise.toml?ref=c13b67c59b7ab4224fb2544a2de6fa2f49d36e2f",
+  "git::https://github.com/christianpflugradt/please-behave-governance.git//rulesets/repository-conventions/mise.toml?ref=29b8b072e41158ab12cadafbda35e868642b224e",
   "git::https://github.com/christianpflugradt/please-behave-governance.git//rulesets/security/mise.toml?ref=0de24d29d6195adecb6806103e205a202793cc0b",
   "git::https://github.com/christianpflugradt/please-behave-governance.git//rulesets/open-source-software/mise.toml?ref=4a3679d9da910272ca4d741307e4cbbe2bde6d6e",
-  "git::https://github.com/christianpflugradt/please-behave-governance.git//rulesets/releasable-open-source-software/mise.toml?ref=c13b67c59b7ab4224fb2544a2de6fa2f49d36e2f",
+  "git::https://github.com/christianpflugradt/please-behave-governance.git//rulesets/releasable-open-source-software/mise.toml?ref=29b8b072e41158ab12cadafbda35e868642b224e",
 ]
 
 [task_config]
 includes = [
-  "git::https://github.com/christianpflugradt/please-behave-governance.git//mise-tasks/release?ref=c13b67c59b7ab4224fb2544a2de6fa2f49d36e2f",
+  "git::https://github.com/christianpflugradt/please-behave-governance.git//mise-tasks/release?ref=29b8b072e41158ab12cadafbda35e868642b224e",
 ]
 
 [tools]
-"github:please-behave/cli" = "0.17.0"
+"github:please-behave/cli" = "0.18.0"
 rust = { version = "1.100.0", profile = "minimal", components = "rustfmt,clippy,llvm-tools" }
 python = "3.15.2"
 node = "26.13.1"

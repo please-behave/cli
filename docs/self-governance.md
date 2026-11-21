@@ -162,7 +162,7 @@ Check validates header syntax, type and scope using the managed commit-msg argum
 The advisory `commit-message-quality` Review evaluates only the first header line
 for specific English imperative wording, without the change set, body or repository files.
 The `gemini-flash-lite` adapter profile is independently imported from
-`providers/gemini-flash-lite` in the same repository; no adapter is copied locally.
+`adapters/gemini-flash-lite` in the same repository; no adapter is copied locally.
 Export GEMINI_API_KEY in the shell running Git. Missing credentials, adapter
 errors and wording failures remain visible without blocking the commit.
 The adapter uses at most three requests, 1/3-second retry waits, a 20-second
