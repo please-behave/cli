@@ -1,7 +1,7 @@
 # Rule and review roadmap
 
 This roadmap tracks implementation in the order below, one coherent, validated
-change at a time. Item 1 is implemented; item 2 is superseded by adapters and items 3 and 5 remain planned work. Writing a
+change at a time. Item 1 is implemented; item 2 is superseded by adapters and item 3 remains planned work. Writing a
 specification alone does not complete an implementation.
 
 | Order | TODO | Status | Depends on |
@@ -9,7 +9,6 @@ specification alone does not complete an implementation.
 | 1 | [Execution points and plans](../execution-points-and-plans.md) | DONE (`18897c9`) | — |
 | 2 | [Per-review MCP permissions and sessions](02-review-mcp-and-sessions.md) | Superseded by adapters | 1 |
 | 3 | [Inputs and review scope](03-inputs-and-review-scope.md) | TODO | 1, 2 |
-| 5 | [Measure and decide result caching](05-cache-decision.md) | TODO; decision task | 1–3 |
 
 ## Agreed decisions
 
@@ -34,8 +33,6 @@ specification alone does not complete an implementation.
 
 Mark an item done only after implementation, relevant tests, documentation and
 commit/push are complete. Record the implementing commit(s) in that item's file.
-For item 5, a documented decision to defer caching is a valid completion; writing
-an unmeasured cache implementation is not required.
 
 The [configuration reference](../configuration.md) describes current
 behavior. The [Execution Plan API](../../knowledge/contracts/plan/api.yaml) contains the

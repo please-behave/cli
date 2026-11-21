@@ -1,0 +1,24 @@
+id: DEC-0031
+name: Results Are Never Reused
+context: >-
+  Repeated runs on unchanged input could be made faster and cheaper by reusing
+  saved results. Reports are local files that are neither signed nor trusted
+  across machines. A review verdict also depends on the model, its settings and
+  the rights of the adapter behind it, none of which Please Behave controls
+  (DEC-0010, DEC-0022, DEC-0030). No measurement shows that repeated work is a
+  problem.
+decision: >-
+  Please Behave never reuses a saved check result or review verdict. Every run
+  executes all selected rules anew, and every PASS belongs to the run that
+  produced it. Caching of prompts or responses inside an adapter or its
+  provider is the adapter's concern; token counters it reports, such as cached
+  input, are telemetry and say nothing about reuse by Please Behave.
+rationale: >-
+  A gate result is valuable only because it states what was verified now.
+  Reusing it would assert something about an earlier moment on the strength of
+  a local file that anyone can edit, and the conditions under which a reuse
+  would be equivalent cannot be established for reviews. Checks are
+  deterministic and quick, so little would be saved. A cache would add
+  invalidation, storage and corruption handling without a demonstrated need.
+  Should measured repeated work justify reuse, a new decision can replace this
+  one.
