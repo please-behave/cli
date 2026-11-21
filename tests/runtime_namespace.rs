@@ -64,7 +64,11 @@ fn library_phases_and_saved_integrity_results_use_product_namespace() {
         ".hannes/config.toml",
         "not valid product configuration",
     );
-    write(root.path(), ".hannes/reports/last.json", "governor state");
+    write(
+        root.path(),
+        ".hannes/reports/governor-state.json",
+        "governor state",
+    );
     let mut phases = Vec::new();
     let report = please::verify_project_at(
         config::load(root.path()).unwrap(),
@@ -91,7 +95,7 @@ fn library_phases_and_saved_integrity_results_use_product_namespace() {
         ]
     );
     assert_eq!(
-        fs::read_to_string(root.path().join(".hannes/reports/last.json")).unwrap(),
+        fs::read_to_string(root.path().join(".hannes/reports/governor-state.json")).unwrap(),
         "governor state"
     );
     check(

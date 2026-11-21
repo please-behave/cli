@@ -220,7 +220,7 @@ The [CI workflow](../.github/workflows/ci.yml) calls the shared `ci-check.yml` w
 released governor through mise, trusts the governance repository, and invokes one published Action step to synchronize
 and run deterministic checks followed by applicable reviews at `check`.
 The Action establishes the GitHub event comparison base and produces generic
-review summaries. CI uploads `.please/reports/last.json`; adapter failures remain
+review summaries. CI uploads the numbered reports `.please/reports/<number>.json`; adapter failures remain
 errors. CI uses the CLI report and Action Summary instead of `execution.json`.
 Local wrapper runs still record governor version/digest, execution point, checked
 commit and exit code in that companion file.
