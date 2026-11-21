@@ -24,7 +24,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     permissions:
       contents: write
-    uses: christianpflugradt/please-behave-governance/.github/workflows/release-plan.yml@dbfbffd45d3c8e4382366345690a280ee7946806 # updates/workflows/release
+    uses: christianpflugradt/please-behave-governance/.github/workflows/release-plan.yml@aa0b0b05864581c26e4f5f9f1024c1411c6b172f # updates/workflows/release
     with:
       force: ${{ inputs.force }}
 
@@ -35,7 +35,7 @@ jobs:
     permissions:
       contents: read
       actions: read
-    uses: christianpflugradt/please-behave-governance/.github/workflows/release-readiness.yml@dbfbffd45d3c8e4382366345690a280ee7946806 # updates/workflows/release
+    uses: christianpflugradt/please-behave-governance/.github/workflows/release-readiness.yml@aa0b0b05864581c26e4f5f9f1024c1411c6b172f # updates/workflows/release
     with:
       source-sha: ${{ needs.plan.outputs.source_sha }}
       required-jobs: check / Check
@@ -77,13 +77,13 @@ jobs:
       - name: Build native candidate
         run: mise run build --offline
       - name: Validate native candidate behavior
-        uses: christianpflugradt/please-behave-governance/actions/release/governance@23c098e0071e5f564a89f5980ffbd199e114fd29 # updates/actions/release
+        uses: christianpflugradt/please-behave-governance/actions/release/governance@97a2570e70f0ae008ecde59f6878f44d55a399fa # updates/actions/release
         with:
           target: ${{ matrix.target }}
       - name: Package smoke-tested candidate
         run: mise run package
       - name: Record release candidate evidence
-        uses: christianpflugradt/please-behave-governance/actions/release/evidence@23c098e0071e5f564a89f5980ffbd199e114fd29 # updates/actions/release
+        uses: christianpflugradt/please-behave-governance/actions/release/evidence@97a2570e70f0ae008ecde59f6878f44d55a399fa # updates/actions/release
         with:
           operation: record
           version: ${{ needs.plan.outputs.version }}
@@ -113,7 +113,7 @@ jobs:
           experimental: true
           version: 2026.11.11
       - name: Verify complete release candidate evidence
-        uses: christianpflugradt/please-behave-governance/actions/release/evidence@23c098e0071e5f564a89f5980ffbd199e114fd29 # updates/actions/release
+        uses: christianpflugradt/please-behave-governance/actions/release/evidence@97a2570e70f0ae008ecde59f6878f44d55a399fa # updates/actions/release
         with:
           operation: verify
           version: ${{ needs.plan.outputs.version }}
@@ -121,7 +121,7 @@ jobs:
         working-directory: dist
         run: sha256sum -- *.tar.gz > SHA256SUMS
       - name: Publish versioned CLI archives and release notes
-        uses: christianpflugradt/please-behave-governance/actions/release/publish-release@23c098e0071e5f564a89f5980ffbd199e114fd29 # updates/actions/release
+        uses: christianpflugradt/please-behave-governance/actions/release/publish-release@97a2570e70f0ae008ecde59f6878f44d55a399fa # updates/actions/release
         with:
           version: ${{ needs.plan.outputs.version }}
           force: ${{ inputs.force }}
