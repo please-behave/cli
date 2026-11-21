@@ -7,7 +7,7 @@ permissions:
   contents: read
 jobs:
   check:
-    uses: christianpflugradt/please-behave-governance/.github/workflows/ci-check.yml@65311554dcbadc1dde0e5da59317532f81046201 # updates/workflows/ci
+    uses: christianpflugradt/please-behave-governance/.github/workflows/ci-check.yml@7d4d524a32ef91207f9da7e6eaea2c6f4a6ceaea # updates/workflows/ci
     with:
       env: |
         BUILD_TARGET=x86_64-unknown-linux-gnu
