@@ -48,6 +48,12 @@ records a single version per API. A document split or move does not change it.
 Each API specifies where its version appears and how unknown fields and versions
 are handled. Recording metadata does not introduce a new wire or configuration field.
 
+Only the CLI reads adapter responses and saved reports (with their embedded plan),
+and it rejects unsupported versions and invalid version types. Run-context documents,
+adapter requests and plan previews are produced by the CLI for external consumers,
+who own their own version handling. Structural schemas accept the number `1.0` as an
+integer version, so the CLI readers, not the schemas, reject it.
+
 The `knowledge` check validates index structure, unique IDs, requirement references
 and document/schema paths. Contract tests check structural schemas against actual
 requests, responses, run-context documents, plan previews, saved reports and parsed

@@ -154,6 +154,15 @@ print(json.dumps(response))"#,
         legacy["protocol_version"] = version.into();
         assert!(responses.is_valid(&legacy));
     }
+    // REQ-0331: unsupported versions and invalid version types are rejected, not coerced.
+    for version in unsupported_versions() {
+        let mut invalid = request.clone();
+        invalid["protocol_version"] = version.clone();
+        assert!(!requests.is_valid(&invalid), "request {version}");
+        let mut invalid = response.clone();
+        invalid["protocol_version"] = version.clone();
+        assert!(!responses.is_valid(&invalid), "response {version}");
+    }
     let mut extension = request.clone();
     extension["future_field"] = true.into();
     assert!(requests.is_valid(&extension));
@@ -557,6 +566,16 @@ fn completed_fail_and_error_respect_review_blocking() {
     )
     .unwrap();
     assert_eq!(execute(root.path()).overall, Status::Error);
+}
+
+fn unsupported_versions() -> Vec<serde_json::Value> {
+    vec![
+        serde_json::json!(true),
+        serde_json::json!(-1),
+        serde_json::json!(2),
+        serde_json::json!("0"),
+        serde_json::Value::Null,
+    ]
 }
 
 #[test]

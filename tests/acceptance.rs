@@ -352,6 +352,18 @@ context = [{path = "evidence.md"}]
             "accepted malformed {pointer}"
         );
     }
+    // REQ-0331: unsupported versions and invalid version types never validate.
+    for version in [
+        serde_json::json!(true),
+        serde_json::json!(-1),
+        serde_json::json!(2),
+        serde_json::json!("0"),
+        serde_json::Value::Null,
+    ] {
+        let mut invalid = plan.clone();
+        invalid["plan_schema_version"] = version.clone();
+        assert!(!validator.is_valid(&invalid), "plan {version}");
+    }
     let mut unknown = plan.clone();
     unknown["context"]["unexpected"] = serde_json::json!(true);
     assert!(!validator.is_valid(&unknown));
@@ -765,6 +777,20 @@ fn report_schema_rejects_malformed_snapshot_results_and_embedded_plan() {
         let mut invalid = document.clone();
         *invalid.pointer_mut(pointer).unwrap() = value;
         assert!(!validator.is_valid(&invalid), "accepted {pointer}");
+    }
+    for version in [
+        serde_json::json!(true),
+        serde_json::json!(-1),
+        serde_json::json!(2),
+        serde_json::json!("0"),
+        serde_json::Value::Null,
+    ] {
+        let mut invalid = document.clone();
+        invalid["schema_version"] = version.clone();
+        assert!(!validator.is_valid(&invalid), "report {version}");
+        let mut invalid = document.clone();
+        invalid["plan"]["plan_schema_version"] = version.clone();
+        assert!(!validator.is_valid(&invalid), "embedded plan {version}");
     }
     let mut invalid = document.clone();
     invalid["snapshot"]["unexpected"] = serde_json::json!(true);

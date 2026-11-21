@@ -209,6 +209,20 @@ fn schema_is_strict_and_requires_the_stable_sections() {
         compatible["schema_version"] = Value::from(version);
         assert!(validator().is_valid(&compatible));
     }
+    for version in [
+        Value::Bool(true),
+        Value::from(-1),
+        Value::from(2),
+        Value::from("0"),
+        Value::Null,
+    ] {
+        let mut invalid = context.clone();
+        invalid["schema_version"] = version.clone();
+        assert!(!validator().is_valid(&invalid), "{version}");
+    }
+    let mut missing = context.clone();
+    missing.as_object_mut().unwrap().remove("schema_version");
+    assert!(!validator().is_valid(&missing));
     for section in ["repository", "head", "workspace"] {
         assert!(context[section].is_object());
     }
