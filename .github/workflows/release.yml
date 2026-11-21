@@ -75,13 +75,13 @@ jobs:
       - name: Build native candidate
         run: mise run build --offline
       - name: Validate native candidate behavior
-        uses: christianpflugradt/please-behave-governance/actions/release/governance@29b8b072e41158ab12cadafbda35e868642b224e # updates/actions/release
+        uses: christianpflugradt/please-behave-governance/actions/release/governance@9d14ea3167e2f427c67dbb976ebc8b041b2ec788 # updates/actions/release
         with:
           target: ${{ matrix.target }}
       - name: Package smoke-tested candidate
         run: mise run package
       - name: Record release candidate evidence
-        uses: christianpflugradt/please-behave-governance/actions/release/evidence@29b8b072e41158ab12cadafbda35e868642b224e # updates/actions/release
+        uses: christianpflugradt/please-behave-governance/actions/release/evidence@9d14ea3167e2f427c67dbb976ebc8b041b2ec788 # updates/actions/release
         with:
           operation: record
           version: ${{ needs.plan.outputs.version }}
@@ -109,7 +109,7 @@ jobs:
         with:
           install_args: python node
       - name: Verify complete release candidate evidence
-        uses: christianpflugradt/please-behave-governance/actions/release/evidence@29b8b072e41158ab12cadafbda35e868642b224e # updates/actions/release
+        uses: christianpflugradt/please-behave-governance/actions/release/evidence@9d14ea3167e2f427c67dbb976ebc8b041b2ec788 # updates/actions/release
         with:
           operation: verify
           version: ${{ needs.plan.outputs.version }}
@@ -117,7 +117,7 @@ jobs:
         working-directory: dist
         run: sha256sum -- *.tar.gz > SHA256SUMS
       - name: Publish versioned CLI archives and release notes
-        uses: christianpflugradt/please-behave-governance/actions/release/publish-release@29b8b072e41158ab12cadafbda35e868642b224e # updates/actions/release
+        uses: christianpflugradt/please-behave-governance/actions/release/publish-release@9d14ea3167e2f427c67dbb976ebc8b041b2ec788 # updates/actions/release
         with:
           version: ${{ needs.plan.outputs.version }}
           force: ${{ inputs.force }}
