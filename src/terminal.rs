@@ -532,9 +532,10 @@ pub fn render_outcome(report: &Report, elapsed_ms: u64, color: bool) -> String {
     let count = report.plan.scheduled.len();
     if count == 0 {
         text.push_str(&format!(
-            "{} · No rules executed · {}\n",
+            "{} · No rules executed · {} · report {}\n",
             status(report.overall, color),
-            duration(elapsed_ms)
+            duration(elapsed_ms),
+            report.number
         ));
     } else {
         let failed = report
@@ -571,9 +572,10 @@ pub fn render_outcome(report: &Report, elapsed_ms: u64, color: bool) -> String {
             summary.push_str(&format!(" · {skipped} not executed"));
         }
         text.push_str(&format!(
-            "{} · {summary} · {}\n",
+            "{} · {summary} · {} · report {}\n",
             status(report.overall, color),
-            duration(elapsed_ms)
+            duration(elapsed_ms),
+            report.number
         ));
     }
     text.push_str(&failure_summary(report, color));
@@ -889,8 +891,10 @@ pub fn render(report: &Report, color: bool) -> String {
         ));
     }
     text.push_str(&format!(
-        "\nOverall: {}\nReport: .please/reports/last.json\nDetails: please status --details\n",
-        status(report.overall, color)
+        "\nOverall: {}\nReport: .please/reports/{}.json\nDetails: please status --report {} --details\n",
+        status(report.overall, color),
+        report.number,
+        report.number
     ));
     if let Some(usage) = report.adapter_usage {
         text.push_str(&format!(

@@ -1084,7 +1084,7 @@ fn cli_refresh_cached_plan_and_offline_hook_keep_existing_lifecycle() {
         "{}",
         String::from_utf8_lossy(&refresh.stderr)
     );
-    assert!(!f.root.join(".please/reports/last.json").exists());
+    assert!(!f.root.join(".please/reports/1.json").exists());
     assert!(f.root.join(".git/hooks/pre-commit").exists());
     fs::rename(&f.remote, f.remote.with_extension("offline")).unwrap();
     let plan = cli(&f, &["run", "--at", "pre-commit", "--plan", "--json"]);

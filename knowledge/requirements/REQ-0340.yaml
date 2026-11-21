@@ -1,0 +1,13 @@
+id: REQ-0340
+name: Reports Are Numbered
+area: reporting
+description: >-
+  Every run that saves a report must save it as a new report with the next
+  higher number, never reusing the number of a saved report, and must name that
+  number in its run summary. Runs that end with FAIL, ERROR,
+  cancellation or a blocked plan are numbered like successful runs. A run
+  that stops because of invalid configuration and a plan-only preview save no
+  report and take no number.
+rationale: >-
+  A user must be able to tell runs apart and find the report of the run just
+  finished, even when newer or older reports exist.

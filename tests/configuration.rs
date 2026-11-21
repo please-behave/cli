@@ -805,7 +805,7 @@ fn saved_reports_reject_inconsistent_metadata() {
             "plan" => value["plan"] = serde_json::Value::Null,
             _ => value["overall"] = "FAIL".into(),
         }
-        write(d.path(), ".please/reports/last.json", &value.to_string());
+        write(d.path(), ".please/reports/1.json", &value.to_string());
         assert!(report::read(d.path()).is_err(), "accepted {case}");
     }
 }

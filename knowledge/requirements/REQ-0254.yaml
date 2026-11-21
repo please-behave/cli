@@ -3,6 +3,6 @@ name: Invalid Configuration Keeps The Report
 area: reporting
 description: >-
   A run that stops because the configuration is invalid must leave the
-  previous report unchanged.
+  saved reports unchanged.
 rationale: >-
-  A configuration mistake must not destroy the evidence of the last valid run.
+  A configuration mistake must not destroy the evidence of earlier valid runs.

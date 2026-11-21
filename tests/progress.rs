@@ -77,7 +77,7 @@ fn names_are_saved_without_changing_identity_and_disambiguated_consistently() {
     assert!(terminal::render(&saved, false).contains("Validation [local] #2"));
     assert!(terminal::render_details(&saved, false).contains("first · PASS"));
     // Existing reports without optional display metadata remain readable.
-    let path = root.path().join(".please/reports/last.json");
+    let path = root.path().join(".please/reports/1.json");
     let mut old: serde_json::Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
     for rule in old["plan"]["scheduled"].as_array_mut().unwrap() {
         rule.as_object_mut().unwrap().remove("name");

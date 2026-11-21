@@ -41,7 +41,7 @@ def main():
         run("sync")
         run("status", 3)
         run("run")
-        report_path = root / ".please/reports/last.json"
+        report_path = root / ".please/reports/1.json"
         report = json.loads(report_path.read_text())
         assert report["overall"] == "PASS"
         assert [r["id"] for r in report["results"]] == ["always-ok"]

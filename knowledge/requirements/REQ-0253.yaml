@@ -3,8 +3,8 @@ name: Report Is Saved Atomically
 area: reporting
 description: >-
   After every run that executes its rules, including one that ends with FAIL
-  or ERROR, Please must save the report by replacing the previous one
-  atomically.
+  or ERROR, Please must save the report as a new numbered report atomically,
+  so that no reader sees a partial report.
 rationale: >-
   Status and tools must always find a complete report, and a failed run is the
   one that most needs one.

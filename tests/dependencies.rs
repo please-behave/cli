@@ -83,7 +83,7 @@ fn invalid_dependencies_block_planning_before_execution() {
         assert_eq!(output.status.code(), Some(2));
         let value: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
         assert_eq!(value["status"], "blocked");
-        assert!(!root.path().join(".please/reports/last.json").exists());
+        assert!(!root.path().join(".please/reports/1.json").exists());
     }
 }
 

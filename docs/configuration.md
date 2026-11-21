@@ -28,7 +28,7 @@ Use this fixed layout at the Git working-tree root:
     rule.toml
     prompt.md
   rule-sets/repository.toml
-  reports/last.json
+  reports/1.json
 ```
 
 Start with `config.toml` and add Rule, Rule Set and adapter profile documents as needed.
@@ -78,7 +78,7 @@ There is no fast-lane setting.
 
 Declare additional execution points under `execution_points.custom`. Invoke
 `check` and custom points explicitly, including in CI; they need no Git hooks.
-Use `context` settings to control stored run contexts and section sizes, and
+Use `context` settings to control stored run contexts and section sizes, `report.retain_runs` to limit saved reports, and
 `max_display_files` to limit changed paths shown by status. Add external sources
 through [Rule Set imports](#import-rule-sets-from-git) and
 [adapter profile imports](#import-adapter-profiles-from-git).
@@ -765,9 +765,15 @@ inferred; declare the inputs your Rules rely on.
 
 ### Reports and other files
 
-Runs save local evidence in `.please/reports/last.json`. Use `please status` to
-compare the saved input with your current files, and `please status --details`
-to inspect results, findings and captured output. Keep reports and credentials
+Each run saves local evidence as a new numbered report in `.please/reports/<number>.json`
+and names its number in the run summary. `report.retain_runs` (default 10, 1 to 10000) keeps
+the newest reports, counting the one just saved; older ones are removed and numbering
+continues, so after run 25 with `retain_runs = 10` reports 16 to 25 remain. Report
+retention is independent of `context.retain_runs`, and reports do not need run contexts.
+Use `please status` to show the newest report and compare its saved input with your
+current files, `please status --report 17` to show an earlier retained one (a number
+that is not saved exits 3), and `please status --details` to inspect results, findings
+and captured output. Keep reports and credentials
 local, and avoid printing secrets: captured output is not automatically redacted.
 
 The [Verification Report API](../knowledge/contracts/report/api.yaml) defines the

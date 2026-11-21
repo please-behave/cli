@@ -77,6 +77,13 @@ a limit on the complete JSON document or the project's snapshot. Larger sections
 remain visibly incomplete rather than silently trusted. The
 [Run Context API](../run-context/api.yaml) defines delivery, lifetime and truncation.
 
+## Report settings
+
+`report.retain_runs` is the number of newest saved reports to keep after each
+run, counting the report just saved. It is independent of `context.retain_runs`.
+Its default and permitted values are defined in [project.schema.json](project.schema.json).
+The [Report API](../report/document.md) defines numbering and removal.
+
 ## Execution points and explicit imports
 
 `execution_points.custom` declares custom point names in the consuming project.

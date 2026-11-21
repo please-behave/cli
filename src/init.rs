@@ -44,6 +44,7 @@ pub fn init(root: &Path) -> Result<usize> {
         max_display_files: MAX_DISPLAY_FILES,
         execution: Default::default(),
         context: Default::default(),
+        report: Default::default(),
         execution_points: Default::default(),
         imports: vec![],
         adapter_imports: vec![],

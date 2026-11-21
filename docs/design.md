@@ -52,7 +52,7 @@ and kills descendants on timeout or fail-fast. It is not a hostile-process sandb
 
 Report persistence, result semantics and usage follow the
 [Report Document and Lifecycle contract](../knowledge/contracts/report/document.md).
-The writer uses a temporary file and atomic rename for `last.json`.
+The writer uses a temporary file and atomic rename for each numbered report.
 
 ## Adapters
 

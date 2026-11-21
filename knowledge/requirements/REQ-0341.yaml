@@ -1,0 +1,14 @@
+id: REQ-0341
+name: Old Reports Are Removed
+area: reporting
+description: >-
+  After saving a report, only the newest configured number of reports must be
+  kept, counting the report just saved, and the number of kept reports must be
+  configurable with a default and bounds. Numbering must continue after removed
+  reports. Report retention must be independent of the retention of run
+  contexts.
+rationale: >-
+  Reports must not pile up without bound on disk, while the evidence of
+  recent runs stays comparable.
+decisions:
+  - DEC-0009

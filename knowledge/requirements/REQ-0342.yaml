@@ -1,0 +1,12 @@
+id: REQ-0342
+name: Status Selects A Report
+area: reporting
+description: >-
+  Status must show the report with the highest number by default and must show
+  another retained report when its number is requested. A requested number
+  that is not saved must end with the missing-report exit status and never show
+  another report. Status must name the number of the report it shows and
+  evaluate freshness for that report against its own saved input.
+rationale: >-
+  A history is only useful if an earlier result can be inspected without
+  mistaking it for the newest one.

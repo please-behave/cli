@@ -1,0 +1,10 @@
+id: REQ-0343
+name: Reports Do Not Depend On Run Contexts
+area: reporting
+description: >-
+  A saved report must not depend on the run context of its run. Its snapshot
+  and plan must stay complete when that context has been removed, and no report
+  validation or status output may require a context directory.
+rationale: >-
+  Report history and run-context retention are separate limits, so a retained
+  report must remain a complete record after its transient context is gone.

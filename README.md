@@ -114,7 +114,7 @@ run the same rules.
 | `please init` | Create the initial `.please/` configuration once. |
 | `please sync` | Validate configuration and synchronize declared integrations. |
 | `please run` | Run selected rules and save their results. |
-| `please status` | Inspect the last report and its freshness. |
+| `please status` | Inspect the newest report, or one chosen with `--report <number>`, and its freshness. |
 | `please help` | Show commands and options. |
 
 `run` uses the `pre-push` execution point by default. Preview its selection

@@ -38,4 +38,5 @@ run. Earlier runs count regardless of whether they finished; contexts have no
 completed or aborted marker. The current run does not count toward the limit.
 Configuration defines the setting's default and permitted values. The context is
 transient input rather than a permanent report: consumers needing it later must
-account for retention. A saved report's snapshot is a separate representation.
+account for retention. A saved report's snapshot is a separate representation, and report retention
+(`report.retain_runs`) is independent of this setting.

@@ -83,10 +83,16 @@ pub enum Words {
         #[arg(last = true, hide = true, requires = "git_hook")]
         hook_arguments: Vec<std::ffi::OsString>,
     },
-    /// Display the last saved report without rerunning rules.
+    /// Display the newest saved report without rerunning rules.
     Status {
         #[arg(long, help = "Show full findings and saved output")]
         details: bool,
+        #[arg(
+            long,
+            value_name = "NUMBER",
+            help = "Show this saved report instead of the newest"
+        )]
+        report: Option<u64>,
     },
     /// Show help.
     Help,

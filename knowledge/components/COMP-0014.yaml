@@ -11,8 +11,9 @@ scope:
     Derives the overall outcome, including the precedence of errors over
     failures, advisory review errors, fail-fast stops and dependency skips.
   - >-
-    Writes the saved report atomically and reads it back, rejecting corrupt,
-    inconsistent or mismatched reports.
+    Saves each report atomically under the next number, keeps the newest
+    configured number of reports and reads a selected one back, rejecting
+    corrupt, inconsistent or mismatched reports.
 out_of_scope:
   - description: Presenting reports for people.
     owner: COMP-0015
@@ -57,6 +58,10 @@ requirements:
   - REQ-0258
   - REQ-0260
   - REQ-0261
+  - REQ-0340
+  - REQ-0341
+  - REQ-0342
+  - REQ-0343
   - REQ-0331
   - REQ-0332
   - REQ-0339

@@ -352,7 +352,7 @@ pub fn verify_project_with_fail_fast(
             item.blocking = rule.blocking;
         }
     }
-    let report = Report {
+    let mut report = Report {
         schema_version: report::REPORT_SCHEMA_VERSION,
         timestamp: chrono::Utc::now().to_rfc3339(),
         repository: project.root.to_string_lossy().into_owned(),
@@ -372,10 +372,11 @@ pub fn verify_project_with_fail_fast(
         adapter_usage,
         checks_only,
         plan,
+        number: 0,
     };
     progress(Progress::Phase("Saving report …"));
     scheduling::History::save_results(&project.root, &report.results);
-    report::write(&project.root, &report)?;
+    report.number = report::write(&project.root, &report, project.config.report.retain_runs)?;
     Ok(report)
 }
 

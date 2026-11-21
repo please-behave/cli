@@ -194,7 +194,7 @@ fn json_plan_errors_use_current_schema_and_blocking_reasons() {
         &["pre-push"],
         "echo executed > executed",
     );
-    let report = path(d.path(), "reports/last.json");
+    let report = path(d.path(), "reports/1.json");
     fs::write(&report, "prior report").unwrap();
     let preview = |args: &[&str], code| {
         let output = cli(d.path(), args);
@@ -527,7 +527,7 @@ fn init_exact_paths_and_repeated_initialization_rejected() {
             .unwrap()
             .any(|entry| { entry.unwrap().file_name() == ".please" })
     );
-    assert!(!path(root, "reports/last.json").exists());
+    assert!(!path(root, "reports/1.json").exists());
     fs::write(path(root, "config.toml"), "personal edits").unwrap();
     assert!(!path(root, "adapter.toml").exists());
     let output = cli(root, &["init"]);
@@ -714,7 +714,7 @@ fn omitted_review_reports_roundtrip_for_staged_and_explicit_base_points() {
                 String::from_utf8_lossy(&run.stderr)
             );
             let document: serde_json::Value =
-                serde_json::from_slice(&fs::read(path(d.path(), "reports/last.json")).unwrap())
+                serde_json::from_slice(&fs::read(path(d.path(), "reports/1.json")).unwrap())
                     .unwrap();
             support::assert_report_contract(&document);
             assert_eq!(document["plan"]["omitted"][0]["reason"], reason);
@@ -730,7 +730,7 @@ fn omitted_review_reports_roundtrip_for_staged_and_explicit_base_points() {
 
             let mut invalid = document.clone();
             invalid["plan"]["omitted"][0]["reason"] = serde_json::json!("unknown_reason");
-            fs::write(path(d.path(), "reports/last.json"), invalid.to_string()).unwrap();
+            fs::write(path(d.path(), "reports/1.json"), invalid.to_string()).unwrap();
             assert!(report::read(d.path()).is_err());
             if point == "check" {
                 let mut missing_base = document.clone();
@@ -738,11 +738,7 @@ fn omitted_review_reports_roundtrip_for_staged_and_explicit_base_points() {
                     .as_object_mut()
                     .unwrap()
                     .remove("change_base");
-                fs::write(
-                    path(d.path(), "reports/last.json"),
-                    missing_base.to_string(),
-                )
-                .unwrap();
+                fs::write(path(d.path(), "reports/1.json"), missing_base.to_string()).unwrap();
                 assert!(report::read(d.path()).is_err());
             }
         }
@@ -805,7 +801,7 @@ fn failing_check_runs_remaining_and_blocks_adapter() {
     assert_eq!(r.results[0].status, Status::Fail);
     assert_eq!(r.results[1].status, Status::Pass);
     assert_eq!(r.results[2].status, Status::NotRun);
-    assert!(path(d.path(), "reports/last.json").is_file());
+    assert!(path(d.path(), "reports/1.json").is_file());
     assert_eq!(cli(d.path(), &["run"]).status.code(), Some(1));
 }
 #[test]
@@ -898,7 +894,7 @@ fn malformed_missing_extra_duplicate_adapter_outputs_fail_closed() {
         let r = please::verify(d.path(), &mock).unwrap();
         assert_eq!(r.overall, Status::Error, "{}", mock.payload);
         assert_eq!(r.results[1].status, Status::Error);
-        assert!(path(d.path(), "reports/last.json").is_file());
+        assert!(path(d.path(), "reports/1.json").is_file());
     }
 }
 #[test]
@@ -1114,7 +1110,7 @@ fn checks_can_generate_ignored_bytecode_without_invalidating_verification() {
 fn no_report_corrupt_report_schema_and_no_color() {
     let d = project();
     assert_eq!(cli(d.path(), &["status"]).status.code(), Some(3));
-    fs::write(path(d.path(), "reports/last.json"), "broken").unwrap();
+    fs::write(path(d.path(), "reports/1.json"), "broken").unwrap();
     assert_eq!(cli(d.path(), &["status"]).status.code(), Some(2));
     let r = please::verify(d.path(), &Never).unwrap();
     let mut value = serde_json::to_value(r).unwrap();
@@ -1127,7 +1123,7 @@ fn no_report_corrupt_report_schema_and_no_color() {
             let mut compatible = value.clone();
             compatible["schema_version"] = serde_json::json!(report_version);
             compatible["plan"]["plan_schema_version"] = serde_json::json!(plan_version);
-            fs::write(path(d.path(), "reports/last.json"), compatible.to_string()).unwrap();
+            fs::write(path(d.path(), "reports/2.json"), compatible.to_string()).unwrap();
             support::assert_report_contract(&compatible);
             let saved = report::read(d.path()).unwrap();
             assert_eq!(saved.schema_version, report_version);
@@ -1150,12 +1146,12 @@ fn no_report_corrupt_report_schema_and_no_color() {
                 &mut invalid["plan"]
             };
             target[field] = version;
-            fs::write(path(d.path(), "reports/last.json"), invalid.to_string()).unwrap();
+            fs::write(path(d.path(), "reports/2.json"), invalid.to_string()).unwrap();
             assert!(report::read(d.path()).is_err());
         }
     }
     value["schema_version"] = serde_json::json!(999);
-    fs::write(path(d.path(), "reports/last.json"), value.to_string()).unwrap();
+    fs::write(path(d.path(), "reports/2.json"), value.to_string()).unwrap();
     assert_eq!(cli(d.path(), &["status"]).status.code(), Some(2));
     synchronize(d.path());
     let out = cli(d.path(), &["--no-color", "run"]);
@@ -1555,7 +1551,7 @@ fn review_summary_is_visible_for_pass_and_fail_while_details_stay_separate() {
         assert!(short.contains("SUMMARY"));
         assert!(short.contains("Settings navigation exposes labels and keyboard focus."));
         assert!(!short.contains("DETAIL_ONLY") && !short.contains(".please/README.md:1"));
-        assert!(short.contains("please status --details"));
+        assert!(short.contains("please status --report 1 --details"));
         let detailed = terminal::render_details(&report, false);
         assert!(detailed.contains("DETAIL_ONLY") && detailed.contains(".please/README.md:1"));
         assert!(
@@ -1607,7 +1603,7 @@ fn detailed_status_reads_saved_findings_without_another_adapter_call() {
         serde_json::json!("DETAIL_ONLY: keyboard focus skips a visible control.");
     let adapter = mock(vec![value]);
     please::verify(d.path(), &adapter).unwrap();
-    let bytes_before = fs::read(path(d.path(), "reports/last.json")).unwrap();
+    let bytes_before = fs::read(path(d.path(), "reports/1.json")).unwrap();
     let fake = tempdir().unwrap();
     let executable = fake.path().join("fake-adapter");
     write_executable(
@@ -1642,7 +1638,7 @@ fn detailed_status_reads_saved_findings_without_another_adapter_call() {
         assert!(!marker.exists());
     }
     assert_eq!(
-        fs::read(path(d.path(), "reports/last.json")).unwrap(),
+        fs::read(path(d.path(), "reports/1.json")).unwrap(),
         bytes_before
     );
 }
@@ -1767,9 +1763,9 @@ fn failed_checks_report_skipped_reviews_without_claiming_they_started() {
     assert!(!output.contains("RUNNING review") && !output.contains("Adapter:"));
     assert!(
         terminal::render_outcome(&report, 2000, false)
-            .starts_with("FAIL · 3 rules · 1 failed · 1 not executed · 2.0 s\n")
+            .starts_with("FAIL · 3 rules · 1 failed · 1 not executed · 2.0 s · report 1\n")
     );
-    assert!(path(d.path(), "reports/last.json").is_file());
+    assert!(path(d.path(), "reports/1.json").is_file());
 }
 #[cfg(unix)]
 #[test]
@@ -1819,7 +1815,7 @@ fn cli_flushes_rule_start_while_the_check_is_still_running_and_keeps_raw_output_
         child.try_wait().unwrap().is_none(),
         "progress arrived only after the process ended"
     );
-    assert!(!path(d.path(), "reports/last.json").exists());
+    assert!(!path(d.path(), "reports/1.json").exists());
     assert!(progress.contains("Wait for the test release signal"));
     fs::write(marker, "continue").unwrap();
     reader.read_to_string(&mut progress).unwrap();
@@ -2096,15 +2092,12 @@ fn checks_only_cli_skips_enabled_adapter_reviews_and_status_keeps_the_scope() {
     assert!(!marker.exists());
     assert!(!String::from_utf8_lossy(&output.stdout).contains("Checks only"));
     assert!(!String::from_utf8_lossy(&output.stderr).contains("Adapter:"));
-    let saved = fs::read(path(d.path(), "reports/last.json")).unwrap();
+    let saved = fs::read(path(d.path(), "reports/1.json")).unwrap();
     for args in [vec!["status"], vec!["status", "--details"]] {
         let status = run(&args);
         assert!(status.status.success());
         assert!(String::from_utf8_lossy(&status.stdout).contains("Checks only"));
-        assert_eq!(
-            fs::read(path(d.path(), "reports/last.json")).unwrap(),
-            saved
-        );
+        assert_eq!(fs::read(path(d.path(), "reports/1.json")).unwrap(), saved);
         assert!(!marker.exists());
     }
     // The flag is per invocation; the next ordinary run still invokes enabled reviews.
@@ -2329,7 +2322,7 @@ fn snapshot_records_file_identity_and_executable_changes() {
 fn invalid_configuration_does_not_replace_the_saved_report() {
     let d = project();
     please::verify(d.path(), &Never).unwrap();
-    let report_path = path(d.path(), "reports/last.json");
+    let report_path = path(d.path(), "reports/1.json");
     let before = fs::read(&report_path).unwrap();
     support::write(d.path(), ".please/config.toml", "unknown_setting = true\n");
     assert_eq!(cli(d.path(), &["run"]).status.code(), Some(2));
@@ -2337,26 +2330,103 @@ fn invalid_configuration_does_not_replace_the_saved_report() {
 }
 
 #[test]
-// REQ-0253: every executing run replaces the saved report completely, including runs that end with FAIL or ERROR.
-fn executed_runs_replace_the_saved_report_and_leave_no_temporary_files() {
+// REQ-0253: every executing run saves its own complete report, including runs that end with FAIL or ERROR.
+// REQ-0340: reports are numbered in ascending order, and numbers are never reused.
+fn executed_runs_save_numbered_reports_and_leave_no_temporary_files() {
     let d = project();
-    for (script, expected) in [
+    for (index, (script, expected)) in [
         ("exit 0\n", Status::Pass),
         ("exit 1\n", Status::Fail),
         ("exit 7\n", Status::Error),
         ("exit 0\n", Status::Pass),
-    ] {
+    ]
+    .into_iter()
+    .enumerate()
+    {
         support::check(d.path(), "outcome", &["check"], script);
         synchronize(d.path());
-        cli(d.path(), &["run", "--checks-only", "--at", "check"]);
+        let out = cli(d.path(), &["run", "--checks-only", "--at", "check"]);
+        let number = index + 1;
+        assert!(String::from_utf8_lossy(&out.stdout).contains(&format!("· report {number}\n")));
         assert_eq!(report::read(d.path()).unwrap().overall, expected);
-        let files: Vec<_> = fs::read_dir(path(d.path(), "reports"))
+        assert_eq!(report::read(d.path()).unwrap().number, number as u64);
+        let mut files: Vec<_> = fs::read_dir(path(d.path(), "reports"))
             .unwrap()
-            .map(|entry| entry.unwrap().file_name())
+            .map(|entry| entry.unwrap().file_name().into_string().unwrap())
             .filter(|name| name != ".gitignore")
             .collect();
-        assert_eq!(files, ["last.json"]);
+        files.sort();
+        let expected_files: Vec<String> = (1..=number).map(|n| format!("{n}.json")).collect();
+        assert_eq!(files, expected_files);
     }
+}
+
+#[test]
+// REQ-0341: only the newest configured number of reports is kept, and numbering continues after pruning.
+fn report_retention_keeps_the_newest_reports_and_continues_numbering() {
+    let d = project();
+    let config = path(d.path(), "config.toml");
+    let text = fs::read_to_string(&config).unwrap();
+    assert!(text.contains("[report]\nretain_runs = 10"));
+    fs::write(
+        &config,
+        text.replace("[report]\nretain_runs = 10", "[report]\nretain_runs = 2"),
+    )
+    .unwrap();
+    synchronize(d.path());
+    for _ in 0..4 {
+        assert!(cli(d.path(), &["run"]).status.success());
+    }
+    let mut files: Vec<_> = fs::read_dir(path(d.path(), "reports"))
+        .unwrap()
+        .map(|entry| entry.unwrap().file_name().into_string().unwrap())
+        .filter(|name| name != ".gitignore")
+        .collect();
+    files.sort();
+    assert_eq!(files, ["3.json", "4.json"]);
+    assert_eq!(report::saved(d.path()).unwrap(), [3, 4]);
+}
+
+#[test]
+// REQ-0342: status shows the newest report by default and an earlier retained report on request.
+fn status_selects_reports_by_number() {
+    let d = project();
+    synchronize(d.path());
+    support::check(d.path(), "outcome", &["check"], "exit 1\n");
+    synchronize(d.path());
+    cli(d.path(), &["run", "--checks-only", "--at", "check"]);
+    support::check(d.path(), "outcome", &["check"], "exit 0\n");
+    synchronize(d.path());
+    cli(d.path(), &["run", "--checks-only", "--at", "check"]);
+    let text = |args: &[&str]| String::from_utf8_lossy(&cli(d.path(), args).stdout).into_owned();
+    assert!(text(&["status"]).contains("reports/2.json"));
+    let earlier = cli(d.path(), &["status", "--report", "1"]);
+    assert!(String::from_utf8_lossy(&earlier.stdout).contains("Report: .please/reports/1.json"));
+    let missing = cli(d.path(), &["status", "--report", "7"]);
+    assert_eq!(missing.status.code(), Some(3));
+    assert!(missing.stdout.is_empty());
+}
+
+#[test]
+// REQ-0343: a saved report stays complete and readable after its run context is removed.
+fn saved_report_does_not_need_its_run_context() {
+    let d = project();
+    synchronize(d.path());
+    assert!(cli(d.path(), &["run"]).status.success());
+    let git_dir = String::from_utf8(
+        std::process::Command::new("git")
+            .args(["rev-parse", "--absolute-git-dir"])
+            .current_dir(d.path())
+            .output()
+            .unwrap()
+            .stdout,
+    )
+    .unwrap();
+    let contexts = std::path::Path::new(git_dir.trim()).join("please/context");
+    assert!(contexts.is_dir());
+    fs::remove_dir_all(&contexts).unwrap();
+    assert!(report::read(d.path()).is_ok());
+    assert_eq!(cli(d.path(), &["status"]).status.code(), Some(0));
 }
 
 #[test]
@@ -2426,7 +2496,7 @@ fn outcome_summary_keeps_status_counts_and_duration_together() {
         let text = terminal::render_outcome(&report, 2345, false);
         assert_eq!(
             text.lines().next().unwrap(),
-            format!("{} · 1 rules{suffix} · 2.3 s", status.label())
+            format!("{} · 1 rules{suffix} · 2.3 s · report 1", status.label())
         );
         assert_eq!(
             text.lines()
@@ -2464,7 +2534,7 @@ fn project_commands_require_the_working_tree_root() {
         }
         assert!(!directory.join(".please").exists());
     }
-    assert!(!path(root.path(), "reports/last.json").exists());
+    assert!(!path(root.path(), "reports/1.json").exists());
 }
 
 #[test]
@@ -2569,7 +2639,7 @@ fn starter_is_confined_and_runs_without_an_adapter() {
     assert_eq!(report.results.len(), 1);
     assert_eq!(report.results[0].id, "always-ok");
     let ignored = support::command("git")
-        .args(["check-ignore", ".please/reports/last.json"])
+        .args(["check-ignore", ".please/reports/1.json"])
         .current_dir(root.path())
         .output()
         .unwrap();

@@ -194,7 +194,7 @@ fn calls_and_saved_reports_keep_adapter_and_parameter_boundaries() {
             .as_str(),
         Some("second-model")
     );
-    let path = root.path().join(".please/reports/last.json");
+    let path = root.path().join(".please/reports/1.json");
     let mut json: serde_json::Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
     let valid = serde_json::to_vec(&json).unwrap();
     json["results"][0]["adapter"] = "second".into();

@@ -9,12 +9,24 @@ A diagnostic preview is not a report plan.
 
 ## Persistence and compatibility
 
-Reports live in `.please/reports/last.json` in the consuming project. After
-executing its Rules, a run saves its result by atomically replacing the previous
-report, including FAIL and ERROR outcomes. An empty selection can also produce
-a report; its PASS establishes no Rule evaluation. Invalid configuration and plan-only previews preserve the previous
-report. Failure to save is an execution error; an older report is not evidence
-for that failed write. Reports are local, unsigned evidence, not tamper-proof
+Reports live in `.please/reports/<number>.json` in the consuming project. After
+executing its Rules, a run atomically saves its result as a new report with the
+next higher number, including FAIL, ERROR, cancelled and blocked outcomes. The
+number is the report's file name and part of no document; it starts at 1, rises
+with every saved report and is never reused while a newer report exists.
+Concurrent runs receive distinct numbers. The run's summary line names the number;
+the path follows from it. An empty selection can also produce a report; its PASS establishes no Rule
+evaluation. Invalid configuration and plan-only previews save no report, take no
+number and leave saved reports unchanged. Failure to save is an execution error;
+an older report is not evidence for that failed write.
+
+After saving, only the newest `report.retain_runs` reports, counting the one
+just saved, are kept; older files are removed and numbering continues. Removal
+failures never fail the run. The setting's default and permitted values are
+defined by the [configuration schema](../configuration/project.schema.json).
+Report retention is independent of run-context retention: a report holds its
+own plan and [snapshot](snapshot.md) and does not reference the run context,
+which can be removed earlier or later. Reports are local, unsigned evidence, not tamper-proof
 attestations. Keep them out of version control and do not print credentials.
 The report directory must be local rather than a symlink to another directory.
 
@@ -127,8 +139,10 @@ otherwise valid verdict.
 Readers reject corrupt, unsupported, internally inconsistent and foreign reports.
 Structural schema validation does not replace cross-field, plan/result, dependency
 and repository checks. A rejected report is an error, never valid evidence.
-`status` performs no Rule execution and evaluates [freshness](snapshot.md) against
-the saved input. A missing report exits 3; an unreadable or invalid one exits 2.
+`status` performs no Rule execution and shows the report with the highest number,
+or the one selected with `--report <number>`, naming its number. It evaluates
+[freshness](snapshot.md) of the shown report against that report's saved input.
+A missing report, including a requested number that is not saved, exits 3; an unreadable or invalid one exits 2.
 A CURRENT report preserves its saved outcome's exit code (PASS 0, FAIL 1, ERROR 2).
 STALE exits 1; UNKNOWN exits 2 and takes precedence over known differences or an
 otherwise successful saved outcome. Freshness does not rewrite the saved verdict.

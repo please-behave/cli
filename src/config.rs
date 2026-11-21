@@ -29,6 +29,8 @@ pub struct Config {
     pub execution: Execution,
     #[serde(default)]
     pub context: ContextSettings,
+    #[serde(default)]
+    pub report: ReportSettings,
     #[serde(default = "default_display")]
     pub max_display_files: usize,
     #[serde(default)]
@@ -65,6 +67,18 @@ impl Default for ContextSettings {
         Self {
             retain_runs: crate::limits::DEFAULT_CONTEXT_RETAIN_RUNS,
             max_section_bytes: crate::limits::DEFAULT_CONTEXT_SECTION_BYTES,
+        }
+    }
+}
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct ReportSettings {
+    pub retain_runs: usize,
+}
+impl Default for ReportSettings {
+    fn default() -> Self {
+        Self {
+            retain_runs: crate::limits::DEFAULT_REPORT_RETAIN_RUNS,
         }
     }
 }
@@ -436,6 +450,11 @@ pub(crate) fn validate(root: PathBuf, loaded: crate::discovery::Loaded) -> Resul
         (1..=crate::limits::MAX_CONTEXT_RETAIN_RUNS).contains(&config.context.retain_runs),
         ".please/config.toml: context.retain_runs must be 1..={}",
         crate::limits::MAX_CONTEXT_RETAIN_RUNS
+    );
+    ensure!(
+        (1..=crate::limits::MAX_REPORT_RETAIN_RUNS).contains(&config.report.retain_runs),
+        ".please/config.toml: report.retain_runs must be 1..={}",
+        crate::limits::MAX_REPORT_RETAIN_RUNS
     );
     ensure!(
         (crate::limits::MIN_CONTEXT_SECTION_BYTES..=crate::limits::MAX_CONTEXT_SECTION_BYTES)

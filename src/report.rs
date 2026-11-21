@@ -131,6 +131,9 @@ pub struct Report {
     #[serde(default)]
     pub checks_only: bool,
     pub plan: crate::planner::Plan,
+    /// Position in the report history; the file name carries it, the document does not.
+    #[serde(skip)]
+    pub number: u64,
 }
 /// Whether a completed result prevents successful governance execution.
 pub(crate) fn prevents_success(item: &Item) -> bool {
@@ -169,7 +172,8 @@ pub fn overall_of(items: &[Item], checks_only: bool) -> Status {
         Status::Pass
     }
 }
-pub fn write(root: &Path, report: &Report) -> Result<()> {
+/// Save the report under the next history number, prune beyond `retain` and return the number.
+pub fn write(root: &Path, report: &Report, retain: usize) -> Result<u64> {
     let target = root.join(crate::config::path("reports"));
     if target
         .symlink_metadata()
@@ -188,17 +192,82 @@ pub fn write(root: &Path, report: &Report) -> Result<()> {
     serde_json::to_writer_pretty(&mut temporary, report)?;
     temporary.write_all(b"\n")?;
     temporary.as_file().sync_all()?;
-    temporary.persist(directory.join("last.json"))?;
+    let mut number = numbers(&directory)?.last().map_or(1, |latest| latest + 1);
+    loop {
+        match temporary.persist_noclobber(directory.join(file_name(number))) {
+            Ok(_) => break,
+            // A concurrent run took this number first.
+            Err(error) if error.error.kind() == std::io::ErrorKind::AlreadyExists => {
+                temporary = error.file;
+                number += 1;
+            }
+            Err(error) => return Err(error.error.into()),
+        }
+    }
     #[cfg(unix)]
     std::fs::File::open(&directory)?.sync_all()?;
-    Ok(())
+    prune(&directory, retain);
+    Ok(number)
 }
+
+fn file_name(number: u64) -> String {
+    format!("{number}.json")
+}
+
+/// Ascending report numbers present in the directory.
+fn numbers(directory: &Path) -> Result<Vec<u64>> {
+    let mut found: Vec<u64> = std::fs::read_dir(directory)?
+        .filter_map(|entry| entry.ok()?.file_name().into_string().ok())
+        .filter_map(|name| {
+            let digits = name.strip_suffix(".json")?;
+            let number: u64 = digits.parse().ok()?;
+            (number > 0 && file_name(number) == name).then_some(number)
+        })
+        .collect();
+    found.sort_unstable();
+    Ok(found)
+}
+
+fn prune(directory: &Path, retain: usize) {
+    let Ok(found) = numbers(directory) else {
+        return;
+    };
+    let surplus = found.len().saturating_sub(retain);
+    for number in found.into_iter().take(surplus) {
+        let _ = std::fs::remove_file(directory.join(file_name(number)));
+    }
+}
+
+/// Ascending numbers of the saved reports.
+pub fn saved(root: &Path) -> Result<Vec<u64>> {
+    let directory = root.join(crate::config::path("reports"));
+    if !directory.try_exists()? {
+        return Ok(vec![]);
+    }
+    numbers(&crate::config::inside(
+        root,
+        &crate::config::path("reports"),
+    )?)
+}
+
+/// Read the newest saved report.
 pub fn read(root: &Path) -> Result<Report> {
-    let path = crate::config::inside(root, &crate::config::path("reports/last.json"))?;
-    let report: Report = serde_json::from_str(&crate::config::read_bounded(
+    let number = saved(root)?.last().copied().context("no saved report")?;
+    read_number(root, number)
+}
+
+/// Read the saved report with the given history number.
+pub fn read_number(root: &Path, number: u64) -> Result<Report> {
+    let path = crate::config::inside(
+        root,
+        &crate::config::path(format!("reports/{}", file_name(number))),
+    )
+    .with_context(|| format!("no saved report {number}"))?;
+    let mut report: Report = serde_json::from_str(&crate::config::read_bounded(
         &path,
         crate::limits::MAX_REPORT_BYTES,
     )?)?;
+    report.number = number;
     ensure!(
         matches!(report.schema_version, 0 | 1),
         "unsupported report schema; rerun please run"

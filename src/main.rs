@@ -189,22 +189,31 @@ fn execute(cli: Cli) -> Result<i32> {
             );
             Ok(report.overall.exit_code())
         }
-        Words::Status { details } => {
+        Words::Status {
+            details,
+            report: selected,
+        } => {
             git_snapshot::require_root(&root)?;
-            let path = root.join(config::path("reports/last.json"));
-            if !path.try_exists()? {
+            let saved = report::saved(&root)?;
+            let Some(number) = selected
+                .or(saved.last().copied())
+                .filter(|number| saved.contains(number))
+            else {
                 eprintln!(
                     "{}",
                     terminal::paint(
-                        "No saved report. Run: please run",
+                        &match selected {
+                            Some(number) => format!("No saved report {number}. Run: please status"),
+                            None => "No saved report. Run: please run".to_string(),
+                        },
                         Tone::Warning,
                         terminal::error_color(cli.no_color)
                     )
                 );
                 return Ok(3);
-            }
-            let report =
-                report::read(&root).context("cannot read last report; rerun please run")?;
+            };
+            let report = report::read_number(&root, number)
+                .with_context(|| format!("cannot read report {number}; rerun please run"))?;
             print!(
                 "{}",
                 if details {

@@ -288,7 +288,7 @@ fn fail_fast_has_no_persistent_configuration_or_plan_selection_effect() {
     assert_eq!(normal.stdout, fast.stdout);
     let plan: serde_json::Value = serde_json::from_slice(&fast.stdout).unwrap();
     assert_eq!(plan["scheduled"].as_array().unwrap().len(), 2);
-    assert!(!root.path().join(".please/reports/last.json").exists());
+    assert!(!root.path().join(".please/reports/1.json").exists());
     for text in [
         "project = 'Example'\nfail_fast = true\n",
         "project = 'Example'\n[execution]\nfail_fast = true\n",

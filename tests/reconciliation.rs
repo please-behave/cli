@@ -790,7 +790,7 @@ fn actual_terminal_approval_and_rejection_gate_execution() {
         "git config --local please.executed yes\n",
     );
     // REQ-0293: declined terminal approval preserves the prior report.
-    let previous = root.path().join(".please/reports/last.json");
+    let previous = root.path().join(".please/reports/1.json");
     fs::write(&previous, "prior report").unwrap();
     assert_eq!(
         terminal(root.path(), &["run", "--at", "pre-push"], b"n\n").code(),
@@ -824,7 +824,7 @@ fn auto_approve_reconciles_noninteractively_without_executing_rules() {
         root.path(),
         "git config --local please.executed yes\nexit 99\n",
     );
-    let report = root.path().join(".please/reports/last.json");
+    let report = root.path().join(".please/reports/1.json");
     fs::write(&report, "prior report").unwrap();
     // REQ-0293: unavailable confirmation exits 2 without replacing the report.
     assert_eq!(cli(root.path(), &["sync"]).status.code(), Some(2));
@@ -886,7 +886,7 @@ fn auto_approve_preserves_conflicts_and_full_configuration_validation() {
     let path = hook(root.path(), "pre-push");
     let foreign = "#!/usr/bin/env python3\nprint('custom')\n";
     executable(&path, foreign);
-    let report = root.path().join(".please/reports/last.json");
+    let report = root.path().join(".please/reports/1.json");
     fs::write(&report, "prior report").unwrap();
     let output = cli(root.path(), &["sync", "--yes"]);
     assert_eq!(output.status.code(), Some(2));
