@@ -8,3 +8,5 @@ description: >-
 rationale: >-
   An adapter must be named explicitly and must not stall verification forever
   unless the owner explicitly chooses so.
+decisions:
+  - DEC-0030
