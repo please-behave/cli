@@ -2414,7 +2414,7 @@ fn saved_report_does_not_need_its_run_context() {
     synchronize(d.path());
     assert!(cli(d.path(), &["run"]).status.success());
     let git_dir = String::from_utf8(
-        std::process::Command::new("git")
+        support::command("git")
             .args(["rev-parse", "--absolute-git-dir"])
             .current_dir(d.path())
             .output()

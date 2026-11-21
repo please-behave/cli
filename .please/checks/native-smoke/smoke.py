@@ -67,7 +67,8 @@ def main():
         # The failed check must skip the enabled review. Any adapter call would fail this assertion.
         run("sync --yes")
         run("run --at pre-commit", 1)
-        report = json.loads(report_path.read_text())
+        newest = max((root / ".please/reports").glob("*.json"), key=lambda path: int(path.stem))
+        report = json.loads(newest.read_text())
         assert report["overall"] == "FAIL"
         assert report["results"][-1]["status"] == "NOT_RUN"
         check_path.write_text(check_path.read_text().replace("enabled = true", "enabled = false"))
