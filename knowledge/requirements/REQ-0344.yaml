@@ -1,0 +1,22 @@
+id: REQ-0344
+name: Missing Prerequisites Follow Three Classes
+area: configuration
+description: >-
+  A missing or invalid prerequisite must be handled by the class it belongs to.
+  A structural error is found when the configuration is loaded and rejected as
+  a configuration error before any rule runs. A selected enabled rule's own
+  inputs, its parameter values, check file and review prompt, are resolved
+  immediately before that rule runs, and a failure is ERROR for that rule
+  naming the cause; for a review it is also a configuration error that
+  prevents success even when the review is advisory. A late provider
+  prerequisite, such as a check's executable, an adapter profile's required
+  environment variables and executables or the run context a check
+  references, is found only when its rule runs and is ERROR for that rule, an
+  ordinary ERROR for a review. A rule's ERROR must not stop other rules unless
+  fail-fast applies, and the report must keep every result.
+rationale: >-
+  Rules and adapters need different guarantees. Mistakes in the project's own
+  files must surface early and never be excused as advisory, while what only
+  the environment can provide must not decide anything before it is needed.
+decisions:
+  - DEC-0015

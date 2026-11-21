@@ -15,6 +15,7 @@ contracts:
       - REQ-0220
       - REQ-0221
       - REQ-0227
+      - REQ-0344
   - id: CON-0002
     name: Adapter Request
     document: request.md

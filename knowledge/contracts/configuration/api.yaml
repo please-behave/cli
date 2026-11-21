@@ -17,6 +17,7 @@ contracts:
       - REQ-0286
       - REQ-0326
       - REQ-0327
+      - REQ-0344
   - id: CON-0011
     name: Project Configuration
     document: project.md
@@ -85,3 +86,4 @@ contracts:
       - REQ-0285
       - REQ-0327
       - REQ-0328
+      - REQ-0344

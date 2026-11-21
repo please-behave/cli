@@ -11,11 +11,13 @@ context: >-
 decision: >-
   Please distinguishes structural configuration validation from
   execution-specific validation. Structural requirements are validated
-  when configuration is loaded. Runtime dependencies, provider
-  requirements, and rule-specific prerequisites are validated only
-  for the rules selected for the current invocation. Validation
-  must establish that selected rules can execute before their
-  execution begins. Missing requirements belonging exclusively to
+  when configuration is loaded. A selected rule's own inputs, such as
+  parameter values, check files and review prompts, are resolved
+  immediately before that rule runs. Provider prerequisites, such as
+  executables, credentials and adapter profile requirements, are
+  checked only when the rule runs. Both apply only to the rules
+  selected for the current invocation and fail that rule alone;
+  REQ-0344 defines the outcomes. Missing requirements belonging exclusively to
   unselected rules must not prevent execution. Rule identity
   conflicts are structural and are validated within their source scope
   when configuration is loaded.

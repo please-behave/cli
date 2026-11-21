@@ -18,7 +18,8 @@ The child inherits the environment after removal of inherited `PLEASE_*` variabl
 Execution point, resolved Rule parameters and the run-context path are request
 data, not additional command arguments or exported variables. Adapter profile executable
 and environment prerequisites are checked after deterministic checks, immediately
-before the selected adapter is called.
+before the selected adapter is called. A missing requirement is an ordinary review
+ERROR, not a configuration error.
 
 Please writes one UTF-8 JSON request to stdin, closes stdin and reads the result.
 At exit 0 or 1, stdout must contain exactly one JSON response object, with no

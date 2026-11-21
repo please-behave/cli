@@ -238,6 +238,7 @@ fn only_fatal_review_results_stop_later_calls() {
 
 #[test]
 fn review_configuration_errors_stop_calls_even_for_advisory_rules() {
+    // REQ-0344: a review's own inputs are configuration errors, unlike late provider prerequisites.
     // REQ-0161: missing prompts and invalid parameters are fatal configuration errors for advisory reviews.
     // REQ-0068: missing prompts and parameter errors stop review calls even for advisory rules.
     for missing_prompt in [false, true] {

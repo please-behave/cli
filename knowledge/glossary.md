@@ -82,11 +82,13 @@ separate kind of plan.
 
 ## Configuration Error
 
-A configuration error means that the project's configuration is invalid or
-lacks a prerequisite required for execution, such as parameter values or the
-prompt of a selected, enabled review. It prevents success even for an advisory
-review. FAIL and ERROR outcomes of an advisory review remain nonblocking;
-they describe the review's result rather than a configuration error.
+A configuration error means that the project's own configuration is wrong: a
+structural error found when the configuration is loaded, or, for a selected,
+enabled review, a parameter or prompt that cannot be resolved. It prevents
+success even for an advisory review. What the environment must provide, such as
+an executable or a credential, is no configuration error. FAIL and ERROR
+outcomes of an advisory review remain nonblocking; they describe the review's
+result rather than a configuration error.
 
 ## Run Context
 

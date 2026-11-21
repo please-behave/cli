@@ -39,6 +39,7 @@ as a default when a consuming project supplies nothing.
 
 Supplied names must have corresponding declarations. Resolution validates every
 declared parameter of an active Rule, not just those mentioned in its command.
+Resolution happens immediately before the Rule runs and fails that Rule alone.
 Missing required values, unsupported kinds, invalid names and invalid supplied
 values produce an ERROR naming the Rule, parameter and cause. For reviews these
 are configuration errors that prevent success even when `blocking` is false.

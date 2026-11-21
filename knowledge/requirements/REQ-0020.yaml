@@ -3,7 +3,7 @@ name: Unusable References Fail The Check
 area: checks
 description: >-
   A reference to a missing or unsafe path, a missing run context or a
-  parameter without a value must be reported as ERROR for that check, without
+  command reference to a parameter without a value must be reported as ERROR for that check, without
   a fallback.
 rationale: >-
   A check that cannot obtain its inputs must report an error rather than pass

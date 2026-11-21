@@ -64,7 +64,9 @@ rejected while loading, but absence becomes an error only for an enabled Rule
 selected by that run.
 Inactive Rules need no runtime implementation. A selected review's missing prompt
 is a configuration error that prevents success even when the review is advisory.
-Detailed Rule, adapter profile and import validation follows the
+Executables, credentials and adapter profile requirements are late provider
+prerequisites, checked only when their Rule runs; they are ordinary ERROR and
+no configuration error. Detailed Rule, adapter profile and import validation follows the
 [configuration reference](../../../docs/configuration.md).
 
 ## Validation and reconciliation
