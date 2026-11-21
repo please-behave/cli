@@ -68,6 +68,8 @@ jobs:
         uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
         with:
           install_args: python rust github:please-behave/cli
+          experimental: true
+          version: 2026.11.11
       - name: Stamp planned release version before verification
         run: python3 .github/scripts/set-release-version.py "$EXPECTED_RELEASE_VERSION"
       - name: Fetch locked candidate dependencies
@@ -108,6 +110,8 @@ jobs:
         uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
         with:
           install_args: python node
+          experimental: true
+          version: 2026.11.11
       - name: Verify complete release candidate evidence
         uses: christianpflugradt/please-behave-governance/actions/release/evidence@23c098e0071e5f564a89f5980ffbd199e114fd29 # updates/actions/release
         with:

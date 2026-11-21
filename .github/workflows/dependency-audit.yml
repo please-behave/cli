@@ -21,6 +21,8 @@ jobs:
         uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
         with:
           install_args: python rust cargo:cargo-audit
+          experimental: true
+          version: 2026.11.11
       - name: Audit the Cargo dependencies
         uses: christianpflugradt/please-behave-governance/actions/dependency-audit/cargo@59733eeb16cb063211bd27db3a57ab95f720a1db # updates/actions/dependency-audit
         with:
