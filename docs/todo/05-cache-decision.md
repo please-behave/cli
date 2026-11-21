@@ -1,7 +1,7 @@
 # TODO 5: Measure and decide result caching
 
 Status: TODO; decision task, not authorization to build a cache unconditionally.
-Depends on [TODOs 1–4](README.md).
+Depends on [TODOs 1–3](README.md).
 
 ## Goal and decisions
 

@@ -7,3 +7,5 @@ description: >-
 rationale: >-
   Token counts are adapter claims and cannot serve as billing or quota
   statements.
+decisions:
+  - DEC-0030

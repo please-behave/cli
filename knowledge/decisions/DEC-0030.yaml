@@ -1,0 +1,27 @@
+id: DEC-0030
+name: Adapters Own Provider Limits And Retry Behavior
+context: >-
+  Limiting an AI provider interaction raises many questions: request timeouts,
+  retries, backoff, call counts, token ceilings, cost and a maximum duration for
+  a whole run. Providers and their tools answer them differently and change
+  their answers often. If Please Behave offered such controls itself, it would
+  have to support the standards of every provider, maintain special cases for
+  them and release new versions whenever a provider changes.
+decision: >-
+  Limits and retry behavior of the communication with an AI provider belong to
+  the adapter: timeouts of that communication, retries, backoff, call budgets,
+  token ceilings, cost control and any run-wide duration for its own work. Please
+  Behave offers no setting for them and performs no retry, fallback or
+  alternate call. It keeps only the protection of its own process: the
+  configured deadline of one adapter invocation, the bounds of the request and of
+  the captured output, and the resulting ERROR when an invocation exceeds
+  one of them (DEC-0010).
+rationale: >-
+  The adapter interface is the single contract between Please Behave and any
+  provider. An implementation that satisfies it runs with every Please Behave
+  version, so a provider change never forces a Please Behave release and no
+  provider needs a particular Please Behave version. Provider-specific policy
+  in the core would grow into custom support that costs constant maintenance.
+  Organizations that need strict limits choose or write an adapter that
+  enforces them. Please Behave does not report them as guaranteed, because it
+  cannot verify them.

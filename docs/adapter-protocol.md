@@ -1,7 +1,9 @@
 # Executable adapters
 
 An adapter connects Please Behave reviews to an AI CLI, HTTP API or local model.
-It owns authentication, model settings, permissions and AI provider communication.
+It owns authentication, model settings, permissions and AI provider communication,
+including timeouts, retries, backoff and budgets of that communication. Please Behave
+only bounds one adapter invocation by its configured deadline and output limits.
 Configure it as an [adapter profile](configuration.md#configure-the-adapter-profile); select it in a review
 or use an explicit project default.
 
