@@ -1,0 +1,26 @@
+id: DEC-0032
+name: Local Verification Judges The Working Files
+context: >-
+  Hooks run in a developer's workspace, where staged, unstaged and untracked
+  changes of people and agents coexist, and where dependencies and build
+  outputs that tests and checks need exist only as ignored files. Verifying the
+  exact staged index or the pushed commit would require an isolated copy of
+  that content without those files, with a faithful Git view for rules that
+  call Git. Local hooks can be bypassed in any case, and CI on a clean checkout
+  is the authoritative verification (DEC-0004).
+decision: >-
+  Local execution points evaluate the working files as they are. The execution
+  point selects which changes are in scope, such as the staged changes or the
+  pushed commits, but not which content is read. Please Behave neither
+  materializes isolated copies of the index or of commits for rules nor refuses
+  to run because of unrelated uncommitted changes. A rule that needs a committed
+  or staged state reads it from Git itself. Changes to the verified inputs during a run
+  still prevent PASS.
+rationale: >-
+  A local PASS can differ from what is committed, for example when a changed
+  file was not staged. The cost is a failed run in CI, which establishes the
+  authoritative result, not an unnoticed violation. Isolation would make local
+  runs slower or impossible for rules that need local artifacts, force
+  Please Behave to reproduce Git state for every rule and conflict with the
+  common practice of leaving unrelated changes in the workspace. The gap is
+  accepted and documented rather than closed by mechanism.

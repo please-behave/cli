@@ -8,3 +8,5 @@ description: >-
 rationale: >-
   A review judges what is about to be committed or pushed, not the whole
   repository.
+decisions:
+  - DEC-0032
