@@ -5,8 +5,8 @@
   "semanticCommitScope": "deps",
   "extends": [
     "config:best-practices",
-    "github>christianpflugradt/please-behave-governance:renovate-governor",
-    "github>christianpflugradt/please-behave-governance:renovate-content-aware",
+    "github>christianpflugradt/repository-catalog:renovate-governor",
+    "github>christianpflugradt/repository-catalog:renovate-content-aware",
     ":maintainLockFilesMonthly"
   ],
   "platformAutomerge": false,

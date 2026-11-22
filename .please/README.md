@@ -18,7 +18,7 @@ complete and consistent with the source.
 `release` selects the independent release-smoke Rule for an already-built
 candidate. Actions builds first, then runs the quality gate. Version stamping and
 packaging are workflow scripts, outside Please Behave; CI proof,
-evidence and publication guards are shared actions from please-behave-governance. The ordinary pre-push/check build and smoke Rules
+evidence and publication guards are shared actions from repository-catalog. The ordinary pre-push/check build and smoke Rules
 retain their existing dependencies and resource locking.
 
 `config.toml` declares only the custom `release` point. All three Rule Sets and
@@ -59,7 +59,7 @@ AGENTS.md at check.
 
 ## Release workflow ownership
 
-GitHub Actions uses the shared release workflows and actions of please-behave-governance for
+GitHub Actions uses the shared release workflows and actions of repository-catalog for
 planning, exact-source CI proof, candidate evidence and publication. The policy of the candidate
 files lives in `.github/release-artifacts.json`.
 Offline release tests require no external release cache or adapter calls.

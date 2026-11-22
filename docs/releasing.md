@@ -72,13 +72,13 @@ after stable graduation.
 Please Behave starts at **0.1.0** and stays in the `0.x` development series. Features and
 breaking changes increment the minor version; fixes and maintenance increment
 patch. Moving to `1.0.0` requires an explicit change to the development-series
-policy in the shared release configuration (please-behave-governance), not merely a breaking commit.
+policy in the shared release configuration (repository-catalog), not merely a breaking commit.
 
 The published v0.1.0 tag establishes the release history. Semantic Release
 calculates subsequent versions and handles publication. If no release-worthy
 commits exist after a release, the workflow exits without building or publishing.
 Semantic Release, its configuration, the CI proof, the evidence and the publication
-are shared release actions and reusable workflows from please-behave-governance,
+are shared release actions and reusable workflows from repository-catalog,
 pinned by commit. This repository keeps no Node tooling for releases; it only holds
 the artifact policy (`.github/release-artifacts.json`) and the native build, smoke test
 and packaging.

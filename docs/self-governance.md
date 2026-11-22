@@ -155,7 +155,7 @@ ownership checks, argument forwarding and recursion protection. Wrappers inspect
 synchronization read-only; drift tells the developer to rerun sync manually.
 
 The `pre-commit`, `check` and `commit-msg` points import `rulesets/multi-point/repository-conventions` from
-[Christian Pflugradt’s personal Ruleset repository](https://github.com/christianpflugradt/please-behave-governance),
+[Christian Pflugradt’s personal Ruleset repository](https://github.com/christianpflugradt/repository-catalog),
 pinned to the full commit in `.please/config.toml`. It receives
 `.please/commit-scopes.txt` through the `scopes_file` parameter. The imported
 Check validates header syntax, type and scope using the managed commit-msg argument.
