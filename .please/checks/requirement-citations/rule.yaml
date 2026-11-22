@@ -1,0 +1,18 @@
+purpose: Keep active requirements linked to tests or justified exemptions.
+problem: >-
+  Tests that cite requirements which do not exist, and requirements that no
+  test cites and nothing exempts, make requirements untraceable.
+value: Every active requirement is verified by a test or carries a stated reason why not, and mistakes are found at commit time.
+conditions:
+  - statement: Every requirement ID cited in a test comment is defined.
+    rationale: A citation without a requirement is a typo or outdated.
+  - statement: Active requirements satisfy the verification contract in why/requirements/README.md.
+    rationale: Verification gaps and contradictory exemptions must not accumulate.
+success_criteria:
+  - An unknown requirement ID fails and the message names the file.
+  - A violation of the requirement verification contract fails and lists the affected IDs.
+  - A crash or an unexpected error is an ERROR.
+out_of_scope:
+  - description: The structure of requirement files, their identifiers and their links, which the why ruleset verifies.
+  - description: Documentation links and the quality of the tests.
+placement: Local, because the citation convention in tests belongs to this repository only.

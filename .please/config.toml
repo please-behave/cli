@@ -42,6 +42,11 @@ git = "https://github.com/christianpflugradt/repository-catalog.git"
 path = "rulesets/releasable-open-source-software"
 ref = "0f47bb84ff5435cb6b692275fb6767f4f599abdb"
 
+[[imports]]
+git = "https://github.com/christianpflugradt/repository-catalog.git"
+path = "rulesets/why"
+ref = "81fc42fecee1b5531d7bd3b8879bac964dcdc25b"
+
 [[adapter_imports]]
 id = "gemini-flash-lite"
 git = "https://github.com/christianpflugradt/repository-catalog.git"

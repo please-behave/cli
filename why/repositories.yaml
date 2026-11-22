@@ -1,0 +1,12 @@
+repository:
+  alias: cli
+  source: github:please-behave/cli
+linked:
+  - alias: action
+    source: github:please-behave/action
+  - alias: catalog
+    source: github:christianpflugradt/repository-catalog
+  - alias: gateway
+    source: github:please-behave/gateway
+  - alias: why
+    source: github:please-behave/why

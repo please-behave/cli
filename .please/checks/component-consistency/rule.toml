@@ -1,0 +1,9 @@
+id = "component-consistency"
+name = "Component consistency"
+description = "Component ownership of compiled files and dependencies between components match the code"
+enabled = true
+run_at = ["pre-commit", "pre-push", "check"]
+
+[check]
+command = "python3 @rule/check.py"
+timeout_seconds = 60

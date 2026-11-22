@@ -1,8 +1,8 @@
 # Requirements
 
 A requirement is one binding, verifiable statement about what Please Behave
-must do or be. The [schema](schema.json) defines the structure, including the
-areas; this document explains why the artifact exists and how to keep it true.
+must do or be. The [Why standard](https://github.com/please-behave/why/tree/main/standard) defines the structure and the
+[areas](#areas) below group the requirements; this document explains why the artifact exists and how to keep it true.
 
 ## Why requirements exist
 
@@ -81,12 +81,29 @@ dependency validation and reporting is too large.
   decision or the product vision, ask the owner and record where the code
   deviates in a GitHub issue.
 
+## Areas
+
+The standard leaves the categories to the repository. A requirement belongs to
+exactly one of these areas, and nothing verifies the choice automatically.
+
+| Area | Covers |
+| --- | --- |
+| `cli` | Commands, invocation syntax, help and version output. |
+| `setup` | Initialization, synchronization and Git hook management. |
+| `configuration` | Configuration files, validation, parameters and limits. |
+| `rules` | Rule definitions, rule sets, execution points, external rule sets, selection and plans. |
+| `checks` | Deterministic checks, concurrency, dependencies, fail-fast and scheduling. |
+| `reviews` | AI reviews, adapters, review input and review results. |
+| `integrity` | Snapshots, stability, freshness and run context. |
+| `reporting` | Reports, status, progress, terminal output and exit codes. |
+| `distribution` | Release artifacts, versions and installation. |
+
 ## Fields
 
 | Field | What to write |
 | --- | --- |
 | `name` | A short noun phrase that identifies the requirement. |
-| `area` | Exactly one of the areas listed in the schema. The overview of what the product can do is generated from the areas, so it is never written by hand. |
+| `area` | Exactly one of the [areas](#areas). The overview of what the product can do is generated from the areas, so it is never written by hand. |
 | `description` | The statement itself. |
 | `rationale` | One plain sentence on why the product needs this. It is what the owner judges, since the statement alone says what holds but not why anyone wants it. If the reason needs more than a sentence, the requirement is probably too large or too small. |
 | `decisions` | The decisions that shaped this requirement. Omit it when no significant choice stands behind it; most requirements need none. |
@@ -106,8 +123,7 @@ no decision. The need that triggered a decision stays in its `context`.
 
 ## How it stays current
 
-The `why` rule in [`.please/checks/why`](../../.please/checks/why/check.py)
-fails when a requirement does not follow the schema, uses an unknown area, or
+The `why` ruleset fails when a requirement does not follow the Why standard or
 cites a decision that does not exist. Component references to requirements must
 resolve as well.
 
@@ -121,7 +137,9 @@ Tests cite the REQ IDs they verify in source comments. Add a citation only
 after confirming that the assertions exercise the requirement. A citation
 records representative coverage rather than proof of every clause.
 
-The documentation check reads line comments in Rust product tests and Python
+The `requirement-citations` rule in
+[`.please/checks/requirement-citations`](../../.please/checks/requirement-citations/check.py)
+reads line comments in Rust product tests and Python
 tooling tests and validates that cited requirement IDs exist. Every active
 requirement must have either a test citation or a non-empty `test_exemption`,
 never both; the check fails on violations. Obsolete requirements are excluded

@@ -17,7 +17,7 @@ documenting why Rules and Rule Sets exist. It is not an API and has no index.
 
 ## Representation
 
-Each API directory contains `api.yaml`, validated by [schema.json](schema.json).
+Each API directory contains `api.yaml`, validated by the [Why standard](https://github.com/please-behave/why/tree/main/standard) through the `why` ruleset.
 The index records its stable `API-NNNN` ID, name, compatibility version and
 contracts. Each contract records a globally unique, stable `CON-NNNN` ID, name,
 document, optional structural schema and the requirements it specifies.

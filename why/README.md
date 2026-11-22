@@ -45,4 +45,4 @@ explicitly before implementation and update the affected sources together.
 - Requirements are authoritative unless marked `obsolete: true`.
 - Decisions remain authoritative unless superseded by a newer decision referencing them through `supersedes`.
 - Historical artifacts may be retained for traceability. Artifacts withdrawn without replacement may be deleted; Git preserves their history.
-- Schemas define the permitted structure of each artifact.
+- The [Why standard](https://github.com/please-behave/why/tree/main/standard) defines the permitted structure of each artifact. [`repositories.yaml`](repositories.yaml) declares the repositories these documents link.

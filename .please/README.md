@@ -12,8 +12,10 @@ and run at pre-push and again in CI. Cargo build, test and Clippy commands
 explicitly select offline mode. Every local Rule has a display name and a
 description that states what must hold, and keeps its script and tests in its own
 directory. Local Rules declare their own run_at; no local Rule Sets are used.
-The `why` Rule keeps the [component map](../why/components/README.md)
-complete and consistent with the source.
+The imported `why` rule set validates the Why artifacts and links. The
+`component-consistency` Rule keeps the [component map](../why/components/README.md)
+complete and consistent with the source, and `requirement-citations` keeps active
+requirements cited by tests or exempted.
 
 `release` selects the independent release-smoke Rule for an already-built
 candidate. Actions builds first, then runs the quality gate. Version stamping and
@@ -21,8 +23,8 @@ packaging are workflow scripts, outside Please Behave; CI proof,
 evidence and publication guards are shared actions from repository-catalog. The ordinary pre-push/check build and smoke Rules
 retain their existing dependencies and resource locking.
 
-`config.toml` declares only the custom `release` point. All three Rule Sets and
-the independent adapter profile share the reviewed immutable revision in config.toml.
+`config.toml` declares only the custom `release` point. The
+imported Rule Sets and the adapter profiles use the reviewed immutable revisions in config.toml.
 Imported checks use `@rule/` or `@source/` resources.
 Check/pre-push source-security snapshot semantics are unchanged.
 `commit-scopes.txt` supplies the commit-message import's required

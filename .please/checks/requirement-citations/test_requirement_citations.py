@@ -1,4 +1,4 @@
-"""The documentation check reports technical failures as exit 2, never as a FAIL verdict (exit 1)."""
+"""The requirement citation check reports technical failures as exit 2, never as a FAIL verdict (exit 1)."""
 
 from pathlib import Path
 import runpy
@@ -26,8 +26,10 @@ class RequirementReferenceTests(unittest.TestCase):
 
     def run_check(self):
         subprocess.run(["git", "init", "--quiet", str(self.root)], check=True, capture_output=True)
-        self.write(".please/checks/docs/check.py", SCRIPT.read_text())
-        return subprocess.run([sys.executable, str(self.root / ".please/checks/docs/check.py")], capture_output=True, text=True)
+        self.write(".please/checks/requirement-citations/check.py", SCRIPT.read_text())
+        return subprocess.run(
+            [sys.executable, str(self.root / ".please/checks/requirement-citations/check.py")], capture_output=True, text=True
+        )
 
     def test_citations_and_exemptions_pass_without_a_specification(self):
         self.write("tests/example.rs", "// REQ-0001: checks one condition.\n#[test]\nfn example() {}\n")
@@ -46,7 +48,7 @@ class RequirementReferenceTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1, result.stderr)
         self.assertIn("without a test citation or non-empty test_exemption: REQ-0001, REQ-0002", result.stderr)
         self.assertIn("with both a test citation and test_exemption: REQ-0003, REQ-0004", result.stderr)
-        self.assertNotIn("Documentation passed", result.stdout)
+        self.assertNotIn("Requirement verification", result.stdout)
 
     def test_empty_exemptions_do_not_close_a_verification_gap(self):
         self.write("tests/example.rs", "// REQ-0001: verified.\n")
@@ -69,6 +71,7 @@ class RequirementReferenceTests(unittest.TestCase):
         self.assertEqual(CHECK["check_requirements"](self.root), ({"REQ-0001"}, set()))
 
     def test_unknown_test_references_fail_with_the_source_path(self):
+        # REQ-0330: requirement references must resolve.
         self.write("tests/example.rs", "// REQ-9999: removed requirement.\n")
         result = self.run_check()
         self.assertEqual(result.returncode, 1, result.stderr)
@@ -95,32 +98,6 @@ class RequirementReferenceTests(unittest.TestCase):
         result = self.run_check()
         self.assertEqual(result.returncode, 2, result.stderr)
         self.assertIn("ERROR: RuntimeError: yq failed for requirement definitions", result.stderr)
-
-
-class DocumentationLinkTests(unittest.TestCase):
-    # REQ-0330: local targets and anchors must exist.
-    def test_missing_local_targets_and_anchors_are_rejected(self):
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            source = root / "README.md"
-            target = root / "details.md"
-            target.write_text("# Details\n")
-            source.write_text("[Details](details.md#details)\n")
-            CHECK["check_links"](root, [source])
-            for link in ["absent.md", "details.md#absent"]:
-                with self.subTest(link=link), self.assertRaises(AssertionError):
-                    source.write_text(f"[Details]({link})\n")
-                    CHECK["check_links"](root, [source])
-
-
-class DocsExitTests(unittest.TestCase):
-    def test_a_missing_repository_is_an_error(self):
-        with tempfile.TemporaryDirectory() as directory:
-            copy = Path(directory) / ".please/checks/docs/check.py"
-            copy.parent.mkdir(parents=True)
-            copy.write_text(SCRIPT.read_text())
-            result = subprocess.run([sys.executable, str(copy)], capture_output=True, text=True)
-            self.assertEqual(result.returncode, 2, result.stderr)
 
 
 if __name__ == "__main__":

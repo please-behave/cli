@@ -2,7 +2,7 @@
 
 A component is a cohesive part of the compiled product with one responsibility.
 Every file that lands in the executable belongs to exactly one component. The
-[schema](schema.json) defines the structure; this document explains why the
+[Why standard](https://github.com/please-behave/why/tree/main/standard) defines the structure; this document explains why the
 artifact exists and how to keep it true.
 
 ## Why components exist
@@ -78,10 +78,11 @@ could ever see violated does not belong here.
 
 ## How it stays current
 
-The `why` rule in [`.please/checks/why`](../../.please/checks/why/check.py)
+The `why` ruleset validates component files against the Why standard and
+resolves their references. The `component-consistency` rule in
+[`.please/checks/component-consistency`](../../.please/checks/component-consistency/check.py)
 runs at pre-commit, pre-push and in CI. It fails when
 
-- a component file does not follow the schema, or a reference does not resolve,
 - a compiled file belongs to no component or to more than one,
 - a listed file is not part of the compiled product, or
 - `depends_on` differs from the dependencies found in the source files.
