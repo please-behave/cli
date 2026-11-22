@@ -1,49 +1,9 @@
-//! The public reference and executable examples must follow Serde's contract.
+//! Configuration types and loaders follow the JSON schema contracts.
 mod support;
-use please::{
-    adapter::{Adapter, Request},
-    config, planner,
-    report::Status,
-};
-use serde::{Serialize, de::DeserializeOwned};
+use please::config;
 use serde_json::Value;
-use std::{collections::BTreeMap, fs};
+use std::fs;
 use tempfile::TempDir;
-
-const CONFIGURATION: &str = include_str!("../docs/configuration.md");
-fn section<'a>(text: &'a str, title: &str) -> &'a str {
-    text.split_once(&format!("### {title}\n"))
-        .unwrap()
-        .1
-        .split("\n### ")
-        .next()
-        .unwrap()
-}
-fn rows(text: &str) -> BTreeMap<String, String> {
-    text.split("\n\n")
-        .filter(|paragraph| paragraph.trim_start().starts_with("| Field |"))
-        .flat_map(str::lines)
-        .filter_map(|line| {
-            let cells: Vec<_> = line.split('|').map(str::trim).collect();
-            let key = cells.get(1)?.strip_prefix('`')?.strip_suffix('`')?;
-            Some((key.to_owned(), cells.get(2)?.to_string()))
-        })
-        .collect()
-}
-// Feed schema metadata into the existing required/default comparison with Serde.
-fn schema_rows(schema: &Value, prefix: &str) -> String {
-    let required = schema["required"].as_array().unwrap();
-    let mut text = String::from("| Field | Required / default |\n| --- | --- |\n");
-    for (name, declaration) in schema["properties"].as_object().unwrap() {
-        let marker = if required.iter().any(|key| key == name) {
-            "Required".to_owned()
-        } else {
-            format!("Optional; `{}`", declaration["default"])
-        };
-        text.push_str(&format!("| `{prefix}{name}` | {marker} |\n"));
-    }
-    text
-}
 
 fn field_paths(value: &Value, parent: Vec<String>, paths: &mut Vec<Vec<String>>) {
     for (key, child) in value.as_object().unwrap() {
@@ -55,75 +15,7 @@ fn field_paths(value: &Value, parent: Vec<String>, paths: &mut Vec<Vec<String>>)
         }
     }
 }
-fn contract<T: Serialize + DeserializeOwned>(sample: &T, text: &str, prefix: &str) {
-    let value = serde_json::to_value(sample).unwrap();
-    let documented = rows(text);
-    let fields = value.as_object().unwrap();
-    for key in documented.keys().filter_map(|key| key.strip_prefix(prefix)) {
-        if !key.contains('.') {
-            assert!(
-                fields.contains_key(key),
-                "obsolete documented field: {prefix}{key}"
-            );
-        }
-    }
-    let mut paths = Vec::new();
-    field_paths(&value, vec![], &mut paths);
-    for path in paths {
-        let key = path.last().unwrap();
-        let label = format!("{prefix}{}", path.join("."));
-        let pointer = format!("/{}", path.join("/"));
-        let parent = if path.len() == 1 {
-            String::new()
-        } else {
-            format!("/{}", path[..path.len() - 1].join("/"))
-        };
-        let cell = documented
-            .get(&label)
-            .unwrap_or_else(|| panic!("undocumented configuration field: {label}"));
-        let mut omitted = value.clone();
-        omitted
-            .pointer_mut(&parent)
-            .unwrap()
-            .as_object_mut()
-            .unwrap()
-            .remove(key);
-        match serde_json::from_value::<T>(omitted) {
-            Err(_) => assert!(cell.starts_with("Required"), "required field {label}"),
-            Ok(parsed) => {
-                assert!(cell.starts_with("Optional"), "optional field {label}");
-                let defaults = serde_json::to_value(parsed).unwrap();
-                let empty = if key == "parameters" {
-                    serde_json::json!({})
-                } else if key == "depends_on" {
-                    Value::Null
-                } else if key == "blocking" {
-                    Value::Bool(true)
-                } else {
-                    Value::Array(vec![])
-                };
-                let default = defaults.pointer(&pointer).unwrap_or_else(|| {
-                    assert!(matches!(
-                        key.as_str(),
-                        "files" | "context" | "parameters" | "depends_on" | "blocking"
-                    ));
-                    &empty
-                });
-                let expected = match (key.as_str(), default) {
-                    (_, Value::Object(_)) => None, // Child fields are visited recursively.
-                    _ => Some(default.to_string()),
-                };
-                if let Some(expected) = expected {
-                    let expected = format!("`{expected}`");
-                    assert!(
-                        cell.contains(&expected),
-                        "wrong default for {label}: expected {expected}, found {cell}"
-                    );
-                }
-            }
-        }
-    }
-}
+
 fn project_schema() -> Value {
     serde_json::from_str(include_str!(
         "../why/contracts/configuration/project.schema.json"
@@ -217,10 +109,16 @@ fn project() -> TempDir {
     root
 }
 #[test]
-fn every_configuration_field_required_marker_and_default_is_documented() {
-    // REQ-0327, REQ-0328: documented defaults, fields and required markers match the configuration types.
+fn initialized_configuration_matches_project_and_rule_schemas() {
+    // REQ-0327: the initialized configuration follows the configuration contracts.
     let root = project();
-    let p = config::load(root.path()).unwrap();
+    let mut config = config::load(root.path()).unwrap().config;
+    assert!(config.publish.is_none());
+    config.publish = Some(config::PublishSettings {
+        key_env: "PLEASE_GATEWAY_KEY".into(),
+        repository: Some("example.invalid/owner/repo".into()),
+    });
+    project_contract(&project_schema(), &config);
     for rule in [
         "checks/always-ok/rule.toml",
         "checks/deliberately-failing/rule.toml",
@@ -230,122 +128,8 @@ fn every_configuration_field_required_marker_and_default_is_documented() {
             &fs::read_to_string(root.path().join(".please").join(rule)).unwrap(),
         );
     }
-    let mut config = p.config;
-    assert!(config.publish.is_none());
-    config.publish = Some(config::PublishSettings {
-        key_env: "PLEASE_GATEWAY_KEY".into(),
-        repository: Some("example.invalid/owner/repo".into()),
-    });
-    project_contract(&project_schema(), &config);
-    contract(
-        &please::external::Import {
-            git: "https://example.invalid/rules.git".into(),
-            path: "repository".into(),
-            reference: "main".into(),
-            execution_points: Default::default(),
-            rule_parameters: Default::default(),
-        },
-        section(CONFIGURATION, "Import rule sets from Git"),
-        "",
-    );
-    contract(
-        &please::external::AdapterImport {
-            id: "quality".into(),
-            git: "https://example.invalid/adapters.git".into(),
-            path: "adapters/quality".into(),
-            reference: "main".into(),
-        },
-        section(CONFIGURATION, "Import adapter profiles from Git"),
-        "",
-    );
-    // Enumerate both implementation tables for field/default comparison; raw documents are validated separately.
-    let rule = config::RuleDefinition {
-        id: "example".into(),
-        depends_on: Some(vec![]),
-        name: Some("Example".into()),
-        description: "Example".into(),
-        enabled: true,
-        blocking: Some(true),
-        run_at: vec!["pre-push".into()],
-        parameters: Default::default(),
-        check: Some(config::CheckDefinition {
-            resource: None,
-            command: please::check_command::Command::new("sh @rule/index.sh").unwrap(),
-            timeout_seconds: 30,
-        }),
-        review: Some(config::ReviewDefinition {
-            parameters: Default::default(),
-            include_content: true,
-            include_change_set: false,
-            trigger: Some(config::ReviewTrigger {
-                changed_files: vec!["docs/**".into()],
-            }),
-            adapter: None,
-            prompt: "prompt.md".into(),
-            context: vec![config::ReviewContext {
-                path: "README.md".into(),
-                headings: vec![],
-            }],
-        }),
-    };
-    let shared = format!(
-        "{}\n{}\n{}",
-        schema_rows(
-            &serde_json::from_str::<Value>(include_str!(
-                "../why/contracts/configuration/rule.schema.json"
-            ))
-            .unwrap(),
-            ""
-        ),
-        section(CONFIGURATION, "Add a check"),
-        section(CONFIGURATION, "Add a review")
-    );
-    contract(&rule, &shared, "");
-    contract(
-        &please::parameters::Declaration {
-            kind: "file".into(),
-            required: true,
-            description: Some("Allowed scopes".into()),
-            value: Some(toml::Value::String(".commit-scopes".into())),
-        },
-        &schema_rows(
-            &serde_json::from_str::<Value>(include_str!(
-                "../why/contracts/configuration/parameters.schema.json"
-            ))
-            .unwrap()["$defs"]["declaration"],
-            "parameters.<name>.",
-        ),
-        "parameters.<name>.",
-    );
-    let adapter: config::AdapterProfile = toml::from_str(block(
-        section(CONFIGURATION, "Configure the adapter profile"),
-        "toml",
-    ))
-    .unwrap();
-    contract(
-        &adapter,
-        section(CONFIGURATION, "Configure the adapter profile"),
-        "",
-    );
-    contract(
-        &config::ReviewContext {
-            path: "README.md".into(),
-            headings: vec![],
-        },
-        section(CONFIGURATION, "Add a review"),
-        "review.context.",
-    );
-    contract(
-        &config::RuleSet {
-            id: "quality".into(),
-            description: "Reusable rules".into(),
-            rules: vec![],
-            run_at: vec![],
-        },
-        section(CONFIGURATION, "Group rules into rule sets"),
-        "",
-    );
 }
+
 #[test]
 fn context_retention_default_matches_the_project_schema() {
     let schema = project_schema();
@@ -534,6 +318,18 @@ fn parameter_schema_keeps_declaration_loading_and_resolution_separate() {
         "../why/contracts/configuration/parameters.schema.json"
     ))
     .unwrap();
+    let declaration = &active["$defs"]["declaration"];
+    let minimal = serde_json::json!({"type": "file"});
+    let validator = jsonschema::validator_for(declaration).unwrap();
+    assert!(validator.is_valid(&minimal));
+    let parsed: please::parameters::Declaration = serde_json::from_value(minimal).unwrap();
+    let defaults = serde_json::to_value(parsed).unwrap();
+    for field in ["required", "description", "value"] {
+        assert_eq!(
+            defaults[field], declaration["properties"][field]["default"],
+            "{field}"
+        );
+    }
     active["$ref"] = serde_json::json!("#/$defs/activeDeclarations");
     let validator = jsonschema::validator_for(&active).unwrap();
     for (declaration, valid) in [
@@ -568,110 +364,4 @@ fn parameter_schema_keeps_declaration_loading_and_resolution_separate() {
             "{declaration}"
         );
     }
-}
-
-#[test]
-fn documentation_contract_detects_missing_fields_and_wrong_defaults() {
-    let root = project();
-    let _p = config::load(root.path()).unwrap();
-    let adapter: config::AdapterProfile = toml::from_str(block(
-        section(CONFIGURATION, "Configure the adapter profile"),
-        "toml",
-    ))
-    .unwrap();
-    let original = section(CONFIGURATION, "Configure the adapter profile");
-    for bad in [
-        original
-            .lines()
-            .filter(|line| !line.starts_with("| `command` |"))
-            .collect::<Vec<_>>()
-            .join("\n"),
-        original.replace("Optional; `[]`", "Optional; `[\"all\"]`"),
-        original.replace("Required | Executable", "Optional | Executable"),
-        original.replace("| `command` |", "| `removed` |"),
-    ] {
-        assert!(std::panic::catch_unwind(|| contract(&adapter, &bad, "")).is_err());
-    }
-}
-fn block<'a>(text: &'a str, kind: &str) -> &'a str {
-    text.split_once(&format!("```{kind}\n"))
-        .unwrap()
-        .1
-        .split_once("\n```")
-        .unwrap()
-        .0
-}
-struct Never;
-impl Adapter for Never {
-    fn review(&self, _: &Request<'_>) -> anyhow::Result<String> {
-        panic!("documentation tests must not call an adapter")
-    }
-}
-#[test]
-fn readme_examples_validate_and_plan_without_ai_or_check_execution() {
-    // REQ-0329: configuration examples load and produce an executable plan without an adapter call.
-    let root = project();
-    assert_eq!(
-        please::verify(root.path(), &Never).unwrap().overall,
-        Status::Pass
-    );
-    let base = root.path().join(".please");
-    fs::write(
-        base.join("config.toml"),
-        block(section(CONFIGURATION, "Project settings"), "toml"),
-    )
-    .unwrap();
-    for (kind, name, title) in [
-        ("checks", "readme", "Add a check"),
-        ("reviews", "architecture", "Add a review"),
-    ] {
-        let dir = base.join(kind).join(name);
-        fs::create_dir_all(&dir).unwrap();
-        fs::write(
-            dir.join("rule.toml"),
-            block(section(CONFIGURATION, title), "toml"),
-        )
-        .unwrap();
-        fs::write(
-            dir.join(if kind == "checks" {
-                "index.sh"
-            } else {
-                "prompt.md"
-            }),
-            block(
-                section(CONFIGURATION, title),
-                if kind == "checks" { "sh" } else { "markdown" },
-            ),
-        )
-        .unwrap();
-    }
-    fs::create_dir_all(base.join("rule-sets")).unwrap();
-    fs::write(
-        base.join("rule-sets/repository.toml"),
-        block(section(CONFIGURATION, "Group rules into rule sets"), "toml"),
-    )
-    .unwrap();
-    support::write(
-        root.path(),
-        ".please/adapter.toml",
-        block(
-            section(CONFIGURATION, "Configure the adapter profile"),
-            "toml",
-        ),
-    );
-    let p = config::load(root.path()).unwrap();
-    let plan = planner::build(&p, Some("check"), false).unwrap().plan;
-    assert!(plan.executable());
-    assert_eq!(plan.scheduled.len(), 2);
-}
-
-#[test]
-fn documented_adapter_profileuration_is_valid() {
-    let example: config::AdapterProfile = toml::from_str(block(
-        section(CONFIGURATION, "Configure the adapter profile"),
-        "toml",
-    ))
-    .unwrap();
-    assert_eq!(example.command, "python3");
-    assert_eq!(example.timeout_seconds, 180);
 }

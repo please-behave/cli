@@ -114,7 +114,15 @@ pub fn init(root: &Path) -> Result<usize> {
         ("reviews/product-consistency/rule.toml".into(), toml::to_string(&review)?),
         ("reviews/product-consistency/prompt.md".into(), "Evaluate the current working files against documented expectations. Cite concrete file paths and lines. Report uncertainty as ERROR, grounded contradictions as FAIL, and PASS only with evidence. Customize before enabling.\n".into()),
         ("reports/.gitignore".into(), "*\n!.gitignore\n".into()),
-        ("README.md".into(), include_str!("../docs/configuration.md").into()),
+        (
+            "README.md".into(),
+            "# Please Behave configuration\n\n\
+             This directory holds the project's settings (`config.toml`), checks, and reviews.\n\
+             Please writes local run reports to `reports/`.\n\n\
+             See the [published CLI documentation](https://please-behave.github.io/docs/cli.html)\n\
+             for configuration guidance.\n"
+                .into(),
+        ),
     ];
     let mut created = 0;
     for (relative, text) in files {

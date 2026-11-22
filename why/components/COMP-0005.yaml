@@ -7,8 +7,8 @@ scope:
     Scaffolds a passing check, a disabled failing check and a disabled review
     in self-contained directories.
   - >-
-    Embeds the configuration reference as the README of the new directory;
-    docs/configuration.md is documentation first and compiled input second.
+    Writes a short README describing the project directory and linking to the
+    published CLI documentation.
   - >-
     Fails without changing anything when the .please directory already exists.
 out_of_scope:
@@ -25,7 +25,6 @@ must_not:
     Supply an adapter profile or an adapter.
 files:
   - src/init.rs
-  - docs/configuration.md
 depends_on:
   - COMP-0003
   - COMP-0011
@@ -34,5 +33,3 @@ requirements:
   - REQ-0288
   - REQ-0289
   - REQ-0327
-  - REQ-0328
-  - REQ-0329

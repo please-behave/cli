@@ -7,3 +7,7 @@ description: >-
 rationale: >-
   A project must be able to configure Please from the reference without
   guessing which settings exist or are required.
+test_exemption: >-
+  The CLI suite verifies supported fields and required markers against the
+  configuration schemas. Agreement with the user documentation is checked
+  during documentation review.

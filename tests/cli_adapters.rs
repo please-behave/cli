@@ -803,12 +803,12 @@ fn init_has_no_adapter_and_selected_reviews_require_explicit_configuration() {
 }
 
 #[test]
-fn documented_dummy_runs_from_supporting_adapter_directory() {
+fn fixture_adapter_runs_from_supporting_adapter_directory() {
     let root = fixture();
     write(
         root.path(),
         ".please/adapters/adapters/dummy.py",
-        include_str!("../examples/adapters/dummy.py"),
+        include_str!("fixtures/dummy_adapter.py"),
     );
     // This supporting file must never be recursively interpreted as an adapter.
     write(
@@ -829,7 +829,7 @@ fn documented_dummy_runs_from_supporting_adapter_directory() {
         result.results[0]
             .stderr
             .as_ref()
-            .is_some_and(|c| c.text.contains("Dummy adapter performs no AI assessment"))
+            .is_some_and(|c| c.text.contains("Fixture adapter performed no assessment"))
     );
     assert!(result.results[0].findings.is_empty());
 }

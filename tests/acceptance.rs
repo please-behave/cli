@@ -534,6 +534,16 @@ fn init_exact_paths_and_repeated_initialization_rejected() {
     ] {
         assert!(path(root, file).is_file(), "{file}");
     }
+    // REQ-0288: the README describes the project directory and links to the published guide.
+    let readme = fs::read_to_string(path(root, "README.md")).unwrap();
+    for expected in [
+        "`config.toml`",
+        "checks, and reviews",
+        "`reports/`",
+        "https://please-behave.github.io/docs/cli.html",
+    ] {
+        assert!(readme.contains(expected), "{expected}");
+    }
     // Check the actual directory entry, even on case-insensitive filesystems.
     assert!(
         fs::read_dir(root)

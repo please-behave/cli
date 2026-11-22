@@ -3,7 +3,7 @@ name: Configuration Defaults And Bounds Agree
 area: configuration
 description: >-
   The defaults and resource bounds used by initialization, validation,
-  planning and execution must agree with the configuration reference.
+  planning and execution must agree with the configuration contracts.
 rationale: >-
-  A project must get the defaults and limits that the documentation promises,
+  A project must get the defaults and limits that the contracts promise,
   whichever command it uses.

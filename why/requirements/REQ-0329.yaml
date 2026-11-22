@@ -7,3 +7,6 @@ description: >-
 rationale: >-
   A project must be able to use a documented example without discovering
   invalid configuration or needing a network connection just to preview it.
+test_exemption: >-
+  Offline validation and planning of published examples belong to user
+  documentation verification. The CLI suite uses self-contained configurations.

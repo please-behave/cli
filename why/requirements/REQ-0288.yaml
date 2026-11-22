@@ -3,7 +3,8 @@ name: Init Creates Only The Project Directory
 area: setup
 description: >-
   Initialization must create files only below `.please` and must not install
-  Git hooks.
+  Git hooks. It must write a short README that explains what the directory holds
+  and links to the published CLI documentation.
 rationale: >-
   Trying out Please must not change anything else in the repository, and hooks
   are a separate step that the user confirms.

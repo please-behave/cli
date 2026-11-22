@@ -2,8 +2,8 @@
 
 Use `please init` to create `.please/`, `please sync` to validate and synchronize
 it, `please run` to execute rules and `please status` to inspect saved results.
-`please help` lists the English commands and options. This guide is generated as
-`.please/README.md` during initialization.
+`please help` lists the English commands and options. Initialization creates a
+short `.please/README.md` with a link to the published CLI documentation.
 
 Please Behave has three governance concepts: a **Rule** defines an expectation, a
 **Rule Set** groups rules and assigns them to **Execution Points**. Checks and
