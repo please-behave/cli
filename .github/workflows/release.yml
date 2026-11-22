@@ -24,7 +24,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     permissions:
       contents: write
-    uses: christianpflugradt/please-behave-governance/.github/workflows/release-plan.yml@511414906fd7f65dd9e5c90b1193c63202814419 # updates/workflows/release
+    uses: christianpflugradt/please-behave-governance/.github/workflows/release-plan.yml@4466526021c1101170b208e3cadbbe1973313423 # updates/workflows/release
     with:
       force: ${{ inputs.force }}
 
@@ -35,7 +35,7 @@ jobs:
     permissions:
       contents: read
       actions: read
-    uses: christianpflugradt/please-behave-governance/.github/workflows/release-readiness.yml@511414906fd7f65dd9e5c90b1193c63202814419 # updates/workflows/release
+    uses: christianpflugradt/please-behave-governance/.github/workflows/release-readiness.yml@4466526021c1101170b208e3cadbbe1973313423 # updates/workflows/release
     with:
       source-sha: ${{ needs.plan.outputs.source_sha }}
       required-jobs: check / Check
