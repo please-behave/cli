@@ -7,3 +7,5 @@ description: >-
 rationale: >-
   A synchronization that reports success while the gate is not in place would
   give a false sense of enforcement.
+decisions:
+  - DEC-0034

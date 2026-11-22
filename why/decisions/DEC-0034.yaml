@@ -1,0 +1,19 @@
+id: DEC-0034
+name: Hook Reconciliation Uses Per-File Atomic Replacement
+context: >-
+  Cooperative hook management (DEC-0020) can require changes to several
+  independently writable scripts. Git or another tool can read or edit one
+  of those scripts while Please Behave is reconciling the hooks.
+decision: >-
+  Explicit synchronization and direct runs that require hook reconciliation
+  use the same plan, approval, application and verification sequence. The plan
+  captures the old and desired file contents and permissions. After approval,
+  reconciliation stages all replacements before applying changes and rechecks
+  the expected state before touching each hook. Each replacement is atomic at
+  the file level. If application or verification fails, reconciliation attempts
+  to restore the hooks it changed and preserves intervening edits it detects.
+rationale: >-
+  Staging prevents a failure while preparing one replacement from leaving
+  several hooks partly updated. Atomic replacement keeps each script readable
+  in full. Git uses separate live hook files, so the sequence offers best-effort
+  recovery across files and leaves a race between each state check and write.

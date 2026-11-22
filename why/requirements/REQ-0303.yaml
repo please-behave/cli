@@ -6,3 +6,5 @@ description: >-
   already changed and must report each one it could not restore.
 rationale: >-
   A failure halfway must not leave some hooks edited with no way back.
+decisions:
+  - DEC-0034

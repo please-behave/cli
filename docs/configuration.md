@@ -438,7 +438,7 @@ To run a review only for relevant changes, add this to its `rule.toml`:
 
 ```toml
 [review.trigger]
-changed_files = ["src/**", "docs/design.md", ".please/reviews/architecture/prompt.md"]
+changed_files = ["src/**", "why/decisions/**", ".please/reviews/architecture/prompt.md"]
 ```
 
 Patterns match consumer-repository paths, including imported reviews. Matching

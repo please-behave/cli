@@ -8,3 +8,5 @@ description: >-
 rationale: >-
   A hook that somebody else edited between the plan and the write is never
   overwritten on stale assumptions.
+decisions:
+  - DEC-0034

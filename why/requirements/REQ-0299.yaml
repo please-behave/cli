@@ -10,3 +10,5 @@ description: >-
 rationale: >-
   Local use keeps the hooks current without a separate step, while CI and
   custom points stay free of hook handling.
+decisions:
+  - DEC-0034

@@ -1,0 +1,17 @@
+id: DEC-0035
+name: External Imports Are Materialized With Git Plumbing
+context: >-
+  Synchronization needs the contents of a resolved Git commit to validate
+  imported rule sets and adapter profiles. A normal working-tree checkout can
+  involve hooks, locally configured filters and repositories outside the
+  selected commit.
+decision: >-
+  Please Behave uses host Git for retrieval and extracts the resolved commit
+  from a bare object cache through Git plumbing with an isolated index and
+  destination. Extraction disables system and user Git configuration, runs
+  no checkout hooks and rejects trees containing submodules.
+rationale: >-
+  The host handles authentication during retrieval. Isolating extraction keeps
+  synchronization a data operation and prevents user-configured filters from
+  transforming imported definitions or running during extraction. Rejecting
+  submodules prevents synchronization from publishing a partial revision.

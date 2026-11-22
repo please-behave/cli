@@ -7,3 +7,5 @@ description: >-
 rationale: >-
   Refreshing an import must not run anything, so synchronization stays a pure
   data operation.
+decisions:
+  - DEC-0035
