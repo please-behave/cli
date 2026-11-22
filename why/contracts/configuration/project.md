@@ -13,9 +13,10 @@ All governance configuration shares the compatibility version in [api.yaml](api.
 including project settings, Rules, Rule Sets, adapter profile declarations and imports.
 Separate TOML documents do not have separate API versions. Version 0 is experimental
 under [DEC-0026](../../decisions/DEC-0026.yaml), independently of CLI releases.
-The API version is contract metadata: configuration declares no version field.
-Adding `version` or `schema_version` is an unknown-field error, not a request for
-another parser. No version negotiation or fallback interpretation occurs.
+The API version is contract metadata. The project document rejects `version`
+and `schema_version` as unknown fields. The optional [rule version](rule.md#rule-version)
+describes the rule itself. Configuration parsing uses a single interpretation
+without version negotiation.
 
 The schema describes TOML's strings, booleans, integers, arrays and tables using
 JSON types. TOML parsing and semantic validation remain necessary: null is not a

@@ -68,6 +68,7 @@ pub fn init(root: &Path) -> Result<usize> {
     let check = |id: &str, description: &str, enabled: bool| -> Result<String> {
         Ok(toml::to_string(&RuleDefinition {
             id: id.into(),
+            version: None,
             depends_on: None,
             name: None,
             description: description.into(),
@@ -87,6 +88,7 @@ pub fn init(root: &Path) -> Result<usize> {
     };
     let review = RuleDefinition {
         id: "product-consistency".into(),
+        version: None,
         depends_on: None,
         name: None,
         description: "Evaluate behavior against documented expectations".into(),

@@ -348,6 +348,7 @@ mod tests {
         Check {
             depends_on: vec![],
             id: id.into(),
+            version: None,
             name: id.into(),
             description: id.into(),
             enabled: true,

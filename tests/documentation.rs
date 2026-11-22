@@ -311,6 +311,62 @@ fn rule_schema_preserves_common_structure_and_implementation_exclusivity() {
 }
 
 #[test]
+fn rule_version_contract_matches_local_loading() {
+    // REQ-0351: optional versions are retained, and invalid values identify the rule.
+    let root = project();
+    let validator = support::rule_contract_validator();
+    let path = ".please/checks/source-directory/rule.toml";
+    let max_length = format!("'{}.0'", "9".repeat(62));
+    let too_long = format!("'{}.0'", "9".repeat(63));
+    for (literal, valid) in [
+        (None, true),
+        (Some("'1.0'"), true),
+        (Some("'1.10'"), true),
+        (Some("'0.3'"), true),
+        (Some(&max_length), true),
+        (Some("'1'"), false),
+        (Some("'1.0.0'"), false),
+        (Some("'01.1'"), false),
+        (Some("'1.01'"), false),
+        (Some("1.10"), false),
+        (Some("''"), false),
+        (Some(r#""1.0\n""#), false),
+        (Some("'1.٠'"), false),
+        (Some(&too_long), false),
+    ] {
+        let mut text =
+            "id = 'versioned-check'\ndescription = 'Check'\nenabled = false\n".to_owned();
+        if let Some(literal) = literal {
+            text.push_str(&format!("version = {literal}\n"));
+        }
+        text.push_str("[check]\ncommand = 'true'\n");
+        let parsed: toml::Value = toml::from_str(&text).unwrap();
+        let expected = parsed.get("version").and_then(toml::Value::as_str);
+        assert_eq!(
+            validator.is_valid(&serde_json::to_value(&parsed).unwrap()),
+            valid,
+            "schema: {literal:?}"
+        );
+        support::write(root.path(), path, &text);
+        let loaded = config::load(root.path());
+        if valid {
+            let project = loaded.unwrap();
+            let check = project
+                .checks
+                .iter()
+                .find(|check| check.id == "versioned-check")
+                .unwrap();
+            assert_eq!(check.version.as_deref(), expected);
+        } else {
+            let error = format!("{:#}", loaded.unwrap_err());
+            assert!(error.contains(path), "{error}");
+            assert!(error.contains("rule \"versioned-check\""), "{error}");
+            assert!(error.contains("version must be a string"), "{error}");
+        }
+    }
+}
+
+#[test]
 fn parameter_schema_keeps_declaration_loading_and_resolution_separate() {
     let root = project();
     support::write(root.path(), "scopes.txt", "cli\n");

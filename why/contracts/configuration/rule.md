@@ -4,8 +4,8 @@ Producer: a local or imported Rule author. Consumer: Please Behave.
 [rule.schema.json](rule.schema.json) defines the shared fields and the structure
 of the check and review implementation tables. It references the
 [parameter declarations schema](parameters.schema.json). These contracts share
-the Governance Configuration API version in [api.yaml](api.yaml), with no version
-field in `rule.toml`. [Discovery](discovery.md) defines locations and safe resources.
+the Governance Configuration API version in [api.yaml](api.yaml).
+[Discovery](discovery.md) defines locations and safe resources.
 
 ## One definition, one implementation
 
@@ -39,6 +39,20 @@ are distinguished by an origin suffix and an occurrence number when still needed
 Plans and reports retain labels and provenance so saved status remains readable
 after configuration changes. `description` explains the expectation and must be
 nonblank and contain no NUL.
+
+## Rule version
+
+The rule owner may declare `version` as a TOML string of at most 64 characters
+in `A.B` form. Each component is a non-negative decimal integer written with
+ASCII digits and no leading zeros, except for zero itself. Versions compare
+numerically by A, then by B. A signals a fundamental change and B any other
+change, as defined by [the owner-assigned rule version decision](https://github.com/please-behave/why/blob/main/why/decisions/DEC-0011.yaml).
+
+The loader retains the value for both checks and reviews, including imported
+rules. An omitted field means the rule is unversioned. An invalid value is a
+configuration error that identifies the rule, including when it is disabled.
+The field records the rule owner's version and has no effect on configuration
+API compatibility or rule execution.
 
 ## Enabled state, enforcement and assignment
 

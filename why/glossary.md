@@ -11,6 +11,7 @@ behavior.
 | [Rule](#rule) | A named expectation, implemented as a check or a review. |
 | [Rule ID](#rule-id) | The identifier of a rule within its source. |
 | [Rule Identity](#rule-identity) | The complete identifier of a rule within a run. |
+| [Rule Version](#rule-version) | An optional A.B label assigned by the rule owner. |
 | [Check](#check) | A deterministic rule that runs a command. |
 | [Review](#review) | A rule that asks an AI to judge the project. |
 | [Rule Set](#rule-set) | A named group of rules with shared execution points. |
@@ -47,6 +48,13 @@ the ID alone does not distinguish which import supplies it.
 A rule identity identifies a [rule](#rule) within a run. It is the rule ID for
 a local rule and the binding-qualified rule ID for an imported rule, so rules from
 different imports remain distinguishable in references, plans and reports.
+
+## Rule Version
+
+A rule version is an optional A.B label that the [rule](#rule) owner declares in
+the [rule definition](contracts/configuration/rule.md#rule-version). A signals a
+fundamental change and B any other change. The label communicates the owner's
+judgment about the change. It carries no guarantee of reproducible behavior.
 
 ## Check
 

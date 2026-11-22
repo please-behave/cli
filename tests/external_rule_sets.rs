@@ -211,6 +211,62 @@ custom = []
     }
 }
 #[test]
+fn imported_rule_versions_come_from_the_source_definitions() {
+    // REQ-0351: a resolved import preserves source versions in both rule kinds.
+    let f = Fixture::new();
+    let check_path = "repository/checks/required-files/rule.toml";
+    let check = fs::read_to_string(f.remote.join(check_path)).unwrap();
+    write(&f.remote, check_path, &format!("version = '1.10'\n{check}"));
+    write(
+        &f.remote,
+        "repository/reviews/advisory/rule.toml",
+        "id = 'versioned-review'\ndescription = 'Review'\nversion = '0.3'\nenabled = false\n[review]\nprompt = 'prompt.md'\n",
+    );
+    let set_path = "repository/ruleset.toml";
+    let set = fs::read_to_string(f.remote.join(set_path)).unwrap();
+    write(
+        &f.remote,
+        set_path,
+        &set.replace(
+            "'repository/checks/required-files'",
+            "'repository/checks/required-files', 'repository/reviews/advisory'",
+        ),
+    );
+    let revision = commit(&f.remote);
+    let unversioned = git(&f.remote, &["rev-parse", "HEAD^"]);
+    f.imports(&[("repository", &revision), ("software", &unversioned)]);
+
+    for refresh in [true, false] {
+        let project = f.load(refresh).unwrap();
+        let check_version = |suffix: &str| {
+            project
+                .checks
+                .iter()
+                .find(|check| check.id.ends_with(suffix))
+                .unwrap()
+                .version
+                .as_deref()
+        };
+        assert_eq!(check_version(":repository:1:required-files"), Some("1.10"));
+        assert_eq!(check_version(":software:1:required-files"), None);
+        let review = project
+            .reviews
+            .iter()
+            .find(|review| review.id.ends_with(":versioned-review"))
+            .unwrap();
+        assert_eq!(review.version.as_deref(), Some("0.3"));
+    }
+
+    write(&f.remote, check_path, &format!("version = 1.10\n{check}"));
+    let invalid = commit(&f.remote);
+    f.imports(&[("repository", &invalid)]);
+    let error = format!("{:#}", f.load(true).unwrap_err());
+    assert!(error.contains(check_path), "{error}");
+    assert!(error.contains("rule \"required-files\""), "{error}");
+    assert!(error.contains("version must be a string"), "{error}");
+}
+
+#[test]
 fn resolution_state_accepts_zero_and_one_without_refresh_or_fallback() {
     // REQ-0331: existing cached imports retain strict validation under either version label.
     let f = Fixture::new();

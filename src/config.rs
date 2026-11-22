@@ -179,6 +179,8 @@ pub struct Check {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub resource: Option<String>,
     pub id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub version: Option<String>,
     pub name: String,
     pub description: String,
     pub enabled: bool,
@@ -197,6 +199,8 @@ pub struct Review {
     pub trigger: Option<ReviewTrigger>,
     pub adapter: Option<String>,
     pub id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub version: Option<String>,
     pub name: String,
     pub description: String,
     pub enabled: bool,
@@ -224,6 +228,9 @@ pub struct RuleDefinition {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub depends_on: Option<Vec<String>>,
     pub id: String,
+    // Retain the TOML type so discovery can diagnose invalid values with the rule ID.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub version: Option<toml::Value>,
     pub name: Option<String>,
     pub description: String,
     #[serde(default = "default_true")]

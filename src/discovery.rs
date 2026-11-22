@@ -296,6 +296,22 @@ fn load_rules(
         );
         let path = dir.join("rule.toml");
         let rule: RuleDefinition = document(root, &path)?;
+        let version = rule
+            .version
+            .as_ref()
+            .map(|value| {
+                value
+                    .as_str()
+                    .filter(|version| valid_rule_version(version))
+                    .map(str::to_owned)
+                    .with_context(|| {
+                        format!(
+                            "{}: rule {:?}: version must be a string in A.B form with no leading zeros and at most {MAX_RULE_VERSION_CHARS} characters",
+                            path.display(), rule.id
+                        )
+                    })
+            })
+            .transpose()?;
         let name = rule.name.unwrap_or_else(|| rule.id.clone());
         ensure!(
             !name.is_empty()
@@ -343,6 +359,7 @@ fn load_rules(
                             .collect(),
                         resource: check.resource,
                         id: rule.id.clone(),
+                        version,
                         name,
                         description: rule.description,
                         enabled: rule.enabled,
@@ -392,6 +409,7 @@ fn load_rules(
                         adapter: review.adapter,
                         adapter_parameters: review.parameters,
                         id: rule.id.clone(),
+                        version,
                         name,
                         description: rule.description,
                         enabled: rule.enabled,
@@ -416,4 +434,15 @@ fn load_rules(
         );
     }
     Ok(loaded)
+}
+
+fn valid_rule_version(version: &str) -> bool {
+    version.len() <= MAX_RULE_VERSION_CHARS
+        && version.split_once('.').is_some_and(|(major, minor)| {
+            [major, minor].into_iter().all(|part| {
+                !part.is_empty()
+                    && (part == "0" || !part.starts_with('0'))
+                    && part.bytes().all(|digit| digit.is_ascii_digit())
+            })
+        })
 }

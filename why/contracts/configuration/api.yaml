@@ -70,6 +70,7 @@ contracts:
       - REQ-0285
       - REQ-0327
       - REQ-0328
+      - REQ-0351
   - id: CON-0013
     name: Rule Parameters
     document: parameters.md

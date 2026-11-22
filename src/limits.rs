@@ -9,6 +9,7 @@ pub const MAX_TIMEOUT_SECONDS: u64 = 3600;
 pub const MAX_DISPLAY_FILES: usize = 5;
 pub const MAX_RULES: usize = 256;
 pub const MAX_RULE_NAME_CHARS: usize = 80;
+pub const MAX_RULE_VERSION_CHARS: usize = 64;
 pub const MAX_ID_BYTES: usize = 80;
 pub const MAX_TRIGGER_PATTERNS: usize = 64;
 pub const MAX_TRIGGER_PATTERN_BYTES: usize = 1024;

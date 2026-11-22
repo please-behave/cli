@@ -1,0 +1,14 @@
+id: REQ-0351
+name: Rule Definitions Accept An Owner-Assigned Version
+area: rules
+description: >-
+  Local and imported checks and reviews may declare a version in their rule
+  definition. The loader must retain a valid version string as defined by the
+  Rule Definition contract and treat an omitted version as unversioned.
+  Invalid values must cause a configuration error that identifies the rule,
+  even when the rule is disabled.
+rationale: >-
+  Rule owners can communicate the significance of a change while existing
+  unversioned rules remain valid.
+decisions:
+  - why:DEC-0011
