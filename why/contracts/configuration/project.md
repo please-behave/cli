@@ -64,7 +64,7 @@ CANCELLED results and partial output under the [Report API](../report/document.m
 Checks that share mutable state use the same `check.resource` declaration; resource
 names coordinate checks within an invocation, including imports, rather than
 locking other Please invocations. Rule-level declarations follow the
-[check reference](../../../docs/configuration.md#add-a-check).
+[check reference](https://github.com/please-behave/docs/blob/main/src/configuration.md#add-a-check).
 
 ## Run context settings
 
@@ -114,5 +114,5 @@ adapter profile packages; these imports select no Rules or execution points. Bot
 are empty by default; Please adds no implicit sources or adapter profiles. Their fields
 are represented in the project schema, with source selection, parameter binding,
 authentication, integrity and refresh semantics defined by the
-[Rule Set import reference](../../../docs/configuration.md#import-rule-sets-from-git)
-and [adapter profile import reference](../../../docs/configuration.md#import-adapter-profiles-from-git).
+[Rule Set import reference](https://github.com/please-behave/docs/blob/main/src/external-rule-sets.md#import-rule-sets)
+and [adapter profile import reference](https://github.com/please-behave/docs/blob/main/src/external-rule-sets.md#independent-profile-packages).

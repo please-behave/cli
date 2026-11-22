@@ -41,8 +41,8 @@ code to know what the product promises.
   Wording such as "must" marks it as binding; vague wording such as "fast" or
   "robust" is not a requirement.
 - **Stated once.** A fact that another source already defines, such as a default
-  or a limit in the [configuration reference](../../docs/configuration.md) or an
-  exit code in the [usage guide](../../docs/usage.md), is referred to, not copied, so the two cannot drift apart.
+  or a limit in the [configuration reference](https://github.com/please-behave/docs/blob/main/src/configuration.md) or an
+  exit code in the [usage guide](https://github.com/please-behave/docs/blob/main/src/running-rules.md#exit-codes), is referred to, not copied, so the two cannot drift apart.
 - **Significant.** A requirement is worth keeping when it is durable, so that it
   stays true after a refactoring, visible from outside the product, and
   justified in one sentence. A statement that follows from other requirements,

@@ -4,8 +4,8 @@
 
 - `why/` is the source of truth for product behavior, responsibilities and decisions. Read `why/README.md` and the artifacts relevant to the task before implementation. Consult the central Why repository (https://github.com/please-behave/why) for purpose, principles and direction. The imported `why` ruleset validates the artifacts against the standard and the links against `why/repositories.yaml`; declare a repository there before linking it.
 - Define the contract and acceptance criteria before changing behavior. If Why artifacts conflict or code differs from them, investigate before proceeding. Ask the owner whether to correct the Why or track the required implementation in an issue; never silently redefine behavior.
-- Every change includes a targeted consistency review of affected Why artifacts, code, tests, configuration and user documentation. Update affected artifacts and examples in the same change.
-- README stays a concise entry point; user documentation explains usage and never overrides the Why. Follow DEC-0026 for format versioning.
+- Every change includes a targeted consistency review of affected Why artifacts, code, tests, configuration and user documentation. Update affected artifacts in the same change; changes to user documentation or examples belong to the documentation repository.
+- README stays a concise entry point; the user documentation and examples live in the documentation repository (https://github.com/please-behave/docs), explain usage and never override the Why. Follow DEC-0026 for format versioning.
 
 ## GitHub issues
 

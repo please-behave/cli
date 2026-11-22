@@ -31,12 +31,12 @@ are data: Please never interprets them as governance configuration. Arbitrary or
 nested files cannot introduce extra definitions.
 
 Explicit Git imports select source directories under the
-[external Rule Set reference](../../../docs/external-rule-sets.md). Each selected
+[external Rule Set reference](https://github.com/please-behave/docs/blob/main/src/external-rule-sets.md). Each selected
 directory defines exactly one Rule Set in its `ruleset.toml`, with optional named
 adapter profiles in `adapters/*.toml` beside it; a directory without
 `ruleset.toml` fails validation. Imports do not extend local recursive
 discovery. Named adapter profile packages follow the
-[independent adapter profile import reference](../../../docs/configuration.md#import-adapter-profiles-from-git).
+[independent adapter profile import reference](https://github.com/please-behave/docs/blob/main/src/external-rule-sets.md#independent-profile-packages).
 These definitions belong to this same configuration compatibility boundary.
 
 ## Documents and safe resources
@@ -67,7 +67,7 @@ is a configuration error that prevents success even when the review is advisory.
 Executables, credentials and adapter profile requirements are late provider
 prerequisites, checked only when their Rule runs; they are ordinary ERROR and
 no configuration error. Detailed Rule, adapter profile and import validation follows the
-[configuration reference](../../../docs/configuration.md).
+[configuration reference](https://github.com/please-behave/docs/blob/main/src/configuration.md).
 
 ## Validation and reconciliation
 

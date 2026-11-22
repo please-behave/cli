@@ -143,6 +143,13 @@ from staged or pushed commits.
 For GitHub Actions integration, see
 [please-behave/action](https://github.com/please-behave/action).
 
+## Documentation
+
+The [published documentation](https://github.com/please-behave/docs) covers
+configuration, running rules, Git hooks, adapters, external Rule Sets and the
+examples. The [CLI chapter](https://github.com/please-behave/docs/blob/main/src/cli.md)
+is the starting point.
+
 ## Build locally
 
 Building from source requires Git, Rust/Cargo and a native compiler/linker.

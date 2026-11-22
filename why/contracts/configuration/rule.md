@@ -19,8 +19,8 @@ optional field is not an explicit null configuration value.
 
 The check and review table structures participate in the same configuration API.
 Their command, resource, prompt, adapter profile, trigger and context semantics are defined
-by the [check reference](../../../docs/configuration.md#add-a-check) and
-[review reference](../../../docs/configuration.md#add-a-review). Structural schema
+by the [check reference](https://github.com/please-behave/docs/blob/main/src/configuration.md#add-a-check) and
+[review reference](https://github.com/please-behave/docs/blob/main/src/configuration.md#add-a-review). Structural schema
 validation alone does not validate a command grammar, file path, trigger or evidence.
 
 ## Identity and labels
@@ -65,7 +65,7 @@ canonical ordering. Assignments select a Rule without changing its properties.
 `depends_on` is check-only and absent means no prerequisites. Reviews must not
 declare it, including an empty array. Check dependencies resolve within the
 selected checks; they never select extra Rules. Detailed resolution and execution
-follow the [dependency reference](../../../docs/configuration.md#fields-shared-by-checks-and-reviews)
+follow the [dependency reference](https://github.com/please-behave/docs/blob/main/src/configuration.md#dependencies)
 and the prepared-plan and report contracts.
 
 `parameters` declares named Rule inputs under the

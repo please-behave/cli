@@ -2,7 +2,7 @@
 
 The terms Please Behave uses with a specific meaning. Each entry explains the
 concept and how it differs from its neighbors; the
-[configuration reference](../docs/configuration.md) holds fields, defaults and
+[configuration reference](https://github.com/please-behave/docs/blob/main/src/configuration.md) holds fields, defaults and
 behavior.
 
 | Term | In short |
@@ -126,4 +126,4 @@ An external source is a Git repository, pinned to a revision, from which a
 project imports [rule sets](#rule-set) or [adapter profiles](#adapter-profile) instead of
 defining them locally. This lets several projects share the same governance.
 Imports are fetched on `please sync` and verified before use. See
-[external rule sets](../docs/external-rule-sets.md).
+[external rule sets](https://github.com/please-behave/docs/blob/main/src/external-rule-sets.md).

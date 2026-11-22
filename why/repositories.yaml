@@ -6,6 +6,8 @@ linked:
     source: github:please-behave/action
   - alias: catalog
     source: github:christianpflugradt/repository-catalog
+  - alias: docs
+    source: github:please-behave/docs
   - alias: gateway
     source: github:please-behave/gateway
   - alias: why
