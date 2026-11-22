@@ -99,9 +99,9 @@ class ReleaseTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 set_version("3.0.0", root)
 
-    # REQ-0315: the release matrix builds a native executable for each target that the release documentation lists.
+    # REQ-0315: the release matrix builds a native executable for each target that the requirement lists.
     def test_native_matrix_and_archive_contract_cover_the_same_platforms(self):
-        documented = re.findall(r"^\| [^|]+ \| `([^`]+)` \|", (ROOT / "docs/releasing.md").read_text(), flags=re.M)
+        documented = re.findall(r"\(`([a-z0-9_-]+)`\)", (ROOT / "why/requirements/REQ-0315.yaml").read_text())
         self.assertEqual(set(documented), set(TARGETS))
         self.assertEqual(len(documented), len(TARGETS))
         workflow = (ROOT / ".github/workflows/release.yml").read_text()

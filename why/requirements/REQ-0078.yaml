@@ -10,5 +10,5 @@ rationale: >-
   cannot be kept.
 test_exemption: >-
   The rejection is compiled only for targets without Unix process groups
-  (src/config.rs), and every released platform is macOS or Linux
-  (docs/releasing.md), so no supported runner can reach it.
+  (src/config.rs), and every released platform is macOS or Linux (REQ-0315),
+  so no supported runner can reach it.

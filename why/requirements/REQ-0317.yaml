@@ -2,9 +2,9 @@ id: REQ-0317
 name: Release Archive Layout
 area: distribution
 description: >-
-  Each release archive must be named by the version and the target as the
-  release documentation defines and must contain one directory of the same
-  name with the `please` executable, the README and the license.
+  Each release archive must be named `please-vVERSION-TARGET.tar.gz` and must
+  contain one directory of the same name with the `please` executable, the
+  README and the license.
 rationale: >-
   Installers and automation can find the right archive and its content without
   guessing.

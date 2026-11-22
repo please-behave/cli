@@ -2,8 +2,8 @@ id: REQ-0318
 name: Release Checksums
 area: distribution
 description: >-
-  Each release must publish a checksum file, as the release documentation defines it, that
-  covers all of its archives.
+  Each release must publish a checksum file named `SHA256SUMS` that lists the
+  SHA-256 checksum of each of its archives in the format of `sha256sum`.
 rationale: >-
   Users can verify that what they downloaded is what was published.
 test_exemption: >-

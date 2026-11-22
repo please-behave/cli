@@ -2,7 +2,11 @@ id: REQ-0315
 name: Release Platforms
 area: distribution
 description: >-
-  Please must be released as native executables for each target platform that
-  the release documentation lists.
+  Please must be released as native executables for macOS on Apple Silicon
+  (`aarch64-apple-darwin`) and Intel (`x86_64-apple-darwin`) and for Linux with
+  glibc on x64 (`x86_64-unknown-linux-gnu`) and ARM64
+  (`aarch64-unknown-linux-gnu`). Windows is not released, and the Linux
+  executables are neither static musl builds nor promised to run on older glibc
+  systems.
 rationale: >-
   Users install a single binary on their platform without a toolchain.
