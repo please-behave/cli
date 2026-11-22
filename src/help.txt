@@ -2,13 +2,14 @@
 {usage-heading} {usage}
 
 Commands:
-  init     Initialize a new .please/ configuration once
-  sync     Validate configuration and synchronize declared state (--yes)
-  trust    Trust a Git repository for imports (--remove, --list)
-  run      Execute rules (--at, --plan; --checks-only: deterministic checks only)
-  status   Show the last saved report (--details for full findings)
-  publish  Send an attestation from the newest current report
-  help     Show help
+  init      Initialize a new .please/ configuration once
+  sync      Validate configuration and synchronize declared state (--yes)
+  trust     Trust a Git repository for imports (--remove, --list)
+  run       Execute rules (--at, --plan; --checks-only: deterministic checks only)
+  status    Show the last saved report (--details for full findings)
+  publish   Send an attestation from the newest current report
+  register  Register committed local rule versions with the gateway
+  help      Show help
 
 Options:
 {options}

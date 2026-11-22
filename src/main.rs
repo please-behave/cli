@@ -267,6 +267,12 @@ fn execute(cli: Cli) -> Result<i32> {
             );
             Ok(0)
         }
+        Words::Register { gateway_url } => {
+            please::register::send(&root, &gateway_url, |message| {
+                println!("{}", terminal::clean(message));
+            })?;
+            Ok(0)
+        }
         Words::Help => {
             print!(
                 "{}",

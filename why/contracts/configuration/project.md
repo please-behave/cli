@@ -87,13 +87,14 @@ The [Report API](../report/document.md) defines numbering and removal.
 
 ## Publish settings
 
-The optional `[publish]` table enables the explicit `please publish` command.
-The [Report API](../report/document.md#publishing-evidence) defines the
-required `--gateway-url` command line argument. A `gateway_url` entry in this
+The optional `[publish]` table supplies settings for
+[`please publish`](../report/document.md#publishing-evidence) and
+[`please register`](../report/registration.md). Both commands take the required
+`--gateway-url` argument on the command line. A `gateway_url` entry in this
 table is rejected as an unknown field.
 `key_env` names the environment variable that supplies the bearer credential.
 The variable is read only for delivery. An optional `repository` supplies the
-exact attestation repository identity, overriding derivation from Git's
+exact repository identity, overriding derivation from Git's
 `origin` remote. Changing these fields changes a governed file and requires a
 new run before publication.
 

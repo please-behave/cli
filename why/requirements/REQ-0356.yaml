@@ -1,0 +1,16 @@
+id: REQ-0356
+name: Registration Uses Committed Local Rule Files
+area: reporting
+description: >-
+  Please must prepare one batch for every rule directory in the source repository,
+  including disabled rules. The batch must identify the current commit and contain
+  only the metadata covered by the canonical rule digest. Missing versions,
+  missing knowledge documents or rule files that differ from the commit must
+  fail with the affected rule identified before any batch is sent.
+rationale: >-
+  Registration provenance ties the displayed rule version to committed source material.
+decisions:
+  - why:DEC-0010
+  - why:DEC-0011
+  - why:DEC-0012
+  - why:DEC-0014

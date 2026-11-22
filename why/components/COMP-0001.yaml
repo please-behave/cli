@@ -1,12 +1,12 @@
 id: COMP-0001
 name: Command Line Interface
 purpose: >-
-  Exposes the seven commands as the `please` executable and maps their outcomes
+  Exposes the commands as the `please` executable and maps their outcomes
   to exit codes and output streams.
 scope:
   - >-
     Parses arguments and shows help for the commands init, sync, trust, run,
-    status, publish and help.
+    status, publish, register and help.
   - >-
     Dispatches each command to the component that does the work and prints the
     outcome.
@@ -70,3 +70,4 @@ requirements:
   - REQ-0295
   - REQ-0345
   - REQ-0350
+  - REQ-0355

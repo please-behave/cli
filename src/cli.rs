@@ -103,6 +103,11 @@ pub enum Words {
         )]
         gateway_url: String,
     },
+    /// Register committed local rule versions with the gateway.
+    Register {
+        #[arg(long, value_name = "URL", help = "HTTP or HTTPS origin of the gateway")]
+        gateway_url: String,
+    },
     /// Show help.
     Help,
 }

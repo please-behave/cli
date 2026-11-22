@@ -39,7 +39,9 @@ pub fn render_help(text: &str, color: bool) -> String {
     for heading in ["Commands:", "Options:", "Usage:"] {
         output = output.replace(heading, &paint(heading, Tone::Heading, true));
     }
-    for phrase in ["init", "sync", "trust", "run", "status", "publish", "help"] {
+    for phrase in [
+        "init", "sync", "trust", "run", "status", "publish", "register", "help",
+    ] {
         output = output.replace(
             &format!("  {phrase}"),
             &format!("  {}", paint(phrase, Tone::Accent, true)),

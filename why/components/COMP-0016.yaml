@@ -1,10 +1,11 @@
 id: COMP-0016
-name: Attestation Publishing
+name: Gateway Delivery
 purpose: >-
-  Delivers a projection of current saved evidence to the configured gateway.
+  Delivers saved verification evidence and committed rule registrations to the gateway.
 scope:
   - Selects the newest saved report and checks its eligibility for delivery.
   - Projects the attestation and derives the remote repository identity.
+  - Prepares committed local rule registrations and checks the receipt against their canonical digests.
   - Authenticates the request and maps the delivery outcome to a diagnostic.
 out_of_scope:
   - description: Calculating and persisting the verification verdict.
@@ -15,8 +16,11 @@ must_not:
   - Modify the report or include captured evidence and secrets in diagnostics.
 files:
   - src/publish.rs
+  - src/gateway.rs
+  - src/register.rs
 depends_on:
   - COMP-0003
+  - COMP-0008
   - COMP-0011
   - COMP-0014
 requirements:
@@ -26,3 +30,6 @@ requirements:
   - REQ-0348
   - REQ-0349
   - REQ-0350
+  - REQ-0355
+  - REQ-0356
+  - REQ-0357

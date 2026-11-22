@@ -1,15 +1,12 @@
 //! Projects saved verification evidence onto the gateway ingest contract.
 use crate::{
-    config::{self, Config},
-    discovery, git_snapshot,
+    gateway, git_snapshot,
     report::{self, Item, Report, Status},
-    repository_identity,
     rule_digest::RuleMetadata,
 };
 use anyhow::{Context, Result, bail, ensure};
 use serde::Serialize;
-use std::{path::Path, time::Duration};
-use ureq::http::{HeaderValue, Uri};
+use std::path::Path;
 
 #[derive(Serialize)]
 struct Attestation<'a> {
@@ -91,32 +88,8 @@ fn attestation<'a>(report: &'a Report, repository: &'a str, commit: &'a str) -> 
     }
 }
 
-fn gateway_endpoint(gateway_url: &str) -> Result<Uri> {
-    let invalid_url = "--gateway-url must be an HTTP or HTTPS origin without credentials, a path, query or fragment";
-    let base: Uri = gateway_url
-        .parse()
-        .map_err(|_| anyhow::anyhow!(invalid_url))?;
-    let scheme = base.scheme().context(invalid_url)?;
-    let authority = base.authority().context(invalid_url)?;
-    let host = authority.host();
-    ensure!(
-        matches!(scheme.as_str(), "http" | "https")
-            && !gateway_url.contains(['?', '#', '@'])
-            && base.path() == "/"
-            && !host.is_empty()
-            && (authority.as_str() == host || authority.port_u16().is_some()),
-        "{invalid_url}"
-    );
-    Uri::builder()
-        .scheme(scheme.clone())
-        .authority(authority.clone())
-        .path_and_query("/v0/attestations")
-        .build()
-        .map_err(|_| anyhow::anyhow!(invalid_url))
-}
-
 pub fn send(root: &Path, gateway_url: &str) -> Result<()> {
-    let endpoint = gateway_endpoint(gateway_url)?;
+    let endpoint = gateway::endpoint(gateway_url, "/v0/attestations")?;
     git_snapshot::require_root(root)?;
     let number = report::saved(root)?
         .last()
@@ -131,9 +104,7 @@ pub fn send(root: &Path, gateway_url: &str) -> Result<()> {
         .filter(|head| !head.is_empty())
         .context("saved report has no commit; create a commit and run please run again")?;
 
-    let config = discovery::document::<Config>(root, &config::path("config.toml")).map_err(|_| {
-        anyhow::anyhow!("cannot read .please/config.toml; check the project configuration")
-    });
+    let settings = gateway::settings(root);
     let (changes, _) = git_snapshot::compare_current(
         root,
         &report.snapshot,
@@ -148,40 +119,12 @@ pub fn send(root: &Path, gateway_url: &str) -> Result<()> {
         changes.state
     );
 
-    let settings = config?
-        .publish
-        .context("configure [publish] in .please/config.toml")?;
-    settings.validate()?;
-    let repository = settings.repository.or_else(|| repository_identity::read_origin(root))
-        .context("cannot determine repository identity; set a network Git remote named origin or publish.repository")?;
-
-    let key = std::env::var(&settings.key_env)
-        .ok()
-        .filter(|key| !key.trim().is_empty())
-        .context("publish API key environment variable is unset, empty or invalid; check publish.key_env")?;
-    ensure!(
-        key.bytes().all(|byte| byte.is_ascii_graphic()),
-        "publish API key is invalid"
-    );
-    let mut authorization = HeaderValue::from_str(&format!("Bearer {key}"))
-        .map_err(|_| anyhow::anyhow!("publish API key is invalid"))?;
-    authorization.set_sensitive(true);
+    let settings = settings?;
+    let repository = gateway::repository(root, &settings)?;
+    let authorization = gateway::authorization(&settings.key_env)?;
     let body = serde_json::to_vec(&attestation(&report, &repository, commit))?;
 
-    let agent = ureq::Agent::config_builder()
-        .timeout_global(Some(Duration::from_secs(30)))
-        .max_redirects(0)
-        .http_status_as_error(false)
-        .build()
-        .new_agent();
-    let response = agent
-        .post(endpoint)
-        .header("Authorization", authorization)
-        .header("Content-Type", "application/json")
-        .send(body.as_slice())
-        .map_err(|_| {
-            anyhow::anyhow!("could not reach the attestation gateway or receive its response")
-        })?;
+    let response = gateway::post(endpoint, authorization, &body, "attestation")?;
     match response.status().as_u16() {
         201 => Ok(()),
         401 | 403 => bail!("attestation gateway rejected the API credentials"),

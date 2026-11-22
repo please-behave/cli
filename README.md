@@ -116,6 +116,7 @@ run the same rules.
 | `please run` | Run selected rules and save their results. |
 | `please status` | Inspect the newest report, or one chosen with `--report <number>`, and its freshness. |
 | `please publish --gateway-url <URL>` | Send an attestation from the newest current report to the specified gateway. |
+| `please register --gateway-url <URL>` | Register committed rule versions from their source repository. |
 | `please help` | Show commands and options. |
 
 `run` uses the `pre-push` execution point by default. Preview its selection

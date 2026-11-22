@@ -1,0 +1,14 @@
+id: REQ-0357
+name: Registration Checks Every Gateway Outcome
+area: reporting
+description: >-
+  Please must report the outcome for each rule in the registration receipt and
+  compare its returned digest with the canonical digest of the submitted
+  metadata. A conflict or unequal digest must fail the command. A conflict must
+  explain that the content changed without a new version. Gateway rejection and
+  transport failures must produce distinct diagnostics.
+rationale: >-
+  Rule owners can identify unsuccessful registrations and see which rules
+  were accepted in the same batch.
+decisions:
+  - why:DEC-0012

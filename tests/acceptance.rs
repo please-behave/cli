@@ -484,6 +484,7 @@ fn all_command_paths_and_standard_help() {
         "run",
         "status",
         "publish --gateway-url https://gateway.example.invalid",
+        "register --gateway-url https://gateway.example.invalid",
         "help",
     ] {
         let argv: Vec<_> = std::iter::once("please")
@@ -1464,9 +1465,11 @@ fn help_lists_only_supported_commands_without_redundant_examples() {
             .lines()
             .filter(|line| !line.trim().is_empty())
             .collect();
-        let phrases = ["init", "sync", "trust", "run", "status", "publish", "help"];
+        let phrases = [
+            "init", "sync", "trust", "run", "status", "publish", "register", "help",
+        ];
         assert_eq!(rows.len(), phrases.len());
-        assert_eq!(rows.last(), Some(&"  help     Show help"));
+        assert_eq!(rows.last(), Some(&"  help      Show help"));
         for (row, phrase) in rows.iter().zip(phrases) {
             let description = row.trim_start().strip_prefix(phrase).unwrap();
             assert!(description.starts_with("  "));

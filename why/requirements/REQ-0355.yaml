@@ -1,0 +1,13 @@
+id: REQ-0355
+name: Rule Version Registration Is Explicit
+area: reporting
+description: >-
+  Please must register rule versions only through the explicit register command.
+  It must require a gateway origin for every invocation, read the bearer
+  credential from the environment variable named by publish.key_env and honor
+  the publish.repository override. It must never follow redirects or expose
+  credentials or URL details beyond the origin in diagnostics.
+rationale: >-
+  Rule owners control when they submit source metadata and where they send it.
+decisions:
+  - why:DEC-0012

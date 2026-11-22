@@ -14,6 +14,13 @@ use std::{
 
 const KEY_NAME: &str = "PLEASE_ATTESTATION_TEST_KEY";
 const KEY: &str = "offline-test-bearer";
+const REGISTRATION_REPOSITORY: &str = "fixture.example/Owner/Repository";
+const CHECK_DIRECTORY: &str = ".please/checks/check-fixture";
+const REVIEW_DIRECTORY: &str = "sets/core/reviews/review-fixture";
+const CHECK_RULE: &str = "id = 'check-fixture'\nversion = '1.0'\nname = 'Fixture check'\ndescription = 'Check'\nenabled = false\n[check]\ncommand = 'unused-check-command'\n";
+const REVIEW_RULE: &str = "id = 'review-fixture'\nversion = '2.3'\ndescription = 'Review'\n[review]\nprompt = 'prompt.md'\n";
+const KNOWLEDGE: &str = "purpose: Fixture\nproblem: Fixture problem\nvalue: Fixture value\nplacement: Fixture placement\nconditions:\n  - statement: Fixture condition\n    rationale: Fixture rationale\nextension: [true, preserved]\n";
+const PROMPT: &str = "Inspect the project.\n";
 
 fn git(root: &Path, args: &[&str]) {
     let result = support::command("git")
@@ -77,6 +84,24 @@ fn listen() -> TcpListener {
 }
 
 fn exchange(listener: &TcpListener, root: &Path, status: u16) -> (Output, Value) {
+    exchange_delivery(
+        listener,
+        root,
+        status,
+        "publish",
+        "/v0/attestations",
+        |_| KEY.as_bytes().to_vec(),
+    )
+}
+
+fn exchange_delivery(
+    listener: &TcpListener,
+    root: &Path,
+    status: u16,
+    command: &str,
+    endpoint: &'static str,
+    reply: impl FnOnce(&Value) -> Vec<u8> + Send + 'static,
+) -> (Output, Value) {
     let server = listener.try_clone().unwrap();
     server.set_nonblocking(true).unwrap();
     let request = thread::spawn(move || {
@@ -98,7 +123,7 @@ fn exchange(listener: &TcpListener, root: &Path, status: u16) -> (Output, Value)
         let mut request = BufReader::new(&mut stream);
         let mut line = String::new();
         request.read_line(&mut line).unwrap();
-        assert_eq!(line, "POST /v0/attestations HTTP/1.1\r\n");
+        assert_eq!(line, format!("POST {endpoint} HTTP/1.1\r\n"));
         let (mut length, mut authorization, mut json_content) = (None, false, false);
         loop {
             line.clear();
@@ -121,6 +146,8 @@ fn exchange(listener: &TcpListener, root: &Path, status: u16) -> (Output, Value)
         let mut body = vec![0; length.unwrap()];
         request.read_exact(&mut body).unwrap();
         assert!(!String::from_utf8_lossy(&body).contains(KEY));
+        let document = serde_json::from_slice(&body).unwrap();
+        let response_body = reply(&document);
         // Even adversarial response bodies and redirect locations must stay out of diagnostics.
         let redirect = format!(
             "Location: http://{}/redirect\r\n",
@@ -128,14 +155,19 @@ fn exchange(listener: &TcpListener, root: &Path, status: u16) -> (Output, Value)
         );
         write!(
             stream,
-            "HTTP/1.1 {status} Test\r\n{redirect}Content-Length: {}\r\nConnection: close\r\n\r\n{KEY}",
-            KEY.len()
+            "HTTP/1.1 {status} Test\r\n{redirect}Content-Length: {}\r\nConnection: close\r\n\r\n",
+            response_body.len()
         )
         .unwrap();
-        serde_json::from_slice(&body).unwrap()
+        stream.write_all(&response_body).unwrap();
+        document
     });
 
-    let output = publish(root, &gateway_url(listener), Some(KEY));
+    let output = cli(
+        root,
+        &[command, "--gateway-url", &gateway_url(listener)],
+        Some(KEY),
+    );
     let body = request.join().unwrap();
     assert_no_request(listener);
     (output, body)
@@ -145,6 +177,244 @@ fn assert_no_request(listener: &TcpListener) {
     listener.set_nonblocking(true).unwrap();
     assert!(
         matches!(listener.accept(), Err(error) if error.kind() == std::io::ErrorKind::WouldBlock)
+    );
+}
+
+fn registration_fixture() -> tempfile::TempDir {
+    let root = tempfile::tempdir().unwrap();
+    let project = root.path();
+    git(project, &["init", "--quiet"]);
+    git(
+        project,
+        &[
+            "remote",
+            "add",
+            "origin",
+            "git@different.example.invalid:owner/repo.git",
+        ],
+    );
+    support::write(
+        project,
+        ".please/config.toml",
+        &format!(
+            "project = 'Fixture'\n[publish]\nkey_env = '{KEY_NAME}'\nrepository = '{REGISTRATION_REPOSITORY}'\n"
+        ),
+    );
+    for (directory, definition) in [
+        (CHECK_DIRECTORY, CHECK_RULE),
+        (REVIEW_DIRECTORY, REVIEW_RULE),
+    ] {
+        support::write(project, &format!("{directory}/rule.toml"), definition);
+        support::write(project, &format!("{directory}/rule.yaml"), KNOWLEDGE);
+    }
+    support::write(project, &format!("{REVIEW_DIRECTORY}/prompt.md"), PROMPT);
+    support::commit_all(project);
+    root
+}
+
+fn registration_digest(root: &Path, directory: &str) -> String {
+    let git = format!("https://{REGISTRATION_REPOSITORY}.git");
+    please::rule_digest::from_directory(
+        please::rule_digest::RuleSource::Imported { git: &git },
+        root,
+        Path::new(directory),
+    )
+    .unwrap()
+    .unwrap()
+}
+
+fn registration_exchange(
+    listener: &TcpListener,
+    root: &Path,
+    status: u16,
+    response: Value,
+) -> (Output, Value) {
+    exchange_delivery(
+        listener,
+        root,
+        status,
+        "register",
+        "/v0/rule-registrations",
+        move |_| serde_json::to_vec(&response).unwrap(),
+    )
+}
+
+#[test]
+// REQ-0355, REQ-0356, REQ-0357: explicitly send one committed batch and process independent outcomes.
+fn registers_committed_checks_and_reviews_and_reports_repeated_and_conflicting_versions() {
+    let listener = listen();
+    let root = registration_fixture();
+    let project = root.path();
+    let commit = support::command("git")
+        .args(["rev-parse", "HEAD"])
+        .current_dir(project)
+        .output()
+        .unwrap();
+    assert!(commit.status.success());
+    let commit = String::from_utf8(commit.stdout)
+        .unwrap()
+        .trim_end()
+        .to_owned();
+    // An unrelated working change does not alter the registered content.
+    support::write(project, "unrelated", "uncommitted\n");
+
+    let check_digest = registration_digest(project, CHECK_DIRECTORY);
+    let review_digest = registration_digest(project, REVIEW_DIRECTORY);
+    let knowledge = json!({
+        "purpose": "Fixture",
+        "problem": "Fixture problem",
+        "value": "Fixture value",
+        "placement": "Fixture placement",
+        "conditions": [{"statement": "Fixture condition", "rationale": "Fixture rationale"}],
+        "extension": [true, "preserved"]
+    });
+    let expected = json!({
+        "commit": commit,
+        "rules": [
+            {"source": REGISTRATION_REPOSITORY, "path": CHECK_DIRECTORY, "id": "check-fixture",
+             "version": "1.0", "kind": "check", "name": "Fixture check",
+             "description": "Check", "knowledge": knowledge},
+            {"source": REGISTRATION_REPOSITORY, "path": REVIEW_DIRECTORY, "id": "review-fixture",
+             "version": "2.3", "kind": "review", "description": "Review",
+             "blocking": true, "prompt": PROMPT, "knowledge": knowledge}
+        ]
+    });
+    for state in ["created", "unchanged"] {
+        let (output, body) = registration_exchange(
+            &listener,
+            project,
+            200,
+            json!({"outcomes": [
+                {"outcome": state, "digest": check_digest},
+                {"outcome": state, "digest": review_digest}
+            ]}),
+        );
+        assert_output(&output, 0, &format!("{state} check-fixture 1.0"));
+        assert_output(&output, 0, &format!("{state} review-fixture 2.3"));
+        assert_eq!(body, expected);
+    }
+
+    support::write(
+        project,
+        &format!("{CHECK_DIRECTORY}/rule.toml"),
+        &CHECK_RULE.replace("'Check'", "'Updated check'"),
+    );
+    support::commit_all(project);
+    let changed = registration_digest(project, CHECK_DIRECTORY);
+    assert_ne!(changed, check_digest);
+    let (output, body) = registration_exchange(
+        &listener,
+        project,
+        200,
+        json!({"outcomes": [
+            {"outcome": "conflict", "digest": changed},
+            {"outcome": "unchanged", "digest": review_digest}
+        ]}),
+    );
+    assert_ne!(body["commit"], expected["commit"]);
+    assert_eq!(body["rules"][0]["description"], "Updated check");
+    assert_eq!(body["rules"][1], expected["rules"][1]);
+    assert_output(&output, 2, "content changed without a new version");
+    assert_output(&output, 2, "unchanged review-fixture 2.3");
+    assert!(!project.join(".please/reports").exists());
+    assert!(!project.join(".git/hooks/pre-push").exists());
+}
+
+#[test]
+// REQ-0356: any missing metadata or dirty rule input blocks the complete request.
+fn rejects_missing_metadata_and_changes_before_sending() {
+    let listener = listen();
+    let url = gateway_url(&listener);
+    let root = registration_fixture();
+    let project = root.path();
+    let invoke = || cli(project, &["register", "--gateway-url", &url], Some(KEY));
+    support::write(
+        project,
+        &format!("{REVIEW_DIRECTORY}/prompt.md"),
+        "Uncommitted prompt\n",
+    );
+    assert_output(&invoke(), 2, "prompt.md differs from the current commit");
+    assert_no_request(&listener);
+    support::write(project, &format!("{REVIEW_DIRECTORY}/prompt.md"), PROMPT);
+    support::write(
+        project,
+        &format!("{REVIEW_DIRECTORY}/script.sh"),
+        "untracked\n",
+    );
+    assert_output(&invoke(), 2, "script.sh differs from the current commit");
+    assert_no_request(&listener);
+    fs::remove_file(project.join(REVIEW_DIRECTORY).join("script.sh")).unwrap();
+
+    support::write(
+        project,
+        &format!("{REVIEW_DIRECTORY}/rule.toml"),
+        &REVIEW_RULE.replace("version = '2.3'\n", ""),
+    );
+    support::commit_all(project);
+    assert_output(&invoke(), 2, "rule review-fixture is missing version");
+    assert_no_request(&listener);
+    support::write(
+        project,
+        &format!("{REVIEW_DIRECTORY}/rule.toml"),
+        REVIEW_RULE,
+    );
+    fs::remove_file(project.join(REVIEW_DIRECTORY).join("rule.yaml")).unwrap();
+    support::commit_all(project);
+    assert_output(
+        &invoke(),
+        2,
+        "rule review-fixture requires a committed rule.yaml",
+    );
+    assert_no_request(&listener);
+}
+
+#[test]
+// REQ-0355, REQ-0357: delivery failures and receipt failures are distinct and redact external data.
+fn registration_errors_do_not_expose_credentials_or_follow_redirects() {
+    let listener = listen();
+    let root = registration_fixture();
+    let project = root.path();
+    let url = gateway_url(&listener);
+    assert_output(&cli(project, &["register"], Some(KEY)), 2, "--gateway-url");
+    let invalid = format!("{url}/{KEY}");
+    assert_output(
+        &cli(project, &["register", "--gateway-url", &invalid], Some(KEY)),
+        2,
+        "must be an HTTP or HTTPS origin",
+    );
+    assert_output(
+        &cli(project, &["register", "--gateway-url", &url], None),
+        2,
+        "API key environment variable is unset",
+    );
+    assert_no_request(&listener);
+    for (status, message) in [
+        (400, "rejected the registration document"),
+        (401, "rejected the API credentials"),
+        (307, "registration gateway error (HTTP 307)"),
+    ] {
+        let (output, _) = registration_exchange(&listener, project, status, json!(KEY));
+        assert_output(&output, 2, message);
+    }
+    let review_digest = registration_digest(project, REVIEW_DIRECTORY);
+    let (output, _) = registration_exchange(
+        &listener,
+        project,
+        200,
+        json!({"outcomes": [
+            {"outcome": "created", "digest": KEY},
+            {"outcome": "created", "digest": review_digest}
+        ]}),
+    );
+    assert_output(&output, 2, "returned digest does not match");
+    let (output, _) = registration_exchange(&listener, project, 200, json!({"outcomes": []}));
+    assert_output(&output, 2, "returned an invalid receipt");
+
+    drop(listener);
+    assert_output(
+        &cli(project, &["register", "--gateway-url", &url], Some(KEY)),
+        2,
+        "could not reach the registration gateway",
     );
 }
 

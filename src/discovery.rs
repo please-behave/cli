@@ -227,7 +227,11 @@ pub(crate) fn document<T: serde::de::DeserializeOwned>(root: &Path, path: &Path)
     let full =
         source_path(root, path).with_context(|| format!("missing or unsafe {}", path.display()))?;
     let text = config::read_bounded(&full, MAX_METADATA_BYTES)?;
-    toml::from_str(&text).map_err(|e: toml::de::Error| {
+    parse_document(&text, path)
+}
+
+pub(crate) fn parse_document<T: serde::de::DeserializeOwned>(text: &str, path: &Path) -> Result<T> {
+    toml::from_str(text).map_err(|e: toml::de::Error| {
         anyhow::anyhow!("invalid {}: {}", path.display(), e.message())
     })
 }

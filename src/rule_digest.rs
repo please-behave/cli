@@ -51,16 +51,9 @@ impl RuleMetadata {
         // Missing or unusable digest inputs leave the rule's identity and
         // declared version available without changing its execution outcome.
         let digest = source.zip(version).and_then(|(source, version)| {
-            digest_definition(
-                root,
-                directory,
-                rule,
-                || Some(source.to_owned()),
-                &path,
-                version,
-            )
-            .ok()
-            .flatten()
+            digest_definition(root, directory, rule, || Some(source.to_owned()), version)
+                .ok()
+                .flatten()
         });
         Some(Self {
             source: source.map(str::to_owned),
@@ -142,17 +135,10 @@ pub fn from_directory(
         RuleSource::Local => repository_identity::read_origin(root),
         RuleSource::Imported { git } => repository_identity::normalize(git),
     };
-    digest_definition(
-        root,
-        directory,
-        &rule,
-        source,
-        &portable_path(directory)?,
-        version,
-    )
+    digest_definition(root, directory, &rule, source, version)
 }
 
-fn portable_path(directory: &Path) -> Result<String> {
+pub(crate) fn portable_path(directory: &Path) -> Result<String> {
     let path = directory
         .components()
         .filter_map(|part| match part {
@@ -169,7 +155,6 @@ fn digest_definition(
     directory: &Path,
     rule: &RuleDefinition,
     source: impl FnOnce() -> Option<String>,
-    path: &str,
     version: &str,
 ) -> Result<Option<String>> {
     let knowledge_path = directory.join("rule.yaml");
@@ -186,13 +171,38 @@ fn digest_definition(
             return Err(error).with_context(|| format!("unsafe {}", knowledge_path.display()));
         }
     };
-    let knowledge = config::read_bounded(&full, MAX_METADATA_BYTES)
-        .and_then(|text| knowledge::parse(&text))
-        .with_context(|| format!("invalid {}", knowledge_path.display()))?;
-
+    let knowledge = config::read_bounded(&full, MAX_METADATA_BYTES)?;
     let identity =
         source().context("cannot determine rule source identity from a network Git remote")?;
+    let document = rule_document(
+        root,
+        directory,
+        rule,
+        &identity,
+        version,
+        &knowledge,
+        |prompt| {
+            config::read_bounded(prompt, MAX_INSTRUCTION_BYTES)
+                .with_context(|| format!("cannot read review prompt {}", prompt.display()))
+        },
+    )?;
+    digest(document)
+        .map(Some)
+        .with_context(|| format!("cannot digest rule {:?}", rule.id))
+}
 
+pub(crate) fn rule_document(
+    root: &Path,
+    directory: &Path,
+    rule: &RuleDefinition,
+    source: &str,
+    version: &str,
+    knowledge: &str,
+    read_prompt: impl FnOnce(&Path) -> Result<String>,
+) -> Result<serde_json::Value> {
+    let path = portable_path(directory)?;
+    let knowledge = knowledge::parse(knowledge)
+        .with_context(|| format!("invalid {}", directory.join("rule.yaml").display()))?;
     let kind = match (&rule.check, &rule.review) {
         (Some(_), None) => {
             ensure!(rule.blocking.is_none(), "a check must not declare blocking");
@@ -202,16 +212,15 @@ fn digest_definition(
             let prompt = discovery::review_prompt_path(root, directory, &review.prompt)?;
             Kind::Review {
                 blocking: rule.blocking.unwrap_or(true),
-                prompt: config::read_bounded(&prompt, MAX_INSTRUCTION_BYTES)
-                    .with_context(|| format!("cannot read review prompt {}", prompt.display()))?,
+                prompt: read_prompt(&prompt)?,
             }
         }
         _ => bail!("expected exactly one rule implementation"),
     };
 
-    canonical::digest(serde_json::to_value(DigestInput {
-        source: &identity,
-        path,
+    Ok(serde_json::to_value(DigestInput {
+        source,
+        path: &path,
         id: &rule.id,
         version,
         kind,
@@ -219,6 +228,8 @@ fn digest_definition(
         description: &rule.description,
         knowledge,
     })?)
-    .map(Some)
-    .with_context(|| format!("cannot digest rule {:?}", rule.id))
+}
+
+pub(crate) fn digest(document: serde_json::Value) -> Result<String> {
+    canonical::digest(document)
 }
