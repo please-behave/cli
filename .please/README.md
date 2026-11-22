@@ -49,9 +49,7 @@ normal hooks, CI and release validation collect independent findings. Configurat
 explicitly keeps running checks alive after fail-fast triggers.
 Developers can run the gate manually with `please run --at pre-push`.
 
-See [repository self-integration](../docs/self-governance.md) for setup, required
-coverage, reports and CI. The general [configuration reference](../docs/configuration.md)
-describes the schema. Reports remain ignored.
+The general [configuration reference](../docs/configuration.md) describes the schema. Reports remain ignored.
 
 The imported blocking agents-size Check limits AGENTS.md to 1500 approximate tokens.
 The imported `agents-quality` Review, documented with the Rule Set, evaluates a changed

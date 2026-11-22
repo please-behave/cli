@@ -193,4 +193,4 @@ an interruption, inspect the reported paths and rerun `please sync`, and remove 
 Local hooks are bypassable (`--no-verify`) and verify the working tree, not the exact
 staged index or pushed commit. CI can run the same execution points on a clean
 checkout. Development of Please Behave itself uses a separately installed, published
-governor; see [repository self-integration](self-governance.md).
+governor.

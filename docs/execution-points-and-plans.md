@@ -47,5 +47,3 @@ The binding [Execution Plan API](../why/contracts/plan/api.yaml) defines:
   selection, dependencies, input, adapter profile provenance and identity semantics.
 
 For execution options and saved results, see [usage](usage.md).
-The repository's own published governor setup is described in
-[self-governance](self-governance.md).

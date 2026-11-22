@@ -213,8 +213,8 @@ No main-branch release commit or branch-protection bypass is needed.
 
 Prepare the published governor and dependencies before committing workflow/tooling
 changes. Git hooks run local validation at commit and push; agents must not run
-`please run --at pre-push` or other checks manually. The [quality-gate catalogue](self-governance.md)
-documents every execution point, installation, the Renovate-managed pin and report artifacts.
+`please run --at pre-push` or other checks manually. See [AGENTS.md](../AGENTS.md) and the
+[repository rules](../.please/README.md) for the validation workflow and the Renovate-managed pin.
 
 The pipeline also runs actionlint.
 Local validation cannot certify other hosted platforms; inspect all GitHub jobs before

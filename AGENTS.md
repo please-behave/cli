@@ -29,4 +29,6 @@ Using newly developed syntax or behavior in repository governance requires two s
 - Use `--fail-fast` only for targeted diagnosis. Hooks, CI and release validation collect complete results; skipped or cancelled checks do not establish success.
 - Keep `Cargo.lock` current. Keep product tests in `tests/*.rs` and tooling tests beside their scripts. Rust tests launch processes through `support::command` to isolate the harness environment and must not change developer or global Git configuration.
 - Follow `docs/releasing.md` for releases.
+- Commit before the final push: local checks inspect the working files, while the imported security and license checks inspect `HEAD` at pre-push.
+- Name local rule directories and IDs descriptively, without numeric prefixes. Rules use string commands, and Python scripts run as `python3 <path>` relative to the repository root.
 - Keep license metadata consistent with `LICENSE`. Never commit machine-specific paths, local reports or developer-specific configuration. Use generic placeholders in public examples.

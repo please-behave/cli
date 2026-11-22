@@ -5,7 +5,7 @@ conditions:
   - statement: The candidate executable passes the same scripted end-to-end flow as the native smoke test.
     rationale: The same behavior is expected of the shipped artifact as of the local build.
   - statement: The Rule depends on no other Rule and uses its own copy of the smoke script.
-    rationale: The release gate runs independently and the built candidate is supplied by the release workflow. This is documented in docs/self-governance.md.
+    rationale: The release gate runs independently and the built candidate is supplied by the release workflow.
 success_criteria:
   - A deviation from the expected behavior fails.
   - A missing executable or any other technical failure is an ERROR.
