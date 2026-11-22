@@ -1,9 +1,8 @@
 # Rule knowledge
 
 A Rule or Rule Set can carry a structured companion document that records why it
-exists. This directory defines the structure of these documents. It is an
-orientation and not an API contract: it has no index, no compatibility version
-and no requirements, and nothing in the product reads or enforces it yet.
+exists. This directory defines their structure. The CLI reads the rule knowledge
+document when computing a rule digest.
 
 ## Why it exists
 
@@ -24,6 +23,21 @@ possible to decide where a new Rule belongs or that a new set is needed.
 The documents carry no identifier. Identity comes from the definition in the same
 directory, so there is nothing to keep consistent. Rules and Rule Sets are
 referenced by their IDs.
+
+## Rule digests
+
+[REQ-0352](../../requirements/REQ-0352.yaml) defines when a rule has a digest.
+For versioned rules with a knowledge document, the CLI uses the
+[ledger digest contract](https://github.com/please-behave/ledger/blob/main/why/contracts/rule-digest/digest.md).
+The rule directory path is relative to the repository that holds the rule.
+The CLI derives the source from the project's network Git origin or the
+configured network Git selector of the import.
+
+[REQ-0353](../../requirements/REQ-0353.yaml) requires the digest to include the
+complete parsed rule knowledge object, including unfamiliar fields. Values
+must be strings, booleans, arrays or objects with unique string keys.
+The CLI reads one UTF-8 YAML document within its metadata size bound and
+limits expanded aliases and nesting. Rule Set knowledge has no role in the digest.
 
 ## What belongs in them
 
@@ -54,5 +68,5 @@ forms of a Rule.
 
 Experimental. Files may change incompatibly, and the schemas follow
 [DEC-0026](../../decisions/DEC-0026.yaml)'s version 0 spirit without carrying a
-version. No check validates the documents yet; the schemas are the reference
-until one does.
+version. The schemas define the expected document structure. Digest computation
+uses the ledger contract to validate canonical input.

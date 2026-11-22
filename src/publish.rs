@@ -3,11 +3,12 @@ use crate::{
     config::{self, Config},
     discovery, git_snapshot,
     report::{self, Item, Report, Status},
+    repository_identity,
 };
 use anyhow::{Context, Result, bail, ensure};
 use serde::Serialize;
 use std::{path::Path, time::Duration};
-use ureq::http::{HeaderValue, Uri, uri::Authority};
+use ureq::http::{HeaderValue, Uri};
 
 #[derive(Serialize)]
 struct Attestation<'a> {
@@ -50,55 +51,6 @@ fn attestation<'a>(report: &'a Report, repository: &'a str, commit: &'a str) -> 
         overall: report.overall,
         results: report.results.iter().map(RuleResult::from).collect(),
     }
-}
-
-fn origin_identity(remote: &str) -> Option<String> {
-    let (authority, path) = if let Some((scheme, address)) = remote.split_once("://") {
-        if !matches!(
-            scheme.to_ascii_lowercase().as_str(),
-            "http" | "https" | "ssh" | "git" | "git+ssh" | "ssh+git"
-        ) {
-            return None;
-        }
-        address.split(['?', '#']).next()?.split_once('/')?
-    } else if let Some(end) = remote.find("]:") {
-        (&remote[..=end], &remote[end + 2..])
-    } else {
-        let (host, path) = remote.split_once(':')?;
-        if host.len() == 1
-            && host.as_bytes()[0].is_ascii_alphabetic()
-            && path.starts_with(['/', '\\'])
-        {
-            return None;
-        }
-        (host, path)
-    };
-    let host_port = authority.rsplit('@').next()?;
-    let address: Authority = host_port.parse().ok()?;
-    let host = address.host();
-    let path = path.trim_matches('/');
-    let path = path.strip_suffix(".git").unwrap_or(path);
-    if host.is_empty()
-        || path.is_empty()
-        || path.chars().any(char::is_control)
-        || path.starts_with('\\')
-    {
-        return None;
-    }
-    Some(format!("{}/{path}", host.to_ascii_lowercase()))
-}
-
-fn read_origin(root: &Path) -> Option<String> {
-    let result = crate::process::run(
-        git_snapshot::git(root).args(["remote", "get-url", "origin"]),
-        Duration::from_secs(10),
-    )
-    .ok()?;
-    if !result.status.success() || result.timed_out || result.stdout.truncated {
-        return None;
-    }
-    let identity = origin_identity(result.stdout.text.trim_end_matches(['\r', '\n']))?;
-    (identity.chars().count() <= 2048).then_some(identity)
 }
 
 fn gateway_endpoint(gateway_url: &str) -> Result<Uri> {
@@ -162,7 +114,7 @@ pub fn send(root: &Path, gateway_url: &str) -> Result<()> {
         .publish
         .context("configure [publish] in .please/config.toml")?;
     settings.validate()?;
-    let repository = settings.repository.or_else(|| read_origin(root))
+    let repository = settings.repository.or_else(|| repository_identity::read_origin(root))
         .context("cannot determine repository identity; set a network Git remote named origin or publish.repository")?;
 
     let key = std::env::var(&settings.key_env)

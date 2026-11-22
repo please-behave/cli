@@ -296,22 +296,7 @@ fn load_rules(
         );
         let path = dir.join("rule.toml");
         let rule: RuleDefinition = document(root, &path)?;
-        let version = rule
-            .version
-            .as_ref()
-            .map(|value| {
-                value
-                    .as_str()
-                    .filter(|version| valid_rule_version(version))
-                    .map(str::to_owned)
-                    .with_context(|| {
-                        format!(
-                            "{}: rule {:?}: version must be a string in A.B form with no leading zeros and at most {MAX_RULE_VERSION_CHARS} characters",
-                            path.display(), rule.id
-                        )
-                    })
-            })
-            .transpose()?;
+        let version = rule_version(&rule, &path)?.map(str::to_owned);
         let name = rule.name.unwrap_or_else(|| rule.id.clone());
         ensure!(
             !name.is_empty()
@@ -378,13 +363,7 @@ fn load_rules(
                     "{}: depends_on is supported only for deterministic checks; reviews cannot declare dependencies",
                     path.display()
                 );
-                let prompt = resource(root, &dir, &review.prompt)?;
-                ensure!(
-                    Path::new(&review.prompt)
-                        .extension()
-                        .is_some_and(|e| e == "md"),
-                    "review prompt must be Markdown (.md)"
-                );
+                let prompt = review_prompt_path(root, &dir, &review.prompt)?;
                 let (text, execution_error) =
                     match config::read_bounded(&prompt, MAX_INSTRUCTION_BYTES) {
                         Ok(text) => (text, None),
@@ -434,6 +413,32 @@ fn load_rules(
         );
     }
     Ok(loaded)
+}
+
+pub(crate) fn review_prompt_path(root: &Path, dir: &Path, filename: &str) -> Result<PathBuf> {
+    let prompt = resource(root, dir, filename)?;
+    ensure!(
+        Path::new(filename).extension().is_some_and(|e| e == "md"),
+        "review prompt must be Markdown (.md)"
+    );
+    Ok(prompt)
+}
+
+pub(crate) fn rule_version<'a>(rule: &'a RuleDefinition, path: &Path) -> Result<Option<&'a str>> {
+    rule.version
+        .as_ref()
+        .map(|value| {
+            value
+                .as_str()
+                .filter(|version| valid_rule_version(version))
+                .with_context(|| {
+                    format!(
+                        "{}: rule {:?}: version must be a string in A.B form with no leading zeros and at most {MAX_RULE_VERSION_CHARS} characters",
+                        path.display(), rule.id
+                    )
+                })
+        })
+        .transpose()
 }
 
 fn valid_rule_version(version: &str) -> bool {

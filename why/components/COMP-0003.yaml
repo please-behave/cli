@@ -21,6 +21,8 @@ scope:
     Resolves repository-relative resource paths without following symlinks and
     reads files within size bounds.
   - >-
+    Derives portable repository identities and computes canonical digests from rule source files.
+  - >-
     Holds the shared defaults and bounds of the public contract.
 out_of_scope:
   - description: Fetching and caching external rule sets.
@@ -43,10 +45,16 @@ files:
   - src/limits.rs
   - src/parameters.rs
   - src/check_command.rs
+  - src/repository_identity.rs
+  - src/rule_digest.rs
+  - src/rule_digest/canonical.rs
+  - src/rule_digest/knowledge.rs
 depends_on:
   - COMP-0004
   - COMP-0006
+  - COMP-0008
   - COMP-0009
+  - COMP-0011
 requirements:
   - REQ-0001
   - REQ-0002
@@ -106,3 +114,5 @@ requirements:
   - REQ-0348
   - REQ-0349
   - REQ-0351
+  - REQ-0352
+  - REQ-0353

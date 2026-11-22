@@ -1,0 +1,91 @@
+[
+  {
+    "name": "check with only required fields",
+    "input": {
+      "source": "github.com/example/catalog",
+      "path": ".please/checks/format",
+      "id": "format",
+      "version": "1.0",
+      "kind": "check"
+    },
+    "digest": "v1:sha256:3fc2593a1d7396aade8124f5d99ce54bcd62bcba273b9c6a750ada7f800634b5"
+  },
+  {
+    "name": "review with complete metadata",
+    "input": {
+      "source": "github.com/example/catalog",
+      "path": ".please/reviews/summary",
+      "id": "summary",
+      "version": "2.10",
+      "kind": "review",
+      "name": "Résumé 📝",
+      "description": "Read the summary.\nCheck the examples.",
+      "blocking": false,
+      "prompt": "Read \"README.md\" under docs/ and check C:\\notes.\nKeep feedback brief.\n",
+      "knowledge": {
+        "purpose": "Make summaries clear.",
+        "problem": "Readers miss important outcomes.",
+        "value": "Readers can find decisions.",
+        "conditions": [
+          {
+            "statement": "Explain the decision.\nName the owner.",
+            "rationale": "Readers know who can act."
+          },
+          {
+            "statement": "Mention the result.",
+            "rationale": "Readers can follow up."
+          }
+        ],
+        "placement": "Every repository publishes summaries.",
+        "extension": {
+          "é": [
+            "\b\t\n\f\u0000\u001f\u2028",
+            true
+          ],
+          "\r\n": "key normalized to LF",
+          "\u000b": false
+        }
+      }
+    },
+    "digest": "v1:sha256:76f3f2fc5f7233f700ae9a6b6aab36875dca5f16e218f24d92f35e34972db598"
+  },
+  {
+    "name": "equivalent review with reordered keys and mixed line endings",
+    "input": {
+      "knowledge": {
+        "extension": {
+          "é": [
+            "\b\t\n\f\u0000\u001f\u2028",
+            true
+          ],
+          "\u000b": false,
+          "\n": "key normalized to LF"
+        },
+        "placement": "Every repository publishes summaries.",
+        "conditions": [
+          {
+            "rationale": "Readers know who can act.",
+            "statement": "Explain the decision.\r\nName the owner."
+          },
+          {
+            "statement": "Mention the result.",
+            "rationale": "Readers can follow up."
+          }
+        ],
+        "value": "Readers can find decisions.",
+        "problem": "Readers miss important outcomes.",
+        "purpose": "Make summaries clear."
+      },
+      "prompt": "Read \"README.md\" under docs/ and check C:\\notes.\r\nKeep feedback brief.\r\n",
+      "blocking": false,
+      "description": "Read the summary.\rCheck the examples.",
+      "name": "Résumé 📝",
+      "kind": "review",
+      "version": "2.10",
+      "id": "summary",
+      "path": ".please/reviews/summary",
+      "source": "github.com/example/catalog"
+    },
+    "digest": "v1:sha256:76f3f2fc5f7233f700ae9a6b6aab36875dca5f16e218f24d92f35e34972db598"
+  }
+]

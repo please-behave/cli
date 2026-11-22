@@ -1,0 +1,16 @@
+id: REQ-0352
+name: Rule Digests Identify Versioned Rule Metadata
+area: rules
+description: >-
+  The CLI must compute the canonical ledger:CON-0005 digest from the source
+  files of an eligible local or imported rule. The input must use the normalized
+  Git identity of the project repository or import, the repository-relative
+  rule directory, the source-local rule ID, and the covered definition,
+  review prompt and knowledge fields. A rule without a declared version or
+  without a rule knowledge document must have no digest.
+rationale: >-
+  Registrations and published results can identify the same rule version
+  without relying on run-specific bindings.
+decisions:
+  - why:DEC-0010
+  - why:DEC-0012

@@ -10,5 +10,7 @@ linked:
     source: github:please-behave/docs
   - alias: gateway
     source: github:please-behave/gateway
+  - alias: ledger
+    source: github:please-behave/ledger
   - alias: why
     source: github:please-behave/why

@@ -12,8 +12,8 @@ one compatibility version; separate documents do not imply separate versions.
 | [Verification Report](report/api.yaml) | [Document and lifecycle](report/document.md), [snapshot and freshness](report/snapshot.md) |
 | [Governance Configuration](configuration/api.yaml) | [Discovery and validation](configuration/discovery.md), [project configuration](configuration/project.md), [Rule definition](configuration/rule.md), [Rule parameters](configuration/parameters.md) |
 
-[Rule knowledge](rule-knowledge/README.md) is an experimental orientation for
-documenting why Rules and Rule Sets exist. It is not an API and has no index.
+[Rule knowledge](rule-knowledge/README.md) defines the experimental companion
+documents for Rules and Rule Sets. The CLI reads rule knowledge to compute rule digests.
 
 ## Representation
 

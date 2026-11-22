@@ -1,0 +1,15 @@
+id: REQ-0353
+name: Rule Knowledge Is Read For Rule Digests
+area: rules
+description: >-
+  When computing a rule digest, the CLI must parse rule.yaml as a single YAML
+  object and include the complete parsed document. YAML comments, formatting,
+  object member order and line endings must leave the digest unchanged when
+  they preserve the canonical input. Every change to a covered canonical
+  value must change the digest.
+rationale: >-
+  Rule digests identify the metadata consumers can read, independent of how
+  the rule author formats the source files.
+decisions:
+  - why:DEC-0012
+  - why:DEC-0014
