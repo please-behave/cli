@@ -11,7 +11,7 @@ includes = [
 ]
 
 [tools]
-"github:please-behave/cli" = "0.19.0"
+"github:please-behave/cli" = "0.20.0"
 rust = { version = "1.100.0", profile = "minimal", components = "rustfmt,clippy,llvm-tools" }
 python = "3.15.2"
 node = "26.13.1"
