@@ -24,11 +24,11 @@ jobs:
           experimental: true
           version: 2026.11.11
       - name: Audit the Cargo dependencies
-        uses: christianpflugradt/repository-catalog/actions/dependency-audit/cargo@8d44e3ebb495ba1371e949bcc11b11597a632394 # updates/actions/dependency-audit
+        uses: christianpflugradt/repository-catalog/actions/dependency-audit/cargo@0f47bb84ff5435cb6b692275fb6767f4f599abdb # updates/actions/dependency-audit
         with:
           directory: .
       - name: Report the findings
         if: ${{ !cancelled() }}
-        uses: christianpflugradt/repository-catalog/actions/dependency-audit/report@8d44e3ebb495ba1371e949bcc11b11597a632394 # updates/actions/dependency-audit
+        uses: christianpflugradt/repository-catalog/actions/dependency-audit/report@0f47bb84ff5435cb6b692275fb6767f4f599abdb # updates/actions/dependency-audit
         with:
           fail-on: ${{ env.AUDIT_FAIL_ON }}
