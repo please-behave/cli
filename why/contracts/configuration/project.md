@@ -87,9 +87,9 @@ The [Report API](../report/document.md) defines numbering and removal.
 ## Publish settings
 
 The optional `[publish]` table enables the explicit `please publish` command.
-`gateway_url` is the HTTP or HTTPS origin of the gateway, with an optional port
-and trailing slash. Credentials, paths other than `/`, queries and fragments
-are invalid. The command sends to `/v0/attestations` on that origin.
+The [Report API](../report/document.md#publishing-evidence) defines the
+required `--gateway-url` command line argument. A `gateway_url` entry in this
+table is rejected as an unknown field.
 `key_env` names the environment variable that supplies the bearer credential.
 The variable is read only for delivery. An optional `repository` supplies the
 exact attestation repository identity, overriding derivation from Git's

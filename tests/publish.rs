@@ -38,7 +38,15 @@ fn cli(root: &Path, args: &[&str], key: Option<&str>) -> Output {
     command.output().unwrap()
 }
 
-fn fixture(listener: &TcpListener, repository: Option<&str>) -> tempfile::TempDir {
+fn publish(root: &Path, gateway_url: &str, key: Option<&str>) -> Output {
+    cli(root, &["publish", "--gateway-url", gateway_url], key)
+}
+
+fn gateway_url(listener: &TcpListener) -> String {
+    format!("http://{}", listener.local_addr().unwrap())
+}
+
+fn fixture(repository: Option<&str>) -> tempfile::TempDir {
     let root = tempfile::tempdir().unwrap();
     git(root.path(), &["init", "--quiet"]);
     please::init::init(root.path()).unwrap();
@@ -47,10 +55,7 @@ fn fixture(listener: &TcpListener, repository: Option<&str>) -> tempfile::TempDi
     let identity = repository.map_or_else(String::new, |value| format!("repository = {value:?}\n"));
     fs::write(
         path,
-        format!(
-            "{config}\n[publish]\ngateway_url = 'http://{}'\nkey_env = '{KEY_NAME}'\n{identity}",
-            listener.local_addr().unwrap()
-        ),
+        format!("{config}\n[publish]\nkey_env = '{KEY_NAME}'\n{identity}"),
     )
     .unwrap();
     root
@@ -125,7 +130,7 @@ fn exchange(listener: &TcpListener, root: &Path, status: u16) -> (Output, Value)
         serde_json::from_slice(&body).unwrap()
     });
 
-    let output = cli(root, &["publish"], Some(KEY));
+    let output = publish(root, &gateway_url(listener), Some(KEY));
     let body = request.join().unwrap();
     assert_no_request(listener);
     (output, body)
@@ -149,12 +154,66 @@ fn assert_output(output: &Output, code: i32, message: &str) {
     );
 }
 
+#[test]
+// REQ-0345, REQ-0284: the destination is required at invocation and rejected in project settings.
+fn requires_a_gateway_argument_and_rejects_a_configured_gateway() {
+    let listener = listen();
+    let url = gateway_url(&listener);
+    let root = fixture(Some("fixture.example/owner/repo"));
+    support::commit_all(root.path());
+    run(root.path(), 0);
+
+    assert_output(
+        &cli(root.path(), &["publish"], Some(KEY)),
+        2,
+        "--gateway-url <URL>",
+    );
+    assert_no_request(&listener);
+
+    let config_path = root.path().join(".please/config.toml");
+    let config = fs::read_to_string(&config_path).unwrap();
+    fs::write(config_path, format!("{config}\ngateway_url = '{url}'\n")).unwrap();
+    let plan = cli(root.path(), &["run", "--plan", "--at", "check"], None);
+    assert_output(&plan, 2, "unknown field `gateway_url`");
+    assert_output(&publish(root.path(), &url, Some(KEY)), 2, "UNKNOWN");
+    assert_no_request(&listener);
+}
+
+#[test]
+// REQ-0345: invalid destinations are rejected without showing their values or making requests.
+fn rejects_invalid_gateway_origins_without_disclosing_the_url() {
+    let listener = listen();
+    let address = listener.local_addr().unwrap();
+    let root = fixture(Some("fixture.example/owner/repo"));
+    support::commit_all(root.path());
+    run(root.path(), 0);
+
+    for url in [
+        format!("http://fixture-user:fixture-password@{address}"),
+        format!("http://{address}/private-path"),
+        format!("http://{address}/?private-query"),
+        format!("http://{address}/#private-fragment"),
+        format!("ftp://{address}"),
+        "http://".to_string(),
+        "http://gateway.example.invalid:65536".to_string(),
+    ] {
+        let output = publish(root.path(), &url, Some(KEY));
+        assert_output(&output, 2, "--gateway-url must be an HTTP or HTTPS origin");
+        for stream in [&output.stdout, &output.stderr] {
+            let text = String::from_utf8_lossy(stream);
+            assert!(!text.contains(&url), "{output:?}");
+            assert!(!text.contains("fixture-password"), "{output:?}");
+        }
+        assert_no_request(&listener);
+    }
+}
+
 #[cfg(unix)]
 #[test]
 // REQ-0345, REQ-0346: the newest failed run is delivered independently using only attestation fields.
 fn projects_newest_failed_report_and_preserves_saved_evidence() {
     let listener = listen();
-    let root = fixture(&listener, Some("fixture.example/owner/repo"));
+    let root = fixture(Some("fixture.example/owner/repo"));
     git(
         root.path(),
         &[
@@ -248,7 +307,8 @@ fn projects_newest_failed_report_and_preserves_saved_evidence() {
 // REQ-0348: normalize the fetch URL for origin and refuse local or missing origins without an override.
 fn derives_repository_from_multiple_git_remote_forms() {
     let listener = listen();
-    let root = fixture(&listener, None);
+    let root = fixture(None);
+    let url = gateway_url(&listener);
     support::commit_all(root.path());
     run(root.path(), 0);
     for (remote, identity) in [
@@ -293,7 +353,7 @@ fn derives_repository_from_multiple_git_remote_forms() {
             &["config", "--local", "remote.origin.url", local],
         );
         assert_output(
-            &cli(root.path(), &["publish"], Some(KEY)),
+            &publish(root.path(), &url, Some(KEY)),
             2,
             "cannot determine repository identity",
         );
@@ -301,7 +361,7 @@ fn derives_repository_from_multiple_git_remote_forms() {
     }
     git(root.path(), &["remote", "remove", "origin"]);
     assert_output(
-        &cli(root.path(), &["publish"], Some(KEY)),
+        &publish(root.path(), &url, Some(KEY)),
         2,
         "cannot determine repository identity",
     );
@@ -312,8 +372,9 @@ fn derives_repository_from_multiple_git_remote_forms() {
 // REQ-0347, REQ-0349: saved HEAD, current files and a usable environment key precede any request.
 fn rejects_unavailable_or_stale_evidence_and_credentials_before_delivery() {
     let listener = listen();
-    let root = fixture(&listener, Some("fixture.example/owner/repo"));
-    let publish = |key| cli(root.path(), &["publish"], key);
+    let root = fixture(Some("fixture.example/owner/repo"));
+    let url = gateway_url(&listener);
+    let publish = |key| publish(root.path(), &url, key);
     assert_output(&publish(Some(KEY)), 2, "no saved report");
     run(root.path(), 0);
     assert_output(&publish(Some(KEY)), 2, "has no commit");
@@ -344,7 +405,7 @@ fn rejects_unavailable_or_stale_evidence_and_credentials_before_delivery() {
 // REQ-0349, REQ-0350: distinguish delivery failures without echoing a credential or response body.
 fn reports_delivery_failures_without_exposing_credentials() {
     let listener = listen();
-    let root = fixture(&listener, Some("fixture.example/owner/repo"));
+    let root = fixture(Some("fixture.example/owner/repo"));
     support::commit_all(root.path());
     run(root.path(), 0);
     let path = root.path().join(".please/reports/1.json");
@@ -365,8 +426,9 @@ fn reports_delivery_failures_without_exposing_credentials() {
         assert_output(&output, 2, message);
         assert_eq!(fs::read(&path).unwrap(), saved);
     }
+    let url = gateway_url(&listener);
     drop(listener);
-    let output = cli(root.path(), &["publish"], Some(KEY));
+    let output = publish(root.path(), &url, Some(KEY));
     assert_output(&output, 2, "could not reach the attestation gateway");
     assert_eq!(fs::read(&path).unwrap(), saved);
 }

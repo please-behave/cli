@@ -87,40 +87,13 @@ impl Default for ReportSettings {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct PublishSettings {
-    pub gateway_url: String,
     pub key_env: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub repository: Option<String>,
 }
 
 impl PublishSettings {
-    fn endpoint(&self) -> Result<ureq::http::Uri> {
-        let invalid_url = "publish.gateway_url must be an HTTP or HTTPS origin without credentials";
-        let base: ureq::http::Uri = self
-            .gateway_url
-            .parse()
-            .map_err(|_| anyhow::anyhow!(invalid_url))?;
-        let scheme = base.scheme().context(invalid_url)?;
-        let authority = base.authority().context(invalid_url)?;
-        let host = authority.host();
-        ensure!(
-            matches!(scheme.as_str(), "http" | "https")
-                && !self.gateway_url.contains(['?', '#', '@'])
-                && base.path() == "/"
-                && !host.is_empty()
-                && (authority.as_str() == host || authority.port_u16().is_some()),
-            "{invalid_url}"
-        );
-        ureq::http::Uri::builder()
-            .scheme(scheme.clone())
-            .authority(authority.clone())
-            .path_and_query("/v0/attestations")
-            .build()
-            .map_err(|_| anyhow::anyhow!(invalid_url))
-    }
-
-    pub(crate) fn validated_endpoint(&self) -> Result<ureq::http::Uri> {
-        let endpoint = self.endpoint()?;
+    pub(crate) fn validate(&self) -> Result<()> {
         let mut bytes = self.key_env.bytes();
         ensure!(
             bytes
@@ -138,7 +111,7 @@ impl PublishSettings {
                 "publish.repository must be 1 to 2048 characters without surrounding whitespace or control characters"
             );
         }
-        Ok(endpoint)
+        Ok(())
     }
 }
 
@@ -499,9 +472,7 @@ pub(crate) fn validate(root: PathBuf, loaded: crate::discovery::Loaded) -> Resul
         .collect();
     let config = loaded.config;
     if let Some(publish) = &config.publish {
-        publish
-            .validated_endpoint()
-            .context(".please/config.toml")?;
+        publish.validate().context(".please/config.toml")?;
     }
     ensure!(
         (1..=MAX_TIMEOUT_SECONDS).contains(&config.execution.fail_fast_termination_grace_seconds),

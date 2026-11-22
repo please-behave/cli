@@ -77,10 +77,20 @@ secrets), selection, required rule IDs, external sources and token usage.
 
 ## Publish a report
 
-Set up [publishing](configuration.md#publish-settings) and supply the configured
-environment variable through your secret store. Run `please publish` from the
-repository root after a run. The newest report must have a commit and show
-CURRENT in `please status`. A current report from a failed run can be published.
+Set up [publishing](configuration.md#publish-settings) and supply the API key in
+the configured environment variable through your secret store. From the
+repository root, pass your gateway origin explicitly after a run.
+
+```sh
+please publish --gateway-url https://gateway.example.invalid
+```
+
+Replace the placeholder with an HTTP or HTTPS origin. Use HTTPS for a remote
+gateway. An optional port or trailing slash is allowed. The origin must be
+free of credentials, additional path segments, a query and a fragment.
+`--gateway-url` is required on every invocation. The newest report must have
+a commit and show CURRENT in `please status`. A current report from a failed
+run can be published.
 
 The gateway receives the repository identity, commit, execution point, report
 schema version, overall verdict and each result's ID, kind and status. Captured

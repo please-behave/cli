@@ -169,8 +169,15 @@ removes the transport scheme, user information, port, URL query and fragment,
 surrounding path slashes and a terminal `.git`. The hostname is lowercased.
 SCP-style locations are supported. A local origin requires an override.
 
-Delivery uses a single POST with bearer authorization from the configured
-environment variable. The command succeeds on HTTP 201 and reports credential
-rejection, rate limiting, document rejection, other gateway responses and
+The command requires `--gateway-url <URL>` for every invocation. The value is
+an HTTP or HTTPS origin with an optional port and trailing slash. Credentials,
+paths other than `/`, queries and fragments are invalid. There is no default
+or fallback. Diagnostics never include credentials or any part of the URL
+beyond the origin.
+
+Delivery uses a single POST to `/v0/attestations` on the supplied origin with
+bearer authorization from the configured environment variable. The command
+succeeds on HTTP 201 and reports credential rejection, rate limiting,
+document rejection, other gateway responses and
 transport failures distinctly. It follows no redirects and leaves the report
 and its verdict intact.

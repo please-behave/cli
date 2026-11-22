@@ -7,7 +7,7 @@ use crate::{
 use anyhow::{Context, Result, bail, ensure};
 use serde::Serialize;
 use std::{path::Path, time::Duration};
-use ureq::http::{HeaderValue, uri::Authority};
+use ureq::http::{HeaderValue, Uri, uri::Authority};
 
 #[derive(Serialize)]
 struct Attestation<'a> {
@@ -101,7 +101,32 @@ fn read_origin(root: &Path) -> Option<String> {
     (identity.chars().count() <= 2048).then_some(identity)
 }
 
-pub fn send(root: &Path) -> Result<()> {
+fn gateway_endpoint(gateway_url: &str) -> Result<Uri> {
+    let invalid_url = "--gateway-url must be an HTTP or HTTPS origin without credentials, a path, query or fragment";
+    let base: Uri = gateway_url
+        .parse()
+        .map_err(|_| anyhow::anyhow!(invalid_url))?;
+    let scheme = base.scheme().context(invalid_url)?;
+    let authority = base.authority().context(invalid_url)?;
+    let host = authority.host();
+    ensure!(
+        matches!(scheme.as_str(), "http" | "https")
+            && !gateway_url.contains(['?', '#', '@'])
+            && base.path() == "/"
+            && !host.is_empty()
+            && (authority.as_str() == host || authority.port_u16().is_some()),
+        "{invalid_url}"
+    );
+    Uri::builder()
+        .scheme(scheme.clone())
+        .authority(authority.clone())
+        .path_and_query("/v0/attestations")
+        .build()
+        .map_err(|_| anyhow::anyhow!(invalid_url))
+}
+
+pub fn send(root: &Path, gateway_url: &str) -> Result<()> {
+    let endpoint = gateway_endpoint(gateway_url)?;
     git_snapshot::require_root(root)?;
     let number = report::saved(root)?
         .last()
@@ -136,7 +161,7 @@ pub fn send(root: &Path) -> Result<()> {
     let settings = config?
         .publish
         .context("configure [publish] in .please/config.toml")?;
-    let endpoint = settings.validated_endpoint()?;
+    settings.validate()?;
     let repository = settings.repository.or_else(|| read_origin(root))
         .context("cannot determine repository identity; set a network Git remote named origin or publish.repository")?;
 

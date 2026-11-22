@@ -483,7 +483,7 @@ fn all_command_paths_and_standard_help() {
         "trust --list",
         "run",
         "status",
-        "publish",
+        "publish --gateway-url https://gateway.example.invalid",
         "help",
     ] {
         let argv: Vec<_> = std::iter::once("please")

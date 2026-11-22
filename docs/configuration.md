@@ -769,19 +769,19 @@ Add this optional table to `.please/config.toml` for [`please publish`](usage.md
 
 ```toml
 [publish]
-gateway_url = "https://gateway.example.invalid"
 key_env = "PLEASE_GATEWAY_KEY"
 # repository = "github.com/owner/repository"
 ```
 
 | Field | Required | Usage |
 | --- | --- | --- |
-| `publish.gateway_url` | Yes | Gateway origin. Use HTTPS for a remote gateway. |
 | `publish.key_env` | Yes | Name of the environment variable holding the API key. Store the value in your secret store. |
 | `publish.repository` | No | Exact repository identity. The default derives the host and path from Git's `origin` fetch URL. |
 
-The command posts to `/v0/attestations`. For example,
-`git@github.com:owner/repository.git` becomes `github.com/owner/repository`.
+Supply the gateway origin at invocation with `--gateway-url`. An existing
+`gateway_url` entry in `[publish]` is an unknown field and must be removed.
+For example, the Git origin `git@github.com:owner/repository.git` becomes the
+repository identity `github.com/owner/repository`.
 Set the override if you have no network `origin`. Run again after editing the
 configuration so the report reflects the current files.
 

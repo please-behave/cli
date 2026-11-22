@@ -233,7 +233,6 @@ fn every_configuration_field_required_marker_and_default_is_documented() {
     let mut config = p.config;
     assert!(config.publish.is_none());
     config.publish = Some(config::PublishSettings {
-        gateway_url: "https://gateway.example.invalid".into(),
         key_env: "PLEASE_GATEWAY_KEY".into(),
         repository: Some("example.invalid/owner/repo".into()),
     });
@@ -386,23 +385,23 @@ fn project_schema_and_loader_agree_on_types_bounds_and_unknown_fields() {
         ),
         ("project = 'Example'\n[publish]", false),
         (
-            "project = 'Example'\n[publish]\ngateway_url = 'https://gateway.example.invalid'\nkey_env = 'PLEASE_GATEWAY_KEY'",
+            "project = 'Example'\n[publish]\nkey_env = 'PLEASE_GATEWAY_KEY'",
             true,
         ),
         (
-            "project = 'Example'\n[publish]\ngateway_url = 'https://user:secret@gateway.example.invalid'\nkey_env = 'PLEASE_GATEWAY_KEY'",
+            "project = 'Example'\n[publish]\ngateway_url = 'https://gateway.example.invalid'\nkey_env = 'PLEASE_GATEWAY_KEY'",
             false,
         ),
         (
-            "project = 'Example'\n[publish]\ngateway_url = 'https://gateway.example.invalid'\nkey_env = 'KEY=VALUE'",
+            "project = 'Example'\n[publish]\nkey_env = 'KEY=VALUE'",
             false,
         ),
         (
-            "project = 'Example'\n[publish]\ngateway_url = 'https://gateway.example.invalid'\nkey_env = 'KEY'\nrepository = ' padded '",
+            "project = 'Example'\n[publish]\nkey_env = 'KEY'\nrepository = ' padded '",
             false,
         ),
         (
-            "project = 'Example'\n[publish]\ngateway_url = 'https://gateway.example.invalid'\nkey_env = 'KEY'\napi_key = 'fixture'",
+            "project = 'Example'\n[publish]\nkey_env = 'KEY'\napi_key = 'fixture'",
             false,
         ),
         ("project = 'Example'\nversion = 0", false),

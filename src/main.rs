@@ -259,8 +259,8 @@ fn execute(cli: Cli) -> Result<i32> {
                 }
             }
         }
-        Words::Publish => {
-            please::publish::send(&root)?;
+        Words::Publish { gateway_url } => {
+            please::publish::send(&root, &gateway_url)?;
             println!(
                 "{}",
                 terminal::paint("Attestation accepted.", Tone::Success, color)

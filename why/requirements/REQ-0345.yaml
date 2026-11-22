@@ -4,9 +4,15 @@ area: cli
 description: >-
   Please must offer a separate publish command for the newest saved report,
   including a current report with a FAIL or ERROR verdict, while preserving
-  the saved report and verification verdict.
+  the saved report and verification verdict. The command must require
+  `--gateway-url` with an HTTP or HTTPS origin without credentials, a query,
+  a fragment or a path other than `/`. It must reject a missing or invalid
+  value before making a request, without falling back to configuration, the
+  environment or a default. Diagnostics may include at most the origin and
+  must never disclose credentials.
 rationale: >-
   Projects need to control when they share evidence and handle delivery
-  separately from governance.
+  separately from governance. The gateway address belongs to the deployment
+  and is supplied when invoking the command.
 decisions:
   - DEC-0033
