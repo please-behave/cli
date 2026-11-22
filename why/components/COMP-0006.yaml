@@ -7,7 +7,7 @@ scope:
     Resolves effective rules from execution points and rule sets, including
     membership, overrides and disabled rules.
   - >-
-    Enforces rule identity: names, binding qualification and uniqueness within the
+    Enforces run-scoped IDs: names, binding qualification and uniqueness within the
     effective selection.
   - >-
     Selects reviews by file-change triggers using the restricted portable glob
@@ -84,3 +84,4 @@ requirements:
   - REQ-0215
   - REQ-0326
   - REQ-0332
+  - REQ-0354

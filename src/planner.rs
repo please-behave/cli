@@ -21,6 +21,8 @@ pub struct Rule {
     pub depends_on: Vec<String>,
     pub id: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rule_metadata: Option<crate::rule_digest::RuleMetadata>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub adapter: Option<String>,
@@ -248,6 +250,7 @@ pub fn build_with_context(
             adapter,
             adapter_profile,
             id: id.clone(),
+            rule_metadata: project.rule_metadata.get(id).cloned(),
             name: Some(display_name.clone()),
             kind: kind.into(),
             description: description.clone(),

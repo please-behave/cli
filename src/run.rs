@@ -350,6 +350,7 @@ pub fn verify_project_with_fail_fast(
     for item in &mut items {
         if let Some(rule) = plan.scheduled.iter().find(|r| r.id == item.id) {
             item.blocking = rule.blocking;
+            item.rule_metadata = rule.rule_metadata.clone();
         }
     }
     let mut report = Report {

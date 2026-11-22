@@ -4,6 +4,7 @@ use crate::{
     discovery, git_snapshot,
     report::{self, Item, Report, Status},
     repository_identity,
+    rule_digest::RuleMetadata,
 };
 use anyhow::{Context, Result, bail, ensure};
 use serde::Serialize;
@@ -25,6 +26,39 @@ struct RuleResult<'a> {
     id: &'a str,
     kind: &'a str,
     status: &'static str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    rule: Option<PublishedRule<'a>>,
+}
+
+#[derive(Serialize)]
+struct PublishedRule<'a> {
+    source: &'a str,
+    path: &'a str,
+    id: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    version: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    digest: Option<&'a str>,
+}
+
+impl<'a> PublishedRule<'a> {
+    fn from_metadata(metadata: &'a RuleMetadata) -> Option<Self> {
+        let source = metadata.source.as_deref()?;
+        if source.chars().count() > 256
+            || metadata.path.chars().count() > 256
+            || metadata.id.chars().count() > 128
+        {
+            return None;
+        }
+        let pair = metadata.version.as_deref().zip(metadata.digest.as_deref());
+        Some(Self {
+            source,
+            path: &metadata.path,
+            id: &metadata.id,
+            version: pair.map(|(version, _)| version),
+            digest: pair.map(|(_, digest)| digest),
+        })
+    }
 }
 
 impl<'a> From<&'a Item> for RuleResult<'a> {
@@ -38,6 +72,10 @@ impl<'a> From<&'a Item> for RuleResult<'a> {
             id: &item.id,
             kind: &item.kind,
             status,
+            rule: item
+                .rule_metadata
+                .as_ref()
+                .and_then(PublishedRule::from_metadata),
         }
     }
 }

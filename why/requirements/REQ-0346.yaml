@@ -4,9 +4,15 @@ area: reporting
 description: >-
   Please must send an attestation matching the gateway ingest contract with
   the saved report version, commit, execution point, overall verdict and each
-  result's ID, kind and mapped status, excluding all result detail.
+  result's run-scoped ID, kind and mapped status. It must project saved rule
+  identities that fit the gateway contract, adding the version and digest
+  together when both are available. Results without such an identity,
+  including integrity results and results from older reports without rule
+  metadata, must omit the rule object. Captured result detail stays local.
 rationale: >-
   The gateway needs portable run evidence without exposing local tools' output
   or review content.
 decisions:
   - DEC-0033
+  - why:DEC-0010
+  - why:DEC-0011

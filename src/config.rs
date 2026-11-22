@@ -289,6 +289,7 @@ pub struct Project {
     pub reviews: Vec<Review>,
     pub rule_sets: Vec<RuleSet>,
     pub effective: crate::rules::EffectiveConfig,
+    pub(crate) rule_metadata: BTreeMap<String, crate::rule_digest::RuleMetadata>,
     /// Absolute path of the current run's context file, set once per execution.
     pub context: Option<PathBuf>,
 }
@@ -624,6 +625,7 @@ pub(crate) fn validate(root: PathBuf, loaded: crate::discovery::Loaded) -> Resul
         reviews,
         rule_sets,
         effective,
+        rule_metadata: loaded.rule_metadata,
         context: None,
     })
 }

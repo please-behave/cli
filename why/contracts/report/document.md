@@ -59,12 +59,16 @@ state. It is not a freshness comparison or a stable machine-readable summary.
 
 `results` contains one result per scheduled Rule, including selected Rules left
 NOT_RUN or CANCELLED. Checks precede reviews, each in canonical ID order rather
-than completion order. Integrity results are additional evidence. Rule identities,
-kinds and enforcement must agree with the saved plan; required identities are
+than completion order. Integrity results are additional evidence. Run-scoped IDs,
+kinds and enforcement must agree with the saved plan; required IDs are
 unique and match its scheduled Rules. Disabled and omitted Rules have no result.
 Both omission reasons defined by the Plan API are valid in saved reports.
 Selection, labels, omitted reviews, required IDs and mode shown by status come
 from this saved plan rather than today's configuration.
+
+Each result also copies optional `rule_metadata` from its scheduled Rule in the
+saved plan. Integrity results have no rule metadata. Older reports may omit it
+in both places and remain readable and eligible for publishing.
 
 Each result's `duration_ms` measures its elapsed execution time; a review duration
 belongs to that review's adapter call. `reason` explains its outcome, with optional
@@ -162,6 +166,14 @@ integrity result, contributes its `id`, `kind` and `status`. A non-blocking
 review's FAIL or ERROR maps to WARN and CANCELLED maps to NOT_RUN. All other
 statuses pass through. The projection excludes the local repository path and
 all captured output, messages, findings and explanations.
+
+When saved `rule_metadata` supplies a rule identity that fits the gateway's
+field bounds, the result also includes `rule` with `source`, `path` and the
+source-local `id`. The publisher includes `version` and `digest` together when
+both are saved. Results without a publishable identity omit `rule`, including
+integrity results, results from sources such as local paths or file URLs, and
+results from older reports without rule metadata. The result's own `id` is
+still the run-scoped ID.
 
 The repository identity is the configured override or Git's fetch URL for
 `origin`, normalized as host and path. Normalization preserves path case and

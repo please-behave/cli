@@ -25,6 +25,14 @@ fn git(root: &Path, args: &[&str]) {
 }
 
 fn cli(root: &Path, args: &[&str], key: Option<&str>) -> Output {
+    let mut command = cli_command(root, args);
+    if let Some(key) = key {
+        command.env(KEY_NAME, key);
+    }
+    command.output().unwrap()
+}
+
+fn cli_command(root: &Path, args: &[&str]) -> std::process::Command {
     let mut command = support::command(env!("CARGO_BIN_EXE_please"));
     command
         .current_dir(root)
@@ -32,10 +40,7 @@ fn cli(root: &Path, args: &[&str], key: Option<&str>) -> Output {
         .env("PLEASE_CHANGE_BASE", "HEAD")
         .env("NO_PROXY", "*")
         .env("no_proxy", "*");
-    if let Some(key) = key {
-        command.env(KEY_NAME, key);
-    }
-    command.output().unwrap()
+    command
 }
 
 fn publish(root: &Path, gateway_url: &str, key: Option<&str>) -> Output {
@@ -253,15 +258,27 @@ fn projects_newest_failed_report_and_preserves_saved_evidence() {
             "execution_points": ["check"],
             "overall": "FAIL",
             "results": [
-                {"id": "failing", "kind": "check", "status": "FAIL"},
-                {"id": "passing", "kind": "check", "status": "PASS"},
-                {"id": "advisory", "kind": "review", "status": "NOT_RUN"},
+                {"id": "failing", "kind": "check", "status": "FAIL", "rule": {
+                    "source": "example.invalid/other/repo", "path": ".please/checks/failing", "id": "failing"
+                }},
+                {"id": "passing", "kind": "check", "status": "PASS", "rule": {
+                    "source": "example.invalid/other/repo", "path": ".please/checks/passing", "id": "passing"
+                }},
+                {"id": "advisory", "kind": "review", "status": "NOT_RUN", "rule": {
+                    "source": "example.invalid/other/repo", "path": ".please/reviews/advisory", "id": "advisory"
+                }},
             ],
         })
     );
 
     // Model a retained transition report with outcomes that are cumbersome to trigger together.
     report.schema_version = 1;
+    for rule in &mut report.plan.scheduled {
+        rule.rule_metadata = None;
+    }
+    for result in &mut report.results {
+        result.rule_metadata = None;
+    }
     report.results[0].status = Status::Error;
     report.results[0].exit_code = Some(2);
     report.results[1].status = Status::Cancelled;
@@ -301,6 +318,185 @@ fn projects_newest_failed_report_and_preserves_saved_evidence() {
         assert_eq!(fs::read(&path).unwrap(), fixture);
         assert_eq!(report::saved(root.path()).unwrap(), [1, 2]);
     }
+}
+
+#[cfg(unix)]
+#[test]
+// REQ-0354, REQ-0346: preserve source identity across import bindings and publish saved metadata.
+fn publishes_versioned_import_metadata_with_the_original_run_ids() {
+    use please::rule_digest::{self, RuleSource};
+
+    const SELECTOR: &str = "https://Rules.example.invalid:8443/Owner/Rules.git";
+    const DIRECTORY: &str = "sets/core/checks/source-directory";
+    let root = fixture(None);
+    let remote = tempfile::tempdir().unwrap();
+    let cache = tempfile::tempdir().unwrap();
+    git(remote.path(), &["init", "--quiet", "--initial-branch=main"]);
+    support::write(
+        remote.path(),
+        "sets/core/ruleset.toml",
+        &format!(
+            "id = 'core'\ndescription = 'Fixture'\nrules = ['{DIRECTORY}']\nrun_at = ['check']\n"
+        ),
+    );
+    support::write(
+        remote.path(),
+        &format!("{DIRECTORY}/rule.toml"),
+        "id = 'imported'\nversion = '2.17'\ndescription = 'Fixture'\n[check]\ncommand = 'git --version'\n",
+    );
+    support::write(
+        remote.path(),
+        &format!("{DIRECTORY}/rule.yaml"),
+        "purpose: 'Fixture'\n",
+    );
+    support::commit_all(remote.path());
+    let digest = rule_digest::from_directory(
+        RuleSource::Imported { git: SELECTOR },
+        remote.path(),
+        Path::new(DIRECTORY),
+    )
+    .unwrap()
+    .unwrap();
+
+    let project = root.path();
+    git(
+        project,
+        &[
+            "remote",
+            "add",
+            "origin",
+            "git@Project.example.invalid:Owner/Project.git",
+        ],
+    );
+    support::check(project, "unversioned", &["check"], "exit 0\n");
+    support::write(
+        project,
+        ".please/checks/no-knowledge/rule.toml",
+        "id = 'no-knowledge'\nversion = '1.0'\ndescription = 'Fixture'\nrun_at = ['check']\n[check]\ncommand = 'git --version'\n",
+    );
+    let file_selector = format!("file://{}", remote.path().display());
+    let config_path = project.join(".please/config.toml");
+    let mut config = fs::read_to_string(&config_path)
+        .unwrap()
+        .replace("\nimports = []\n", "\n");
+    for selector in [SELECTOR, &file_selector] {
+        support::trust_location(selector);
+        config.push_str(&format!(
+            "\n[[imports]]\ngit = {selector:?}\npath = 'sets/core'\nref = 'main'\n"
+        ));
+    }
+    fs::write(config_path, config).unwrap();
+    support::commit_all(project);
+
+    let invoke = |args: &[&str]| {
+        cli_command(project, args)
+            .env("XDG_CACHE_HOME", cache.path())
+            .env("GIT_CONFIG_COUNT", "1")
+            .env("GIT_CONFIG_KEY_0", format!("url.{file_selector}.insteadOf"))
+            .env("GIT_CONFIG_VALUE_0", SELECTOR)
+            .output()
+            .unwrap()
+    };
+    let sync = invoke(&["sync", "--yes"]);
+    assert!(sync.status.success(), "{sync:?}");
+    let preview = invoke(&["run", "--at", "check", "--plan", "--json"]);
+    assert!(preview.status.success(), "{preview:?}");
+    let plan: Value = serde_json::from_slice(&preview.stdout).unwrap();
+    support::assert_plan_contract(&plan);
+    let output = invoke(&["run", "--at", "check"]);
+    assert!(output.status.success(), "{output:?}");
+    let mut saved = report::read(project).unwrap();
+    assert_eq!(
+        plan["scheduled"],
+        serde_json::to_value(&saved.plan.scheduled).unwrap()
+    );
+
+    let published = json!({
+        "source": "rules.example.invalid/Owner/Rules",
+        "path": DIRECTORY,
+        "id": "imported",
+        "version": "2.17",
+        "digest": digest,
+    });
+    let mut expected_results = Vec::new();
+    for item in &saved.results {
+        let metadata = serde_json::to_value(item.rule_metadata.as_ref().unwrap()).unwrap();
+        let mut result = json!({"id": item.id, "kind": "check", "status": "PASS"});
+        match item.id.as_str() {
+            "unversioned" | "no-knowledge" => {
+                let identity = json!({
+                    "source": "project.example.invalid/Owner/Project",
+                    "path": format!(".please/checks/{}", item.id),
+                    "id": item.id,
+                });
+                let mut expected = identity.clone();
+                if item.id == "no-knowledge" {
+                    expected["version"] = json!("1.0");
+                }
+                assert_eq!(metadata, expected);
+                result["rule"] = identity;
+            }
+            id => {
+                assert!(
+                    id.starts_with("git:") && id.ends_with(":sets/core:1:imported"),
+                    "{id}"
+                );
+                if metadata["source"].is_null() {
+                    assert_eq!(
+                        metadata,
+                        json!({"path": DIRECTORY, "id": "imported", "version": "2.17"})
+                    );
+                } else {
+                    assert_eq!(metadata, published);
+                    result["rule"] = published.clone();
+                }
+            }
+        }
+        expected_results.push(result);
+    }
+    assert_eq!(expected_results.len(), 4);
+    assert_eq!(
+        expected_results
+            .iter()
+            .filter(|result| result["rule"] == published)
+            .count(),
+        1
+    );
+    saved.results.push(report::Item::simple(
+        "please-tree-stability",
+        "integrity",
+        Status::Error,
+        "Fixture integrity error".into(),
+    ));
+    saved.overall = Status::Error;
+    expected_results.push(json!({
+        "id": "please-tree-stability", "kind": "integrity", "status": "ERROR",
+    }));
+    let document = serde_json::to_value(&saved).unwrap();
+    support::assert_report_contract(&document);
+    fs::write(
+        project.join(".please/reports/1.json"),
+        serde_json::to_vec(&document).unwrap(),
+    )
+    .unwrap();
+
+    // Publication uses the persisted rule source even if the Git origin changed.
+    git(
+        project,
+        &[
+            "remote",
+            "set-url",
+            "origin",
+            "git@new.example.invalid:Owner/Project.git",
+        ],
+    );
+    let (output, attestation) = exchange(&listen(), project, 201);
+    assert_output(&output, 0, "Attestation accepted");
+    assert_eq!(
+        attestation["repository"],
+        "new.example.invalid/Owner/Project"
+    );
+    assert_eq!(attestation["results"], json!(expected_results));
 }
 
 #[test]

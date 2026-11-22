@@ -68,6 +68,8 @@ pub struct Finding {
 #[serde(deny_unknown_fields)]
 pub struct Item {
     pub id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rule_metadata: Option<crate::rule_digest::RuleMetadata>,
     pub kind: String,
     pub status: Status,
     pub blocking: bool,
@@ -96,6 +98,7 @@ impl Item {
     pub fn simple(id: &str, kind: &str, status: Status, reason: String) -> Self {
         Self {
             id: id.into(),
+            rule_metadata: None,
             kind: kind.into(),
             status,
             blocking: true,
@@ -305,6 +308,9 @@ pub fn read_number(root: &Path, number: u64) -> Result<Report> {
         if let Some(config) = &rule.adapter_profile {
             crate::config::validate_adapter(config).context("invalid report adapter profile")?;
         }
+        if let Some(metadata) = &rule.rule_metadata {
+            metadata.validate()?;
+        }
     }
     let expected: std::collections::BTreeSet<_> =
         plan.scheduled.iter().map(|r| (&r.id, &r.kind)).collect();
@@ -334,10 +340,10 @@ pub fn read_number(root: &Path, number: u64) -> Result<Report> {
             .origin
             .as_ref()
             .is_some_and(|o| o.execution_points.contains(&plan.at))
-            && report
-                .results
-                .iter()
-                .any(|item| item.id == rule.id && item.blocking == rule.blocking)),
+            && report.results.iter().any(|item| item.id == rule.id
+                && item.kind == rule.kind
+                && item.blocking == rule.blocking
+                && item.rule_metadata == rule.rule_metadata)),
         "inconsistent report rule metadata"
     );
     ensure!(
@@ -346,6 +352,10 @@ pub fn read_number(root: &Path, number: u64) -> Result<Report> {
         "inconsistent review configuration error"
     );
     for item in &report.results {
+        ensure!(
+            item.kind != "integrity" || item.rule_metadata.is_none(),
+            "integrity result cannot carry rule metadata"
+        );
         if let Some(adapter) = &item.adapter {
             ensure!(
                 item.kind == "review"

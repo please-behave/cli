@@ -9,7 +9,7 @@ use crate::{
     repository_identity,
 };
 use anyhow::{Context, Result, bail, ensure};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Map;
 use std::{
     io::ErrorKind,
@@ -20,6 +20,84 @@ use std::{
 pub enum RuleSource<'a> {
     Local,
     Imported { git: &'a str },
+}
+
+/// Portable metadata captured from a rule directory before import qualification.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RuleMetadata {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
+    pub path: String,
+    pub id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub version: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub digest: Option<String>,
+}
+
+impl RuleMetadata {
+    pub(crate) fn from_definition(
+        source: Option<&str>,
+        root: &Path,
+        directory: &Path,
+        rule: &RuleDefinition,
+        version: Option<&str>,
+    ) -> Option<Self> {
+        if source.is_none() && version.is_none() {
+            return None;
+        }
+        let path = portable_path(directory).ok()?;
+        // Missing or unusable digest inputs leave the rule's identity and
+        // declared version available without changing its execution outcome.
+        let digest = source.zip(version).and_then(|(source, version)| {
+            digest_definition(
+                root,
+                directory,
+                rule,
+                || Some(source.to_owned()),
+                &path,
+                version,
+            )
+            .ok()
+            .flatten()
+        });
+        Some(Self {
+            source: source.map(str::to_owned),
+            path,
+            id: rule.id.clone(),
+            version: version.map(str::to_owned),
+            digest,
+        })
+    }
+
+    pub(crate) fn validate(&self) -> Result<()> {
+        ensure!(
+            [&self.path, &self.id]
+                .into_iter()
+                .all(|value| !value.is_empty() && !value.contains('\0'))
+                && self.source.as_deref().is_none_or(|source| {
+                    !source.is_empty() && !source.contains('\0') && source.chars().count() <= 2048
+                })
+                && (self.source.is_some() || self.version.is_some())
+                && self
+                    .version
+                    .as_deref()
+                    .is_none_or(discovery::valid_rule_version)
+                && self.digest.as_deref().is_none_or(|digest| {
+                    self.source.is_some()
+                        && self.version.is_some()
+                        && digest.strip_prefix("v1:sha256:").is_some_and(|hex| {
+                            hex.len() == 64
+                                && hex
+                                    .bytes()
+                                    .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+                        })
+                }),
+            "invalid report rule metadata"
+        );
+        Ok(())
+    }
 }
 
 #[derive(Serialize)]
@@ -60,7 +138,40 @@ pub fn from_directory(
     let Some(version) = discovery::rule_version(&rule, &definition_path)? else {
         return Ok(None);
     };
+    let source = || match source {
+        RuleSource::Local => repository_identity::read_origin(root),
+        RuleSource::Imported { git } => repository_identity::normalize(git),
+    };
+    digest_definition(
+        root,
+        directory,
+        &rule,
+        source,
+        &portable_path(directory)?,
+        version,
+    )
+}
 
+fn portable_path(directory: &Path) -> Result<String> {
+    let path = directory
+        .components()
+        .filter_map(|part| match part {
+            Component::Normal(name) => Some(name.to_str().context("rule path must be UTF-8")),
+            _ => None,
+        })
+        .collect::<Result<Vec<_>>>()?
+        .join("/");
+    Ok(if path.is_empty() { ".".into() } else { path })
+}
+
+fn digest_definition(
+    root: &Path,
+    directory: &Path,
+    rule: &RuleDefinition,
+    source: impl FnOnce() -> Option<String>,
+    path: &str,
+    version: &str,
+) -> Result<Option<String>> {
     let knowledge_path = directory.join("rule.yaml");
     let full = match config::source_path(root, &knowledge_path) {
         Ok(path) => path,
@@ -79,19 +190,8 @@ pub fn from_directory(
         .and_then(|text| knowledge::parse(&text))
         .with_context(|| format!("invalid {}", knowledge_path.display()))?;
 
-    let identity = match source {
-        RuleSource::Local => repository_identity::read_origin(root),
-        RuleSource::Imported { git } => repository_identity::normalize(git),
-    }
-    .context("cannot determine rule source identity from a network Git remote")?;
-    let path = directory
-        .components()
-        .filter_map(|part| match part {
-            Component::Normal(name) => Some(name.to_str().context("rule path must be UTF-8")),
-            _ => None,
-        })
-        .collect::<Result<Vec<_>>>()?
-        .join("/");
+    let identity =
+        source().context("cannot determine rule source identity from a network Git remote")?;
 
     let kind = match (&rule.check, &rule.review) {
         (Some(_), None) => {
@@ -111,7 +211,7 @@ pub fn from_directory(
 
     canonical::digest(serde_json::to_value(DigestInput {
         source: &identity,
-        path: if path.is_empty() { "." } else { &path },
+        path,
         id: &rule.id,
         version,
         kind,

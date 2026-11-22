@@ -3,10 +3,12 @@ use crate::{
     config::source_path,
     config::{self, Check, Config, Review, RuleDefinition, RuleSet},
     limits::*,
+    repository_identity,
+    rule_digest::RuleMetadata,
 };
 use anyhow::{Context, Result, ensure};
 use std::{
-    collections::BTreeSet,
+    collections::{BTreeMap, BTreeSet},
     fs,
     path::{Path, PathBuf},
 };
@@ -104,6 +106,7 @@ pub(crate) struct Loaded {
     pub checks: Vec<(PathBuf, Check)>,
     pub reviews: Vec<(PathBuf, Review)>,
     pub rule_sets: Vec<(PathBuf, RuleSet)>,
+    pub rule_metadata: BTreeMap<String, RuleMetadata>,
 }
 pub(crate) fn load(root: &Path) -> Result<Loaded> {
     let directory = config::path("");
@@ -125,11 +128,19 @@ pub(crate) fn load(root: &Path) -> Result<Loaded> {
             directories.push((kind.to_owned(), dir));
         }
     }
-    let mut loaded = load_rules(root, config, sets, directories)?;
+    let source = (!directories.is_empty())
+        .then(|| repository_identity::read_origin(root))
+        .flatten();
+    let mut loaded = load_rules(root, config, sets, directories, source.as_deref())?;
     loaded.adapters = adapters(root, &directory.join("adapters"))?;
     Ok(loaded)
 }
-pub(crate) fn load_external(root: &Path, selected: &Path, consumer: Config) -> Result<Loaded> {
+pub(crate) fn load_external(
+    root: &Path,
+    selected: &Path,
+    consumer: Config,
+    git: &str,
+) -> Result<Loaded> {
     let central = selected.join("ruleset.toml");
     let mut set: RuleSet = document(root, &central)?;
     let mut directories = std::collections::BTreeMap::new();
@@ -163,6 +174,7 @@ pub(crate) fn load_external(root: &Path, selected: &Path, consumer: Config) -> R
             .into_iter()
             .map(|(path, kind)| (kind, path))
             .collect(),
+        repository_identity::normalize(git).as_deref(),
     )?;
     // External paths select definitions; the shared resolver still operates on IDs.
     let ids: std::collections::BTreeMap<_, _> = loaded
@@ -279,6 +291,7 @@ fn load_rules(
     config: Config,
     rule_sets: Vec<(PathBuf, RuleSet)>,
     directories: Vec<(String, PathBuf)>,
+    source: Option<&str>,
 ) -> Result<Loaded> {
     let mut loaded = Loaded {
         config,
@@ -286,6 +299,7 @@ fn load_rules(
         rule_sets,
         checks: vec![],
         reviews: vec![],
+        rule_metadata: BTreeMap::new(),
     };
     for (kind, dir) in directories {
         let full = source_path(root, &dir)?;
@@ -297,6 +311,11 @@ fn load_rules(
         let path = dir.join("rule.toml");
         let rule: RuleDefinition = document(root, &path)?;
         let version = rule_version(&rule, &path)?.map(str::to_owned);
+        if let Some(metadata) =
+            RuleMetadata::from_definition(source, root, &dir, &rule, version.as_deref())
+        {
+            loaded.rule_metadata.insert(rule.id.clone(), metadata);
+        }
         let name = rule.name.unwrap_or_else(|| rule.id.clone());
         ensure!(
             !name.is_empty()
@@ -441,7 +460,7 @@ pub(crate) fn rule_version<'a>(rule: &'a RuleDefinition, path: &Path) -> Result<
         .transpose()
 }
 
-fn valid_rule_version(version: &str) -> bool {
+pub(crate) fn valid_rule_version(version: &str) -> bool {
     version.len() <= MAX_RULE_VERSION_CHARS
         && version.split_once('.').is_some_and(|(major, minor)| {
             [major, minor].into_iter().all(|part| {

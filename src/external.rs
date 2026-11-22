@@ -463,6 +463,7 @@ pub(crate) fn load_with_changes(
             &checkout,
             Path::new(&import.path),
             project.config.clone(),
+            &import.git,
         )
         .context("invalid external rule-set definitions")?;
         ensure!(
@@ -610,6 +611,10 @@ pub(crate) fn load_with_changes(
             }
         }
         for (id, effective) in external.effective.rules {
+            let run_id = format!("{prefix}{id}");
+            if let Some(metadata) = external.rule_metadata.remove(&id) {
+                project.rule_metadata.insert(run_id.clone(), metadata);
+            }
             let source = PathBuf::from(format!(
                 "git/{repository}/{}@{}/{}",
                 import.path,
@@ -617,7 +622,7 @@ pub(crate) fn load_with_changes(
                 effective.source.display()
             ));
             project.effective.rules.insert(
-                format!("{prefix}{id}"),
+                run_id,
                 EffectiveRule {
                     source,
                     execution_points: effective.execution_points,

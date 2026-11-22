@@ -1,0 +1,16 @@
+id: REQ-0354
+name: Plans And Reports Preserve Portable Rule Metadata
+area: reporting
+description: >-
+  Plans must record the global identity of each represented rule with a
+  normalizable source and carry its declared version and canonical digest
+  where available. A declared version remains available without a source
+  or digest. Each saved rule result must carry the same metadata as its
+  scheduled rule. The run-scoped ID remains the execution identifier.
+rationale: >-
+  Recorded metadata supports later publication of the identity and version
+  observed during verification.
+decisions:
+  - DEC-0026
+  - why:DEC-0010
+  - why:DEC-0011

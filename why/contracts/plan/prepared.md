@@ -27,7 +27,18 @@ execution points and contributing Rule Set IDs. Imported origins additionally
 identify the source repository by a hash of its selector, selected directory,
 configured reference and full resolved commit; credentials and machine-specific
 cache paths are not provenance. Import mappings change effective points before
-selection and keep distinct import scopes and binding-qualified identities.
+selection and keep distinct import scopes and binding-qualified run-scoped IDs.
+
+Optional `rule_metadata` records the source-local `id` and the repository-relative
+rule directory `path` using slash separators. When available, `source` completes
+the global rule identity defined by why:DEC-0010. The source is the normalized
+network Git origin for a local Rule and the normalized configured Git selector
+for an imported Rule. `version` records a version declared by the rule owner.
+`digest` records the canonical rule digest when it can be computed from the
+source definition, prompt and knowledge document. A digest requires both a
+source and a version. A rule with neither a normalizable source nor a declared
+version omits `rule_metadata`. Plans produced before this extension may omit it.
+These fields leave the run-scoped `id` and its references in their existing form.
 
 `depends_on` records sorted, deduplicated canonical check IDs. Dependencies resolve
 within the enabled checks selected at this point; they never select extra Rules.

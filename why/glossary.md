@@ -10,7 +10,8 @@ behavior.
 | [Project](#project) | The repository in which Please Behave runs and whose governance it evaluates. |
 | [Rule](#rule) | A named expectation, implemented as a check or a review. |
 | [Rule ID](#rule-id) | The identifier of a rule within its source. |
-| [Rule Identity](#rule-identity) | The complete identifier of a rule within a run. |
+| [Rule Identity](#rule-identity) | The global identity of a rule across runs and revisions. |
+| [Run-Scoped ID](#run-scoped-id) | The identifier used for a rule in plans and reports. |
 | [Rule Version](#rule-version) | An optional A.B label assigned by the rule owner. |
 | [Check](#check) | A deterministic rule that runs a command. |
 | [Review](#review) | A rule that asks an AI to judge the project. |
@@ -45,9 +46,16 @@ the ID alone does not distinguish which import supplies it.
 
 ## Rule Identity
 
-A rule identity identifies a [rule](#rule) within a run. It is the rule ID for
-a local rule and the binding-qualified rule ID for an imported rule, so rules from
-different imports remain distinguishable in references, plans and reports.
+A rule identity consists of the normalized Git repository source, the
+repository-relative path of the rule directory and the [rule ID](#rule-id).
+It follows the same [rule](#rule) across refs, commits, import bindings,
+parameters, rule sets and execution points (why:DEC-0010).
+
+## Run-Scoped ID
+
+The run-scoped ID is the [rule ID](#rule-id) for a local rule and the
+binding-qualified rule ID for an imported rule. That qualification
+distinguishes bindings in references, plans and reports (DEC-0014).
 
 ## Rule Version
 
