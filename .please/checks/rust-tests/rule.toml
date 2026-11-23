@@ -1,4 +1,5 @@
 id = "rust-tests"
+version = "1.0"
 name = "Rust tests"
 description = "All Rust unit, acceptance, documentation and compatibility tests pass"
 enabled = true

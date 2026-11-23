@@ -1,4 +1,5 @@
 id = "requirement-citations"
+version = "1.0"
 name = "Requirement citations"
 description = "Every active requirement is cited by a test or exempted, and every cited requirement exists"
 enabled = true

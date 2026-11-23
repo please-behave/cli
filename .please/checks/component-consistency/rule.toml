@@ -1,4 +1,5 @@
 id = "component-consistency"
+version = "1.0"
 name = "Component consistency"
 description = "Component ownership of compiled files and dependencies between components match the code"
 enabled = true

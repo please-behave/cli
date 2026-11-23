@@ -1,4 +1,5 @@
 id = "clippy"
+version = "1.0"
 name = "Clippy"
 description = "Rust code has no Clippy warnings"
 enabled = true

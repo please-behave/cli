@@ -1,4 +1,5 @@
 id = "format-rust"
+version = "1.0"
 name = "Rust formatting"
 description = "Rust sources are formatted with rustfmt"
 enabled = true

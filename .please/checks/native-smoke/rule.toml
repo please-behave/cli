@@ -1,4 +1,5 @@
 id = "native-smoke"
+version = "1.0"
 name = "Native smoke test"
 description = "The built executable passes its smoke test"
 enabled = true

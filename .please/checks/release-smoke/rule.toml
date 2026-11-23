@@ -1,4 +1,5 @@
 id = "release-smoke"
+version = "1.0"
 name = "Release smoke test"
 description = "The release candidate executable passes its smoke test"
 run_at = ["release"]
