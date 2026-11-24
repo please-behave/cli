@@ -1,13 +1,16 @@
 id: REQ-0349
-name: Publish Credentials Come From the Environment
+name: Gateway Authentication Is Configured Explicitly
 area: configuration
 description: >-
-  Please must read the API key only from the environment variable named in
-  the project's publish settings, refuse delivery if the key is unavailable,
-  and send the key only in the bearer authorization header without
-  disclosing it in output.
+  Publish and register must use the authentication method selected by
+  publish.auth. The supported values are api-key (the default) and github-oidc.
+  Other values are configuration errors. API key authentication requires
+  publish.key_env and reads the key only from the named environment variable.
+  Delivery fails if the key is unavailable. The key is sent only in the
+  bearer authorization header and is never disclosed in output. GitHub OIDC
+  does not require publish.key_env.
 rationale: >-
   A project can configure delivery without storing the credential in version
   control or exposing it in logs.
 decisions:
-  - DEC-0033
+  - DEC-0036

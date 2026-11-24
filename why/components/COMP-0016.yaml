@@ -17,6 +17,7 @@ must_not:
 files:
   - src/publish.rs
   - src/gateway.rs
+  - src/gateway/auth.rs
   - src/register.rs
 depends_on:
   - COMP-0003
@@ -33,3 +34,4 @@ requirements:
   - REQ-0355
   - REQ-0356
   - REQ-0357
+  - REQ-0358

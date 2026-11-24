@@ -3,8 +3,8 @@ name: Rule Version Registration Is Explicit
 area: reporting
 description: >-
   Please must register rule versions only through the explicit register command.
-  It must require a gateway origin for every invocation, read the bearer
-  credential from the environment variable named by publish.key_env and honor
+  It must require a gateway origin for every invocation, use the configured
+  gateway authentication method and honor
   the publish.repository override. It must never follow redirects or expose
   credentials or URL details beyond the origin in diagnostics.
 rationale: >-

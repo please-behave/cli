@@ -121,7 +121,7 @@ pub fn send(root: &Path, gateway_url: &str) -> Result<()> {
 
     let settings = settings?;
     let repository = gateway::repository(root, &settings)?;
-    let authorization = gateway::authorization(&settings.key_env)?;
+    let authorization = gateway::authorization(&settings, &endpoint)?;
     let body = serde_json::to_vec(&attestation(&report, &repository, commit))?;
 
     let response = gateway::post(endpoint, authorization, &body, "attestation")?;

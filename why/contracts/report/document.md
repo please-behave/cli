@@ -188,8 +188,17 @@ or fallback. Diagnostics never include credentials or any part of the URL
 beyond the origin.
 
 Delivery uses a single POST to `/v0/attestations` on the supplied origin with
-bearer authorization from the configured environment variable. The command
-succeeds on HTTP 201 and reports credential rejection, rate limiting,
+bearer authorization using the [configured method](../configuration/project.md#publish-settings).
+For GitHub OIDC, the CLI requests a token over HTTPS from
+`ACTIONS_ID_TOKEN_REQUEST_URL` with bearer authorization from
+`ACTIONS_ID_TOKEN_REQUEST_TOKEN`. The request has a timeout and follows no
+redirects. Its audience is the lowercase gateway scheme and authority, with
+any explicit port and no trailing slash. If either environment variable is
+missing or empty, the error names the workflow permission `id-token: write`.
+Neither the workflow request credential nor the returned token is exposed
+in diagnostics or logs.
+
+The command succeeds on HTTP 201 and reports credential rejection, rate limiting,
 document rejection, other gateway responses and
 transport failures distinctly. It follows no redirects and leaves the report
 and its verdict intact.

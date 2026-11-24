@@ -7,11 +7,13 @@ of verification and attestation publication (why:DEC-0012).
 
 The command shares the [delivery settings and HTTP origin rules](document.md#publishing-evidence)
 of `please publish`. The origin is required on every invocation. `[publish]`
-names the environment variable for the bearer credential and can override the
+selects the authentication method and can override the
 repository identity derived from the network Git origin. The identity used for
 registration must be a normalized Git host and path that the gateway accepts.
 Redirects are disabled. Errors omit credentials, response bodies and URL details
 beyond the origin.
+With GitHub OIDC, the gateway rejects a registration whose source differs from
+the workflow's repository.
 
 A rule directory contains `rule.toml`. Discovery uses the current commit,
 the index and nonignored untracked paths. It includes disabled rules and rules

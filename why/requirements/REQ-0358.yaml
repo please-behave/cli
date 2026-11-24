@@ -1,0 +1,17 @@
+id: REQ-0358
+name: GitHub OIDC Tokens Are Scoped to the Gateway
+area: reporting
+description: >-
+  With github-oidc selected, publish and register must obtain a fresh token
+  from the GitHub Actions token request URL using the request credential provided
+  by the workflow environment. The token audience must be the lowercase gateway
+  scheme and authority, including any explicit port and with no trailing slash.
+  The request must use HTTPS, have a timeout and follow no redirects. If either
+  workflow request variable is missing or empty, the error must identify the
+  id-token write permission. Both credentials must be sent only as bearer
+  authorization for their respective requests and kept out of diagnostics and logs.
+rationale: >-
+  A workflow can send evidence and register its rules without a stored secret.
+  The gateway audience scopes the credential to the intended recipient.
+decisions:
+  - DEC-0036

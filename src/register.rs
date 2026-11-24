@@ -1,6 +1,6 @@
 //! Submit committed rule metadata as one registration batch.
 use crate::{
-    config::{self, RuleDefinition},
+    config::{self, PublishAuth, RuleDefinition},
     discovery, gateway,
     git_snapshot::{self, git},
     limits::{MAX_INSTRUCTION_BYTES, MAX_METADATA_BYTES},
@@ -60,7 +60,10 @@ pub fn send(root: &Path, gateway_url: &str, mut show: impl FnMut(&str)) -> Resul
     let settings = gateway::settings(root)?;
     let source = gateway::repository(root, &settings)?;
     validate_source(&source)?;
-    let authorization = gateway::authorization(&settings.key_env)?;
+    let api_key = match settings.auth {
+        PublishAuth::ApiKey => Some(gateway::api_key_authorization(&settings)?),
+        PublishAuth::GithubOidc => None,
+    };
     let head = head(root)?;
     let tree = git_text(root, &["ls-tree", "-rz", "--full-tree", &head])
         .context("cannot enumerate files in the registration commit")?;
@@ -102,6 +105,10 @@ pub fn send(root: &Path, gateway_url: &str, mut show: impl FnMut(&str)) -> Resul
         "registration exceeds the gateway request size limit"
     );
     require_clean_directories(root, &directories, &head)?;
+    let authorization = match api_key {
+        Some(header) => header,
+        None => gateway::authorization(&settings, &endpoint)?,
+    };
     let response = gateway::post(endpoint, authorization, &body, "registration")?;
     let receipt = read_receipt(response)?;
     ensure!(

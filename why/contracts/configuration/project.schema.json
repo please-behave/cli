@@ -83,8 +83,17 @@
     "publish": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["key_env"],
+      "required": [],
+      "if": {
+        "properties": { "auth": { "const": "github-oidc" } },
+        "required": ["auth"]
+      },
+      "else": { "required": ["key_env"] },
       "properties": {
+        "auth": {
+          "enum": ["api-key", "github-oidc"],
+          "default": "api-key"
+        },
         "key_env": {
           "type": "string",
           "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"

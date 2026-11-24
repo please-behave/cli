@@ -114,11 +114,22 @@ fn initialized_configuration_matches_project_and_rule_schemas() {
     let root = project();
     let mut config = config::load(root.path()).unwrap().config;
     assert!(config.publish.is_none());
+    let schema = project_schema();
     config.publish = Some(config::PublishSettings {
-        key_env: "PLEASE_GATEWAY_KEY".into(),
+        auth: config::PublishAuth::ApiKey,
+        key_env: Some("PLEASE_GATEWAY_KEY".into()),
         repository: Some("example.invalid/owner/repo".into()),
     });
-    project_contract(&project_schema(), &config);
+    project_contract(&schema, &config);
+    config.publish = Some(config::PublishSettings {
+        auth: config::PublishAuth::GithubOidc,
+        key_env: None,
+        repository: None,
+    });
+    jsonschema::validator_for(&schema)
+        .unwrap()
+        .validate(&serde_json::to_value(&config).unwrap())
+        .unwrap();
     for rule in [
         "checks/always-ok/rule.toml",
         "checks/deliberately-failing/rule.toml",
@@ -168,6 +179,12 @@ fn project_schema_and_loader_agree_on_types_bounds_and_unknown_fields() {
             true,
         ),
         ("project = 'Example'\n[publish]", false),
+        ("project = 'Example'\n[publish]\nauth = 'api-key'", false),
+        ("project = 'Example'\n[publish]\nauth = 'github-oidc'", true),
+        (
+            "project = 'Example'\n[publish]\nauth = 'unknown'\nkey_env = 'KEY'",
+            false,
+        ),
         (
             "project = 'Example'\n[publish]\nkey_env = 'PLEASE_GATEWAY_KEY'",
             true,

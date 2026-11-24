@@ -95,6 +95,9 @@ pub enum Words {
         report: Option<u64>,
     },
     /// Publish an attestation from the newest current report.
+    #[command(
+        after_help = "Set publish.auth in .please/config.toml to api-key (default) or github-oidc. GitHub OIDC requires id-token: write."
+    )]
     Publish {
         #[arg(
             long,
@@ -104,6 +107,9 @@ pub enum Words {
         gateway_url: String,
     },
     /// Register committed local rule versions with the gateway.
+    #[command(
+        after_help = "Set publish.auth in .please/config.toml to api-key (default) or github-oidc. GitHub OIDC requires id-token: write."
+    )]
     Register {
         #[arg(long, value_name = "URL", help = "HTTP or HTTPS origin of the gateway")]
         gateway_url: String,

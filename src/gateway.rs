@@ -1,6 +1,8 @@
 //! Shared delivery settings and HTTP transport for the gateway commands.
+mod auth;
+
 use crate::{
-    config::{self, Config, PublishSettings},
+    config::{self, Config, PublishAuth, PublishSettings},
     discovery, repository_identity,
 };
 use anyhow::{Context, Result, ensure};
@@ -48,19 +50,38 @@ pub(crate) fn repository(root: &Path, settings: &PublishSettings) -> Result<Stri
         .context("cannot determine repository identity; set a network Git remote named origin or publish.repository")
 }
 
-pub(crate) fn authorization(key_env: &str) -> Result<HeaderValue> {
+pub(crate) fn authorization(settings: &PublishSettings, endpoint: &Uri) -> Result<HeaderValue> {
+    match settings.auth {
+        PublishAuth::ApiKey => api_key_authorization(settings),
+        PublishAuth::GithubOidc => {
+            let request_value = |name| {
+                std::env::var(name)
+                    .ok()
+                    .filter(|value| !value.trim().is_empty())
+                    .with_context(|| {
+                        format!(
+                            "GitHub OIDC requires {name}; grant id-token: write in the workflow"
+                        )
+                    })
+            };
+            let url = request_value("ACTIONS_ID_TOKEN_REQUEST_URL")?;
+            let request_token = request_value("ACTIONS_ID_TOKEN_REQUEST_TOKEN")?;
+            let agent = ureq::Agent::new_with_defaults();
+            auth::request_token_from_github(&agent, &url, &request_token, endpoint)
+        }
+    }
+}
+
+pub(crate) fn api_key_authorization(settings: &PublishSettings) -> Result<HeaderValue> {
+    let key_env = settings
+        .key_env
+        .as_deref()
+        .context("publish.key_env is required for api-key authentication")?;
     let key = std::env::var(key_env)
         .ok()
         .filter(|key| !key.trim().is_empty())
         .context("publish API key environment variable is unset, empty or invalid; check publish.key_env")?;
-    ensure!(
-        key.bytes().all(|byte| byte.is_ascii_graphic()),
-        "publish API key is invalid"
-    );
-    let mut authorization = HeaderValue::from_str(&format!("Bearer {key}"))
-        .map_err(|_| anyhow::anyhow!("publish API key is invalid"))?;
-    authorization.set_sensitive(true);
-    Ok(authorization)
+    auth::bearer(&key).context("publish API key is invalid")
 }
 
 pub(crate) fn post(

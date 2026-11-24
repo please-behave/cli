@@ -46,7 +46,9 @@ fn cli_command(root: &Path, args: &[&str]) -> std::process::Command {
         .args(args)
         .env("PLEASE_CHANGE_BASE", "HEAD")
         .env("NO_PROXY", "*")
-        .env("no_proxy", "*");
+        .env("no_proxy", "*")
+        .env_remove("ACTIONS_ID_TOKEN_REQUEST_URL")
+        .env_remove("ACTIONS_ID_TOKEN_REQUEST_TOKEN");
     command
 }
 
@@ -178,6 +180,46 @@ fn assert_no_request(listener: &TcpListener) {
     assert!(
         matches!(listener.accept(), Err(error) if error.kind() == std::io::ErrorKind::WouldBlock)
     );
+}
+
+#[test]
+// REQ-0349, REQ-0358: both commands select OIDC without an API key and require HTTPS.
+fn oidc_delivery_requires_workflow_permission_and_a_secure_token_endpoint() {
+    const URL_ENV: &str = "ACTIONS_ID_TOKEN_REQUEST_URL";
+    const TOKEN_ENV: &str = "ACTIONS_ID_TOKEN_REQUEST_TOKEN";
+
+    let listener = listen();
+    let url = gateway_url(&listener);
+    let root = registration_fixture();
+    let project = root.path();
+    let config_path = project.join(".please/config.toml");
+    let config = fs::read_to_string(&config_path).unwrap();
+    fs::write(
+        config_path,
+        config.replace(&format!("key_env = '{KEY_NAME}'"), "auth = 'github-oidc'"),
+    )
+    .unwrap();
+    support::commit_all(project);
+    run(project, 0);
+
+    for command in ["publish", "register"] {
+        let args = [command, "--gateway-url", &url];
+        for (provided, missing) in [(TOKEN_ENV, URL_ENV), (URL_ENV, TOKEN_ENV)] {
+            let output = cli_command(project, &args)
+                .env(provided, &url)
+                .output()
+                .unwrap();
+            assert_output(&output, 2, "id-token: write");
+            assert_output(&output, 2, missing);
+        }
+        let output = cli_command(project, &args)
+            .env(URL_ENV, format!("{url}/{KEY}"))
+            .env(TOKEN_ENV, KEY)
+            .output()
+            .unwrap();
+        assert_output(&output, 2, "GitHub OIDC request URL must be an HTTPS URL");
+        assert_no_request(&listener);
+    }
 }
 
 fn registration_fixture() -> tempfile::TempDir {

@@ -87,21 +87,39 @@ impl Default for ReportSettings {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct PublishSettings {
-    pub key_env: String,
+    #[serde(default)]
+    pub auth: PublishAuth,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub key_env: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub repository: Option<String>,
 }
 
+#[derive(Debug, Clone, Copy, Default, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum PublishAuth {
+    #[default]
+    ApiKey,
+    GithubOidc,
+}
+
 impl PublishSettings {
     pub(crate) fn validate(&self) -> Result<()> {
-        let mut bytes = self.key_env.bytes();
-        ensure!(
-            bytes
-                .next()
-                .is_some_and(|first| first.is_ascii_alphabetic() || first == b'_')
-                && bytes.all(|byte| byte.is_ascii_alphanumeric() || byte == b'_'),
-            "publish.key_env must name an environment variable"
-        );
+        if let Some(key_env) = &self.key_env {
+            let mut bytes = key_env.bytes();
+            ensure!(
+                bytes
+                    .next()
+                    .is_some_and(|first| first.is_ascii_alphabetic() || first == b'_')
+                    && bytes.all(|byte| byte.is_ascii_alphanumeric() || byte == b'_'),
+                "publish.key_env must name an environment variable"
+            );
+        } else {
+            ensure!(
+                matches!(self.auth, PublishAuth::GithubOidc),
+                "publish.key_env is required for api-key authentication"
+            );
+        }
         if let Some(repository) = &self.repository {
             ensure!(
                 !repository.is_empty()
