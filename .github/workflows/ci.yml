@@ -7,7 +7,10 @@ permissions:
   contents: read
 jobs:
   check:
-    uses: christianpflugradt/repository-catalog/.github/workflows/ci-check.yml@52f75f8c81b611b346a64c0d8d0c11f3ed124de1 # updates/workflows/ci
+    permissions:
+      contents: read
+      id-token: write
+    uses: christianpflugradt/repository-catalog/.github/workflows/ci-check.yml@2b098709773d0de78f6d03b597c03b15eff6e2d5 # updates/workflows/ci
     with:
       env: |
         BUILD_TARGET=x86_64-unknown-linux-gnu
@@ -15,4 +18,3 @@ jobs:
     secrets:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       GATEWAY_URL: ${{ secrets.GATEWAY_URL }}
-      GATEWAY_KEY: ${{ secrets.GATEWAY_KEY }}
