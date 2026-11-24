@@ -98,11 +98,12 @@ configuration errors. With `api-key`, `key_env` is required and names the
 environment variable that supplies the API key. With `github-oidc`, no
 `key_env` is required. Credentials are acquired only for delivery.
 
-An optional `repository` supplies the
-exact repository identity, overriding derivation from Git's
-`origin` remote. The gateway rejects GitHub OIDC delivery when that identity
-differs from the workflow's repository. Changing these fields changes a
-governed file and requires a new run before publication.
+An optional `repository` overrides derivation of the repository identity from
+Git's `origin` remote. With API-key authentication the override is used as
+written. With GitHub OIDC the CLI lowercases the host and path of the selected
+identity, and the gateway rejects delivery if the result differs from the
+workflow's repository. Changing these fields changes a governed file and
+requires a new run before publication.
 
 These fields extend the experimental configuration API at version 0. They add
 no version declaration in TOML.

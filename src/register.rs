@@ -1,6 +1,6 @@
 //! Submit committed rule metadata as one registration batch.
 use crate::{
-    config::{self, PublishAuth, RuleDefinition},
+    config::{self, PublishAuth, PublishSettings, RuleDefinition},
     discovery, gateway,
     git_snapshot::{self, git},
     limits::{MAX_INSTRUCTION_BYTES, MAX_METADATA_BYTES},
@@ -15,7 +15,7 @@ use std::{
     path::{Path, PathBuf},
     time::Duration,
 };
-use ureq::http::uri::Authority;
+use ureq::http::{HeaderValue, Uri, uri::Authority};
 
 const GIT_TIMEOUT: Duration = Duration::from_secs(30);
 const MAX_BATCH_RULES: usize = 100;
@@ -54,7 +54,16 @@ struct PreparedRule {
     digest: String,
 }
 
-pub fn send(root: &Path, gateway_url: &str, mut show: impl FnMut(&str)) -> Result<()> {
+pub fn send(root: &Path, gateway_url: &str, show: impl FnMut(&str)) -> Result<()> {
+    send_with_authorization(root, gateway_url, show, gateway::authorization)
+}
+
+pub(crate) fn send_with_authorization(
+    root: &Path,
+    gateway_url: &str,
+    mut show: impl FnMut(&str),
+    authorize: impl FnOnce(&PublishSettings, &Uri) -> Result<HeaderValue>,
+) -> Result<()> {
     let endpoint = gateway::endpoint(gateway_url, "/v0/rule-registrations")?;
     git_snapshot::require_root(root)?;
     let settings = gateway::settings(root)?;
@@ -107,7 +116,7 @@ pub fn send(root: &Path, gateway_url: &str, mut show: impl FnMut(&str)) -> Resul
     require_clean_directories(root, &directories, &head)?;
     let authorization = match api_key {
         Some(header) => header,
-        None => gateway::authorization(&settings, &endpoint)?,
+        None => authorize(&settings, &endpoint)?,
     };
     let response = gateway::post(endpoint, authorization, &body, "registration")?;
     let receipt = read_receipt(response)?;

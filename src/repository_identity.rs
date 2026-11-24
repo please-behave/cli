@@ -1,6 +1,26 @@
-use crate::git_snapshot;
+use crate::{
+    config::{PublishAuth, PublishSettings},
+    git_snapshot,
+};
 use std::{path::Path, time::Duration};
 use ureq::http::uri::Authority;
+
+pub(crate) fn for_delivery(root: &Path, settings: &PublishSettings) -> Option<String> {
+    let mut identity = settings.repository.clone().or_else(|| read_origin(root))?;
+    if matches!(settings.auth, PublishAuth::GithubOidc) {
+        identity.make_ascii_lowercase();
+    }
+    Some(identity)
+}
+
+pub(crate) fn for_local_rule(root: &Path, settings: Option<&PublishSettings>) -> Option<String> {
+    match settings {
+        Some(settings) if matches!(settings.auth, PublishAuth::GithubOidc) => {
+            for_delivery(root, settings)
+        }
+        _ => read_origin(root),
+    }
+}
 
 pub(crate) fn normalize(remote: &str) -> Option<String> {
     let (authority, path) = if let Some((scheme, address)) = remote.split_once("://") {

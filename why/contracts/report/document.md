@@ -175,11 +175,16 @@ integrity results, results from sources such as local paths or file URLs, and
 results from older reports without rule metadata. The result's own `id` is
 still the run-scoped ID.
 
-The repository identity is the configured override or Git's fetch URL for
-`origin`, normalized as host and path. Normalization preserves path case and
-removes the transport scheme, user information, port, URL query and fragment,
-surrounding path slashes and a terminal `.git`. The hostname is lowercased.
-SCP-style locations are supported. A local origin requires an override.
+The repository identity is the configured override or the host and path from
+Git's fetch URL for `origin`. Derivation from the URL lowercases the hostname
+and removes the transport scheme, user information, port, URL query and
+fragment, surrounding path slashes and a terminal `.git`. SCP-style locations
+are supported. A local origin requires an override. With API-key authentication
+the derived path keeps its case and an override is used as written. With
+GitHub OIDC the CLI lowercases the entire identity to match the gateway sender.
+Runs use that same identity for local rule metadata and its digest. If a saved
+report records a different source for a local rule, GitHub OIDC publication
+requires a new run to capture matching metadata.
 
 The command requires `--gateway-url <URL>` for every invocation. The value is
 an HTTP or HTTPS origin with an optional port and trailing slash. Credentials,

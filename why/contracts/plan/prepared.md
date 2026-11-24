@@ -33,7 +33,9 @@ Optional `rule_metadata` records the source-local `id` and the repository-relati
 rule directory `path` using slash separators. When available, `source` completes
 the global rule identity defined by why:DEC-0010. The source is the normalized
 network Git origin for a local Rule and the normalized configured Git selector
-for an imported Rule. `version` records a version declared by the rule owner.
+for an imported Rule. With GitHub OIDC configured, a local Rule instead uses
+the same lowercase repository identity as delivery, including any
+`publish.repository` override. `version` records a version declared by the rule owner.
 `digest` records the canonical rule digest when it can be computed from the
 source definition, prompt and knowledge document. A digest requires both a
 source and a version. A rule with neither a normalizable source nor a declared

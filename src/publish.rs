@@ -1,5 +1,6 @@
 //! Projects saved verification evidence onto the gateway ingest contract.
 use crate::{
+    config::{PublishAuth, PublishSettings},
     gateway, git_snapshot,
     report::{self, Item, Report, Status},
     rule_digest::RuleMetadata,
@@ -7,6 +8,7 @@ use crate::{
 use anyhow::{Context, Result, bail, ensure};
 use serde::Serialize;
 use std::path::Path;
+use ureq::http::{HeaderValue, Uri};
 
 #[derive(Serialize)]
 struct Attestation<'a> {
@@ -89,6 +91,14 @@ fn attestation<'a>(report: &'a Report, repository: &'a str, commit: &'a str) -> 
 }
 
 pub fn send(root: &Path, gateway_url: &str) -> Result<()> {
+    send_with_authorization(root, gateway_url, gateway::authorization)
+}
+
+pub(crate) fn send_with_authorization(
+    root: &Path,
+    gateway_url: &str,
+    authorize: impl FnOnce(&PublishSettings, &Uri) -> Result<HeaderValue>,
+) -> Result<()> {
     let endpoint = gateway::endpoint(gateway_url, "/v0/attestations")?;
     git_snapshot::require_root(root)?;
     let number = report::saved(root)?
@@ -121,7 +131,22 @@ pub fn send(root: &Path, gateway_url: &str) -> Result<()> {
 
     let settings = settings?;
     let repository = gateway::repository(root, &settings)?;
-    let authorization = gateway::authorization(&settings, &endpoint)?;
+    if matches!(settings.auth, PublishAuth::GithubOidc) {
+        ensure!(
+            report.plan.scheduled.iter().all(|rule| {
+                rule.origin
+                    .as_ref()
+                    .is_some_and(|origin| origin.external.is_some())
+                    || rule
+                        .rule_metadata
+                        .as_ref()
+                        .and_then(|metadata| metadata.source.as_deref())
+                        .is_none_or(|source| source == repository)
+            }),
+            "saved report has a different local rule source; run please run again before publishing"
+        );
+    }
+    let authorization = authorize(&settings, &endpoint)?;
     let body = serde_json::to_vec(&attestation(&report, &repository, commit))?;
 
     let response = gateway::post(endpoint, authorization, &body, "attestation")?;

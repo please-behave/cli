@@ -12,7 +12,8 @@ repository identity derived from the network Git origin. The identity used for
 registration must be a normalized Git host and path that the gateway accepts.
 Redirects are disabled. Errors omit credentials, response bodies and URL details
 beyond the origin.
-With GitHub OIDC, the gateway rejects a registration whose source differs from
+With GitHub OIDC, the CLI uses the lowercase repository identity as each rule's
+source before computing its digest. The gateway requires the source to match
 the workflow's repository.
 
 A rule directory contains `rule.toml`. Discovery uses the current commit,

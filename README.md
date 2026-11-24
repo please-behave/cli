@@ -121,9 +121,10 @@ run the same rules.
 
 Both gateway commands use `[publish].auth` in `.please/config.toml`.
 Set it to `"github-oidc"` in GitHub Actions with `id-token: write` to use
-the workflow's identity. API-key authentication remains the default. With
-GitHub OIDC, a `publish.repository` override must match the workflow's
-repository.
+the workflow's identity. GitHub OIDC lowercases the repository host and path
+for both commands, including a `publish.repository` override. The resulting
+identity must match the workflow's repository. API-key authentication remains
+the default and preserves repository path case.
 
 `run` uses the `pre-push` execution point by default. Preview its selection
 without executing rules:

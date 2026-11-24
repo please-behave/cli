@@ -36,3 +36,9 @@ pub use run::{
     verify_project_with_context, verify_project_with_fail_fast, verify_project_with_mode,
     verify_project_with_progress,
 };
+
+#[cfg(test)]
+extern crate self as please;
+#[cfg(test)]
+#[path = "../tests/support/oidc_delivery.rs"]
+mod oidc_delivery_tests;

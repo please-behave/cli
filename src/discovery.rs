@@ -110,7 +110,7 @@ pub(crate) struct Loaded {
 }
 pub(crate) fn load(root: &Path) -> Result<Loaded> {
     let directory = config::path("");
-    let config = document(root, &directory.join("config.toml"))?;
+    let config: Config = document(root, &directory.join("config.toml"))?;
     let mut sets = Vec::new();
     for path in entries(root, &directory.join("rule-sets"))? {
         let full = source_path(root, &path)?;
@@ -129,7 +129,7 @@ pub(crate) fn load(root: &Path) -> Result<Loaded> {
         }
     }
     let source = (!directories.is_empty())
-        .then(|| repository_identity::read_origin(root))
+        .then(|| repository_identity::for_local_rule(root, config.publish.as_ref()))
         .flatten();
     let mut loaded = load_rules(root, config, sets, directories, source.as_deref())?;
     loaded.adapters = adapters(root, &directory.join("adapters"))?;

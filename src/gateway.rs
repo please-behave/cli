@@ -46,7 +46,7 @@ pub(crate) fn settings(root: &Path) -> Result<PublishSettings> {
 }
 
 pub(crate) fn repository(root: &Path, settings: &PublishSettings) -> Result<String> {
-    settings.repository.clone().or_else(|| repository_identity::read_origin(root))
+    repository_identity::for_delivery(root, settings)
         .context("cannot determine repository identity; set a network Git remote named origin or publish.repository")
 }
 
