@@ -324,6 +324,8 @@ pub struct ExecutionPoints {
 pub struct RuleSet {
     pub id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub version: Option<toml::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
     pub description: String,
     pub rules: Vec<RuleReference>,
@@ -442,7 +444,7 @@ fn timeout(value: u64) -> Result<()> {
     );
     Ok(())
 }
-fn nonempty(value: &str, name: &str) -> Result<()> {
+pub(crate) fn nonempty(value: &str, name: &str) -> Result<()> {
     ensure!(
         !value.trim().is_empty() && !value.contains('\0'),
         "{name} must be nonempty and contain no NUL"

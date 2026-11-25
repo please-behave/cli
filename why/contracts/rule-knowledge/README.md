@@ -2,7 +2,8 @@
 
 A Rule or Rule Set can carry a structured companion document that records why it
 exists. This directory defines their structure. The CLI reads the rule knowledge
-document when computing a rule digest.
+document when computing a rule digest and reads the Rule Set knowledge document
+when registering a set.
 
 ## Why it exists
 

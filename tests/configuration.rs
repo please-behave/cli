@@ -1654,7 +1654,7 @@ fn rule_set_ids_are_unique_independently_of_rule_ids() {
 }
 
 #[test]
-// REQ-0359: set labels preserve the selected rule, semantic plan and rule digest.
+// REQ-0359, REQ-0362: labels and versions preserve rule selection and digests.
 fn local_rule_set_name_is_display_only() {
     let root = project();
     git(
@@ -1681,10 +1681,17 @@ fn local_rule_set_name_is_display_only() {
     let path = ".please/rule-sets/shared.toml";
     let definition =
         "id = 'shared'\ndescription = 'Shared set'\nrules = ['shared']\nrun_at = ['check']\n";
-    let load = |name_field: &str, expected_name: Option<&str>| {
-        write(root.path(), path, &format!("{definition}{name_field}"));
+    let load = |fields: &str, expected_name: Option<&str>, expected_version: Option<&str>| {
+        write(root.path(), path, &format!("{definition}{fields}"));
         let project = config::load(root.path()).unwrap();
         assert_eq!(project.rule_sets[0].name.as_deref(), expected_name);
+        assert_eq!(
+            project.rule_sets[0]
+                .version
+                .as_ref()
+                .and_then(toml::Value::as_str),
+            expected_version
+        );
         let plan = planner::build(&project, Some("check"), false).unwrap().plan;
         assert_eq!(plan.required_ids, ["shared"]);
         let digest = plan.scheduled[0]
@@ -1700,9 +1707,29 @@ fn local_rule_set_name_is_display_only() {
         );
         (plan.plan_id, digest)
     };
-    let unnamed = load("", None);
+    write(
+        root.path(),
+        ".please/rule-sets/ruleset.yaml",
+        "purpose: Fixture\n",
+    );
+    let unnamed = load("", None, None);
     let name = "é".repeat(80);
-    assert_eq!(unnamed, load(&format!("name = '{name}'\n"), Some(&name)));
+    assert_eq!(
+        unnamed,
+        load(
+            &format!("name = '{name}'\nversion = '1.2'\n"),
+            Some(&name),
+            Some("1.2")
+        )
+    );
+    for invalid in ["1.2", "'01.2'", "'1.2.3'"] {
+        write(
+            root.path(),
+            path,
+            &format!("{definition}version = {invalid}\n"),
+        );
+        assert!(error(root.path()).contains(&format!("{path}: Rule Set \"shared\": version")));
+    }
 }
 
 #[test]

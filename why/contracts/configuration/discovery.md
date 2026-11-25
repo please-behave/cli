@@ -24,7 +24,8 @@ these locations only:
 
 Adapter profile, Rule and Rule Set directories are optional. Each entry in `checks/`
 or `reviews/` must be a Rule directory containing its own `rule.toml`; each entry
-in `rule-sets/` must be a TOML file. In `adapters/`, TOML files are definitions
+in `rule-sets/` must be a TOML definition or the sibling `ruleset.yaml`
+knowledge document. In `adapters/`, TOML files are definitions
 and directories may hold supporting resources without recursive discovery.
 Supporting files inside a Rule directory, such as a tool's own TOML configuration,
 are data: Please never interprets them as governance configuration. Arbitrary or
@@ -48,6 +49,12 @@ An omitted name leaves only the technical ID available as a label. Invalid names
 fail configuration validation. Names are display labels only and have no effect
 on identities, references, selection, ordering, execution or canonical rule
 digests.
+
+## Rule Set versions
+
+Local and imported Rule Sets may declare a `version` using the
+[Rule version syntax](rule.md#rule-version). Loading retains a valid version and
+rejects an invalid version. Registration requires a version.
 
 ## Documents and safe resources
 

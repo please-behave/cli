@@ -1,0 +1,12 @@
+id: REQ-0361
+name: Registration Delivers Sets After Rules And Reports Every Outcome
+area: reporting
+description: >-
+  The register command must submit Rule Sets after the repository's rule batch
+  in the same invocation. It must report each set outcome, identify failing
+  members and their reasons, and fail on any conflict, member failure or
+  unsuccessful delivery.
+rationale: >-
+  Owners can register a set with its member versions and identify what to correct on failure.
+decisions:
+  - why:DEC-0017

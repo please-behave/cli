@@ -70,7 +70,7 @@ contracts:
       - REQ-0240
       - REQ-0321
   - id: CON-0014
-    name: Rule Version Registration
+    name: Rule and Rule Set Version Registration
     document: registration.md
     requirements:
       - REQ-0349
@@ -78,3 +78,5 @@ contracts:
       - REQ-0356
       - REQ-0357
       - REQ-0358
+      - REQ-0360
+      - REQ-0361

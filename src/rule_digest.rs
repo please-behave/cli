@@ -1,6 +1,6 @@
 //! Compute ledger-compatible digests from rule source files.
 mod canonical;
-mod knowledge;
+pub(crate) mod knowledge;
 
 use crate::{
     config::{self, RuleDefinition},
@@ -78,19 +78,21 @@ impl RuleMetadata {
                     .as_deref()
                     .is_none_or(discovery::valid_rule_version)
                 && self.digest.as_deref().is_none_or(|digest| {
-                    self.source.is_some()
-                        && self.version.is_some()
-                        && digest.strip_prefix("v1:sha256:").is_some_and(|hex| {
-                            hex.len() == 64
-                                && hex
-                                    .bytes()
-                                    .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
-                        })
+                    self.source.is_some() && self.version.is_some() && valid_digest(digest)
                 }),
             "invalid report rule metadata"
         );
         Ok(())
     }
+}
+
+pub(crate) fn valid_digest(digest: &str) -> bool {
+    digest.strip_prefix("v1:sha256:").is_some_and(|hex| {
+        hex.len() == 64
+            && hex
+                .bytes()
+                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+    })
 }
 
 #[derive(Serialize)]

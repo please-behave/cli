@@ -1,4 +1,6 @@
-//! Submit committed rule metadata as one registration batch.
+//! Submit committed rule and Rule Set metadata in dependency order.
+mod sets;
+
 use crate::{
     config::{self, PublishAuth, PublishSettings, RuleDefinition},
     discovery, gateway,
@@ -49,11 +51,6 @@ enum State {
     Conflict,
 }
 
-struct PreparedRule {
-    label: String,
-    digest: String,
-}
-
 pub fn send(root: &Path, gateway_url: &str, show: impl FnMut(&str)) -> Result<()> {
     send_with_authorization(root, gateway_url, show, gateway::authorization)
 }
@@ -88,8 +85,10 @@ pub(crate) fn send_with_authorization(
         ],
     )
     .context("cannot enumerate local rule files")?;
-    let directories = rule_directories(tree.keys().copied().chain(files.split_terminator('\0')))?;
-    if directories.is_empty() {
+    let files = tree.keys().copied().chain(files.split_terminator('\0'));
+    let directories = rule_directories(files.clone())?;
+    let set_paths = sets::definition_paths(files)?;
+    if directories.is_empty() && set_paths.is_empty() {
         show("No rule directories to register.");
         return Ok(());
     }
@@ -101,31 +100,70 @@ pub(crate) fn send_with_authorization(
         commit: &head,
         rules: Vec::with_capacity(directories.len()),
     };
-    let mut prepared = Vec::with_capacity(directories.len());
+    let mut members = BTreeMap::new();
     for directory in &directories {
         let (rule, verification) = prepare_rule(root, directory, &source, &tree)
             .with_context(|| format!("cannot register rule directory {}", directory.display()))?;
         batch.rules.push(rule);
-        prepared.push(verification);
+        members.insert(directory.clone(), verification);
     }
-    let body = serde_json::to_vec(&batch)?;
-    ensure!(
-        body.len() <= MAX_BATCH_BYTES,
-        "registration exceeds the gateway request size limit"
-    );
-    require_clean_directories(root, &directories, &head)?;
+    let sets = sets::prepare(root, &source, &tree, &set_paths, &members)?;
+    let rules_body = batch_body(&batch)?;
+    let sets_body = batch_body(&sets::Batch {
+        commit: &head,
+        sets: &sets,
+    })
+    .context("cannot prepare Rule Set registration batch")?;
+    require_clean_inputs(root, &directories, &set_paths, &head)?;
     let authorization = match api_key {
         Some(header) => header,
         None => authorize(&settings, &endpoint)?,
     };
-    let response = gateway::post(endpoint, authorization, &body, "registration")?;
-    let receipt = read_receipt(response)?;
+    let mut rules_failed = false;
+    if !members.is_empty() {
+        let receipt = post(
+            endpoint,
+            authorization.clone(),
+            &rules_body,
+            MAX_RECEIPT_BYTES,
+        )?;
+        rules_failed = report_rules(&members, receipt, &mut show)?;
+    }
+    let mut sets_failed = false;
+    if !sets.is_empty() {
+        let endpoint = gateway::endpoint(gateway_url, "/v0/rule-set-registrations")?;
+        sets_failed = sets::send(endpoint, authorization, &sets_body, &sets, &mut show)
+            .context("cannot register Rule Sets")?;
+    }
+    match (rules_failed, sets_failed) {
+        (true, true) => bail!("one or more rule and Rule Set registrations failed"),
+        (true, false) => bail!("one or more rule registrations failed"),
+        (false, true) => bail!("one or more Rule Set registrations failed"),
+        (false, false) => Ok(()),
+    }
+}
+
+fn batch_body(batch: &impl Serialize) -> Result<Vec<u8>> {
+    let body = serde_json::to_vec(batch)?;
     ensure!(
-        receipt.outcomes.len() == prepared.len(),
+        body.len() <= MAX_BATCH_BYTES,
+        "registration exceeds the gateway request size limit"
+    );
+    Ok(body)
+}
+
+fn report_rules(
+    members: &BTreeMap<PathBuf, sets::Member>,
+    receipt: Receipt,
+    show: &mut impl FnMut(&str),
+) -> Result<bool> {
+    ensure!(
+        receipt.outcomes.len() == members.len(),
         "registration gateway returned an invalid receipt"
     );
     let mut failed = false;
-    for (rule, outcome) in prepared.into_iter().zip(receipt.outcomes) {
+    for (rule, outcome) in members.values().zip(receipt.outcomes) {
+        let label = rule.label();
         let status = match outcome.outcome {
             State::Created => "created",
             State::Unchanged => "unchanged",
@@ -135,17 +173,15 @@ pub(crate) fn send_with_authorization(
             }
         };
         if outcome.digest == rule.digest {
-            show(&format!("{status} {}", rule.label));
+            show(&format!("{status} {label}"));
         } else {
             failed = true;
             show(&format!(
-                "{status} {} (returned digest does not match)",
-                rule.label
+                "{status} {label} (returned digest does not match)"
             ));
         }
     }
-    ensure!(!failed, "one or more rule registrations failed");
-    Ok(())
+    Ok(failed)
 }
 
 fn validate_source(source: &str) -> Result<()> {
@@ -253,7 +289,7 @@ fn prepare_rule(
     directory: &Path,
     source: &str,
     tree: &BTreeMap<&str, (&str, &str)>,
-) -> Result<(Value, PreparedRule)> {
+) -> Result<(Value, sets::Member)> {
     let definition_path = directory.join("rule.toml");
     let definition = committed_text(root, &definition_path, MAX_METADATA_BYTES, tree)?;
     let rule: RuleDefinition = discovery::parse_document(&definition, &definition_path)?;
@@ -281,16 +317,21 @@ fn prepare_rule(
     let digest = rule_digest::digest(document.clone())?;
     Ok((
         document,
-        PreparedRule {
-            label: format!("{} {} ({})", rule.id, version, directory.display()),
+        sets::Member {
+            source: source.to_owned(),
+            path: rule_digest::portable_path(directory)?,
+            id: rule.id.clone(),
+            version: version.to_owned(),
             digest,
+            enabled: rule.enabled,
         },
     ))
 }
 
-fn require_clean_directories(
+fn require_clean_inputs(
     root: &Path,
     directories: &BTreeSet<PathBuf>,
+    set_paths: &BTreeSet<PathBuf>,
     commit: &str,
 ) -> Result<()> {
     let status = git_text(
@@ -304,12 +345,18 @@ fn require_clean_directories(
             "--untracked-files=all",
         ],
     )
-    .context("cannot check rule files against the current commit")?;
+    .context("cannot check registration files against the current commit")?;
+    let set_knowledge: BTreeSet<_> = set_paths
+        .iter()
+        .map(|path| path.with_file_name("ruleset.yaml"))
+        .collect();
     for change in status.split_terminator('\0') {
         let path = Path::new(change.get(3..).context("invalid Git status entry")?);
         ensure!(
             !directories.contains(Path::new("."))
-                && !path.ancestors().any(|part| directories.contains(part)),
+                && !path.ancestors().any(|part| directories.contains(part))
+                && !set_paths.contains(path)
+                && !set_knowledge.contains(path),
             "{} differs from the current commit",
             path.display()
         );
@@ -321,7 +368,13 @@ fn require_clean_directories(
     Ok(())
 }
 
-fn read_receipt(response: ureq::http::Response<ureq::Body>) -> Result<Receipt> {
+fn post<T: serde::de::DeserializeOwned>(
+    endpoint: Uri,
+    authorization: HeaderValue,
+    body: &[u8],
+    receipt_limit: u64,
+) -> Result<T> {
+    let response = gateway::post(endpoint, authorization, body, "registration")?;
     match response.status().as_u16() {
         200 => {}
         401 | 403 => bail!("registration gateway rejected the API credentials"),
@@ -333,11 +386,11 @@ fn read_receipt(response: ureq::http::Response<ureq::Body>) -> Result<Receipt> {
     response
         .into_body()
         .into_reader()
-        .take(MAX_RECEIPT_BYTES + 1)
+        .take(receipt_limit + 1)
         .read_to_end(&mut body)
         .map_err(|_| anyhow::anyhow!("could not receive the registration gateway response"))?;
     ensure!(
-        body.len() as u64 <= MAX_RECEIPT_BYTES,
+        body.len() as u64 <= receipt_limit,
         "registration gateway returned an invalid receipt"
     );
     serde_json::from_slice(&body)

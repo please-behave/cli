@@ -1,0 +1,15 @@
+id: REQ-0360
+name: Rule Set Versions Use Committed Definitions
+area: reporting
+description: >-
+  The register command must prepare every Rule Set defined by the repository
+  from its committed definition and ruleset.yaml. Each set must have an
+  owner-assigned version. The batch must include the commit, each set's
+  identity, optional display name, description and knowledge, and each member's
+  rule identity, version, canonical digest and declared enabled state.
+  Invalid local inputs must fail before any batch is sent.
+rationale: >-
+  Registered membership describes a reproducible set version from its owner's repository.
+decisions:
+  - why:DEC-0016
+  - why:DEC-0017

@@ -1,0 +1,12 @@
+id: REQ-0362
+name: Rule Sets Accept An Owner-Assigned Version
+area: configuration
+description: >-
+  Local and imported Rule Sets may declare a version in the same A.B form
+  as a rule. Configuration loading must retain valid versions and reject
+  invalid ones. A sibling ruleset.yaml is a knowledge document and must
+  not be discovered as a local Rule Set definition.
+rationale: >-
+  Authors can version existing Rule Sets without changing how their rules are selected.
+decisions:
+  - why:DEC-0016

@@ -17,6 +17,7 @@ fn set(id: &str, at: &[&str], ids: &[&str]) -> (PathBuf, config::RuleSet) {
         config::RuleSet {
             description: "Rule set".into(),
             id: id.into(),
+            version: None,
             name: None,
             run_at: at.iter().map(|s| s.to_string()).collect(),
             rules: ids.iter().map(|s| s.to_string().into()).collect(),

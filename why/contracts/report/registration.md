@@ -1,6 +1,6 @@
-# Rule version registration
+# Rule and Rule Set version registration
 
-`please register --gateway-url <URL>` registers committed rule versions from the
+`please register --gateway-url <URL>` registers committed rule and Rule Set versions from the
 root of the Git working tree that holds their definitions. The rule owner
 invokes it from CI. It has no execution point or Git hook and runs independently
 of verification and attestation publication (why:DEC-0012).
@@ -12,15 +12,15 @@ repository identity derived from the network Git origin. The identity used for
 registration must be a normalized Git host and path that the gateway accepts.
 Redirects are disabled. Errors omit credentials, response bodies and URL details
 beyond the origin.
-With GitHub OIDC, the CLI uses the lowercase repository identity as each rule's
-source before computing its digest. The gateway requires the source to match
+With GitHub OIDC, the CLI uses the lowercase repository identity as the source
+for each rule and set before computing any rule digest. The gateway requires the source to match
 the workflow's repository.
 
 A rule directory contains `rule.toml`. Discovery uses the current commit,
 the index and nonignored untracked paths. It includes disabled rules and rules
 outside `.please/` in the same repository. A definition at the repository root
 uses `.` as its path. Imported definitions in external repositories are registered
-by their owners. A repository with no rule directories succeeds without a request.
+by their owners. An empty batch is omitted.
 
 Before sending, the command requires a current commit and verifies the rule
 directories against it. It checks the exact bytes read for each definition,
@@ -46,3 +46,30 @@ registration remains stored. Other outcomes retain their independent meaning.
 The exit status is 0 when every outcome succeeds and 2 for a conflict, digest
 mismatch, invalid receipt, gateway rejection, transport failure or invalid local
 input. Gateway rejections and transport failures have distinct diagnostics.
+
+## Rule Sets
+
+Registration includes local definitions in `.please/rule-sets/*.toml` and
+`ruleset.toml` definitions at any directory in the source repository. Local
+sets resolve members by ID among local Rules. Definitions named `ruleset.toml`
+reference Rule directories relative to the repository root, as for an import.
+The set's path identifies its containing directory.
+
+Before sending either batch, the command prepares each set using its committed
+definition and sibling [`ruleset.yaml`](../rule-knowledge/README.md). It
+requires a set version and resolves each member to the rule registration it
+already prepared. Each member carries the exact submitted rule's source,
+path, ID, version and digest, plus its declared enabled state. The set carries
+its own source, path, ID, version, optional name, description and parsed
+knowledge.
+
+The command sends one set batch, in definition path order, using the same
+commit and the [gateway Rule Set registration contract](https://github.com/please-behave/gateway/blob/main/why/contracts/ingest/rule-set-registration.md).
+It sends the set batch after processing the rule receipt, including when the
+receipt reports a rule conflict or a digest mismatch.
+
+The command reports each set's `created`, `unchanged`, `conflict` or
+`invalid_members` outcome. It identifies each failing member and whether the
+ledger found an unregistered version or a digest mismatch. It accepts the set
+digest from the ledger. A conflict, member failure, invalid receipt, gateway
+rejection or transport failure makes the command exit with status 2.

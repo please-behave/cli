@@ -114,6 +114,9 @@ pub(crate) fn load(root: &Path) -> Result<Loaded> {
     let mut sets = Vec::new();
     for path in entries(root, &directory.join("rule-sets"))? {
         let full = source_path(root, &path)?;
+        if path.file_name().is_some_and(|name| name == "ruleset.yaml") && full.is_file() {
+            continue;
+        }
         ensure!(
             full.is_file() && path.extension().is_some_and(|e| e == "toml"),
             "{}: expected a rule-set TOML file",
@@ -238,10 +241,16 @@ pub(crate) fn parse_document<T: serde::de::DeserializeOwned>(text: &str, path: &
 
 fn rule_set(root: &Path, path: &Path) -> Result<RuleSet> {
     let set: RuleSet = document(root, path)?;
+    validate_rule_set_name(&set, path)?;
+    rule_set_version(&set, path)?;
+    Ok(set)
+}
+
+pub(crate) fn validate_rule_set_name(set: &RuleSet, path: &Path) -> Result<()> {
     if let Some(name) = &set.name {
         validate_display_name(name, path)?;
     }
-    Ok(set)
+    Ok(())
 }
 
 fn validate_display_name(name: &str, path: &Path) -> Result<()> {
@@ -461,16 +470,28 @@ pub(crate) fn review_prompt_path(root: &Path, dir: &Path, filename: &str) -> Res
 }
 
 pub(crate) fn rule_version<'a>(rule: &'a RuleDefinition, path: &Path) -> Result<Option<&'a str>> {
-    rule.version
-        .as_ref()
+    declared_version(rule.version.as_ref(), path, "rule", &rule.id)
+}
+
+pub(crate) fn rule_set_version<'a>(set: &'a RuleSet, path: &Path) -> Result<Option<&'a str>> {
+    declared_version(set.version.as_ref(), path, "Rule Set", &set.id)
+}
+
+fn declared_version<'a>(
+    value: Option<&'a toml::Value>,
+    path: &Path,
+    kind: &str,
+    id: &str,
+) -> Result<Option<&'a str>> {
+    value
         .map(|value| {
             value
                 .as_str()
                 .filter(|version| valid_rule_version(version))
                 .with_context(|| {
                     format!(
-                        "{}: rule {:?}: version must be a string in A.B form with no leading zeros and at most {MAX_RULE_VERSION_CHARS} characters",
-                        path.display(), rule.id
+                        "{}: {kind} {id:?}: version must be a string in A.B form with no leading zeros and at most {MAX_RULE_VERSION_CHARS} characters",
+                        path.display()
                     )
                 })
         })

@@ -10,7 +10,7 @@ use yaml_rust2::{
 
 const MAX_DEPTH: usize = 64;
 
-pub(super) fn parse(text: &str) -> Result<Map<String, Value>> {
+pub(crate) fn parse(text: &str) -> Result<Map<String, Value>> {
     let mut reader = Reader {
         parser: Parser::new(text.chars()),
         remaining: 2 * MAX_METADATA_BYTES as usize,

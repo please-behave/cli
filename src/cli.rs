@@ -106,9 +106,9 @@ pub enum Words {
         )]
         gateway_url: String,
     },
-    /// Register committed local rule versions with the gateway.
+    /// Register committed rule and Rule Set versions with the gateway.
     #[command(
-        after_help = "Set publish.auth in .please/config.toml to api-key (default) or github-oidc. GitHub OIDC requires id-token: write."
+        after_help = "Sends rules before Rule Sets. Both require a version and a committed knowledge document.\n\nSet publish.auth in .please/config.toml to api-key (default) or github-oidc. GitHub OIDC requires id-token: write."
     )]
     Register {
         #[arg(long, value_name = "URL", help = "HTTP or HTTPS origin of the gateway")]

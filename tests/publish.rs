@@ -20,6 +20,9 @@ const REVIEW_DIRECTORY: &str = "sets/core/reviews/review-fixture";
 const CHECK_RULE: &str = "id = 'check-fixture'\nversion = '1.0'\nname = 'Fixture check'\ndescription = 'Check'\nenabled = false\n[check]\ncommand = 'unused-check-command'\n";
 const REVIEW_RULE: &str = "id = 'review-fixture'\nversion = '2.3'\ndescription = 'Review'\n[review]\nprompt = 'prompt.md'\n";
 const KNOWLEDGE: &str = "purpose: Fixture\nproblem: Fixture problem\nvalue: Fixture value\nplacement: Fixture placement\nconditions:\n  - statement: Fixture condition\n    rationale: Fixture rationale\nextension: [true, preserved]\n";
+const SET_KNOWLEDGE: &str = "purpose: Fixture\naudience: Maintainers\ncommonality: Repository checks\nrules:\n  - rule: check-fixture\n    role: Checks inputs\nadmission: [Checks repository inputs]\nexecution_points: Check\n";
+const LOCAL_SET_PATH: &str = ".please/rule-sets/local.toml";
+const LOCAL_SET: &str = "id = 'local'\nname = 'Local checks'\ndescription = 'The local set'\nrun_at = ['check']\nrules = ['check-fixture']\n";
 const PROMPT: &str = "Inspect the project.\n";
 
 fn git(root: &Path, args: &[&str]) {
@@ -106,65 +109,7 @@ fn exchange_delivery(
 ) -> (Output, Value) {
     let server = listener.try_clone().unwrap();
     server.set_nonblocking(true).unwrap();
-    let request = thread::spawn(move || {
-        let deadline = std::time::Instant::now() + Duration::from_secs(10);
-        let mut stream = loop {
-            match server.accept() {
-                Ok((stream, _)) => break stream,
-                Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
-                    assert!(std::time::Instant::now() < deadline, "no publish request");
-                    thread::sleep(Duration::from_millis(5));
-                }
-                Err(error) => panic!("{error}"),
-            }
-        };
-        stream.set_nonblocking(false).unwrap();
-        stream
-            .set_read_timeout(Some(Duration::from_secs(5)))
-            .unwrap();
-        let mut request = BufReader::new(&mut stream);
-        let mut line = String::new();
-        request.read_line(&mut line).unwrap();
-        assert_eq!(line, format!("POST {endpoint} HTTP/1.1\r\n"));
-        let (mut length, mut authorization, mut json_content) = (None, false, false);
-        loop {
-            line.clear();
-            assert_ne!(request.read_line(&mut line).unwrap(), 0);
-            if line == "\r\n" {
-                break;
-            }
-            let (name, value) = line.split_once(':').unwrap();
-            match name.to_ascii_lowercase().as_str() {
-                "authorization" => {
-                    assert_eq!(value.trim(), format!("Bearer {KEY}"));
-                    authorization = true;
-                }
-                "content-type" => json_content = value.trim() == "application/json",
-                "content-length" => length = Some(value.trim().parse::<usize>().unwrap()),
-                _ => assert!(!value.contains(KEY)),
-            }
-        }
-        assert!(authorization && json_content);
-        let mut body = vec![0; length.unwrap()];
-        request.read_exact(&mut body).unwrap();
-        assert!(!String::from_utf8_lossy(&body).contains(KEY));
-        let document = serde_json::from_slice(&body).unwrap();
-        let response_body = reply(&document);
-        // Even adversarial response bodies and redirect locations must stay out of diagnostics.
-        let redirect = format!(
-            "Location: http://{}/redirect\r\n",
-            server.local_addr().unwrap()
-        );
-        write!(
-            stream,
-            "HTTP/1.1 {status} Test\r\n{redirect}Content-Length: {}\r\nConnection: close\r\n\r\n",
-            response_body.len()
-        )
-        .unwrap();
-        stream.write_all(&response_body).unwrap();
-        document
-    });
-
+    let request = thread::spawn(move || answer_delivery(&server, status, endpoint, reply));
     let output = cli(
         root,
         &[command, "--gateway-url", &gateway_url(listener)],
@@ -173,6 +118,70 @@ fn exchange_delivery(
     let body = request.join().unwrap();
     assert_no_request(listener);
     (output, body)
+}
+
+fn answer_delivery(
+    server: &TcpListener,
+    status: u16,
+    endpoint: &str,
+    reply: impl FnOnce(&Value) -> Vec<u8>,
+) -> Value {
+    let deadline = std::time::Instant::now() + Duration::from_secs(10);
+    let mut stream = loop {
+        match server.accept() {
+            Ok((stream, _)) => break stream,
+            Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                assert!(std::time::Instant::now() < deadline, "no publish request");
+                thread::sleep(Duration::from_millis(5));
+            }
+            Err(error) => panic!("{error}"),
+        }
+    };
+    stream.set_nonblocking(false).unwrap();
+    stream
+        .set_read_timeout(Some(Duration::from_secs(5)))
+        .unwrap();
+    let mut request = BufReader::new(&mut stream);
+    let mut line = String::new();
+    request.read_line(&mut line).unwrap();
+    assert_eq!(line, format!("POST {endpoint} HTTP/1.1\r\n"));
+    let (mut length, mut authorization, mut json_content) = (None, false, false);
+    loop {
+        line.clear();
+        assert_ne!(request.read_line(&mut line).unwrap(), 0);
+        if line == "\r\n" {
+            break;
+        }
+        let (name, value) = line.split_once(':').unwrap();
+        match name.to_ascii_lowercase().as_str() {
+            "authorization" => {
+                assert_eq!(value.trim(), format!("Bearer {KEY}"));
+                authorization = true;
+            }
+            "content-type" => json_content = value.trim() == "application/json",
+            "content-length" => length = Some(value.trim().parse::<usize>().unwrap()),
+            _ => assert!(!value.contains(KEY)),
+        }
+    }
+    assert!(authorization && json_content);
+    let mut body = vec![0; length.unwrap()];
+    request.read_exact(&mut body).unwrap();
+    assert!(!String::from_utf8_lossy(&body).contains(KEY));
+    let document = serde_json::from_slice(&body).unwrap();
+    let response_body = reply(&document);
+    // Even adversarial response bodies and redirect locations must stay out of diagnostics.
+    let redirect = format!(
+        "Location: http://{}/redirect\r\n",
+        server.local_addr().unwrap()
+    );
+    write!(
+        stream,
+        "HTTP/1.1 {status} Test\r\n{redirect}Content-Length: {}\r\nConnection: close\r\n\r\n",
+        response_body.len()
+    )
+    .unwrap();
+    stream.write_all(&response_body).unwrap();
+    document
 }
 
 fn assert_no_request(listener: &TcpListener) {
@@ -279,6 +288,167 @@ fn registration_exchange(
         "/v0/rule-registrations",
         move |_| serde_json::to_vec(&response).unwrap(),
     )
+}
+
+#[test]
+// REQ-0360, REQ-0361: submit rules first, reuse their digests and report each set's outcome.
+fn registers_local_and_shareable_rule_sets_after_their_rules() {
+    let root = registration_fixture();
+    let project = root.path();
+    support::write(
+        project,
+        LOCAL_SET_PATH,
+        &format!("{LOCAL_SET}version = '3.1'\n"),
+    );
+    support::write(project, ".please/rule-sets/ruleset.yaml", SET_KNOWLEDGE);
+    support::write(
+        project,
+        "ruleset.toml",
+        &format!(
+            "id = 'shared'\nversion = '1.4'\ndescription = 'Shared rules'\nrun_at = ['check']\nrules = ['{REVIEW_DIRECTORY}', {{ id = './{CHECK_DIRECTORY}', run_at = ['pre-push'] }}, '{CHECK_DIRECTORY}']\n"
+        ),
+    );
+    support::write(
+        project,
+        "ruleset.yaml",
+        &format!("{SET_KNOWLEDGE}  # comments stay local\n"),
+    );
+    support::commit_all(project);
+
+    let check = registration_digest(project, CHECK_DIRECTORY);
+    let review = registration_digest(project, REVIEW_DIRECTORY);
+    let set_digest = format!("v1:sha256:{}", "a".repeat(64));
+    for (outcomes, code, messages) in [
+        (
+            json!([
+                {"outcome": "created", "digest": set_digest},
+                {"outcome": "unchanged", "digest": set_digest},
+            ]),
+            0,
+            vec![
+                "created Rule Set local 3.1",
+                "unchanged Rule Set shared 1.4",
+            ],
+        ),
+        (
+            json!([
+                {"outcome": "conflict", "digest": set_digest},
+                {"outcome": "invalid_members", "failures": [
+                    {"member_index": 0, "reason": "digest_mismatch"},
+                    {"member_index": 1, "reason": "unregistered"},
+                ]},
+            ]),
+            2,
+            vec![
+                "conflict Rule Set local 3.1",
+                "invalid_members Rule Set shared 1.4",
+                &format!(
+                    "member review-fixture 2.3 ({REVIEW_DIRECTORY}): rule digest does not match"
+                ),
+                &format!(
+                    "member check-fixture 1.0 ({CHECK_DIRECTORY}): rule version is unregistered"
+                ),
+            ],
+        ),
+        (
+            json!([
+                {"outcome": "created", "digest": set_digest},
+                {"outcome": "invalid_members", "failures": [
+                    {"member_index": 2, "reason": "digest_mismatch"},
+                ]},
+            ]),
+            2,
+            vec!["registration gateway returned an invalid receipt"],
+        ),
+    ] {
+        let listener = listen();
+        let server = listener.try_clone().unwrap();
+        server.set_nonblocking(true).unwrap();
+        let rule_outcomes = json!({"outcomes": [
+            {"outcome": "created", "digest": check},
+            {"outcome": "created", "digest": review},
+        ]});
+        let worker = thread::spawn(move || {
+            let rules = answer_delivery(&server, 200, "/v0/rule-registrations", |_| {
+                serde_json::to_vec(&rule_outcomes).unwrap()
+            });
+            let sets = answer_delivery(&server, 200, "/v0/rule-set-registrations", |_| {
+                serde_json::to_vec(&json!({"outcomes": outcomes})).unwrap()
+            });
+            (rules, sets)
+        });
+        let output = cli(
+            project,
+            &["register", "--gateway-url", &gateway_url(&listener)],
+            Some(KEY),
+        );
+        let (rules, sets) = worker.join().unwrap();
+        assert_no_request(&listener);
+        for message in messages {
+            assert_output(&output, code, message);
+        }
+        let knowledge = json!({
+            "purpose": "Fixture", "audience": "Maintainers", "commonality": "Repository checks",
+            "rules": [{"rule": "check-fixture", "role": "Checks inputs"}],
+            "admission": ["Checks repository inputs"], "execution_points": "Check",
+        });
+        let check_member = json!({
+            "source": REGISTRATION_REPOSITORY, "path": CHECK_DIRECTORY, "id": "check-fixture",
+            "version": "1.0", "digest": check, "enabled": false,
+        });
+        let review_member = json!({
+            "source": REGISTRATION_REPOSITORY, "path": REVIEW_DIRECTORY, "id": "review-fixture",
+            "version": "2.3", "digest": review, "enabled": true,
+        });
+        assert_eq!(
+            sets,
+            json!({"commit": rules["commit"], "sets": [
+                {"source": REGISTRATION_REPOSITORY, "path": ".please/rule-sets", "id": "local",
+                 "version": "3.1", "name": "Local checks", "description": "The local set",
+                 "knowledge": knowledge, "members": [check_member]},
+                {"source": REGISTRATION_REPOSITORY, "path": ".", "id": "shared",
+                 "version": "1.4", "description": "Shared rules", "knowledge": knowledge,
+                 "members": [review_member, check_member]},
+            ]})
+        );
+    }
+}
+
+#[test]
+// REQ-0360: missing set inputs fail preparation even when rules could be registered.
+fn rejects_missing_rule_set_version_and_knowledge_before_sending() {
+    let listener = listen();
+    let root = registration_fixture();
+    let project = root.path();
+    let url = gateway_url(&listener);
+    let invoke = || cli(project, &["register", "--gateway-url", &url], Some(KEY));
+    support::write(project, LOCAL_SET_PATH, LOCAL_SET);
+    support::commit_all(project);
+    assert_output(&invoke(), 2, "Rule Set local is missing version");
+    assert_no_request(&listener);
+
+    support::write(
+        project,
+        LOCAL_SET_PATH,
+        &format!("{LOCAL_SET}version = '3.1'\n"),
+    );
+    support::commit_all(project);
+    assert_output(
+        &invoke(),
+        2,
+        "Rule Set local requires a committed ruleset.yaml",
+    );
+    assert_no_request(&listener);
+
+    support::write(project, ".please/rule-sets/ruleset.yaml", SET_KNOWLEDGE);
+    support::commit_all(project);
+    support::write(
+        project,
+        ".please/rule-sets/ruleset.yaml",
+        "purpose: Uncommitted\n",
+    );
+    assert_output(&invoke(), 2, "ruleset.yaml differs from the current commit");
+    assert_no_request(&listener);
 }
 
 #[test]
