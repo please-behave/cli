@@ -98,6 +98,8 @@ pub struct Plan {
     pub at: String,
     pub input: Input,
     pub checks_only: bool,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub bound_rule_sets: Vec<crate::rules::RuleSetIdentity>,
     pub scheduled: Vec<Rule>,
     pub omitted: Vec<Omission>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -404,6 +406,12 @@ pub fn build_with_context(
             limitations: snapshot.limitations.clone(),
         },
         checks_only,
+        bound_rule_sets: project
+            .versioned_rule_sets
+            .iter()
+            .filter(|(_, points)| points.contains(name))
+            .map(|(identity, _)| identity.clone())
+            .collect(),
         scheduled,
         omitted,
         disabled_rules,

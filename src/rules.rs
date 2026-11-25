@@ -1,6 +1,6 @@
 //! Domain validation and effective assignments, independent of configuration loading.
 use crate::config::{ExecutionPoints, RuleSet};
-use anyhow::{Result, ensure};
+use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -30,6 +30,69 @@ pub struct EffectiveConfig {
     pub points: BTreeSet<String>,
     pub rules: BTreeMap<String, EffectiveRule>,
     pub diagnostics: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RuleSetIdentity {
+    pub source: String,
+    pub path: String,
+    pub id: String,
+    pub version: String,
+}
+
+impl RuleSetIdentity {
+    pub(crate) fn validate(&self) -> Result<()> {
+        name(&self.id).context("invalid report Rule Set ID")?;
+        ensure!(
+            [&self.source, &self.path]
+                .into_iter()
+                .all(|value| !value.is_empty() && !value.contains('\0'))
+                && crate::discovery::valid_rule_version(&self.version),
+            "invalid report Rule Set metadata"
+        );
+        Ok(())
+    }
+}
+
+impl EffectiveConfig {
+    pub(crate) fn versioned_rule_sets(
+        &self,
+        sets: &[(PathBuf, RuleSet)],
+        source: Option<&str>,
+    ) -> Result<BTreeMap<RuleSetIdentity, BTreeSet<String>>> {
+        let mut bindings = BTreeMap::new();
+        let Some(source) = source else {
+            return Ok(bindings);
+        };
+        for (definition, set) in sets {
+            let Some(version) = crate::discovery::rule_set_version(set, definition)? else {
+                continue;
+            };
+            let points: BTreeSet<_> = set
+                .rules
+                .iter()
+                .filter(|reference| !self.rules[reference.id()].execution_points.is_empty())
+                .flat_map(|reference| reference.run_at().unwrap_or(&set.run_at))
+                .cloned()
+                .collect();
+            if !points.is_empty() {
+                let path = crate::rule_digest::portable_path(
+                    definition.parent().context("missing Rule Set directory")?,
+                )?;
+                bindings.insert(
+                    RuleSetIdentity {
+                        source: source.to_owned(),
+                        path,
+                        id: set.id.clone(),
+                        version: version.to_owned(),
+                    },
+                    points,
+                );
+            }
+        }
+        Ok(bindings)
+    }
 }
 pub(crate) fn name(value: &str) -> Result<()> {
     ensure!(

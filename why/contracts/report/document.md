@@ -175,6 +175,14 @@ integrity results, results from sources such as local paths or file URLs, and
 results from older reports without rule metadata. The result's own `id` is
 still the run-scoped ID.
 
+When the saved plan records bound Rule Sets, the attestation includes
+`rule_sets` with each saved `source`, `path`, `id` and `version`, and the
+saved run's point in each entry's `execution_points` array. Reports without
+recorded bindings, including older reports, omit `rule_sets`. Publication fails
+if the saved bindings exceed the gateway's limit of 100 entries or its limit of
+256 characters per source or path. This optional field retains the
+attestation's format version.
+
 The repository identity is the configured override or the host and path from
 Git's fetch URL for `origin`. Derivation from the URL lowercases the hostname
 and removes the transport scheme, user information, port, URL query and

@@ -306,6 +306,7 @@ pub struct Project {
     pub checks: Vec<Check>,
     pub reviews: Vec<Review>,
     pub rule_sets: Vec<RuleSet>,
+    pub(crate) versioned_rule_sets: BTreeMap<crate::rules::RuleSetIdentity, BTreeSet<String>>,
     pub effective: crate::rules::EffectiveConfig,
     pub(crate) rule_metadata: BTreeMap<String, crate::rule_digest::RuleMetadata>,
     /// Absolute path of the current run's context file, set once per execution.
@@ -636,6 +637,8 @@ pub(crate) fn validate(root: PathBuf, loaded: crate::discovery::Loaded) -> Resul
     )?;
     let effective =
         crate::rules::resolve(&config.execution_points, &assignments, &loaded.rule_sets)?;
+    let versioned_rule_sets =
+        effective.versioned_rule_sets(&loaded.rule_sets, loaded.rule_source.as_deref())?;
     let rule_sets = loaded.rule_sets.into_iter().map(|(_, set)| set).collect();
     Ok(Project {
         root,
@@ -646,6 +649,7 @@ pub(crate) fn validate(root: PathBuf, loaded: crate::discovery::Loaded) -> Resul
         checks,
         reviews,
         rule_sets,
+        versioned_rule_sets,
         effective,
         rule_metadata: loaded.rule_metadata,
         context: None,

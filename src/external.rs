@@ -549,12 +549,21 @@ pub(crate) fn load_with_changes(
                 <= MAX_TOTAL_INSTRUCTION_BYTES,
             "total review instructions exceed {MAX_TOTAL_INSTRUCTION_BYTES} bytes"
         );
+        let mapped_point =
+            |point: &String| import.execution_points.get(point).unwrap_or(point).clone();
         for effective in external.effective.rules.values_mut() {
             effective.execution_points = effective
                 .execution_points
                 .iter()
-                .map(|point| import.execution_points.get(point).unwrap_or(point).clone())
+                .map(mapped_point)
                 .collect();
+        }
+        for (set, points) in external.versioned_rule_sets {
+            project
+                .versioned_rule_sets
+                .entry(set)
+                .or_default()
+                .extend(points.iter().map(mapped_point));
         }
         for source in &used {
             let target = import.execution_points.get(source).unwrap_or(source);

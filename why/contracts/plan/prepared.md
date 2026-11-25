@@ -42,6 +42,15 @@ source and a version. A rule with neither a normalizable source nor a declared
 version omits `rule_metadata`. Plans produced before this extension may omit it.
 These fields leave the run-scoped `id` and its references in their existing form.
 
+Optional `bound_rule_sets` saves each distinct versioned Rule Set that assigns
+an enabled rule to the plan's execution point and has a normalized repository
+source. Each entry records the set's `source`, repository-relative directory
+`path` (`.` for the root), source-local `id`, and `version`. The source follows
+the same normalization as `rule_metadata`. Assignment uses per-reference
+overrides and import execution-point mappings. Identical
+source, path, ID and version tuples are recorded once. Plans with no such
+bindings and older plans may omit this field.
+
 `depends_on` records sorted, deduplicated canonical check IDs. Dependencies resolve
 within the enabled checks selected at this point; they never select extra Rules.
 Invalid, ambiguous, disabled, unselected or review references, self-dependencies

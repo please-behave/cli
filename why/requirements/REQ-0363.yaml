@@ -1,0 +1,16 @@
+id: REQ-0363
+name: Attestations Record Bound Rule Set Versions
+area: reporting
+description: >-
+  The run must save the identity and version of each distinct versioned Rule
+  Set with a normalized repository source that assigns an enabled rule to the
+  run's execution point. Publication must report those saved bindings with
+  their source, repository-relative directory, source-local ID, version and
+  execution point. When the report contains no bindings, publication must omit
+  the optional list.
+rationale: >-
+  The platform can identify which Rule Set versions a repository applied from
+  the reported run evidence.
+decisions:
+  - why:DEC-0016
+  - why:DEC-0018

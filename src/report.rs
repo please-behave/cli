@@ -290,6 +290,11 @@ pub fn read_number(root: &Path, number: u64) -> Result<Report> {
             && plan.input.complete == report.snapshot.complete,
         "inconsistent report plan/input"
     );
+    let mut sets = std::collections::BTreeSet::new();
+    for set in &plan.bound_rule_sets {
+        set.validate()?;
+        ensure!(sets.insert(set), "duplicate report Rule Set binding");
+    }
     for rule in plan
         .scheduled
         .iter()

@@ -4,6 +4,7 @@ use crate::{
     gateway, git_snapshot,
     report::{self, Item, Report, Status},
     rule_digest::RuleMetadata,
+    rules::RuleSetIdentity,
 };
 use anyhow::{Context, Result, bail, ensure};
 use serde::Serialize;
@@ -16,8 +17,17 @@ struct Attestation<'a> {
     repository: &'a str,
     commit: &'a str,
     execution_points: [&'a str; 1],
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    rule_sets: Vec<PublishedRuleSet<'a>>,
     overall: Status,
     results: Vec<RuleResult<'a>>,
+}
+
+#[derive(Serialize)]
+struct PublishedRuleSet<'a> {
+    #[serde(flatten)]
+    identity: &'a RuleSetIdentity,
+    execution_points: [&'a str; 1],
 }
 
 #[derive(Serialize)]
@@ -79,15 +89,42 @@ impl<'a> From<&'a Item> for RuleResult<'a> {
     }
 }
 
-fn attestation<'a>(report: &'a Report, repository: &'a str, commit: &'a str) -> Attestation<'a> {
-    Attestation {
+fn attestation<'a>(
+    report: &'a Report,
+    repository: &'a str,
+    commit: &'a str,
+) -> Result<Attestation<'a>> {
+    ensure!(
+        report.plan.bound_rule_sets.len() <= 100,
+        "the gateway accepts at most 100 bound Rule Sets per attestation"
+    );
+    ensure!(
+        report
+            .plan
+            .bound_rule_sets
+            .iter()
+            .all(|set| { set.source.chars().count() <= 256 && set.path.chars().count() <= 256 }),
+        "the gateway accepts bound Rule Set sources and paths up to 256 characters"
+    );
+    let execution_points = [report.plan.at.as_str()];
+    let rule_sets = report
+        .plan
+        .bound_rule_sets
+        .iter()
+        .map(|identity| PublishedRuleSet {
+            identity,
+            execution_points,
+        })
+        .collect();
+    Ok(Attestation {
         schema_version: report.schema_version,
         repository,
         commit,
-        execution_points: [&report.plan.at],
+        execution_points,
+        rule_sets,
         overall: report.overall,
         results: report.results.iter().map(RuleResult::from).collect(),
-    }
+    })
 }
 
 pub fn send(root: &Path, gateway_url: &str) -> Result<()> {
@@ -146,8 +183,8 @@ pub(crate) fn send_with_authorization(
             "saved report has a different local rule source; run please run again before publishing"
         );
     }
+    let body = serde_json::to_vec(&attestation(&report, &repository, commit)?)?;
     let authorization = authorize(&settings, &endpoint)?;
-    let body = serde_json::to_vec(&attestation(&report, &repository, commit))?;
 
     let response = gateway::post(endpoint, authorization, &body, "attestation")?;
     match response.status().as_u16() {

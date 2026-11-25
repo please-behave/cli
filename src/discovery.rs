@@ -106,6 +106,7 @@ pub(crate) struct Loaded {
     pub checks: Vec<(PathBuf, Check)>,
     pub reviews: Vec<(PathBuf, Review)>,
     pub rule_sets: Vec<(PathBuf, RuleSet)>,
+    pub rule_source: Option<String>,
     pub rule_metadata: BTreeMap<String, RuleMetadata>,
 }
 pub(crate) fn load(root: &Path) -> Result<Loaded> {
@@ -131,7 +132,7 @@ pub(crate) fn load(root: &Path) -> Result<Loaded> {
             directories.push((kind.to_owned(), dir));
         }
     }
-    let source = (!directories.is_empty())
+    let source = (!directories.is_empty() || !sets.is_empty())
         .then(|| repository_identity::for_local_rule(root, config.publish.as_ref()))
         .flatten();
     let mut loaded = load_rules(root, config, sets, directories, source.as_deref())?;
@@ -330,6 +331,7 @@ fn load_rules(
         config,
         adapters: vec![],
         rule_sets,
+        rule_source: source.map(str::to_owned),
         checks: vec![],
         reviews: vec![],
         rule_metadata: BTreeMap::new(),

@@ -697,7 +697,7 @@ fn rejects_invalid_gateway_origins_without_disclosing_the_url() {
 
 #[cfg(unix)]
 #[test]
-// REQ-0345, REQ-0346: the newest failed run is delivered independently using only attestation fields.
+// REQ-0345, REQ-0346, REQ-0363: deliver the newest failed run with no Rule Set field when no sets were bound.
 fn projects_newest_failed_report_and_preserves_saved_evidence() {
     let listener = listen();
     let root = fixture(Some("fixture.example/owner/repo"));
@@ -804,7 +804,7 @@ fn projects_newest_failed_report_and_preserves_saved_evidence() {
 
 #[cfg(unix)]
 #[test]
-// REQ-0354, REQ-0346: preserve source identity across import bindings and publish saved metadata.
+// REQ-0354, REQ-0346, REQ-0363: publish saved rule metadata and versioned local and imported set bindings.
 fn publishes_versioned_import_metadata_with_the_original_run_ids() {
     use please::rule_digest::{self, RuleSource};
 
@@ -818,7 +818,7 @@ fn publishes_versioned_import_metadata_with_the_original_run_ids() {
         remote.path(),
         "sets/core/ruleset.toml",
         &format!(
-            "id = 'core'\ndescription = 'Fixture'\nrules = ['{DIRECTORY}']\nrun_at = ['check']\n"
+            "id = 'core'\nversion = '3.4'\ndescription = 'Fixture'\nrules = ['{DIRECTORY}']\nrun_at = ['validate']\n"
         ),
     );
     support::write(
@@ -850,21 +850,32 @@ fn publishes_versioned_import_metadata_with_the_original_run_ids() {
             "git@Project.example.invalid:Owner/Project.git",
         ],
     );
-    support::check(project, "unversioned", &["check"], "exit 0\n");
+    support::check(project, "unversioned", &["verify"], "exit 0\n");
+    support::write(
+        project,
+        LOCAL_SET_PATH,
+        "id = 'local'\nversion = '1.2'\ndescription = 'Fixture'\nrun_at = ['pre-push']\nrules = [{ id = 'unversioned', run_at = ['verify'] }]\n",
+    );
+    support::write(
+        project,
+        ".please/rule-sets/other.toml",
+        "id = 'other'\nversion = '1.0'\ndescription = 'Fixture'\nrun_at = ['pre-push']\nrules = ['unversioned']\n",
+    );
     support::write(
         project,
         ".please/checks/no-knowledge/rule.toml",
-        "id = 'no-knowledge'\nversion = '1.0'\ndescription = 'Fixture'\nrun_at = ['check']\n[check]\ncommand = 'git --version'\n",
+        "id = 'no-knowledge'\nversion = '1.0'\ndescription = 'Fixture'\nrun_at = ['verify']\n[check]\ncommand = 'git --version'\n",
     );
     let file_selector = format!("file://{}", remote.path().display());
     let config_path = project.join(".please/config.toml");
     let mut config = fs::read_to_string(&config_path)
         .unwrap()
-        .replace("\nimports = []\n", "\n");
+        .replace("\nimports = []\n", "\n")
+        .replace("\ncustom = []\n", "\ncustom = ['verify']\n");
     for selector in [SELECTOR, &file_selector] {
         support::trust_location(selector);
         config.push_str(&format!(
-            "\n[[imports]]\ngit = {selector:?}\npath = 'sets/core'\nref = 'main'\n"
+            "\n[[imports]]\ngit = {selector:?}\npath = 'sets/core'\nref = 'main'\nexecution_points = {{ validate = 'verify' }}\n"
         ));
     }
     fs::write(config_path, config).unwrap();
@@ -881,11 +892,11 @@ fn publishes_versioned_import_metadata_with_the_original_run_ids() {
     };
     let sync = invoke(&["sync", "--yes"]);
     assert!(sync.status.success(), "{sync:?}");
-    let preview = invoke(&["run", "--at", "check", "--plan", "--json"]);
+    let preview = invoke(&["run", "--at", "verify", "--plan", "--json"]);
     assert!(preview.status.success(), "{preview:?}");
     let plan: Value = serde_json::from_slice(&preview.stdout).unwrap();
     support::assert_plan_contract(&plan);
-    let output = invoke(&["run", "--at", "check"]);
+    let output = invoke(&["run", "--at", "verify"]);
     assert!(output.status.success(), "{output:?}");
     let mut saved = report::read(project).unwrap();
     assert_eq!(
@@ -979,6 +990,25 @@ fn publishes_versioned_import_metadata_with_the_original_run_ids() {
         "new.example.invalid/Owner/Project"
     );
     assert_eq!(attestation["results"], json!(expected_results));
+    assert_eq!(
+        attestation["rule_sets"],
+        json!([
+            {
+                "source": "project.example.invalid/Owner/Project",
+                "path": ".please/rule-sets",
+                "id": "local",
+                "version": "1.2",
+                "execution_points": ["verify"],
+            },
+            {
+                "source": "rules.example.invalid/Owner/Rules",
+                "path": "sets/core",
+                "id": "core",
+                "version": "3.4",
+                "execution_points": ["verify"],
+            },
+        ])
+    );
 }
 
 #[test]
