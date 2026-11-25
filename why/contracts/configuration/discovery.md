@@ -39,6 +39,16 @@ discovery. Named adapter profile packages follow the
 [independent adapter profile import reference](https://github.com/please-behave/docs/blob/main/src/external-rule-sets.md#independent-profile-packages).
 These definitions belong to this same configuration compatibility boundary.
 
+## Rule Set display names
+
+Local and imported Rule Sets may declare a `name` TOML string. It must contain
+1 to 80 Unicode characters, with no control characters or surrounding whitespace,
+using the same bounds as a [Rule's display label](rule.md#identity-and-labels).
+An omitted name leaves only the technical ID available as a label. Invalid names
+fail configuration validation. Names are display labels only and have no effect
+on identities, references, selection, ordering, execution or canonical rule
+digests.
+
 ## Documents and safe resources
 
 Governance documents are TOML encoded as UTF-8. Each metadata document is bounded

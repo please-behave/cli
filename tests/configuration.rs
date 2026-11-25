@@ -1652,3 +1652,78 @@ fn rule_set_ids_are_unique_independently_of_rule_ids() {
     write(root.path(), ".please/rule-sets/second.toml", definition);
     assert!(error(root.path()).contains("duplicate"));
 }
+
+#[test]
+// REQ-0359: set labels preserve the selected rule, semantic plan and rule digest.
+fn local_rule_set_name_is_display_only() {
+    let root = project();
+    git(
+        root.path(),
+        &[
+            "remote",
+            "add",
+            "origin",
+            "https://example.invalid/owner/project.git",
+        ],
+    );
+    check(
+        root.path(),
+        "shared",
+        "version = '1.0'",
+        "command = 'git --version'",
+        "",
+    );
+    write(
+        root.path(),
+        ".please/checks/shared/rule.yaml",
+        "purpose: 'Fixture'\n",
+    );
+    let path = ".please/rule-sets/shared.toml";
+    let definition =
+        "id = 'shared'\ndescription = 'Shared set'\nrules = ['shared']\nrun_at = ['check']\n";
+    let load = |name_field: &str, expected_name: Option<&str>| {
+        write(root.path(), path, &format!("{definition}{name_field}"));
+        let project = config::load(root.path()).unwrap();
+        assert_eq!(project.rule_sets[0].name.as_deref(), expected_name);
+        let plan = planner::build(&project, Some("check"), false).unwrap().plan;
+        assert_eq!(plan.required_ids, ["shared"]);
+        let digest = plan.scheduled[0]
+            .rule_metadata
+            .as_ref()
+            .unwrap()
+            .digest
+            .clone()
+            .unwrap();
+        assert_eq!(
+            please::checks::execute(&project, &project.checks[0]).status,
+            Status::Pass
+        );
+        (plan.plan_id, digest)
+    };
+    let unnamed = load("", None);
+    let name = "é".repeat(80);
+    assert_eq!(unnamed, load(&format!("name = '{name}'\n"), Some(&name)));
+}
+
+#[test]
+// REQ-0359: a set label uses the same text validation as a rule label.
+fn invalid_local_rule_set_names_report_the_definition_path() {
+    let root = project();
+    let path = ".please/rule-sets/shared.toml";
+    let definition = "id = 'shared'\ndescription = 'Shared set'\nrules = []\nrun_at = ['check']\n";
+    for name in [
+        "''",
+        "' leading'",
+        "'trailing '",
+        r#""a\tb""#,
+        &format!("'{}'", "é".repeat(81)),
+    ] {
+        write(root.path(), path, &format!("{definition}name = {name}\n"));
+        assert!(
+            error(root.path()).contains(&format!("{path}: name must contain 1..=80 characters")),
+            "{name}"
+        );
+    }
+    write(root.path(), path, &format!("{definition}name = 1\n"));
+    assert!(error(root.path()).contains(&format!("invalid {path}: invalid type")));
+}

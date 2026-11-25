@@ -1,0 +1,13 @@
+id: REQ-0359
+name: Rule Sets Accept An Optional Display Name
+area: configuration
+description: >-
+  Local and imported Rule Sets may declare a display name that follows the
+  same syntax and bounds as a Rule name. The loader must retain a valid name
+  and reject an invalid name. The label must have no effect on identities,
+  references, selection, ordering, execution or canonical rule digests.
+rationale: >-
+  Authors can supply a short human-readable label while stable technical IDs
+  continue to identify Rule Sets.
+decisions:
+  - why:DEC-0016

@@ -211,6 +211,42 @@ custom = []
     }
 }
 #[test]
+// REQ-0359: a selected import validates and preserves its optional set label.
+fn imported_rule_set_name_is_validated_and_preserved() {
+    let f = Fixture::new();
+    let path = "repository/ruleset.toml";
+    let definition = fs::read_to_string(f.remote.join(path)).unwrap();
+    let mut selected_id = None;
+    f.imports(&[("repository", "main")]);
+    for (field, name) in [
+        ("", None),
+        ("name = 'Repository checks'\n", Some("Repository checks")),
+    ] {
+        if name.is_some() {
+            write(&f.remote, path, &format!("{definition}{field}"));
+            commit(&f.remote);
+        }
+        let project = f.load(true).unwrap();
+        let set = &project.rule_sets[0];
+        assert_eq!(set.name.as_deref(), name);
+        assert!(set.id.ends_with(":quality"));
+        let plan = planner::build(&project, Some("check"), false).unwrap().plan;
+        assert_eq!(plan.required_ids.len(), 1);
+        assert!(plan.required_ids[0].ends_with(":required-files"));
+        assert_eq!(
+            plan.scheduled[0].origin.as_ref().unwrap().rule_sets,
+            [set.id.clone()].into()
+        );
+        let id = &plan.required_ids[0];
+        assert_eq!(selected_id.get_or_insert_with(|| id.clone()), id);
+    }
+    write(&f.remote, path, &format!("{definition}name = 'invalid '\n"));
+    commit(&f.remote);
+    let error = f.load(true).unwrap_err();
+    assert!(format!("{error:#}").contains(&format!("{path}: name must contain 1..=80 characters")));
+}
+
+#[test]
 fn imported_rule_versions_come_from_the_source_definitions() {
     // REQ-0351: a resolved import preserves source versions in both rule kinds.
     let f = Fixture::new();

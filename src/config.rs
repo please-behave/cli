@@ -323,6 +323,8 @@ pub struct ExecutionPoints {
 #[serde(deny_unknown_fields)]
 pub struct RuleSet {
     pub id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
     pub description: String,
     pub rules: Vec<RuleReference>,
     pub run_at: Vec<String>,

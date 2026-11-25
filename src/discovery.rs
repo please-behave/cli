@@ -119,7 +119,7 @@ pub(crate) fn load(root: &Path) -> Result<Loaded> {
             "{}: expected a rule-set TOML file",
             path.display()
         );
-        let set: RuleSet = document(root, &path)?;
+        let set = rule_set(root, &path)?;
         sets.push((path, set));
     }
     let mut directories = Vec::new();
@@ -142,7 +142,7 @@ pub(crate) fn load_external(
     git: &str,
 ) -> Result<Loaded> {
     let central = selected.join("ruleset.toml");
-    let mut set: RuleSet = document(root, &central)?;
+    let mut set = rule_set(root, &central)?;
     let mut directories = std::collections::BTreeMap::new();
     for reference in &set.rules {
         let reference = reference.id();
@@ -236,6 +236,26 @@ pub(crate) fn parse_document<T: serde::de::DeserializeOwned>(text: &str, path: &
     })
 }
 
+fn rule_set(root: &Path, path: &Path) -> Result<RuleSet> {
+    let set: RuleSet = document(root, path)?;
+    if let Some(name) = &set.name {
+        validate_display_name(name, path)?;
+    }
+    Ok(set)
+}
+
+fn validate_display_name(name: &str, path: &Path) -> Result<()> {
+    ensure!(
+        !name.is_empty()
+            && name.chars().count() <= MAX_RULE_NAME_CHARS
+            && name.trim() == name
+            && !name.chars().any(char::is_control),
+        "{}: name must contain 1..={MAX_RULE_NAME_CHARS} characters without control characters or surrounding whitespace",
+        path.display()
+    );
+    Ok(())
+}
+
 fn resource(root: &Path, directory: &Path, filename: &str) -> Result<PathBuf> {
     ensure!(
         !filename.is_empty()
@@ -321,14 +341,7 @@ fn load_rules(
             loaded.rule_metadata.insert(rule.id.clone(), metadata);
         }
         let name = rule.name.unwrap_or_else(|| rule.id.clone());
-        ensure!(
-            !name.is_empty()
-                && name.chars().count() <= MAX_RULE_NAME_CHARS
-                && name.trim() == name
-                && !name.chars().any(char::is_control),
-            "{}: name must contain 1..={MAX_RULE_NAME_CHARS} characters without control characters or surrounding whitespace",
-            path.display()
-        );
+        validate_display_name(&name, &path)?;
         match (kind.as_str(), rule.check, rule.review) {
             ("checks", Some(check), None) => {
                 ensure!(
