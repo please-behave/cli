@@ -21,6 +21,7 @@ behavior.
 | [Configuration Error](#configuration-error) | An invalid configuration or a missing prerequisite required for execution. |
 | [Run Context](#run-context) | The Git state of a run, supplied to rules as a file. |
 | [Input Snapshot](#input-snapshot) | A fingerprint of the files a run judged. |
+| [Release Fact](#release-fact) | An authenticated report of a release version and its Git commit. |
 | [Adapter Profile](#adapter-profile) | A named configuration entry that tells Please Behave which adapter to run and with what settings. |
 | [Adapter](#adapter) | The executable that talks to the AI for an adapter profile. |
 | [External Source](#external-source) | A Git repository that supplies rule sets or adapter profiles. |
@@ -118,6 +119,13 @@ so rules do not need to query Git themselves.
 The input snapshot is a fingerprint of the files a run judges. It is captured
 around execution, so a result is only trusted when the files did not change
 while the rules ran. An incomplete or unstable snapshot never counts as a pass.
+
+## Release Fact
+
+A release fact associates an opaque version with a full Git object ID in a
+repository. The ledger uses the repository and commit to find reported
+verification evidence. The release fact carries the sender's claim about the
+release and contributes no verification evidence of its own.
 
 ## Adapter Profile
 

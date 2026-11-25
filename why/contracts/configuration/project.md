@@ -88,8 +88,9 @@ The [Report API](../report/document.md) defines numbering and removal.
 ## Publish settings
 
 The optional `[publish]` table supplies settings for
-[`please publish`](../report/document.md#publishing-evidence) and
-[`please register`](../report/registration.md). Both commands take the required
+[`please publish`](../report/document.md#publishing-evidence),
+[`please register`](../report/registration.md) and
+[`please record release`](../release-facts/record.md). Each command takes the required
 `--gateway-url` argument on the command line. A `gateway_url` entry in this
 table is rejected as an unknown field.
 

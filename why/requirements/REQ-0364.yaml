@@ -1,0 +1,16 @@
+id: REQ-0364
+name: Release Fact Delivery Is Explicit
+area: reporting
+description: >-
+  Please must send a release fact only when explicitly requested through
+  record release. It must require a gateway origin and a caller-supplied version,
+  use the shared gateway authentication and repository settings, and report the
+  supplied full Git object ID or default to the commit of HEAD. It must preserve
+  the opaque version and any explicit object ID as supplied. It must work
+  independently of verification, saved reports and Git tags.
+rationale: >-
+  Release workflows can report the version and commit they released using
+  their own version scheme.
+decisions:
+  - why:DEC-0001
+  - why:DEC-0020

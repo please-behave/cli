@@ -114,6 +114,28 @@ pub enum Words {
         #[arg(long, value_name = "URL", help = "HTTP or HTTPS origin of the gateway")]
         gateway_url: String,
     },
+    /// Report a fact to the gateway.
+    Record {
+        #[command(subcommand)]
+        fact: Fact,
+    },
     /// Show help.
     Help,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum Fact {
+    /// Record the commit associated with a release version.
+    Release {
+        #[arg(long, value_name = "URL", help = "HTTP or HTTPS origin of the gateway")]
+        gateway_url: String,
+        #[arg(long, help = "Version assigned by the release workflow")]
+        version: String,
+        #[arg(
+            long,
+            value_name = "SHA",
+            help = "Full Git object ID (default: HEAD commit)"
+        )]
+        commit: Option<String>,
+    },
 }

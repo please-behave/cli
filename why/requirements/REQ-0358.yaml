@@ -2,7 +2,7 @@ id: REQ-0358
 name: GitHub OIDC Tokens Are Scoped to the Gateway
 area: reporting
 description: >-
-  With github-oidc selected, publish and register must obtain a fresh token
+  With github-oidc selected, publish, register and record release must obtain a fresh token
   from the GitHub Actions token request URL using the request credential provided
   by the workflow environment. The token audience must be the lowercase gateway
   scheme and authority, including any explicit port and with no trailing slash.

@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use clap::{CommandFactory, Parser, error::ErrorKind};
 use please::{
     adapter::Configured,
-    cli::{Cli, Words},
+    cli::{Cli, Fact, Words},
     config, git_snapshot, report,
     terminal::{self, Tone},
 };
@@ -271,6 +271,19 @@ fn execute(cli: Cli) -> Result<i32> {
             please::register::send(&root, &gateway_url, |message| {
                 println!("{}", terminal::clean(message));
             })?;
+            Ok(0)
+        }
+        Words::Record {
+            fact:
+                Fact::Release {
+                    gateway_url,
+                    version,
+                    commit,
+                },
+        } => {
+            let message =
+                please::record::release(&root, &gateway_url, &version, commit.as_deref())?;
+            println!("{message}");
             Ok(0)
         }
         Words::Help => {

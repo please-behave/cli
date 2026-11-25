@@ -1,0 +1,12 @@
+id: API-0006
+name: Release Fact Delivery
+version: 0
+contracts:
+  - id: CON-0015
+    name: Release Fact Command
+    document: record.md
+    requirements:
+      - REQ-0349
+      - REQ-0358
+      - REQ-0364
+      - REQ-0365

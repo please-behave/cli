@@ -17,6 +17,7 @@ pub mod planner;
 pub mod process;
 pub mod publish;
 pub mod reconciliation;
+pub mod record;
 pub mod register;
 pub mod report;
 mod repository_identity;

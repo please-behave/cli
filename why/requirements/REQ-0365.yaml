@@ -1,0 +1,15 @@
+id: REQ-0365
+name: Release Fact Delivery Reports the Outcome
+area: reporting
+description: >-
+  Please must distinguish a recorded, already known or conflicting release
+  fact from the gateway receipt. Recorded and already known facts succeed.
+  Conflicts, invalid input, invalid receipts, gateway rejection and delivery
+  failures exit with an error. Diagnostics must distinguish gateway rejection
+  from transport failure and omit credentials, response bodies and URL details
+  beyond the origin. Delivery must never follow redirects.
+rationale: >-
+  Release workflows can retry delivery and identify a conflict with the
+  preserved record or a technical failure.
+decisions:
+  - why:DEC-0020

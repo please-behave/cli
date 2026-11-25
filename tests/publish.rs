@@ -93,7 +93,7 @@ fn exchange(listener: &TcpListener, root: &Path, status: u16) -> (Output, Value)
         listener,
         root,
         status,
-        "publish",
+        &["publish"],
         "/v0/attestations",
         |_| KEY.as_bytes().to_vec(),
     )
@@ -103,18 +103,17 @@ fn exchange_delivery(
     listener: &TcpListener,
     root: &Path,
     status: u16,
-    command: &str,
+    command: &[&str],
     endpoint: &'static str,
     reply: impl FnOnce(&Value) -> Vec<u8> + Send + 'static,
 ) -> (Output, Value) {
     let server = listener.try_clone().unwrap();
     server.set_nonblocking(true).unwrap();
     let request = thread::spawn(move || answer_delivery(&server, status, endpoint, reply));
-    let output = cli(
-        root,
-        &[command, "--gateway-url", &gateway_url(listener)],
-        Some(KEY),
-    );
+    let url = gateway_url(listener);
+    let mut args = command.to_vec();
+    args.extend(["--gateway-url", &url]);
+    let output = cli(root, &args, Some(KEY));
     let body = request.join().unwrap();
     assert_no_request(listener);
     (output, body)
@@ -192,7 +191,142 @@ fn assert_no_request(listener: &TcpListener) {
 }
 
 #[test]
-// REQ-0349, REQ-0358: both commands select OIDC without an API key and require HTTPS.
+// REQ-0364, REQ-0365: delivery uses HEAD or the exact supplied object ID and checks the receipt.
+fn records_release_facts_without_a_saved_report() {
+    let listener = listen();
+    let root = fixture(None);
+    git(
+        root.path(),
+        &["remote", "add", "origin", "git@Example.org:Owner/Repo.git"],
+    );
+    support::commit_all(root.path());
+    let head = support::command("git")
+        .args(["rev-parse", "HEAD"])
+        .current_dir(root.path())
+        .output()
+        .unwrap();
+    assert!(head.status.success());
+    let head = String::from_utf8(head.stdout).unwrap();
+    let explicit = "Ab".repeat(32);
+    let version = " Train 7/β ";
+
+    for (commit, status, receipt, code, message) in [
+        (None, 201, "created", 0, "Release recorded."),
+        (None, 200, "unchanged", 0, "Release already known."),
+        (
+            Some(explicit.as_str()),
+            409,
+            "conflict",
+            2,
+            "conflicts with a recorded commit",
+        ),
+    ] {
+        let mut args = vec!["record", "release", "--version", version];
+        if let Some(commit) = commit {
+            args.extend(["--commit", commit]);
+        }
+        let (output, document) = exchange_delivery(
+            &listener,
+            root.path(),
+            status,
+            &args,
+            "/v0/facts/releases",
+            move |_| serde_json::to_vec(&json!({"outcome": receipt})).unwrap(),
+        );
+        assert_output(&output, code, message);
+        assert_eq!(
+            document,
+            json!({
+                "repository": "example.org/Owner/Repo",
+                "version": version,
+                "commit": commit.unwrap_or_else(|| head.trim()),
+            })
+        );
+    }
+    assert!(report::saved(root.path()).unwrap().is_empty());
+}
+
+#[test]
+// REQ-0364, REQ-0365: validate local prerequisites and distinguish receipt and transport failures.
+fn release_errors_use_publish_exit_codes() {
+    let listener = listen();
+    let url = gateway_url(&listener);
+    let root = fixture(Some("example.org/Configured/Repo"));
+    let args = [
+        "record",
+        "release",
+        "--version",
+        "Build",
+        "--gateway-url",
+        &url,
+    ];
+    for invalid in ["HEAD", "0123456789", &"g".repeat(40)] {
+        let mut with_commit = args.to_vec();
+        with_commit.extend(["--commit", invalid]);
+        assert_output(
+            &cli(root.path(), &with_commit, Some(KEY)),
+            2,
+            "--commit must be a full Git object ID",
+        );
+    }
+    assert_output(
+        &cli(root.path(), &args, Some(KEY)),
+        2,
+        "requires a current Git commit",
+    );
+    assert_no_request(&listener);
+
+    let commit = "ab".repeat(20);
+    let mut args = args.to_vec();
+    args.extend(["--commit", &commit]);
+    assert_output(
+        &cli(root.path(), &args, None),
+        2,
+        "API key environment variable",
+    );
+    assert_no_request(&listener);
+
+    for (status, receipt, message) in [
+        (201, r#"{"outcome":"unchanged"}"#, "invalid receipt"),
+        (409, KEY, "invalid receipt"),
+        (302, KEY, "HTTP 302"),
+        (503, KEY, "HTTP 503"),
+    ] {
+        let (output, document) = exchange_delivery(
+            &listener,
+            root.path(),
+            status,
+            &[
+                "record",
+                "release",
+                "--version",
+                "Build",
+                "--commit",
+                &commit,
+            ],
+            "/v0/facts/releases",
+            move |_| receipt.as_bytes().to_vec(),
+        );
+        assert_output(&output, 2, message);
+        assert_eq!(document["repository"], "example.org/Configured/Repo");
+    }
+
+    drop(listener);
+    assert_output(
+        &cli(root.path(), &args, Some(KEY)),
+        2,
+        "could not reach the release fact gateway",
+    );
+    support::write(root.path(), ".please/config.toml", "project = 'Fixture'\n");
+    assert_output(
+        &cli(root.path(), &args, Some(KEY)),
+        2,
+        "configure [publish]",
+    );
+}
+
+#[test]
+// REQ-0349, REQ-0358: gateway commands select OIDC without an API key and require HTTPS.
 fn oidc_delivery_requires_workflow_permission_and_a_secure_token_endpoint() {
     const URL_ENV: &str = "ACTIONS_ID_TOKEN_REQUEST_URL";
     const TOKEN_ENV: &str = "ACTIONS_ID_TOKEN_REQUEST_TOKEN";
@@ -211,8 +345,13 @@ fn oidc_delivery_requires_workflow_permission_and_a_secure_token_endpoint() {
     support::commit_all(project);
     run(project, 0);
 
-    for command in ["publish", "register"] {
-        let args = [command, "--gateway-url", &url];
+    for command in [
+        &["publish"][..],
+        &["register"],
+        &["record", "release", "--version", "workflow-release"],
+    ] {
+        let mut args = command.to_vec();
+        args.extend(["--gateway-url", &url]);
         for (provided, missing) in [(TOKEN_ENV, URL_ENV), (URL_ENV, TOKEN_ENV)] {
             let output = cli_command(project, &args)
                 .env(provided, &url)
@@ -284,7 +423,7 @@ fn registration_exchange(
         listener,
         root,
         status,
-        "register",
+        &["register"],
         "/v0/rule-registrations",
         move |_| serde_json::to_vec(&response).unwrap(),
     )

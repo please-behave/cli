@@ -2,7 +2,7 @@ id: REQ-0349
 name: Gateway Authentication Is Configured Explicitly
 area: configuration
 description: >-
-  Publish and register must use the authentication method selected by
+  Publish, register and record release must use the authentication method selected by
   publish.auth. The supported values are api-key (the default) and github-oidc.
   Other values are configuration errors. API key authentication requires
   publish.key_env and reads the key only from the named environment variable.
