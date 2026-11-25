@@ -40,7 +40,7 @@ target = "LICENSE"
 [[imports]]
 git = "https://github.com/christianpflugradt/repository-catalog.git"
 path = "rulesets/releasable-open-source-software"
-ref = "356256b67beed2419a0691611bb71aa3736c326e"
+ref = "247434c51b05ace2163a53887595dd1eaa701fdf"
 
 [[imports]]
 git = "https://github.com/christianpflugradt/repository-catalog.git"
