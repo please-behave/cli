@@ -17,7 +17,7 @@ rust = { version = "1.100.0", profile = "minimal", components = "rustfmt,clippy,
 python = "3.15.2"
 node = "26.13.1"
 gh = "2.105.0"
-ruff = "0.17.5"
+ruff = "0.17.6"
 "cargo:cargo-audit" = "0.23.0"
 "aqua:taiki-e/cargo-llvm-cov" = "0.9.1"
 "aqua:boyter/scc" = "4.1.0"
