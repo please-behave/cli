@@ -1,12 +1,13 @@
 id: COMP-0016
 name: Gateway Delivery
 purpose: >-
-  Delivers saved verification evidence, committed rule and Rule Set registrations and release facts to the gateway.
+  Delivers saved verification evidence, registrations and release facts to the gateway.
 scope:
   - Selects the newest saved report and checks its eligibility for delivery.
   - Projects the attestation and derives the remote repository identity.
   - Prepares committed local rule registrations and checks the receipt against their canonical digests.
   - Prepares committed Rule Set registrations from the same member metadata and reports the ledger outcomes.
+  - Submits configured deployment targets and validates their registration receipt.
   - Reports the release version and commit and validates the release fact receipt.
   - Authenticates the request and maps the delivery outcome to a diagnostic.
 out_of_scope:
@@ -22,6 +23,7 @@ files:
   - src/gateway/auth.rs
   - src/register.rs
   - src/register/sets.rs
+  - src/register/targets.rs
   - src/record.rs
 depends_on:
   - COMP-0003
@@ -45,3 +47,5 @@ requirements:
   - REQ-0363
   - REQ-0364
   - REQ-0365
+  - REQ-0366
+  - REQ-0367

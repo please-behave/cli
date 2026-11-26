@@ -71,7 +71,7 @@ contracts:
       - REQ-0240
       - REQ-0321
   - id: CON-0014
-    name: Rule and Rule Set Version Registration
+    name: Rule, Rule Set and Deployment Target Registration
     document: registration.md
     requirements:
       - REQ-0349
@@ -81,3 +81,5 @@ contracts:
       - REQ-0358
       - REQ-0360
       - REQ-0361
+      - REQ-0366
+      - REQ-0367

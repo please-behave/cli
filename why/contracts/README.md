@@ -9,7 +9,7 @@ one compatibility version; separate documents do not imply separate versions.
 | [Adapter Protocol](adapter/api.yaml) | [Invocation](adapter/invocation.md), [request](adapter/request.md), [response](adapter/response.md) |
 | [Run Context](run-context/api.yaml) | [Delivery and lifetime](run-context/delivery.md), [document and patches](run-context/document.md) |
 | [Execution Plan](plan/api.yaml) | [Preview and diagnostics](plan/preview.md), [prepared plan and identity](plan/prepared.md) |
-| [Verification Report](report/api.yaml) | [Document and lifecycle](report/document.md), [snapshot and freshness](report/snapshot.md), [rule version registration](report/registration.md) |
+| [Verification Report](report/api.yaml) | [Document and lifecycle](report/document.md), [snapshot and freshness](report/snapshot.md), [registration](report/registration.md) |
 | [Governance Configuration](configuration/api.yaml) | [Discovery and validation](configuration/discovery.md), [project configuration](configuration/project.md), [Rule definition](configuration/rule.md), [Rule parameters](configuration/parameters.md) |
 | [Release Fact Delivery](release-facts/api.yaml) | [Release fact command](release-facts/record.md) |
 

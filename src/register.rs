@@ -1,5 +1,6 @@
-//! Submit committed rule and Rule Set metadata in dependency order.
+//! Submit rule, Rule Set and deployment target registrations in order.
 mod sets;
+mod targets;
 
 use crate::{
     config::{self, PublishAuth, PublishSettings, RuleDefinition},
@@ -63,7 +64,9 @@ pub(crate) fn send_with_authorization(
 ) -> Result<()> {
     let endpoint = gateway::endpoint(gateway_url, "/v0/rule-registrations")?;
     git_snapshot::require_root(root)?;
-    let settings = gateway::settings(root)?;
+    let config = gateway::project_config(root)?;
+    config.validate_targets().context(".please/config.toml")?;
+    let settings = gateway::settings_from(&config)?;
     let source = gateway::repository(root, &settings)?;
     validate_source(&source)?;
     let api_key = match settings.auth {
@@ -88,7 +91,7 @@ pub(crate) fn send_with_authorization(
     let files = tree.keys().copied().chain(files.split_terminator('\0'));
     let directories = rule_directories(files.clone())?;
     let set_paths = sets::definition_paths(files)?;
-    if directories.is_empty() && set_paths.is_empty() {
+    if directories.is_empty() && set_paths.is_empty() && config.targets.is_empty() {
         show("No rule directories to register.");
         return Ok(());
     }
@@ -114,6 +117,8 @@ pub(crate) fn send_with_authorization(
         sets: &sets,
     })
     .context("cannot prepare Rule Set registration batch")?;
+    let targets_body = targets::prepare(&config.targets)
+        .context("cannot prepare deployment target registration batch")?;
     require_clean_inputs(root, &directories, &set_paths, &head)?;
     let authorization = match api_key {
         Some(header) => header,
@@ -132,8 +137,19 @@ pub(crate) fn send_with_authorization(
     let mut sets_failed = false;
     if !sets.is_empty() {
         let endpoint = gateway::endpoint(gateway_url, "/v0/rule-set-registrations")?;
-        sets_failed = sets::send(endpoint, authorization, &sets_body, &sets, &mut show)
-            .context("cannot register Rule Sets")?;
+        sets_failed = sets::send(
+            endpoint,
+            authorization.clone(),
+            &sets_body,
+            &sets,
+            &mut show,
+        )
+        .context("cannot register Rule Sets")?;
+    }
+    if let Some(body) = targets_body {
+        let endpoint = gateway::endpoint(gateway_url, "/v0/target-registrations")?;
+        targets::send(endpoint, authorization, &body, &config.targets, &mut show)
+            .context("cannot register deployment targets")?;
     }
     match (rules_failed, sets_failed) {
         (true, true) => bail!("one or more rule and Rule Set registrations failed"),

@@ -109,6 +109,28 @@
         }
       }
     },
+    "targets": {
+      "type": "array",
+      "maxItems": 100,
+      "default": [],
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}(?![\\s\\S])"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "not": { "pattern": "\\u0000" }
+          }
+        }
+      }
+    },
     "execution_points": {
       "type": "object",
       "additionalProperties": false,

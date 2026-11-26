@@ -109,6 +109,18 @@ requires a new run before publication.
 These fields extend the experimental configuration API at version 0. They add
 no version declaration in TOML.
 
+## Deployment targets
+
+Each top-level `[[targets]]` entry declares a deployment target owned by the
+repository. The list defaults to empty and allows up to 100 entries. Replace
+the initial `targets = []` line when adding the first entry. A name
+contains 1 to 64 ASCII characters. It starts with a letter or digit and may
+continue with letters, digits, dots, underscores or hyphens. Names are case
+sensitive. An optional description contains 1 to 512 Unicode characters and
+excludes NUL. The CLI preserves both values as supplied.
+
+CI submits these declarations through [`please register`](../report/registration.md#deployment-targets).
+
 ## Execution points and explicit imports
 
 `execution_points.custom` declares custom point names in the consuming project.

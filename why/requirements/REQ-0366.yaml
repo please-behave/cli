@@ -1,0 +1,13 @@
+id: REQ-0366
+name: Deployment Targets Are Declared In Project Configuration
+area: configuration
+description: >-
+  Please must accept an optional list of deployment targets in .please/config.toml.
+  Each entry must have a case-sensitive name and may have a description. Please
+  must reject entries and lists outside the gateway contract's bounds before
+  sending any registration batch.
+rationale: >-
+  The deploying repository keeps its target names reviewable alongside its
+  configuration and can correct invalid declarations before delivery.
+decisions:
+  - why:DEC-0022

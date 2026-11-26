@@ -430,10 +430,14 @@ fn registration_exchange(
 }
 
 #[test]
-// REQ-0360, REQ-0361: submit rules first, reuse their digests and report each set's outcome.
-fn registers_local_and_shareable_rule_sets_after_their_rules() {
+// REQ-0360, REQ-0361, REQ-0367: deliver all three batches in order and report outcomes.
+fn registers_rules_then_local_and_shareable_rule_sets_then_targets() {
     let root = registration_fixture();
     let project = root.path();
+    let config = project.join(".please/config.toml");
+    let mut contents = fs::read_to_string(&config).unwrap();
+    contents.push_str("\n[[targets]]\nname = 'Prod.eu_1-west'\ndescription = 'Région ouest'\n");
+    fs::write(config, contents).unwrap();
     support::write(
         project,
         LOCAL_SET_PATH,
@@ -457,12 +461,13 @@ fn registers_local_and_shareable_rule_sets_after_their_rules() {
     let check = registration_digest(project, CHECK_DIRECTORY);
     let review = registration_digest(project, REVIEW_DIRECTORY);
     let set_digest = format!("v1:sha256:{}", "a".repeat(64));
-    for (outcomes, code, messages) in [
+    for (outcomes, valid_set_receipt, code, messages) in [
         (
             json!([
                 {"outcome": "created", "digest": set_digest},
                 {"outcome": "unchanged", "digest": set_digest},
             ]),
+            true,
             0,
             vec![
                 "created Rule Set local 3.1",
@@ -477,6 +482,7 @@ fn registers_local_and_shareable_rule_sets_after_their_rules() {
                     {"member_index": 1, "reason": "unregistered"},
                 ]},
             ]),
+            true,
             2,
             vec![
                 "conflict Rule Set local 3.1",
@@ -496,6 +502,7 @@ fn registers_local_and_shareable_rule_sets_after_their_rules() {
                     {"member_index": 2, "reason": "digest_mismatch"},
                 ]},
             ]),
+            false,
             2,
             vec!["registration gateway returned an invalid receipt"],
         ),
@@ -514,17 +521,29 @@ fn registers_local_and_shareable_rule_sets_after_their_rules() {
             let sets = answer_delivery(&server, 200, "/v0/rule-set-registrations", |_| {
                 serde_json::to_vec(&json!({"outcomes": outcomes})).unwrap()
             });
-            (rules, sets)
+            let targets = valid_set_receipt.then(|| {
+                answer_delivery(&server, 200, "/v0/target-registrations", |_| {
+                    br#"{"outcomes":[{"name":"Prod.eu_1-west","outcome":"created"}]}"#.to_vec()
+                })
+            });
+            (rules, sets, targets)
         });
         let output = cli(
             project,
             &["register", "--gateway-url", &gateway_url(&listener)],
             Some(KEY),
         );
-        let (rules, sets) = worker.join().unwrap();
+        let (rules, sets, targets) = worker.join().unwrap();
         assert_no_request(&listener);
         for message in messages {
             assert_output(&output, code, message);
+        }
+        if valid_set_receipt {
+            assert_output(&output, code, "created Prod.eu_1-west");
+            assert_eq!(
+                targets.unwrap(),
+                json!({"targets": [{"name": "Prod.eu_1-west", "description": "Région ouest"}]})
+            );
         }
         let knowledge = json!({
             "purpose": "Fixture", "audience": "Maintainers", "commonality": "Repository checks",
@@ -551,6 +570,97 @@ fn registers_local_and_shareable_rule_sets_after_their_rules() {
             ]})
         );
     }
+}
+
+#[test]
+// REQ-0366, REQ-0367: a target-only project reports each ordered, authenticated outcome.
+fn registers_targets_without_rules_and_rejects_invalid_receipts() {
+    let root = tempfile::tempdir().unwrap();
+    let project = root.path();
+    git(project, &["init", "--quiet"]);
+    let config = format!(
+        "project = 'Fixture'\n[publish]\nkey_env = '{KEY_NAME}'\nrepository = '{REGISTRATION_REPOSITORY}'\n"
+    );
+    support::write(project, ".please/config.toml", &config);
+    support::commit_all(project);
+    let listener = listen();
+    let url = gateway_url(&listener);
+    let invoke = || cli(project, &["register", "--gateway-url", &url], Some(KEY));
+    assert_output(&invoke(), 0, "No rule directories to register.");
+    assert_no_request(&listener);
+
+    support::write(
+        project,
+        ".please/config.toml",
+        &format!("{config}\n[[targets]]\nname = 'Prod'\n[[targets]]\nname = 'prod'\n"),
+    );
+    support::commit_all(project);
+    let exchange = |status, reply: Value| {
+        exchange_delivery(
+            &listener,
+            project,
+            status,
+            &["register"],
+            "/v0/target-registrations",
+            move |_| serde_json::to_vec(&reply).unwrap(),
+        )
+    };
+    let created = json!({"name": "Prod", "outcome": "created"});
+    let unchanged = json!({"name": "prod", "outcome": "unchanged"});
+    let (output, body) = exchange(200, json!({"outcomes": [created, unchanged]}));
+    assert_output(&output, 0, "created Prod\nunchanged prod");
+    assert_eq!(
+        body,
+        json!({"targets": [{"name": "Prod"}, {"name": "prod"}]})
+    );
+
+    for outcomes in [
+        json!([created]),
+        json!([unchanged, created]),
+        json!([created, {"name": "prod", "outcome": "conflict"}]),
+        json!([created, {"name": KEY, "outcome": "unchanged"}]),
+    ] {
+        let (output, _) = exchange(200, json!({"outcomes": outcomes}));
+        assert_output(
+            &output,
+            2,
+            "registration gateway returned an invalid receipt",
+        );
+        assert!(output.stdout.is_empty());
+    }
+    let (output, _) = exchange(400, json!(KEY));
+    assert_output(
+        &output,
+        2,
+        "registration gateway rejected the registration document",
+    );
+    drop(listener);
+    assert_output(&invoke(), 2, "could not reach the registration gateway");
+}
+
+#[test]
+// REQ-0366: invalid target declarations prevent even an otherwise valid rule batch.
+fn rejects_invalid_targets_before_sending_any_batch() {
+    let root = registration_fixture();
+    let project = root.path();
+    let path = project.join(".please/config.toml");
+    let config = fs::read_to_string(&path).unwrap();
+    let listener = listen();
+    let url = gateway_url(&listener);
+    for name in ["", "-prod", "prod east", "prod/edge", "é", &"a".repeat(65)] {
+        fs::write(&path, format!("{config}\n[[targets]]\nname = '{name}'\n")).unwrap();
+        let output = cli(project, &["register", "--gateway-url", &url], Some(KEY));
+        assert_output(&output, 2, "targets[1].name");
+        assert_no_request(&listener);
+    }
+    fs::write(
+        &path,
+        format!("{config}\n[[targets]]\nname = 'prod'\ndescription = ''\n"),
+    )
+    .unwrap();
+    let output = cli(project, &["register", "--gateway-url", &url], Some(KEY));
+    assert_output(&output, 2, "targets[1].description");
+    assert_no_request(&listener);
 }
 
 #[test]

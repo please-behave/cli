@@ -22,6 +22,7 @@ behavior.
 | [Run Context](#run-context) | The Git state of a run, supplied to rules as a file. |
 | [Input Snapshot](#input-snapshot) | A fingerprint of the files a run judged. |
 | [Release Fact](#release-fact) | An authenticated report of a release version and its Git commit. |
+| [Deployment Target](#deployment-target) | A named place where software runs, identified by its authenticated owner and name. |
 | [Adapter Profile](#adapter-profile) | A named configuration entry that tells Please Behave which adapter to run and with what settings. |
 | [Adapter](#adapter) | The executable that talks to the AI for an adapter profile. |
 | [External Source](#external-source) | A Git repository that supplies rule sets or adapter profiles. |
@@ -126,6 +127,13 @@ A release fact associates an opaque version with a full Git object ID in a
 repository. The ledger uses the repository and commit to find reported
 verification evidence. The release fact carries the sender's claim about the
 release and contributes no verification evidence of its own.
+
+## Deployment Target
+
+A deployment target belongs to the repository that deploys the software. The
+owner declares the target in its [project configuration](contracts/configuration/project.md#deployment-targets)
+and registers it from CI with [`please register`](contracts/report/registration.md#deployment-targets).
+The authenticated owner and case-sensitive name identify a target (why:DEC-0022).
 
 ## Adapter Profile
 

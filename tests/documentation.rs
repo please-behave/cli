@@ -156,11 +156,26 @@ fn context_retention_default_matches_the_project_schema() {
 
 #[test]
 fn project_schema_and_loader_agree_on_types_bounds_and_unknown_fields() {
+    // REQ-0366: target declarations use the same bounds in the schema and loader.
     let root = project();
     let schema = project_schema();
     let validator = jsonschema::validator_for(&schema).unwrap();
     for (text, valid) in [
         ("project = 'Example'", true),
+        ("project = 'Example'\ntargets = []", true),
+        ("project = 'Example'\n[[targets]]\nname = 'Prod.eu-1'", true),
+        (
+            "project = 'Example'\n[[targets]]\nname = 'prod'\ndescription = 'Région'",
+            true,
+        ),
+        (
+            "project = 'Example'\n[[targets]]\nname = \"prod\\n\"",
+            false,
+        ),
+        (
+            "project = 'Example'\n[[targets]]\nname = 'prod'\ndescription = ''",
+            false,
+        ),
         ("project = 'Example'\n[execution]\nmax_parallel = 1", true),
         (
             "project = 'Example'\n[execution]\nfail_fast_termination_grace_seconds = 3600",

@@ -8,7 +8,7 @@ Commands:
   run       Execute rules (--at, --plan; --checks-only: deterministic checks only)
   status    Show the last saved report (--details for full findings)
   publish   Send an attestation from the newest current report
-  register  Register committed rule and Rule Set versions with the gateway
+  register  Register rule versions, Rule Set versions and deployment targets
   help      Show help
 
 Options:

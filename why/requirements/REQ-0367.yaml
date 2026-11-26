@@ -1,0 +1,15 @@
+id: REQ-0367
+name: Registration Delivers Deployment Targets And Reports Every Outcome
+area: reporting
+description: >-
+  Please must send configured deployment targets only through the explicit
+  register command, in one authenticated batch after any rule and Rule Set
+  batches. It must omit an empty target batch. It must verify that each outcome
+  matches the submitted target in order and report created or unchanged for
+  each entry. Both outcomes succeed, while invalid receipts, gateway rejection
+  and transport failure fail the command.
+rationale: >-
+  The owner can register its valid targets from CI and see the result of
+  retrying the same declarations.
+decisions:
+  - why:DEC-0022

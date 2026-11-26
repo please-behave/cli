@@ -116,7 +116,7 @@ run the same rules.
 | `please run` | Run selected rules and save their results. |
 | `please status` | Inspect the newest report, or one chosen with `--report <number>`, and its freshness. |
 | `please publish --gateway-url <URL>` | Send an attestation from the newest current report to the specified gateway. |
-| `please register --gateway-url <URL>` | Register committed rule versions, then Rule Set versions, from their source repository. |
+| `please register --gateway-url <URL>` | Register committed rule versions, then Rule Set versions, then any configured deployment targets. |
 | `please record release --gateway-url <URL> --version <version> [--commit <sha>]` | Record a release fact. The commit defaults to HEAD. |
 | `please help` | Show commands and options. |
 

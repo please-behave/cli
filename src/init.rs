@@ -47,6 +47,7 @@ pub fn init(root: &Path) -> Result<usize> {
         report: Default::default(),
         execution_points: Default::default(),
         publish: None,
+        targets: vec![],
         imports: vec![],
         adapter_imports: vec![],
     };

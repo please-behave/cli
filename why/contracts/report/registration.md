@@ -1,8 +1,8 @@
-# Rule and Rule Set version registration
+# Rule, Rule Set and deployment target registration
 
-`please register --gateway-url <URL>` registers committed rule and Rule Set versions from the
-root of the Git working tree that holds their definitions. The rule owner
-invokes it from CI. It has no execution point or Git hook and runs independently
+`please register --gateway-url <URL>` registers committed rule and Rule Set versions
+and configured deployment targets from the root of their Git working tree. The
+owner invokes it from CI. It has no execution point or Git hook and runs independently
 of verification and attestation publication (why:DEC-0012).
 
 The command shares the [delivery settings and HTTP origin rules](document.md#publishing-evidence)
@@ -55,7 +55,7 @@ sets resolve members by ID among local Rules. Definitions named `ruleset.toml`
 reference Rule directories relative to the repository root, as for an import.
 The set's path identifies its containing directory.
 
-Before sending either batch, the command prepares each set using its committed
+Before sending any batch, the command prepares each set using its committed
 definition and sibling [`ruleset.yaml`](../rule-knowledge/README.md). It
 requires a set version and resolves each member to the rule registration it
 already prepared. Each member carries the exact submitted rule's source,
@@ -73,3 +73,21 @@ The command reports each set's `created`, `unchanged`, `conflict` or
 ledger found an unregistered version or a digest mismatch. It accepts the set
 digest from the ledger. A conflict, member failure, invalid receipt, gateway
 rejection or transport failure makes the command exit with status 2.
+
+## Deployment targets
+
+The command validates every [target declaration](../configuration/project.md#deployment-targets)
+before making any registration request. It sends one batch in configuration
+order to [`POST /v0/target-registrations`](https://github.com/please-behave/gateway/blob/main/why/contracts/ingest/target-registration.md)
+after processing any rule and Rule Set receipts. It can send a target batch
+on its own. An empty list omits the batch. The batch contains only the target
+names and any descriptions. The gateway derives the owner from the authenticated
+sender (why:DEC-0022).
+
+The gateway receipt must contain one outcome per entry with the exact name in
+the same order. The command prints `created` or `unchanged` for each target
+after validating the receipt. Both outcomes succeed, and a repeated registration
+preserves the original description. Invalid declarations, invalid receipts,
+gateway rejection and transport failure exit with status 2. Outcome failures
+reported in earlier valid receipts still cause exit status 2 after target
+delivery. A failed request or invalid receipt stops delivery of later batches.

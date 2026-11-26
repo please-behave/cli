@@ -33,6 +33,8 @@ pub struct Config {
     pub report: ReportSettings,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub publish: Option<PublishSettings>,
+    #[serde(default)]
+    pub targets: Vec<DeploymentTarget>,
     #[serde(default = "default_display")]
     pub max_display_files: usize,
     #[serde(default)]
@@ -42,6 +44,45 @@ pub struct Config {
     #[serde(default)]
     pub adapter_imports: Vec<crate::external::AdapterImport>,
 }
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct DeploymentTarget {
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+}
+
+impl Config {
+    pub(crate) fn validate_targets(&self) -> Result<()> {
+        const MAX_TARGETS: usize = 100;
+        ensure!(
+            self.targets.len() <= MAX_TARGETS,
+            "targets must contain at most {MAX_TARGETS} entries"
+        );
+        for (index, target) in self.targets.iter().enumerate() {
+            let mut bytes = target.name.bytes();
+            ensure!(
+                target.name.len() <= 64
+                    && bytes
+                        .next()
+                        .is_some_and(|first| first.is_ascii_alphanumeric())
+                    && bytes.all(|byte| byte.is_ascii_alphanumeric() || b"._-".contains(&byte)),
+                "targets[{}].name must start with an ASCII letter or digit and contain 1 to 64 ASCII letters, digits, dots, underscores or hyphens",
+                index + 1
+            );
+            if let Some(description) = &target.description {
+                ensure!(
+                    (1..=512).contains(&description.chars().count()) && !description.contains('\0'),
+                    "targets[{}].description must contain 1 to 512 Unicode characters without NUL",
+                    index + 1
+                );
+            }
+        }
+        Ok(())
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct Execution {
@@ -502,6 +543,7 @@ pub(crate) fn validate(root: PathBuf, loaded: crate::discovery::Loaded) -> Resul
         )
         .collect();
     let config = loaded.config;
+    config.validate_targets().context(".please/config.toml")?;
     if let Some(publish) = &config.publish {
         publish.validate().context(".please/config.toml")?;
     }

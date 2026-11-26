@@ -34,12 +34,20 @@ pub(crate) fn endpoint(gateway_url: &str, path: &str) -> Result<Uri> {
 }
 
 pub(crate) fn settings(root: &Path) -> Result<PublishSettings> {
-    let config =
-        discovery::document::<Config>(root, &config::path("config.toml")).map_err(|_| {
-            anyhow::anyhow!("cannot read .please/config.toml; check the project configuration")
-        })?;
+    let config = project_config(root)?;
+    settings_from(&config)
+}
+
+pub(crate) fn project_config(root: &Path) -> Result<Config> {
+    discovery::document(root, &config::path("config.toml")).map_err(|_| {
+        anyhow::anyhow!("cannot read .please/config.toml; check the project configuration")
+    })
+}
+
+pub(crate) fn settings_from(config: &Config) -> Result<PublishSettings> {
     let settings = config
         .publish
+        .clone()
         .context("configure [publish] in .please/config.toml")?;
     settings.validate()?;
     Ok(settings)
