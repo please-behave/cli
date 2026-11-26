@@ -1,0 +1,18 @@
+id: REQ-0368
+name: Deployment Fact Delivery Is Explicit
+area: reporting
+description: >-
+  Please must send a deployment fact only through the explicit record deployment
+  command. It must require a gateway origin, target name, deployed repository
+  and exactly one of an opaque version or a full Git object ID. It must
+  normalize Git URLs the same way as publish and preserve the version or object
+  ID as supplied. It must use the shared gateway settings and authenticate the
+  reporter as the owner of the target. The subject must come from the command
+  line. Delivery must work independently of verification, saved reports and
+  local Git history.
+rationale: >-
+  A workflow can report software deployed to its own target, including software
+  from another repository.
+decisions:
+  - why:DEC-0001
+  - why:DEC-0023

@@ -286,6 +286,27 @@ fn execute(cli: Cli) -> Result<i32> {
             println!("{message}");
             Ok(0)
         }
+        Words::Record {
+            fact:
+                Fact::Deployment {
+                    gateway_url,
+                    target,
+                    repository,
+                    version,
+                    commit,
+                },
+        } => {
+            let message = please::record::deployment(
+                &root,
+                &gateway_url,
+                &target,
+                &repository,
+                version.as_deref(),
+                commit.as_deref(),
+            )?;
+            println!("{message}");
+            Ok(0)
+        }
         Words::Help => {
             print!(
                 "{}",

@@ -22,6 +22,19 @@ pub(crate) fn for_local_rule(root: &Path, settings: Option<&PublishSettings>) ->
     }
 }
 
+pub(crate) fn from_identity_or_remote(value: &str) -> Option<std::borrow::Cow<'_, str>> {
+    if let Some((host, path)) = value.split_once('/')
+        && let Ok(authority) = host.parse::<Authority>()
+        && authority.host() == host
+        && !path.is_empty()
+        && !path.starts_with(['/', '\\'])
+        && !path.chars().any(char::is_control)
+    {
+        return Some(value.into());
+    }
+    normalize(value).map(Into::into)
+}
+
 pub(crate) fn normalize(remote: &str) -> Option<String> {
     let (authority, path) = if let Some((scheme, address)) = remote.split_once("://") {
         if !matches!(

@@ -89,8 +89,9 @@ The [Report API](../report/document.md) defines numbering and removal.
 
 The optional `[publish]` table supplies settings for
 [`please publish`](../report/document.md#publishing-evidence),
-[`please register`](../report/registration.md) and
-[`please record release`](../release-facts/record.md). Each command takes the required
+[`please register`](../report/registration.md),
+[`please record release`](../release-facts/record.md) and
+[`please record deployment`](../release-facts/deployment.md). Each command takes the required
 `--gateway-url` argument on the command line. A `gateway_url` entry in this
 table is rejected as an unknown field.
 
@@ -105,6 +106,9 @@ written. With GitHub OIDC the CLI lowercases the host and path of the selected
 identity, and the gateway rejects delivery if the result differs from the
 workflow's repository. Changing these fields changes a governed file and
 requires a new run before publication.
+
+Deployment delivery takes the subject repository from its required
+`--repository` argument. The authenticated sender identifies the target owner.
 
 These fields extend the experimental configuration API at version 0. They add
 no version declaration in TOML.

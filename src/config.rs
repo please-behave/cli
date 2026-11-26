@@ -53,6 +53,15 @@ pub struct DeploymentTarget {
     pub description: Option<String>,
 }
 
+pub(crate) fn valid_target_name(name: &str) -> bool {
+    let mut bytes = name.bytes();
+    name.len() <= 64
+        && bytes
+            .next()
+            .is_some_and(|first| first.is_ascii_alphanumeric())
+        && bytes.all(|byte| byte.is_ascii_alphanumeric() || b"._-".contains(&byte))
+}
+
 impl Config {
     pub(crate) fn validate_targets(&self) -> Result<()> {
         const MAX_TARGETS: usize = 100;
@@ -61,13 +70,8 @@ impl Config {
             "targets must contain at most {MAX_TARGETS} entries"
         );
         for (index, target) in self.targets.iter().enumerate() {
-            let mut bytes = target.name.bytes();
             ensure!(
-                target.name.len() <= 64
-                    && bytes
-                        .next()
-                        .is_some_and(|first| first.is_ascii_alphanumeric())
-                    && bytes.all(|byte| byte.is_ascii_alphanumeric() || b"._-".contains(&byte)),
+                valid_target_name(&target.name),
                 "targets[{}].name must start with an ASCII letter or digit and contain 1 to 64 ASCII letters, digits, dots, underscores or hyphens",
                 index + 1
             );

@@ -118,6 +118,7 @@ run the same rules.
 | `please publish --gateway-url <URL>` | Send an attestation from the newest current report to the specified gateway. |
 | `please register --gateway-url <URL>` | Register committed rule versions, then Rule Set versions, then any configured deployment targets. |
 | `please record release --gateway-url <URL> --version <version> [--commit <sha>]` | Record a release fact. The commit defaults to HEAD. |
+| `please record deployment --gateway-url <URL> --target <name> --repository <identity> (--version <version> \| --commit <sha>)` | Report the version or full commit deployed to a registered target. |
 | `please help` | Show commands and options. |
 
 Gateway commands use `[publish].auth` in `.please/config.toml`.

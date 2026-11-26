@@ -11,7 +11,7 @@ one compatibility version; separate documents do not imply separate versions.
 | [Execution Plan](plan/api.yaml) | [Preview and diagnostics](plan/preview.md), [prepared plan and identity](plan/prepared.md) |
 | [Verification Report](report/api.yaml) | [Document and lifecycle](report/document.md), [snapshot and freshness](report/snapshot.md), [registration](report/registration.md) |
 | [Governance Configuration](configuration/api.yaml) | [Discovery and validation](configuration/discovery.md), [project configuration](configuration/project.md), [Rule definition](configuration/rule.md), [Rule parameters](configuration/parameters.md) |
-| [Release Fact Delivery](release-facts/api.yaml) | [Release fact command](release-facts/record.md) |
+| [Fact Delivery](release-facts/api.yaml) | [Release fact command](release-facts/record.md), [deployment fact command](release-facts/deployment.md) |
 
 [Rule knowledge](rule-knowledge/README.md) defines the experimental companion
 documents for Rules and Rule Sets. The CLI reads rule knowledge to compute rule digests.

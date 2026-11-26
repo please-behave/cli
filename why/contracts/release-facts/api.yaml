@@ -1,5 +1,5 @@
 id: API-0006
-name: Release Fact Delivery
+name: Fact Delivery
 version: 0
 contracts:
   - id: CON-0015
@@ -10,3 +10,11 @@ contracts:
       - REQ-0358
       - REQ-0364
       - REQ-0365
+  - id: CON-0016
+    name: Deployment Fact Command
+    document: deployment.md
+    requirements:
+      - REQ-0349
+      - REQ-0358
+      - REQ-0368
+      - REQ-0369

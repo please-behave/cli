@@ -326,6 +326,210 @@ fn release_errors_use_publish_exit_codes() {
 }
 
 #[test]
+// REQ-0368, REQ-0369: report the deployed subject independently of the sender's repository.
+fn records_deployment_facts_with_versions_and_full_commits() {
+    let root = fixture(Some("example.org/Infrastructure/Owner"));
+    let listener = listen();
+    let version = " Train 7/β ";
+    let sha1 = "Ab".repeat(20);
+    let sha256 = "Cd".repeat(32);
+    for (repository, flag, revision, status, receipt, code, message) in [
+        (
+            "software.example/Team/Application",
+            "--version",
+            version,
+            201,
+            r#"{"outcome":"created"}"#,
+            0,
+            "Deployment recorded.",
+        ),
+        (
+            "ssh://git@SOFTWARE.example:2222/Team/Application.git",
+            "--commit",
+            sha1.as_str(),
+            200,
+            r#"{"outcome":"unchanged"}"#,
+            0,
+            "Deployment unchanged.",
+        ),
+        (
+            "git@SOFTWARE.example:Team/Application.git",
+            "--commit",
+            sha256.as_str(),
+            400,
+            "",
+            2,
+            "Deployment target is unknown",
+        ),
+    ] {
+        let (output, document) = exchange_delivery(
+            &listener,
+            root.path(),
+            status,
+            &[
+                "record",
+                "deployment",
+                "--target",
+                "Prod.eu-1",
+                "--repository",
+                repository,
+                flag,
+                revision,
+            ],
+            "/v0/facts/deployments",
+            move |_| receipt.as_bytes().to_vec(),
+        );
+        assert_output(&output, code, message);
+        let mut expected = json!({
+            "target": "Prod.eu-1",
+            "repository": "software.example/Team/Application",
+        });
+        expected[flag.trim_start_matches("--")] = json!(revision);
+        assert_eq!(document, expected);
+    }
+    assert!(report::saved(root.path()).unwrap().is_empty());
+}
+
+#[test]
+// REQ-0368, REQ-0369: invalid arguments never reach the gateway and technical errors exit 2.
+fn deployment_errors_use_gateway_exit_codes() {
+    let listener = listen();
+    let url = gateway_url(&listener);
+    let root = fixture(None);
+    let base = [
+        "record",
+        "deployment",
+        "--gateway-url",
+        &url,
+        "--target",
+        "Prod",
+    ];
+    assert_output(
+        &cli(
+            root.path(),
+            &[base.as_slice(), &["--version", "Build"]].concat(),
+            Some(KEY),
+        ),
+        2,
+        "--repository",
+    );
+    let args = [
+        base.as_slice(),
+        &["--repository", "example.org/Team/Software"],
+    ]
+    .concat();
+    let commit = "ab".repeat(20);
+    for (revision, message) in [
+        (&[][..], "--version"),
+        (
+            &["--version", "Build", "--commit", commit.as_str()],
+            "cannot be used with",
+        ),
+        (
+            &["--commit", "HEAD"],
+            "--commit must be a full Git object ID",
+        ),
+        (
+            &["--commit", &"g".repeat(40)],
+            "--commit must be a full Git object ID",
+        ),
+        (&["--version", ""], "deployment version must contain"),
+    ] {
+        assert_output(
+            &cli(
+                root.path(),
+                &[args.as_slice(), revision].concat(),
+                Some(KEY),
+            ),
+            2,
+            message,
+        );
+    }
+    for (target, repository, message) in [
+        ("-invalid", "example.org/Team/Software", "--target"),
+        (
+            "bad target",
+            "example.org/Team/Software",
+            "--target must start",
+        ),
+        (
+            "Prod",
+            "file:///tmp/example.git",
+            "--repository must identify",
+        ),
+    ] {
+        assert_output(
+            &cli(
+                root.path(),
+                &[
+                    "record",
+                    "deployment",
+                    "--gateway-url",
+                    &url,
+                    "--target",
+                    target,
+                    "--repository",
+                    repository,
+                    "--version",
+                    "Build",
+                ],
+                Some(KEY),
+            ),
+            2,
+            message,
+        );
+    }
+    let valid = [args.as_slice(), &["--version", "Build"]].concat();
+    assert_output(
+        &cli(root.path(), &valid, None),
+        2,
+        "API key environment variable",
+    );
+    assert_no_request(&listener);
+
+    let oversized = " ".repeat(1025);
+    for (status, receipt, message) in [
+        (201, r#"{"outcome":"unchanged"}"#, "invalid receipt"),
+        (
+            200,
+            r#"{"outcome":"unchanged","extra":true}"#,
+            "invalid receipt",
+        ),
+        (200, "", "invalid receipt"),
+        (200, oversized.as_str(), "invalid receipt"),
+        (400, KEY, "rejected the deployment document"),
+        (302, KEY, "HTTP 302"),
+        (503, KEY, "HTTP 503"),
+    ] {
+        let reply = receipt.as_bytes().to_vec();
+        let (output, _) = exchange_delivery(
+            &listener,
+            root.path(),
+            status,
+            &[
+                "record",
+                "deployment",
+                "--target",
+                "Prod",
+                "--repository",
+                "example.org/Team/Software",
+                "--version",
+                "Build",
+            ],
+            "/v0/facts/deployments",
+            move |_| reply,
+        );
+        assert_output(&output, 2, message);
+    }
+    drop(listener);
+    assert_output(
+        &cli(root.path(), &valid, Some(KEY)),
+        2,
+        "could not reach the deployment fact gateway",
+    );
+}
+
+#[test]
 // REQ-0349, REQ-0358: gateway commands select OIDC without an API key and require HTTPS.
 fn oidc_delivery_requires_workflow_permission_and_a_secure_token_endpoint() {
     const URL_ENV: &str = "ACTIONS_ID_TOKEN_REQUEST_URL";
@@ -349,6 +553,16 @@ fn oidc_delivery_requires_workflow_permission_and_a_secure_token_endpoint() {
         &["publish"][..],
         &["register"],
         &["record", "release", "--version", "workflow-release"],
+        &[
+            "record",
+            "deployment",
+            "--target",
+            "Prod",
+            "--repository",
+            "example.org/Team/Software",
+            "--version",
+            "workflow-release",
+        ],
     ] {
         let mut args = command.to_vec();
         args.extend(["--gateway-url", &url]);

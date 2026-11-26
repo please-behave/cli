@@ -1466,7 +1466,7 @@ fn help_lists_only_supported_commands_without_redundant_examples() {
             .filter(|line| !line.trim().is_empty())
             .collect();
         let phrases = [
-            "init", "sync", "trust", "run", "status", "publish", "register", "help",
+            "init", "sync", "trust", "run", "status", "publish", "register", "record", "help",
         ];
         assert_eq!(rows.len(), phrases.len());
         assert_eq!(rows.last(), Some(&"  help      Show help"));

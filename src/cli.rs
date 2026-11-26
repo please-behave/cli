@@ -138,4 +138,22 @@ pub enum Fact {
         )]
         commit: Option<String>,
     },
+    /// Report which version or commit was deployed to a target.
+    #[command(group(clap::ArgGroup::new("revision").required(true).args(["version", "commit"])))]
+    Deployment {
+        #[arg(long, value_name = "URL", help = "HTTP or HTTPS origin of the gateway")]
+        gateway_url: String,
+        #[arg(long, help = "Registered deployment target name")]
+        target: String,
+        #[arg(
+            long,
+            value_name = "IDENTITY",
+            help = "Deployed repository identity or Git URL"
+        )]
+        repository: String,
+        #[arg(long, help = "Deployed release version")]
+        version: Option<String>,
+        #[arg(long, value_name = "SHA", help = "Deployed full Git object ID")]
+        commit: Option<String>,
+    },
 }

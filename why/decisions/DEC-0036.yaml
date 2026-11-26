@@ -4,7 +4,7 @@ context: >-
   GitHub Actions can authenticate to the gateway with a repository-bound
   credential instead of a stored API key (gateway:DEC-0007).
 decision: >-
-  Publish, register and record release share an explicit project setting for authentication.
+  Publish, register and record share an explicit project setting for authentication.
   API key authentication remains the default. A project can select GitHub
   OIDC to obtain a fresh token scoped to the origin of the gateway it calls.
 rationale: >-

@@ -135,6 +135,14 @@ owner declares the target in its [project configuration](contracts/configuration
 and registers it from CI with [`please register`](contracts/report/registration.md#deployment-targets).
 The authenticated owner and case-sensitive name identify a target (why:DEC-0022).
 
+## Deployment Fact
+
+A deployment fact is an authenticated report of the version or full commit of
+a software repository deployed to a registered target. The reporter owns the
+target and can report software from another repository. The ledger keeps the
+history and considers the latest deployment for each target and subject to be
+current (why:DEC-0023). See the [deployment fact command](contracts/release-facts/deployment.md).
+
 ## Adapter Profile
 
 An adapter profile is a named configuration entry: the command of an

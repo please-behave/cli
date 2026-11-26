@@ -6,7 +6,7 @@ purpose: >-
 scope:
   - >-
     Parses arguments and shows help for the commands init, sync, trust, run,
-    status, publish, register and help.
+    status, publish, register, record and help.
   - >-
     Dispatches each command to the component that does the work and prints the
     outcome.
@@ -72,3 +72,4 @@ requirements:
   - REQ-0350
   - REQ-0355
   - REQ-0364
+  - REQ-0368

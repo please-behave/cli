@@ -1,0 +1,15 @@
+id: REQ-0369
+name: Deployment Fact Delivery Reports the Outcome
+area: reporting
+description: >-
+  Please must distinguish a recorded, unchanged or unknown-target deployment
+  from the gateway response. Recorded and unchanged deployments succeed.
+  Unknown targets, invalid input, invalid receipts, gateway rejection and
+  transport failure fail the command. Diagnostics must distinguish gateway
+  rejection from transport failure and omit credentials, response bodies and
+  URL details beyond the origin. Delivery must never follow redirects.
+rationale: >-
+  Workflows can retry deployment reports and identify an unregistered target
+  or a technical failure.
+decisions:
+  - why:DEC-0023
