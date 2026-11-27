@@ -44,7 +44,9 @@ The reader limits the report file to 128 MiB.
 
 ## Identity and evidence
 
-`timestamp` is the run's UTC timestamp. `repository` is the canonical absolute
+`timestamp` records the instant of the run. See
+[why:DEC-0027](https://github.com/please-behave/why/blob/main/why/decisions/DEC-0027.yaml)
+for the shared convention. `repository` is the canonical absolute
 repository root and must match the repository where the report is read.
 `project` preserves the configured project label. The report has no run-level
 adapter: one run can use several adapter profiles, and an adapter profile is a
