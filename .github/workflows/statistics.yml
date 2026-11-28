@@ -22,7 +22,7 @@ jobs:
         with:
           install_args: rust python aqua:boyter/scc aqua:taiki-e/cargo-llvm-cov
           experimental: true
-          version: 2026.11.11
+          version: 2026.11.12
       - name: Run tests and calculate coverage
         run: |
           mkdir -p target/statistics

@@ -22,7 +22,7 @@ jobs:
         with:
           install_args: python rust cargo:cargo-audit
           experimental: true
-          version: 2026.11.11
+          version: 2026.11.12
       - name: Audit the Cargo dependencies
         uses: christianpflugradt/repository-catalog/actions/dependency-audit/cargo@0f47bb84ff5435cb6b692275fb6767f4f599abdb # updates/actions/dependency-audit
         with:
