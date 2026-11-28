@@ -69,7 +69,7 @@ jobs:
         with:
           install_args: python rust github:please-behave/cli
           experimental: true
-          version: 2026.11.11
+          version: 2026.11.12
       - name: Stamp planned release version before verification
         run: python3 .github/scripts/set-release-version.py "$EXPECTED_RELEASE_VERSION"
       - name: Fetch locked candidate dependencies
@@ -112,7 +112,7 @@ jobs:
         with:
           install_args: python node
           experimental: true
-          version: 2026.11.11
+          version: 2026.11.12
       - name: Verify complete release candidate evidence
         uses: christianpflugradt/repository-catalog/actions/release/evidence@74c1911d36c4f967b43040c5179e4ca5f6b0080b # updates/actions/release
         with:
