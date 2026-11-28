@@ -24,7 +24,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     permissions:
       contents: write
-    uses: christianpflugradt/repository-catalog/.github/workflows/release-plan.yml@7804bdd85b2bfb225ae1dbcd684ebbc9192fe6bf # updates/workflows/release
+    uses: christianpflugradt/repository-catalog/.github/workflows/release-plan.yml@eb70e1fee21c5bff98d2a0c067f344a12c60c8c7 # updates/workflows/release
     with:
       force: ${{ inputs.force }}
 
@@ -35,7 +35,7 @@ jobs:
     permissions:
       contents: read
       actions: read
-    uses: christianpflugradt/repository-catalog/.github/workflows/release-readiness.yml@7804bdd85b2bfb225ae1dbcd684ebbc9192fe6bf # updates/workflows/release
+    uses: christianpflugradt/repository-catalog/.github/workflows/release-readiness.yml@eb70e1fee21c5bff98d2a0c067f344a12c60c8c7 # updates/workflows/release
     with:
       source-sha: ${{ needs.plan.outputs.source_sha }}
       required-jobs: check / Check
