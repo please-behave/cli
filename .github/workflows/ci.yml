@@ -10,7 +10,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    uses: christianpflugradt/repository-catalog/.github/workflows/ci-check.yml@7804bdd85b2bfb225ae1dbcd684ebbc9192fe6bf # updates/workflows/ci
+    uses: christianpflugradt/repository-catalog/.github/workflows/ci-check.yml@eb70e1fee21c5bff98d2a0c067f344a12c60c8c7 # updates/workflows/ci
     with:
       env: |
         BUILD_TARGET=x86_64-unknown-linux-gnu
